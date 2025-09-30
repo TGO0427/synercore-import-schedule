@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShipmentStatus, InspectionStatus, ReceivingStatus } from '../types/shipment';
+import { getApiUrl } from '../config/api';
 
 function PostArrivalWorkflow() {
   const [postArrivalShipments, setPostArrivalShipments] = useState([]);
@@ -25,7 +26,7 @@ function PostArrivalWorkflow() {
   const fetchPostArrivalShipments = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/shipments/post-arrival');
+      const response = await fetch(getApiUrl('/api/shipments/post-arrival'));
       if (response.ok) {
         const shipments = await response.json();
         setPostArrivalShipments(shipments);
@@ -130,7 +131,7 @@ function PostArrivalWorkflow() {
     if (action === 'mark-stored') {
       try {
         setActionLoading(true);
-        const response = await fetch(`/api/shipments/${shipment.id}`, {
+        const response = await fetch(getApiUrl(`/api/shipments/${shipment.id}`), {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -162,7 +163,7 @@ function PostArrivalWorkflow() {
       if (confirm(confirmMessage)) {
         try {
           setActionLoading(true);
-          const response = await fetch(`/api/shipments/${shipment.id}`, {
+          const response = await fetch(getApiUrl(`/api/shipments/${shipment.id}`), {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',

@@ -3,6 +3,7 @@ import { ShipmentStatus } from '../types/shipment';
 import { getCurrentWeekNumber } from '../utils/dateUtils';
 import PostArrivalWorkflowReport from './PostArrivalWorkflowReport';
 import CurrentWeekStoredReport from './CurrentWeekStoredReport';
+import { getApiUrl } from '../config/api';
 
 // Helper function to extract forwarding agent from shipment data
 const extractForwardingAgent = (shipment) => {
@@ -48,7 +49,7 @@ function ReportsView({ shipments, statusFilter, onStatusFilter }) {
   const fetchSavedReports = async () => {
     try {
       setLoadingReports(true);
-      const response = await fetch('/api/reports');
+      const response = await fetch(getApiUrl('/api/reports'));
       if (response.ok) {
         const data = await response.json();
         setSavedReports(data.reports || []);
@@ -72,7 +73,7 @@ function ReportsView({ shipments, statusFilter, onStatusFilter }) {
         warehouseStats: analytics.warehouseStats
       };
 
-      const response = await fetch('/api/reports/generate', {
+      const response = await fetch(getApiUrl('/api/reports/generate'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -99,7 +100,7 @@ function ReportsView({ shipments, statusFilter, onStatusFilter }) {
 
   const loadHistoricalReport = async (reportId) => {
     try {
-      const response = await fetch(`/api/reports/${reportId}`);
+      const response = await fetch(getApiUrl(`/api/reports/${reportId}`));
       if (response.ok) {
         const report = await response.json();
         setSelectedReport(report);
@@ -114,7 +115,7 @@ function ReportsView({ shipments, statusFilter, onStatusFilter }) {
     if (!confirm('Are you sure you want to delete this report?')) return;
 
     try {
-      const response = await fetch(`/api/reports/${reportId}`, {
+      const response = await fetch(getApiUrl(`/api/reports/${reportId}`), {
         method: 'DELETE'
       });
 

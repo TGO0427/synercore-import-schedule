@@ -4,6 +4,7 @@ import WeekCalendar from './WeekCalendar';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { getApiUrl } from '../config/api';
 
 function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreateShipment, loading }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -479,7 +480,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
   const fetchAutoArchiveStats = async () => {
     try {
       setAutoArchiveLoading(true);
-      const response = await fetch(`/api/shipments/auto-archive/stats?daysOld=${autoArchiveDays}`);
+      const response = await fetch(getApiUrl(`/api/shipments/auto-archive/stats?daysOld=${autoArchiveDays}`));
       if (response.ok) {
         const stats = await response.json();
         setAutoArchiveStats(stats);
@@ -505,7 +506,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
 
     try {
       setAutoArchiveLoading(true);
-      const response = await fetch('/api/shipments/auto-archive/perform', {
+      const response = await fetch(getApiUrl('/api/shipments/auto-archive/perform'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -570,7 +571,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
 
     try {
       setManualArchiveLoading(true);
-      const response = await fetch('/api/shipments/manual-archive', {
+      const response = await fetch(getApiUrl('/api/shipments/manual-archive'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

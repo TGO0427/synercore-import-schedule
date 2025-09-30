@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { getCurrentWeekNumber, getWeekDateRange } from '../utils/dateUtils';
+import { getApiUrl } from '../config/api';
 
 function CurrentWeekStoredReport({ shipments, showTitle = true }) {
   const currentWeek = getCurrentWeekNumber();
@@ -14,7 +15,7 @@ function CurrentWeekStoredReport({ shipments, showTitle = true }) {
     const fetchArchivedShipments = async () => {
       try {
         setLoadingArchives(true);
-        const response = await fetch('/api/shipments/archives');
+        const response = await fetch(getApiUrl('/api/shipments/archives'));
         if (!response.ok) return;
 
         const archives = await response.json();
@@ -23,7 +24,7 @@ function CurrentWeekStoredReport({ shipments, showTitle = true }) {
         // Fetch each archive and extract shipments stored in current week
         for (const archive of archives) {
           try {
-            const archiveResponse = await fetch(`/api/shipments/archives/${archive.fileName}`);
+            const archiveResponse = await fetch(getApiUrl(`/api/shipments/archives/${archive.fileName}`));
             if (!archiveResponse.ok) continue;
 
             const archiveData = await archiveResponse.json();

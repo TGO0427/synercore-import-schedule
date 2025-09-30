@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Supplier, ImportFormat, DocumentType } from '../types/supplier';
 import * as XLSX from 'xlsx';
 import SupplierCharts from './SupplierCharts';
+import { getApiUrl } from '../config/api';
 
 function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onUpdateSupplier, onDeleteSupplier, onImportSchedule, showSuccess, showError, loading }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -174,7 +175,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
       });
       formData.append('supplierId', selectedSupplier.id);
 
-      const uploadResponse = await fetch('/api/documents/upload', {
+      const uploadResponse = await fetch(getApiUrl('/api/documents/upload'), {
         method: 'POST',
         body: formData
       });
@@ -208,7 +209,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
       });
       formData.append('supplierId', selectedSupplier.id);
 
-      const uploadResponse = await fetch('/api/documents/upload', {
+      const uploadResponse = await fetch(getApiUrl('/api/documents/upload'), {
         method: 'POST',
         body: formData
       });
@@ -252,7 +253,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
       
       formData.append('supplierId', selectedSupplier.id);
 
-      const uploadResponse = await fetch('/api/documents/upload', {
+      const uploadResponse = await fetch(getApiUrl('/api/documents/upload'), {
         method: 'POST',
         body: formData
       });
@@ -376,7 +377,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
       setShowDocumentsDialog(true);
       
       // Fetch documents for this supplier
-      const response = await fetch(`/api/suppliers/${supplier.id}/documents`);
+      const response = await fetch(getApiUrl(`/api/suppliers/${supplier.id}/documents`));
       if (response.ok) {
         const documents = await response.json();
         setSupplierDocuments(documents);
@@ -412,7 +413,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
     if (!documentToDelete) return;
 
     try {
-      const response = await fetch(`/api/suppliers/${selectedSupplierDocs.id}/documents/${documentToDelete.filename}`, {
+      const response = await fetch(getApiUrl(`/api/suppliers/${selectedSupplierDocs.id}/documents/${documentToDelete.filename}`), {
         method: 'DELETE'
       });
 
@@ -447,7 +448,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
     if (!documentToRename || !newDocumentName.trim()) return;
 
     try {
-      const response = await fetch(`/api/suppliers/${selectedSupplierDocs.id}/documents/${encodeURIComponent(documentToRename.filename)}/rename`, {
+      const response = await fetch(getApiUrl(`/api/suppliers/${selectedSupplierDocs.id}/documents/${encodeURIComponent(documentToRename.filename)}/rename`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'

@@ -221,7 +221,7 @@ function App() {
 
   const handleUpdateSupplier = async (id, updates) => {
     try {
-      const response = await fetch(`/api/suppliers/${id}`, {
+      const response = await fetch(getApiUrl(`/api/suppliers/${id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
@@ -235,7 +235,7 @@ function App() {
   const handleDeleteSupplier = async (id) => {
     if (!confirm('Are you sure you want to delete this supplier?')) return;
     try {
-      const response = await fetch(`/api/suppliers/${id}`, { method: 'DELETE' });
+      const response = await fetch(getApiUrl(`/api/suppliers/${id}`), { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete supplier');
       await fetchSuppliers();
       showSuccess('Supplier deleted successfully');
@@ -247,7 +247,7 @@ function App() {
     try {
       setLoading(true);
 
-      const response = await fetch(`/api/suppliers/${supplierId}/import`, {
+      const response = await fetch(getApiUrl(`/api/suppliers/${supplierId}/import`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scheduleData, documents })
@@ -328,7 +328,7 @@ function App() {
   // ---------- CRUD: shipments ----------
   const handleUpdateShipment = async (id, updates) => {
     try {
-      const response = await fetch(`/api/shipments/${id}`, {
+      const response = await fetch(getApiUrl(`/api/shipments/${id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
@@ -343,7 +343,7 @@ function App() {
 
   const handleDeleteShipment = async (id) => {
     try {
-      const response = await fetch(`/api/shipments/${id}`, { method: 'DELETE' });
+      const response = await fetch(getApiUrl(`/api/shipments/${id}`), { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete shipment');
       await fetchShipments();
       showSuccess('Shipment deleted successfully');
