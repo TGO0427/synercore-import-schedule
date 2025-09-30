@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { getApiUrl } from '../config/api';
 
 function ArchiveView() {
   const [archives, setArchives] = useState([]);
@@ -21,7 +22,7 @@ function ArchiveView() {
   const fetchArchives = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/shipments/archives');
+      const response = await fetch(getApiUrl('/api/shipments/archives'));
       if (!response.ok) throw new Error('Failed to fetch archives');
       const data = await response.json();
       setArchives(data);

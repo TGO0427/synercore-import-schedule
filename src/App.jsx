@@ -17,6 +17,7 @@ import AlertHub from './components/AlertHub';
 import { ExcelProcessor } from './utils/excelProcessor';
 import { Supplier } from './types/supplier';
 import { computeShipmentAlerts, createCustomAlert } from './utils/alerts';
+import { getApiUrl } from './config/api';
 import './theme.css';
 
 // ----- real timeout helper for fetch (since fetch doesn't honor a "timeout" option) -----
@@ -126,7 +127,7 @@ function App() {
 
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          response = await fetchWithTimeout('/api/shipments', {
+          response = await fetchWithTimeout(getApiUrl('/api/shipments'), {
             headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
           }, 10000);
 
@@ -185,7 +186,7 @@ function App() {
 
       if (!isBackgroundSync) setLoading(true);
 
-      const res = await fetchWithTimeout('/api/suppliers', {}, 10000);
+      const res = await fetchWithTimeout(getApiUrl('/api/suppliers'), {}, 10000);
       if (!res.ok) throw new Error('Failed to fetch suppliers');
       const data = await res.json();
 
@@ -207,7 +208,7 @@ function App() {
   // ---------- CRUD: suppliers ----------
   const handleAddSupplier = async (supplier) => {
     try {
-      const response = await fetch('/api/suppliers', {
+      const response = await fetch(getApiUrl('/api/suppliers'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(supplier)
@@ -255,7 +256,7 @@ function App() {
 
       const result = await response.json();
       if (result.scheduleData && result.scheduleData.length > 0) {
-        const shipmentsResponse = await fetch('/api/shipments/bulk-import', {
+        const shipmentsResponse = await fetch(getApiUrl('/api/shipments/bulk-import'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(result.scheduleData)
@@ -300,7 +301,7 @@ function App() {
         prod: x.productName, qty: x.quantity, cbm: x.cbm, type: typeof x.cbm
       })));
 
-      const response = await fetch('/api/shipments/bulk-import', {
+      const response = await fetch(getApiUrl('/api/shipments/bulk-import'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -351,7 +352,7 @@ function App() {
 
   const handleArchiveShipment = async (id) => {
     try {
-      const response = await fetch('/api/shipments/manual-archive', {
+      const response = await fetch(getApiUrl('/api/shipments/manual-archive'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shipmentIds: [id] })
@@ -364,7 +365,7 @@ function App() {
 
   const handleCreateShipment = async (shipmentData) => {
     try {
-      const response = await fetch('/api/shipments', {
+      const response = await fetch(getApiUrl('/api/shipments'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(shipmentData)
