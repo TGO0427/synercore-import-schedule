@@ -1,0 +1,66 @@
+{
+  "archivedAt": "2025-09-08T13:01:28.417Z",
+  "totalShipments": 4,
+  "data": [
+    {
+      "id": "ship_1757336372157_0",
+      "supplier": "QIDA CHEMICAL",
+      "orderRef": "Disodium Phosphate Anhydrous / APO0016424",
+      "finalPod": "PRETORIA",
+      "latestStatus": "arrived",
+      "weekNumber": 36,
+      "productName": "Disodium Phosphate Anhydrous",
+      "quantity": 1000,
+      "receivingWarehouse": "PRETORIA",
+      "priority": "medium",
+      "notes": "",
+      "createdAt": "2025-09-08T12:59:32.157Z",
+      "updatedAt": "2025-09-08T12:59:32.157Z"
+    },
+    {
+      "id": "ship_1757336372157_1",
+      "supplier": "TRISTAR GLOBAL",
+      "orderRef": "POWDER FAT / APO0016139",
+      "finalPod": "PRETORIA",
+      "latestStatus": "planned",
+      "weekNumber": null,
+      "productName": "POWDER FAT",
+      "quantity": 0,
+      "receivingWarehouse": "PRETORIA",
+      "priority": "medium",
+      "notes": "",
+      "createdAt": "2025-09-08T12:59:32.157Z",
+      "updatedAt": "2025-09-08T12:59:32.157Z"
+    },
+    {
+      "id": "ship_1757336372157_2",
+      "supplier": "QIDA CHEMICAL",
+      "orderRef": "Sodium Hexametaphosphate\r\n(SHMP, SH62) / APO0016500",
+      "finalPod": "PRETORIA",
+      "latestStatus": "planned",
+      "weekNumber": null,
+      "productName": "Sodium Hexametaphosphate\r\n(SHMP, SH62)",
+      "quantity": 0,
+      "receivingWarehouse": "PRETORIA",
+      "priority": "medium",
+      "notes": "",
+      "createdAt": "2025-09-08T12:59:32.157Z",
+      "updatedAt": "2025-09-08T12:59:32.157Z"
+    },
+    {
+      "id": "ship_1757336372157_3",
+      "supplier": "FUTURA INGREDIENTS",
+      "orderRef": "EKOMUL MG 95 / APO0016422",
+      "finalPod": "PRETORIA",
+      "latestStatus": "planned",
+      "weekNumber": null,
+      "productName": "EKOMUL MG 95",
+      "quantity": 0,
+      "receivingWarehouse": "PRETORIA",
+      "priority": "medium",
+      "notes": "",
+      "createdAt": "2025-09-08T12:59:32.157Z",
+      "updatedAt": "2025-09-08T12:59:32.157Z"
+    }
+  ]
+}

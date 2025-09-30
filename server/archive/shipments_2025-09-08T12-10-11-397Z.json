@@ -1,0 +1,16 @@
+{
+  "archivedAt": "2025-09-08T12:10:11.397Z",
+  "totalShipments": 1,
+  "data": [
+    {
+      "id": "existing1",
+      "supplier": "Existing Supplier",
+      "orderRef": "EXIST001",
+      "productName": "Existing Product",
+      "finalPod": "Existing POD",
+      "latestStatus": "in_transit",
+      "weekNumber": "40",
+      "quantity": "50"
+    }
+  ]
+}

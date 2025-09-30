@@ -1,0 +1,36 @@
+{
+  "archivedAt": "2025-09-23T12:34:17.427Z",
+  "totalShipments": 1,
+  "archiveType": "manual",
+  "archiveReason": "Manual archive of selected ARRIVED shipments",
+  "data": [
+    {
+      "id": "ship_1758020350665_17",
+      "supplier": "FUTURA INGREDIENTS",
+      "orderRef": "EKOMUL MG 90 / APO0015753",
+      "finalPod": "PRETORIA",
+      "latestStatus": "stored",
+      "weekNumber": 39,
+      "productName": "EKOMUL MG 90 ",
+      "quantity": 14400,
+      "cbm": 14.4,
+      "receivingWarehouse": "PRETORIA",
+      "notes": "",
+      "updatedAt": "2025-09-23T06:47:22.127Z",
+      "forwardingAgent": "DHL",
+      "unloadingStartDate": "2025-09-23T06:47:12.453Z",
+      "unloadingCompletedDate": "2025-09-23T06:47:13.461Z",
+      "inspectionStatus": "passed",
+      "inspectedBy": "",
+      "inspectionDate": "2025-09-23T06:47:15.094Z",
+      "inspectionNotes": "",
+      "receivingStatus": "completed",
+      "receivedBy": "",
+      "receivingDate": "2025-09-23T06:47:18.422Z",
+      "receivedQuantity": 14400,
+      "receivingNotes": "",
+      "discrepancies": [],
+      "storedDate": "2025-09-23T06:47:22.122Z"
+    }
+  ]
+}

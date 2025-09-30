@@ -1,0 +1,170 @@
+/* ----------- CSS Variables (Brand System) ----------- */
+:root {
+  /* Core palette */
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --surface-2: #f0f3f9;
+  --border: #e5e9f2;
+
+  /* Navy brand & accents */
+  --navy-900: #0b1f3a;
+  --navy-700: #143a63;
+  --navy-600: #1b4a7f;
+
+  /* Accent (teal/cyan) */
+  --accent: #0ea5a8;         /* primary actions */
+  --accent-600: #0a8f91;
+  --accent-100: #e6f8f8;
+
+  /* States */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger:  #ef4444;
+  --info:    #3b82f6;
+
+  /* Text */
+  --text-900: #0f172a;
+  --text-700: #334155;
+  --text-500: #64748b;
+
+  /* Shadows / radius */
+  --shadow-1: 0 1px 2px rgba(16,24,40,.06), 0 1px 1px rgba(16,24,40,.04);
+  --shadow-2: 0 10px 20px rgba(2, 6, 23, 0.06);
+  --radius: 10px;
+
+  /* Spacing scale */
+  --sp-1: 6px;  --sp-2: 10px; --sp-3: 14px; --sp-4: 18px; --sp-5: 24px; --sp-6: 32px;
+}
+
+/* ----------- Global reset-ish ----------- */
+html, body, #root { height: 100%; background: var(--bg); }
+body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial; color: var(--text-900); }
+
+/* ----------- App Layout ----------- */
+.container {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+  background: linear-gradient(180deg, var(--navy-900) 0%, #0e274a 100%);
+  color: #eef3fb;
+  padding: var(--sp-5);
+  border-right: 1px solid rgba(255,255,255,0.06);
+}
+.sidebar h2 { margin: 0 0 var(--sp-4); font-size: 18px; font-weight: 700; letter-spacing: .2px; }
+.sidebar-nav { list-style: none; padding: 0; margin: var(--sp-4) 0 0; display: grid; gap: 8px; }
+.sidebar-nav button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: #e6edf6;
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: .15s ease;
+}
+.sidebar-nav button:hover { background: rgba(255,255,255,0.06); }
+.sidebar-nav button.active {
+  background: rgba(14,165,168, .18);
+  border-color: rgba(14,165,168,.35);
+  color: #eaffff;
+}
+
+/* Main */
+.main-content {
+  padding: var(--sp-5);
+}
+
+/* Header strip (logo + actions) */
+.app-header {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-1);
+  margin-bottom: var(--sp-5);
+}
+
+/* ----------- Cards / Surfaces ----------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-1);
+  padding: var(--sp-4);
+}
+
+/* Stat grid */
+.stats-grid {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-4);
+  box-shadow: var(--shadow-1);
+  transition: .15s ease;
+}
+.stat-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-2); }
+.stat-card h3 { margin: 0 0 6px; font-size: 22px; font-weight: 800; color: var(--navy-900); }
+.stat-card p  { margin: 0; color: var(--text-500); font-size: 13px; }
+.stat-card.success { border-left: 4px solid var(--success); }
+.stat-card.alert   { border-left: 4px solid var(--danger); }
+.stat-card.total   { border-left: 4px solid var(--accent); }
+.stat-card.active  { outline: 2px solid rgba(14,165,168,.25); }
+
+/* ----------- Buttons ----------- */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  border-radius: 8px; padding: 8px 12px;
+  font-weight: 600; border: 1px solid transparent; cursor: pointer; transition: .15s ease;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-600); }
+.btn-danger  { background: var(--danger); color: #fff; }
+.btn-ghost   { background: #f8fafc; color: var(--text-900); border-color: var(--border); }
+.btn-ghost:hover { background: #eef2f7; }
+
+/* ----------- Table ----------- */
+.table {
+  width: 100%; border-collapse: collapse; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+  box-shadow: var(--shadow-1);
+}
+.table th {
+  text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .06em;
+  background: var(--surface-2); color: var(--text-700);
+  padding: 10px; border-bottom: 1px solid var(--border);
+}
+.table td {
+  padding: 12px 10px; border-bottom: 1px solid var(--border); color: var(--text-900);
+}
+.table tr:hover td { background: #fafcff; }
+
+/* ----------- Alerts / Pills ----------- */
+.pill { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.pill-info { background: var(--accent-100); color: var(--accent-600); }
+.pill-ok   { background: #ecfdf5; color: var(--success); }
+.pill-warn { background: #fffbeb; color: #b45309; }
+.pill-bad  { background: #fef2f2; color: #b91c1c; }
+
+/* ----------- Form bits ----------- */
+.input, .select {
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: #fff; color: var(--text-900);
+}
+.input:focus, .select:focus { outline: 2px solid rgba(14,165,168,.25); }
+
+/* ----------- Scrollbar (subtle) ----------- */
+*::-webkit-scrollbar { height: 10px; width: 10px; }
+*::-webkit-scrollbar-thumb { background: #cfd8ea; border-radius: 10px; }
+*::-webkit-scrollbar-thumb:hover { background: #b9c6e3; }

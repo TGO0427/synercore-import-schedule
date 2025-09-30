@@ -1,0 +1,38 @@
+{
+  "archivedAt": "2025-09-18T11:56:53.625Z",
+  "totalShipments": 2,
+  "archiveType": "manual",
+  "archiveReason": "Manual archive of selected ARRIVED shipments",
+  "data": [
+    {
+      "id": "ship_1758020350665_12",
+      "supplier": "FUTURA INGREDIENTS",
+      "orderRef": "EKOMUL MG 95 / APO0016422",
+      "finalPod": "PRETORIA",
+      "latestStatus": "arrived",
+      "weekNumber": 39,
+      "productName": "EKOMUL MG 95 ",
+      "quantity": 25190,
+      "cbm": 25.19,
+      "receivingWarehouse": "PRETORIA",
+      "notes": "",
+      "updatedAt": "2025-09-17T13:34:16.461Z",
+      "forwardingAgent": "DHL"
+    },
+    {
+      "id": "ship_1758020350665_13",
+      "supplier": "AFRICAN FOOD INDUSTRIES",
+      "orderRef": "ifaBake Strong HFN Improver",
+      "finalPod": "PRETORIA",
+      "latestStatus": "arrived",
+      "weekNumber": 38,
+      "productName": "ifaBake Strong HFN Improver",
+      "quantity": 271,
+      "cbm": 0.271,
+      "receivingWarehouse": "PRETORIA",
+      "notes": "",
+      "updatedAt": "2025-09-17T13:33:57.384Z",
+      "forwardingAgent": "Afrigistics"
+    }
+  ]
+}

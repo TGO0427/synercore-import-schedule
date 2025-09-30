@@ -1,0 +1,38 @@
+{
+  "archivedAt": "2025-09-18T11:55:05.623Z",
+  "totalShipments": 2,
+  "archiveType": "manual",
+  "archiveReason": "Manual archive of selected ARRIVED shipments",
+  "data": [
+    {
+      "id": "ship_1758020350665_10",
+      "supplier": "QIDA CHEMICAL",
+      "orderRef": "Disodium Phosphate Anhydrous / APO0016424",
+      "finalPod": "PRETORIA",
+      "latestStatus": "arrived",
+      "weekNumber": 37,
+      "productName": "Disodium Phosphate Anhydrous",
+      "quantity": 20160,
+      "cbm": 20.16,
+      "receivingWarehouse": "PRETORIA",
+      "notes": "",
+      "updatedAt": "2025-09-18T11:40:17.321Z",
+      "forwardingAgent": "MSC"
+    },
+    {
+      "id": "ship_1758020350665_11",
+      "supplier": "TRISTAR GLOBAL",
+      "orderRef": "POWDER FAT / APO0016139",
+      "finalPod": "PRETORIA",
+      "latestStatus": "arrived",
+      "weekNumber": 38,
+      "productName": "POWDER FAT ",
+      "quantity": 24729.6,
+      "cbm": 24.729599999999998,
+      "receivingWarehouse": "PRETORIA",
+      "notes": "",
+      "updatedAt": "2025-09-17T13:33:23.156Z",
+      "forwardingAgent": "DHL"
+    }
+  ]
+}

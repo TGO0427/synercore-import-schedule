@@ -1,0 +1,36 @@
+{
+  "archivedAt": "2025-09-23T12:40:53.962Z",
+  "totalShipments": 1,
+  "archiveType": "manual",
+  "archiveReason": "Manual archive of selected ARRIVED shipments",
+  "data": [
+    {
+      "id": "ship_1758020350665_11",
+      "supplier": "TRISTAR GLOBAL",
+      "orderRef": "POWDER FAT / APO0016139",
+      "finalPod": "PRETORIA",
+      "latestStatus": "stored",
+      "weekNumber": 38,
+      "productName": "POWDER FAT ",
+      "quantity": 24700,
+      "cbm": 24,
+      "receivingWarehouse": "PRETORIA",
+      "notes": "",
+      "updatedAt": "2025-09-23T12:40:15.714Z",
+      "forwardingAgent": "DHL",
+      "unloadingStartDate": "2025-09-23T12:39:23.155Z",
+      "unloadingCompletedDate": "2025-09-23T12:39:23.948Z",
+      "inspectionStatus": "passed",
+      "inspectedBy": "",
+      "inspectionDate": "2025-09-23T12:39:25.550Z",
+      "inspectionNotes": "",
+      "receivingStatus": "completed",
+      "receivedBy": "",
+      "receivingDate": "2025-09-23T12:39:28.705Z",
+      "receivedQuantity": 24700,
+      "receivingNotes": "",
+      "discrepancies": [],
+      "storedDate": "2025-09-23T12:40:16.261Z"
+    }
+  ]
+}

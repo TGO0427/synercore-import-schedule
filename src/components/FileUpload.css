@@ -1,0 +1,90 @@
+/* FileUpload.css */
+:root{
+  /* Resilinc-like cool blues / teals and neutrals you can tune globally */
+  --fu-accent: #1e88e5;         /* primary accent */
+  --fu-accent-600: #1565c0;
+  --fu-accent-50: #e3f2fd;
+  --fu-ink: #333;
+  --fu-ink-2: #666;
+  --fu-border: #e5e7eb;
+  --fu-bg: #ffffff;
+  --fu-drop-halo: rgba(30, 136, 229, 0.15);
+}
+
+.fu-section { margin: 1.25rem 0; }
+.fu-title { margin: 0 0 .75rem; color: var(--fu-ink); }
+.fu-subtitle { margin: 0 0 1rem; color: var(--fu-ink-2); }
+
+.fu-actions {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin-bottom: 1rem;
+}
+.fu-actions-hint { color: var(--fu-ink-2); font-size: .9rem; }
+
+.fu-dropzone {
+  position: relative;
+  border: 2px dashed var(--fu-border);
+  background: var(--fu-bg);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  transition: border-color .2s ease, box-shadow .2s ease, transform .1s ease;
+  cursor: pointer;
+}
+.fu-dropzone:hover {
+  border-color: var(--fu-accent);
+  box-shadow: 0 0 0 4px var(--fu-drop-halo);
+}
+.fu-dropzone.is-dragover {
+  border-color: var(--fu-accent);
+  box-shadow: 0 0 0 6px var(--fu-drop-halo);
+  transform: translateY(-1px);
+}
+.fu-dropzone.is-loading { cursor: progress; }
+
+.fu-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none; /* we trigger click programmatically */
+}
+
+.fu-state { display: grid; place-items: center; gap: .35rem; }
+.fu-state--loading .fu-emoji { font-size: 2rem; margin-bottom: .5rem; }
+
+.fu-emoji { font-size: 3rem; margin-bottom: .5rem; }
+.fu-emoji--accent { color: var(--fu-accent); }
+
+.fu-headline { margin: .25rem 0; }
+.fu-hint { margin: 0 0 .75rem; color: var(--fu-ink-2); }
+
+.fu-help {
+  margin-top: 1rem;
+  font-size: .9rem;
+  color: var(--fu-ink-2);
+}
+
+/* Optional: if your .btn/.btn-secondary don’t exist yet, here’s a minimal base */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  padding: .6rem 1rem;
+  border: 1px solid var(--fu-border);
+  background: var(--fu-bg);
+  color: var(--fu-ink);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .15s ease, box-shadow .15s ease, transform .05s ease;
+}
+.btn:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); transform: translateY(-1px); }
+
+.btn-secondary {
+  background: var(--fu-accent);
+  color: #fff;
+  border-color: var(--fu-accent);
+}
+.btn-secondary:hover { background: var(--fu-accent-600); border-color: var(--fu-accent-600); }

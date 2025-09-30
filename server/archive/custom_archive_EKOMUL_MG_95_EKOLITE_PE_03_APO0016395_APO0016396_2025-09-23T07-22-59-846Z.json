@@ -1,0 +1,39 @@
+{
+  "archivedAt": "2025-09-23T07:22:59.846Z",
+  "totalShipments": 1,
+  "archiveType": "manual",
+  "archiveReason": "Manual archive of selected ARRIVED shipments",
+  "data": [
+    {
+      "id": "ship_1758020350665_16",
+      "supplier": "FUTURA INGREDIENTS",
+      "orderRef": "EKOMUL MG 95 & EKOLITE PE 03 / APO0016395 & APO0016396",
+      "finalPod": "PRETORIA",
+      "latestStatus": "stored",
+      "weekNumber": "38",
+      "productName": "EKOMUL MG 95 & EKOLITE PE 03",
+      "quantity": 12090,
+      "cbm": 12.09,
+      "receivingWarehouse": "PRETORIA",
+      "notes": "",
+      "updatedAt": "2025-09-23T06:46:30.526Z",
+      "forwardingAgent": "DHL",
+      "unloadingStartDate": "2025-09-23T06:46:20.597Z",
+      "unloadingCompletedDate": "2025-09-23T06:46:22.083Z",
+      "inspectionStatus": "passed",
+      "inspectedBy": "",
+      "inspectionDate": "2025-09-23T06:46:23.645Z",
+      "inspectionNotes": "",
+      "selectedWeekDate": "2025-09-18T22:00:00.000Z",
+      "receivingStatus": "completed",
+      "receivedBy": "",
+      "receivingDate": "2025-09-23T06:46:27.441Z",
+      "receivedQuantity": 12090,
+      "receivingNotes": "",
+      "discrepancies": [],
+      "storedDate": "2025-09-23T06:46:30.521Z"
+    }
+  ],
+  "customName": "EKOMUL MG 95 EKOLITE PE 03 APO0016395 APO0016396",
+  "originalFileName": "custom_archive_Manual_Archive_-_EKOMUL_MG_95_EKOLITE_PE_03_APO0016395_APO0016396_2025-09-23T07-22-59-846Z.json"
+}

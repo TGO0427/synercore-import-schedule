@@ -1,0 +1,38 @@
+{
+  "archivedAt": "2025-09-23T07:39:34.927Z",
+  "totalShipments": 1,
+  "archiveType": "manual",
+  "archiveReason": "Manual archive of selected ARRIVED shipments",
+  "data": [
+    {
+      "id": "ship_1758020350665_14",
+      "supplier": "QIDA CHEMICAL",
+      "orderRef": "Sodium Hexametaphosphate\r\n(SHMP, SH62) / APO0016500",
+      "finalPod": "PRETORIA",
+      "latestStatus": "stored",
+      "weekNumber": 38,
+      "productName": "Sodium Hexametaphosphate",
+      "quantity": 24192,
+      "cbm": 24.192,
+      "receivingWarehouse": "PRETORIA",
+      "notes": "",
+      "updatedAt": "2025-09-23T06:45:59.093Z",
+      "forwardingAgent": "MSC",
+      "unloadingStartDate": "2025-09-23T06:45:49.637Z",
+      "unloadingCompletedDate": "2025-09-23T06:45:51.134Z",
+      "inspectionStatus": "passed",
+      "inspectedBy": "",
+      "inspectionDate": "2025-09-23T06:45:52.993Z",
+      "inspectionNotes": "",
+      "receivingStatus": "completed",
+      "receivedBy": "",
+      "receivingDate": "2025-09-23T06:45:56.542Z",
+      "receivedQuantity": 24192,
+      "receivingNotes": "",
+      "discrepancies": [],
+      "storedDate": "2025-09-23T06:45:59.089Z"
+    }
+  ],
+  "customName": "Sodium, Hexametaphosphate, SHMP, SH62, APO0016500",
+  "originalFileName": "manual_archive_Sodium_Hexametaphosphate_SHMP_SH62_APO0016500_2025-09-23T07-39-34-927Z.json"
+}
