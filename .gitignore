@@ -67,8 +67,10 @@ data/
 *.xlsx
 *.docx
 *.rtf
-*.png
 *.tgz
+
+# Allow Synercore logo files
+!src/assets/synercore-*.png
 
 # Claude settings (keep local)
 .claude/
