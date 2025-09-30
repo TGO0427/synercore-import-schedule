@@ -25,10 +25,21 @@ const allowedOrigins = [
   'http://127.0.0.1:3002',
   'http://172.20.18.135:3002',
   'https://f5797077a9ef.ngrok-free.app',
+  'https://synercore-import-schedule.vercel.app',
+  'https://synercore-import-schedule-*.vercel.app', // Preview deployments
 ];
 app.use(cors({
   origin(origin, cb) {
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    if (!origin) return cb(null, true);
+
+    // Check exact matches
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+
+    // Check Vercel preview deployments
+    if (origin.match(/^https:\/\/synercore-import-schedule.*\.vercel\.app$/)) {
+      return cb(null, true);
+    }
+
     cb(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
