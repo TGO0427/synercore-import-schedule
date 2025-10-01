@@ -712,36 +712,8 @@ function App() {
       <div className="sidebar">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h2>Import Supply Chain Management</h2>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              onClick={() => setSettingsOpen(true)}
-              style={{
-                padding: '6px 12px',
-                backgroundColor: '#667eea',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '0.8rem'
-              }}
-              title={`Logged in as ${username}`}
-            >
-              👤 User
-            </button>
-            <button
-              onClick={handleLogout}
-              style={{
-                padding: '6px 12px',
-                backgroundColor: '#dc3545',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '0.8rem'
-              }}
-            >
-              Logout
-            </button>
+          <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>
+            Logged in as: <strong>{username}</strong>
           </div>
         </div>
 
@@ -755,6 +727,12 @@ function App() {
           <li><button className={activeView === 'archives' ? 'active' : ''} onClick={() => setActiveView('archives')}>📦 Shipment Archives</button></li>
           <li><button className={activeView === 'rates' ? 'active' : ''} onClick={() => setActiveView('rates')}>💰 Rates & Quotes</button></li>
           <li><button className={activeView === 'stored' ? 'active' : ''} onClick={() => setActiveView('stored')}>🏪 Warehouse Stored</button></li>
+          <li style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
+            <button onClick={() => setSettingsOpen(true)} style={{ width: '100%', textAlign: 'left' }}>👤 User Settings</button>
+          </li>
+          <li>
+            <button onClick={handleLogout} style={{ width: '100%', textAlign: 'left', backgroundColor: '#dc3545' }}>🚪 Logout</button>
+          </li>
         </ul>
 
         {/* External links & quick stats unchanged (kept for brevity) */}
