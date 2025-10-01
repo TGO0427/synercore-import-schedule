@@ -13,6 +13,7 @@ import reportsRouter from './routes/reports.js';
 import emailImportRouter from './routes/emailImport.js';
 import adminRouter from './routes/admin.js';
 import warehouseCapacityRouter from './routes/warehouseCapacity.js';
+import authRouter from './routes/auth.js';
 
 // __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -66,6 +67,7 @@ app.use('/api', (req, res, next) => {
 });
 
 /* ---------------- Routers ---------------- */
+app.use('/api/auth', authRouter);
 app.use('/api/shipments', shipmentsRouter);
 app.use('/api/suppliers', suppliersRouter);
 app.use('/api/quotes', quotesRouter);

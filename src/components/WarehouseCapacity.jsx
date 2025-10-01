@@ -2,6 +2,7 @@ import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react'
 import { getCurrentWeekNumber } from '../utils/dateUtils';
 import { jsPDF } from 'jspdf';
 import { ShipmentStatus } from '../types/shipment';
+import { authUtils } from '../utils/auth';
 
 // Helper function to get current month's weeks using consistent week calculation
 const getCurrentMonthWeeks = () => {
@@ -245,19 +246,35 @@ function WarehouseCapacity({ shipments }) {
     // Save to database
     try {
       const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+      const token = authUtils.getToken();
+
+      if (!token) {
+        alert('You must be logged in to update warehouse capacity.');
+        return;
+      }
+
       const response = await fetch(`${apiUrl}/api/warehouse-capacity/${encodeURIComponent(warehouse)}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          ...authUtils.getAuthHeader()
         },
         body: JSON.stringify({ binsUsed: newValue }),
       });
+
+      if (response.status === 401 || response.status === 403) {
+        alert('Your session has expired. Please log in again.');
+        authUtils.clearAuth();
+        window.location.reload();
+        return;
+      }
 
       if (!response.ok) {
         throw new Error('Failed to save warehouse capacity');
       }
 
-      console.log(`✓ Saved ${warehouse} bins used: ${newValue}`);
+      const user = authUtils.getUser();
+      console.log(`✓ Saved ${warehouse} bins used: ${newValue} by ${user?.username}`);
     } catch (error) {
       console.error('Failed to save bins used data to database:', error);
       console.error('API URL used:', import.meta.env.VITE_API_BASE_URL);

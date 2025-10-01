@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { authUtils } from '../utils/auth';
 
 function LoginPage({ onLogin }) {
   const [credentials, setCredentials] = useState({
@@ -29,17 +30,33 @@ function LoginPage({ onLogin }) {
         return;
       }
 
-      // For demo purposes - you can implement actual authentication here
-      // For now, accept any non-empty credentials
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      
-      // Store authentication status
-      localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('username', credentials.username);
-      
-      onLogin(credentials.username);
+      // Call authentication API
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+      const response = await fetch(`${apiUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: credentials.username,
+          password: credentials.password
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Login failed. Please try again.');
+        return;
+      }
+
+      // Store authentication data
+      authUtils.setAuth(data.token, data.user);
+
+      onLogin(data.user.username);
     } catch (err) {
-      setError('Login failed. Please try again.');
+      console.error('Login error:', err);
+      setError('Network error. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -199,7 +216,7 @@ function LoginPage({ onLogin }) {
           </button>
         </form>
 
-        {/* Demo credentials info */}
+        {/* Info message */}
         <div style={{
           marginTop: '24px',
           padding: '16px',
@@ -213,14 +230,14 @@ function LoginPage({ onLogin }) {
             color: '#495057',
             marginBottom: '8px'
           }}>
-            Demo Access
+            ℹ️ First Time User?
           </div>
           <div style={{
             fontSize: '12px',
             color: '#6c757d',
             lineHeight: '1.4'
           }}>
-            Enter any username and password to access the system
+            Contact your administrator to create an account for you.
           </div>
         </div>
       </div>

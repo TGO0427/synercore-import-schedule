@@ -18,6 +18,7 @@ import { ExcelProcessor } from './utils/excelProcessor';
 import { Supplier } from './types/supplier';
 import { computeShipmentAlerts, createCustomAlert } from './utils/alerts';
 import { getApiUrl } from './config/api';
+import { authUtils } from './utils/auth';
 import './theme.css';
 
 // ----- real timeout helper for fetch (since fetch doesn't honor a "timeout" option) -----
@@ -54,11 +55,19 @@ function App() {
   useEffect(() => {
     console.log('App: Component mounted, starting initialization...');
 
-    const savedAuth = localStorage.getItem('isAuthenticated');
-    const savedUsername = localStorage.getItem('username');
-    if (savedAuth === 'true' && savedUsername) {
+    // Check for new JWT-based auth first
+    const user = authUtils.getUser();
+    if (user && authUtils.isAuthenticated()) {
       setIsAuthenticated(true);
-      setUsername(savedUsername);
+      setUsername(user.username);
+    } else {
+      // Fallback to legacy localStorage check
+      const savedAuth = localStorage.getItem('isAuthenticated');
+      const savedUsername = localStorage.getItem('username');
+      if (savedAuth === 'true' && savedUsername) {
+        setIsAuthenticated(true);
+        setUsername(savedUsername);
+      }
     }
 
     fetchShipments();
@@ -388,8 +397,7 @@ function App() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('username');
+    authUtils.clearAuth();
     setIsAuthenticated(false);
     setUsername('');
     setActiveView('shipping');

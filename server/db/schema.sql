@@ -47,14 +47,43 @@ CREATE TABLE IF NOT EXISTS suppliers (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Users table
+CREATE TABLE IF NOT EXISTS users (
+  id VARCHAR(255) PRIMARY KEY,
+  username VARCHAR(255) NOT NULL UNIQUE,
+  email VARCHAR(255) UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  full_name VARCHAR(255),
+  role VARCHAR(50) DEFAULT 'user',
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Warehouse capacity table
 CREATE TABLE IF NOT EXISTS warehouse_capacity (
   warehouse_name VARCHAR(255) PRIMARY KEY,
   bins_used INTEGER NOT NULL DEFAULT 0,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  updated_by VARCHAR(255),
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Warehouse capacity history (audit trail)
+CREATE TABLE IF NOT EXISTS warehouse_capacity_history (
+  id SERIAL PRIMARY KEY,
+  warehouse_name VARCHAR(255) NOT NULL,
+  bins_used INTEGER NOT NULL,
+  previous_value INTEGER,
+  changed_by VARCHAR(255),
+  changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- Create indexes for better query performance
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_warehouse_capacity_history_warehouse ON warehouse_capacity_history(warehouse_name);
+CREATE INDEX IF NOT EXISTS idx_warehouse_capacity_history_date ON warehouse_capacity_history(changed_at);
 CREATE INDEX IF NOT EXISTS idx_shipments_supplier ON shipments(supplier);
 CREATE INDEX IF NOT EXISTS idx_shipments_status ON shipments(latest_status);
 CREATE INDEX IF NOT EXISTS idx_shipments_week ON shipments(week_number);

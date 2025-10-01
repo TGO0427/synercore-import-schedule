@@ -23,6 +23,7 @@
   "author": "Synercore",
   "license": "ISC",
   "dependencies": {
+    "bcryptjs": "^3.0.2",
     "chart.js": "^4.5.0",
     "cors": "^2.8.5",
     "cron-parser": "^5.4.0",
@@ -30,6 +31,7 @@
     "express": "^4.18.2",
     "fs-extra": "^11.3.2",
     "imap": "^0.8.19",
+    "jsonwebtoken": "^9.0.2",
     "jspdf": "^3.0.2",
     "jspdf-autotable": "^5.0.2",
     "mailparser": "^3.7.4",
