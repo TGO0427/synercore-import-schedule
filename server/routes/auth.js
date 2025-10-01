@@ -171,4 +171,86 @@ router.get('/me', authenticateToken, async (req, res) => {
   }
 });
 
+// POST /api/auth/admin/create-user - Create user (admin only)
+router.post('/admin/create-user', authenticateToken, async (req, res) => {
+  try {
+    // Check if requester is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { username, email, password, fullName, role = 'user' } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
+
+    // Check if user already exists
+    const existingUser = await pool.query(
+      'SELECT id FROM users WHERE username = $1 OR email = $2',
+      [username, email]
+    );
+
+    if (existingUser.rows.length > 0) {
+      return res.status(409).json({ error: 'Username or email already exists' });
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Create user
+    const id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const result = await pool.query(
+      `INSERT INTO users (id, username, email, password_hash, full_name, role, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, username, email, full_name, role, is_active, created_at`,
+      [id, username, email || null, passwordHash, fullName || null, role, true]
+    );
+
+    const user = result.rows[0];
+
+    res.status(201).json({
+      message: 'User created successfully',
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        fullName: user.full_name,
+        role: user.role,
+        isActive: user.is_active
+      }
+    });
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+// GET /api/auth/admin/users - List all users (admin only)
+router.get('/admin/users', authenticateToken, async (req, res) => {
+  try {
+    // Check if requester is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const result = await pool.query(
+      'SELECT id, username, email, full_name, role, is_active, created_at FROM users ORDER BY created_at DESC'
+    );
+
+    res.json(result.rows.map(user => ({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      fullName: user.full_name,
+      role: user.role,
+      isActive: user.is_active,
+      createdAt: user.created_at
+    })));
+  } catch (error) {
+    console.error('Error listing users:', error);
+    res.status(500).json({ error: 'Failed to list users' });
+  }
+});
+
 export default router;
