@@ -1,143 +1,78 @@
 import { Shipment, ShipmentStatus } from '../../src/types/shipment.js';
 import archiveService from '../services/archiveService.js';
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import db from '../db/connection.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Data file path
-const SHIPMENTS_FILE = path.join(__dirname, '../data/shipments.json');
-
-let shipments = [];
-
-// Ensure data directory exists
-async function ensureDataDirectory() {
-  try {
-    await fs.mkdir(path.join(__dirname, '../data'), { recursive: true });
-  } catch (error) {
-    console.error('Error creating data directory:', error);
-  }
+// Helper to convert snake_case DB columns to camelCase
+function dbRowToShipment(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    supplier: row.supplier,
+    orderRef: row.order_ref,
+    finalPod: row.final_pod,
+    latestStatus: row.latest_status,
+    weekNumber: row.week_number,
+    productName: row.product_name,
+    quantity: row.quantity ? parseFloat(row.quantity) : null,
+    cbm: row.cbm ? parseFloat(row.cbm) : null,
+    receivingWarehouse: row.receiving_warehouse,
+    notes: row.notes,
+    updatedAt: row.updated_at,
+    forwardingAgent: row.forwarding_agent,
+    incoterm: row.incoterm,
+    vesselName: row.vessel_name,
+    selectedWeekDate: row.selected_week_date,
+    createdAt: row.created_at,
+    // Post-arrival workflow fields
+    unloadingStartDate: row.unloading_start_date,
+    unloadingCompletedDate: row.unloading_completed_date,
+    inspectionDate: row.inspection_date,
+    inspectionStatus: row.inspection_status,
+    inspectionNotes: row.inspection_notes,
+    inspectedBy: row.inspected_by,
+    receivingDate: row.receiving_date,
+    receivingStatus: row.receiving_status,
+    receivingNotes: row.receiving_notes,
+    receivedBy: row.received_by,
+    receivedQuantity: row.received_quantity ? parseFloat(row.received_quantity) : null,
+    discrepancies: row.discrepancies ? JSON.parse(row.discrepancies) : []
+  };
 }
-
-// File operation queue to prevent race conditions
-let fileOperationQueue = Promise.resolve();
-
-// Helper function to read shipments from file with retry logic
-async function readShipments(retries = 3) {
-  return fileOperationQueue = fileOperationQueue.then(async () => {
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        const data = await fs.readFile(SHIPMENTS_FILE, 'utf8');
-        return JSON.parse(data);
-      } catch (error) {
-        if (error.code === 'ENOENT') {
-          // File doesn't exist, return empty array
-          return [];
-        }
-
-        if (attempt < retries && (error.code === 'EBUSY' || error.code === 'EMFILE')) {
-          console.warn(`Read attempt ${attempt} failed, retrying:`, error.message);
-          await new Promise(resolve => setTimeout(resolve, 100 * attempt));
-          continue;
-        }
-
-        throw error;
-      }
-    }
-  });
-}
-
-// Helper function to write shipments to file with atomic write
-async function writeShipments(shipmentsData) {
-  return fileOperationQueue = fileOperationQueue.then(async () => {
-    await ensureDataDirectory();
-
-    // Use atomic write (write to temp file, then rename)
-    const tempFile = SHIPMENTS_FILE + '.tmp';
-    const data = JSON.stringify(shipmentsData, null, 2);
-
-    try {
-      await fs.writeFile(tempFile, data, 'utf8');
-      await fs.rename(tempFile, SHIPMENTS_FILE);
-    } catch (error) {
-      // Clean up temp file if write failed
-      try {
-        await fs.unlink(tempFile);
-      } catch (cleanupError) {
-        // Ignore cleanup errors
-      }
-      throw error;
-    }
-  });
-}
-
-// Load shipments on startup
-async function loadShipments() {
-  try {
-    shipments = await readShipments();
-    console.log(`Loaded ${shipments.length} shipments from persistent storage`);
-  } catch (error) {
-    console.error('Error loading shipments:', error);
-    shipments = [];
-  }
-}
-
-// Initialize shipments
-loadShipments();
 
 export class ShipmentsController {
   static async getAllShipments(req, res) {
     try {
-      // Reload data from file if shipments array is empty or stale
-      if (shipments.length === 0) {
-        console.log('Reloading shipments data...');
-        shipments = await readShipments();
-      }
+      const { sortBy = 'updated_at', order = 'asc', status, search } = req.query;
 
-      const { sortBy = 'estimatedArrival', order = 'asc', status, search } = req.query;
-      
-      let filteredShipments = [...shipments];
-      
+      let query = 'SELECT * FROM shipments WHERE 1=1';
+      const params = [];
+
       if (status) {
-        filteredShipments = filteredShipments.filter(s => s.latestStatus === status);
+        params.push(status);
+        query += ` AND latest_status = $${params.length}`;
       }
-      
-      if (search) {
-        const searchLower = search.toLowerCase();
-        filteredShipments = filteredShipments.filter(s => 
-          s.orderRef.toLowerCase().includes(searchLower) ||
-          s.supplier.toLowerCase().includes(searchLower) ||
-          s.finalPod.toLowerCase().includes(searchLower)
-        );
-      }
-      
-      filteredShipments.sort((a, b) => {
-        const aValue = a[sortBy];
-        const bValue = b[sortBy];
-        
-        if (aValue === null || aValue === undefined) return 1;
-        if (bValue === null || bValue === undefined) return -1;
-        
-        if (aValue instanceof Date && bValue instanceof Date) {
-          return order === 'asc' ? aValue - bValue : bValue - aValue;
-        }
-        
-        const comparison = aValue.toString().localeCompare(bValue.toString());
-        return order === 'asc' ? comparison : -comparison;
-      });
-      
-      console.log('getAllShipments: Sample values being returned:', filteredShipments.slice(0, 5).map(s => ({ id: s.id, cbm: s.cbm, status: s.latestStatus })));
 
-      // Set proper cache headers to prevent caching issues
+      if (search) {
+        params.push(`%${search.toLowerCase()}%`);
+        query += ` AND (LOWER(order_ref) LIKE $${params.length} OR LOWER(supplier) LIKE $${params.length} OR LOWER(final_pod) LIKE $${params.length})`;
+      }
+
+      // Map camelCase to snake_case for sorting
+      const sortColumn = sortBy === 'estimatedArrival' ? 'updated_at' : sortBy.replace(/([A-Z])/g, '_$1').toLowerCase();
+      query += ` ORDER BY ${sortColumn} ${order.toUpperCase()}`;
+
+      const result = await db.query(query, params);
+      const shipments = result.rows.map(dbRowToShipment);
+
+      console.log('getAllShipments: Sample values being returned:', shipments.slice(0, 5).map(s => ({ id: s.id, cbm: s.cbm, status: s.latestStatus })));
+
       res.set({
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0'
       });
 
-      res.json(filteredShipments);
+      res.json(shipments);
     } catch (error) {
       console.error('Error in getAllShipments:', error);
       res.status(500).json({
@@ -148,14 +83,14 @@ export class ShipmentsController {
     }
   }
 
-  static getShipmentById(req, res) {
+  static async getShipmentById(req, res) {
     console.log('DEBUG: getShipmentById method called with id:', req.params.id);
     try {
-      const shipment = shipments.find(s => s.id === req.params.id);
-      if (!shipment) {
+      const result = await db.query('SELECT * FROM shipments WHERE id = $1', [req.params.id]);
+      if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Shipment not found' });
       }
-      res.json(shipment);
+      res.json(dbRowToShipment(result.rows[0]));
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -164,14 +99,35 @@ export class ShipmentsController {
   static async createShipment(req, res) {
     try {
       const shipmentData = req.body;
-      const newShipment = new Shipment({
-        ...shipmentData,
-        id: `ship_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      });
-      
-      shipments.push(newShipment);
-      await writeShipments(shipments);
-      res.status(201).json(newShipment);
+      const id = `ship_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      await db.query(
+        `INSERT INTO shipments (
+          id, supplier, order_ref, final_pod, latest_status, week_number,
+          product_name, quantity, cbm, receiving_warehouse, notes,
+          forwarding_agent, incoterm, vessel_name, selected_week_date
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+        [
+          id,
+          shipmentData.supplier,
+          shipmentData.orderRef || null,
+          shipmentData.finalPod || null,
+          shipmentData.latestStatus || null,
+          shipmentData.weekNumber || null,
+          shipmentData.productName || null,
+          shipmentData.quantity || null,
+          shipmentData.cbm || null,
+          shipmentData.receivingWarehouse || null,
+          shipmentData.notes || null,
+          shipmentData.forwardingAgent || null,
+          shipmentData.incoterm || null,
+          shipmentData.vesselName || null,
+          shipmentData.selectedWeekDate || null
+        ]
+      );
+
+      const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      res.status(201).json(dbRowToShipment(result.rows[0]));
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
@@ -179,16 +135,52 @@ export class ShipmentsController {
 
   static async updateShipment(req, res) {
     try {
-      const index = shipments.findIndex(s => s.id === req.params.id);
-      if (index === -1) {
+      const { id } = req.params;
+      const data = req.body;
+
+      await db.query(
+        `UPDATE shipments SET
+          supplier = COALESCE($1, supplier),
+          order_ref = COALESCE($2, order_ref),
+          final_pod = COALESCE($3, final_pod),
+          latest_status = COALESCE($4, latest_status),
+          week_number = COALESCE($5, week_number),
+          product_name = COALESCE($6, product_name),
+          quantity = COALESCE($7, quantity),
+          cbm = COALESCE($8, cbm),
+          receiving_warehouse = COALESCE($9, receiving_warehouse),
+          notes = COALESCE($10, notes),
+          forwarding_agent = COALESCE($11, forwarding_agent),
+          incoterm = COALESCE($12, incoterm),
+          vessel_name = COALESCE($13, vessel_name),
+          selected_week_date = COALESCE($14, selected_week_date),
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $15`,
+        [
+          data.supplier,
+          data.orderRef,
+          data.finalPod,
+          data.latestStatus,
+          data.weekNumber,
+          data.productName,
+          data.quantity,
+          data.cbm,
+          data.receivingWarehouse,
+          data.notes,
+          data.forwardingAgent,
+          data.incoterm,
+          data.vesselName,
+          data.selectedWeekDate,
+          id
+        ]
+      );
+
+      const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Shipment not found' });
       }
-      
-      const updatedShipment = { ...shipments[index], ...req.body, updatedAt: new Date() };
-      shipments[index] = updatedShipment;
-      
-      await writeShipments(shipments);
-      res.json(updatedShipment);
+
+      res.json(dbRowToShipment(result.rows[0]));
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
@@ -196,59 +188,95 @@ export class ShipmentsController {
 
   static async deleteShipment(req, res) {
     try {
-      const index = shipments.findIndex(s => s.id === req.params.id);
-      if (index === -1) {
+      const result = await db.query('DELETE FROM shipments WHERE id = $1 RETURNING id', [req.params.id]);
+      if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Shipment not found' });
       }
-      
-      shipments.splice(index, 1);
-      await writeShipments(shipments);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
   }
 
-  static getShipmentsByStatus(req, res) {
+  static async getShipmentsByStatus(req, res) {
     try {
       const { status } = req.params;
-      const filteredShipments = shipments.filter(s => s.status === status);
-      res.json(filteredShipments);
+      const result = await db.query('SELECT * FROM shipments WHERE latest_status = $1', [status]);
+      res.json(result.rows.map(dbRowToShipment));
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
   }
 
-  static getDelayedShipments(req, res) {
+  static async getDelayedShipments(req, res) {
     try {
-      const delayedShipments = shipments.filter(shipment => {
-        return shipment.latestStatus === ShipmentStatus.DELAYED;
-      });
-      
-      res.json(delayedShipments);
+      const result = await db.query('SELECT * FROM shipments WHERE latest_status = $1', [ShipmentStatus.DELAYED]);
+      res.json(result.rows.map(dbRowToShipment));
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
   }
 
   static async bulkImport(shipmentsData) {
-    // Archive existing data before importing new schedule
-    if (shipments.length > 0) {
-      console.log(`Archiving ${shipments.length} existing shipments before new import`);
-      try {
-        const archiveFileName = archiveService.archiveCurrentData(shipments);
-        console.log(`Successfully archived to: ${archiveFileName}`);
-      } catch (error) {
-        console.error('Failed to archive existing data:', error);
-        // Continue with import even if archiving fails
+    const client = await db.getPool().connect();
+
+    try {
+      await client.query('BEGIN');
+
+      // Archive existing data before importing
+      const existingResult = await client.query('SELECT * FROM shipments');
+      if (existingResult.rows.length > 0) {
+        console.log(`Archiving ${existingResult.rows.length} existing shipments before new import`);
+        try {
+          const existingShipments = existingResult.rows.map(dbRowToShipment);
+          const archiveFileName = archiveService.archiveCurrentData(existingShipments);
+          console.log(`Successfully archived to: ${archiveFileName}`);
+        } catch (error) {
+          console.error('Failed to archive existing data:', error);
+        }
       }
+
+      // Delete all existing shipments
+      await client.query('DELETE FROM shipments');
+
+      // Insert new shipments
+      for (const shipment of shipmentsData) {
+        await client.query(
+          `INSERT INTO shipments (
+            id, supplier, order_ref, final_pod, latest_status, week_number,
+            product_name, quantity, cbm, receiving_warehouse, notes, updated_at,
+            forwarding_agent, incoterm, vessel_name, selected_week_date
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+          [
+            shipment.id,
+            shipment.supplier,
+            shipment.orderRef || null,
+            shipment.finalPod || null,
+            shipment.latestStatus || null,
+            shipment.weekNumber || null,
+            shipment.productName || null,
+            shipment.quantity || null,
+            shipment.cbm || null,
+            shipment.receivingWarehouse || null,
+            shipment.notes || null,
+            shipment.updatedAt || new Date().toISOString(),
+            shipment.forwardingAgent || null,
+            shipment.incoterm || null,
+            shipment.vesselName || null,
+            shipment.selectedWeekDate || null
+          ]
+        );
+      }
+
+      await client.query('COMMIT');
+      console.log(`Bulk import completed: ${shipmentsData.length} shipments loaded`);
+      return shipmentsData.length;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
     }
-    
-    // Replace all existing shipments with new data
-    shipments = [...shipmentsData];
-    await writeShipments(shipments);
-    console.log(`Bulk import completed: ${shipments.length} shipments loaded`);
-    return shipments.length;
   }
 
   static async bulkImportEndpoint(req, res) {
@@ -256,8 +284,8 @@ export class ShipmentsController {
       console.log('Bulk import endpoint called with', req.body.length, 'shipments');
       console.log('Sample shipment CBM values:', req.body.slice(0, 3).map(s => ({ id: s.id, cbm: s.cbm })));
       const count = await ShipmentsController.bulkImport(req.body);
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: `Successfully imported ${count} shipments`,
         count: count
       });
@@ -296,10 +324,11 @@ export class ShipmentsController {
     }
   }
 
-  // Auto-archive endpoints
-  static getAutoArchiveStats(req, res) {
+  static async getAutoArchiveStats(req, res) {
     try {
       const { daysOld = 30 } = req.query;
+      const result = await db.query('SELECT * FROM shipments');
+      const shipments = result.rows.map(dbRowToShipment);
       const stats = archiveService.getAutoArchiveStats(shipments, parseInt(daysOld));
       res.json(stats);
     } catch (error) {
@@ -308,28 +337,45 @@ export class ShipmentsController {
   }
 
   static async performAutoArchive(req, res) {
+    const client = await db.getPool().connect();
+
     try {
+      await client.query('BEGIN');
+
       const { daysOld = 30 } = req.body;
       console.log(`Performing auto-archive for ARRIVED shipments older than ${daysOld} days`);
 
-      const result = archiveService.archiveOldArrivedShipments(shipments, parseInt(daysOld));
+      const result = await client.query('SELECT * FROM shipments');
+      const allShipments = result.rows.map(dbRowToShipment);
 
-      // Update the in-memory shipments array with remaining shipments
-      shipments.length = 0;
-      shipments.push(...result.remaining);
+      const archiveResult = archiveService.archiveOldArrivedShipments(allShipments, parseInt(daysOld));
 
-      // Persist the updated shipments list
-      await ShipmentsController.persistShipments();
+      // Delete archived shipments
+      const archivedIds = archiveResult.remaining.length < allShipments.length
+        ? allShipments.filter(s => !archiveResult.remaining.find(r => r.id === s.id)).map(s => s.id)
+        : [];
+
+      if (archivedIds.length > 0) {
+        await client.query(
+          `DELETE FROM shipments WHERE id = ANY($1::text[])`,
+          [archivedIds]
+        );
+      }
+
+      await client.query('COMMIT');
 
       res.json({
         success: true,
-        archivedCount: result.archived,
-        remainingCount: result.remaining.length,
-        archiveFileName: result.archiveFileName
+        archivedCount: archiveResult.archived,
+        remainingCount: archiveResult.remaining.length,
+        archiveFileName: archiveResult.archiveFileName
       });
     } catch (error) {
+      await client.query('ROLLBACK');
       console.error('Auto-archive error:', error);
       res.status(500).json({ error: error.message });
+    } finally {
+      client.release();
     }
   }
 
@@ -358,7 +404,11 @@ export class ShipmentsController {
   }
 
   static async performManualArchive(req, res) {
+    const client = await db.getPool().connect();
+
     try {
+      await client.query('BEGIN');
+
       const { shipmentIds } = req.body;
       console.log(`Performing manual archive for ${shipmentIds.length} selected shipments`);
 
@@ -366,45 +416,42 @@ export class ShipmentsController {
         return res.status(400).json({ error: 'No shipment IDs provided' });
       }
 
-      // Find shipments to archive (ARRIVED or STORED shipments)
-      const shipmentsToArchive = shipments.filter(s =>
-        shipmentIds.includes(s.id) && (s.latestStatus === 'arrived_pta' || s.latestStatus === 'arrived_klm' || s.latestStatus === 'stored')
+      // Find shipments to archive
+      const result = await client.query(
+        `SELECT * FROM shipments WHERE id = ANY($1::text[]) AND latest_status IN ('arrived_pta', 'arrived_klm', 'stored')`,
+        [shipmentIds]
       );
+      const shipmentsToArchive = result.rows.map(dbRowToShipment);
 
       if (shipmentsToArchive.length === 0) {
         return res.status(400).json({ error: 'No valid ARRIVED or STORED shipments found to archive' });
       }
 
       // Create archive
-      const result = archiveService.archiveSpecificShipments(shipmentsToArchive);
+      const archiveResult = archiveService.archiveSpecificShipments(shipmentsToArchive);
 
-      // Remove archived shipments from main array
-      const remainingShipments = shipments.filter(s => !shipmentIds.includes(s.id));
+      // Remove archived shipments
+      await client.query(
+        `DELETE FROM shipments WHERE id = ANY($1::text[])`,
+        [shipmentIds]
+      );
 
-      // Update the in-memory shipments array
-      shipments.length = 0;
-      shipments.push(...remainingShipments);
+      const remaining = await client.query('SELECT COUNT(*) FROM shipments');
 
-      // Persist the updated shipments list
-      await ShipmentsController.persistShipments();
+      await client.query('COMMIT');
 
       res.json({
         success: true,
         archivedCount: shipmentsToArchive.length,
-        remainingCount: remainingShipments.length,
-        archiveFileName: result.archiveFileName
+        remainingCount: parseInt(remaining.rows[0].count),
+        archiveFileName: archiveResult.archiveFileName
       });
     } catch (error) {
+      await client.query('ROLLBACK');
       console.error('Manual archive error:', error);
       res.status(500).json({ error: error.message });
-    }
-  }
-
-  static async persistShipments() {
-    try {
-      await writeShipments(shipments);
-    } catch (error) {
-      console.error('Error persisting shipments:', error);
+    } finally {
+      client.release();
     }
   }
 
@@ -412,22 +459,22 @@ export class ShipmentsController {
   static async startUnloading(req, res) {
     try {
       const { id } = req.params;
-      const shipment = shipments.find(s => s.id === id);
 
-      if (!shipment) {
-        return res.status(404).json({ error: 'Shipment not found' });
+      await db.query(
+        `UPDATE shipments SET
+          latest_status = 'unloading',
+          unloading_start_date = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1 AND latest_status IN ('arrived_pta', 'arrived_klm')`,
+        [id]
+      );
+
+      const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Shipment not found or not in ARRIVED status' });
       }
 
-      if (shipment.latestStatus !== 'arrived_pta' && shipment.latestStatus !== 'arrived_klm') {
-        return res.status(400).json({ error: 'Shipment must be in ARRIVED status to start unloading' });
-      }
-
-      shipment.latestStatus = 'unloading';
-      shipment.unloadingStartDate = new Date().toISOString();
-      shipment.updatedAt = new Date().toISOString();
-
-      await writeShipments(shipments);
-      res.json(shipment);
+      res.json(dbRowToShipment(result.rows[0]));
     } catch (error) {
       console.error('Error starting unloading:', error);
       res.status(500).json({ error: error.message });
@@ -437,22 +484,22 @@ export class ShipmentsController {
   static async completeUnloading(req, res) {
     try {
       const { id } = req.params;
-      const shipment = shipments.find(s => s.id === id);
 
-      if (!shipment) {
-        return res.status(404).json({ error: 'Shipment not found' });
+      await db.query(
+        `UPDATE shipments SET
+          latest_status = 'inspection_pending',
+          unloading_completed_date = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1 AND latest_status = 'unloading'`,
+        [id]
+      );
+
+      const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Shipment not found or not in UNLOADING status' });
       }
 
-      if (shipment.latestStatus !== 'unloading') {
-        return res.status(400).json({ error: 'Shipment must be in UNLOADING status' });
-      }
-
-      shipment.latestStatus = 'inspection_pending';
-      shipment.unloadingCompletedDate = new Date().toISOString();
-      shipment.updatedAt = new Date().toISOString();
-
-      await writeShipments(shipments);
-      res.json(shipment);
+      res.json(dbRowToShipment(result.rows[0]));
     } catch (error) {
       console.error('Error completing unloading:', error);
       res.status(500).json({ error: error.message });
@@ -463,24 +510,24 @@ export class ShipmentsController {
     try {
       const { id } = req.params;
       const { inspectedBy } = req.body;
-      const shipment = shipments.find(s => s.id === id);
 
-      if (!shipment) {
-        return res.status(404).json({ error: 'Shipment not found' });
+      await db.query(
+        `UPDATE shipments SET
+          latest_status = 'inspecting',
+          inspection_status = 'in_progress',
+          inspected_by = $2,
+          inspection_date = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1 AND latest_status = 'inspection_pending'`,
+        [id, inspectedBy || '']
+      );
+
+      const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Shipment not found or not in INSPECTION_PENDING status' });
       }
 
-      if (shipment.latestStatus !== 'inspection_pending') {
-        return res.status(400).json({ error: 'Shipment must be in INSPECTION_PENDING status' });
-      }
-
-      shipment.latestStatus = 'inspecting';
-      shipment.inspectionStatus = 'in_progress';
-      shipment.inspectedBy = inspectedBy || '';
-      shipment.inspectionDate = new Date().toISOString();
-      shipment.updatedAt = new Date().toISOString();
-
-      await writeShipments(shipments);
-      res.json(shipment);
+      res.json(dbRowToShipment(result.rows[0]));
     } catch (error) {
       console.error('Error starting inspection:', error);
       res.status(500).json({ error: error.message });
@@ -491,24 +538,24 @@ export class ShipmentsController {
     try {
       const { id } = req.params;
       const { passed, notes, inspectedBy } = req.body;
-      const shipment = shipments.find(s => s.id === id);
 
-      if (!shipment) {
-        return res.status(404).json({ error: 'Shipment not found' });
+      await db.query(
+        `UPDATE shipments SET
+          inspection_status = $2,
+          latest_status = $3,
+          inspection_notes = $4,
+          inspected_by = COALESCE($5, inspected_by),
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1 AND latest_status = 'inspecting'`,
+        [id, passed ? 'passed' : 'failed', passed ? 'inspection_passed' : 'inspection_failed', notes || '', inspectedBy]
+      );
+
+      const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Shipment not found or not in INSPECTING status' });
       }
 
-      if (shipment.latestStatus !== 'inspecting') {
-        return res.status(400).json({ error: 'Shipment must be in INSPECTING status' });
-      }
-
-      shipment.inspectionStatus = passed ? 'passed' : 'failed';
-      shipment.latestStatus = passed ? 'inspection_passed' : 'inspection_failed';
-      shipment.inspectionNotes = notes || '';
-      if (inspectedBy) shipment.inspectedBy = inspectedBy;
-      shipment.updatedAt = new Date().toISOString();
-
-      await writeShipments(shipments);
-      res.json(shipment);
+      res.json(dbRowToShipment(result.rows[0]));
     } catch (error) {
       console.error('Error completing inspection:', error);
       res.status(500).json({ error: error.message });
@@ -519,24 +566,24 @@ export class ShipmentsController {
     try {
       const { id } = req.params;
       const { receivedBy } = req.body;
-      const shipment = shipments.find(s => s.id === id);
 
-      if (!shipment) {
-        return res.status(404).json({ error: 'Shipment not found' });
+      await db.query(
+        `UPDATE shipments SET
+          latest_status = 'receiving',
+          receiving_status = 'in_progress',
+          received_by = $2,
+          receiving_date = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1 AND latest_status = 'inspection_passed'`,
+        [id, receivedBy || '']
+      );
+
+      const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Shipment not found or inspection not passed' });
       }
 
-      if (shipment.latestStatus !== 'inspection_passed') {
-        return res.status(400).json({ error: 'Shipment must have passed inspection to start receiving' });
-      }
-
-      shipment.latestStatus = 'receiving';
-      shipment.receivingStatus = 'in_progress';
-      shipment.receivedBy = receivedBy || '';
-      shipment.receivingDate = new Date().toISOString();
-      shipment.updatedAt = new Date().toISOString();
-
-      await writeShipments(shipments);
-      res.json(shipment);
+      res.json(dbRowToShipment(result.rows[0]));
     } catch (error) {
       console.error('Error starting receiving:', error);
       res.status(500).json({ error: error.message });
@@ -549,38 +596,48 @@ export class ShipmentsController {
       console.log('DEBUG: completeReceiving body:', req.body);
       const { id } = req.params;
       const { receivedQuantity, notes, receivedBy, discrepancies } = req.body;
-      const shipment = shipments.find(s => s.id === id);
 
-      if (!shipment) {
+      // Get current shipment to compare quantity
+      const current = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      if (current.rows.length === 0) {
         return res.status(404).json({ error: 'Shipment not found' });
       }
 
-      if (shipment.latestStatus !== 'receiving') {
+      const shipment = current.rows[0];
+      if (shipment.latest_status !== 'receiving') {
         return res.status(400).json({ error: 'Shipment must be in RECEIVING status' });
       }
 
-      shipment.receivedQuantity = receivedQuantity;
-      shipment.receivingNotes = notes || '';
-      shipment.discrepancies = discrepancies || [];
-      if (receivedBy) shipment.receivedBy = receivedBy;
+      let receivingStatus = 'completed';
+      let latestStatus = 'received';
 
       if (discrepancies && discrepancies.length > 0) {
-        shipment.receivingStatus = 'discrepancy';
+        receivingStatus = 'discrepancy';
         console.log('DEBUG: Setting status to discrepancy');
-      } else if (receivedQuantity < shipment.quantity) {
-        shipment.receivingStatus = 'partial';
+      } else if (receivedQuantity < parseFloat(shipment.quantity)) {
+        receivingStatus = 'partial';
         console.log('DEBUG: Setting status to partial');
       } else {
-        shipment.receivingStatus = 'completed';
-        shipment.latestStatus = 'received';
         console.log('DEBUG: Setting status to received');
       }
 
-      shipment.updatedAt = new Date().toISOString();
-      console.log('DEBUG: Updated shipment status to:', shipment.latestStatus);
+      await db.query(
+        `UPDATE shipments SET
+          received_quantity = $2,
+          receiving_notes = $3,
+          discrepancies = $4,
+          received_by = COALESCE($5, received_by),
+          receiving_status = $6,
+          latest_status = $7,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1`,
+        [id, receivedQuantity, notes || '', JSON.stringify(discrepancies || []), receivedBy, receivingStatus, latestStatus]
+      );
 
-      await writeShipments(shipments);
-      res.json(shipment);
+      const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      console.log('DEBUG: Updated shipment status to:', result.rows[0].latest_status);
+
+      res.json(dbRowToShipment(result.rows[0]));
     } catch (error) {
       console.error('Error completing receiving:', error);
       res.status(500).json({ error: error.message });
@@ -590,28 +647,28 @@ export class ShipmentsController {
   static async markAsStored(req, res) {
     try {
       const { id } = req.params;
-      const shipment = shipments.find(s => s.id === id);
 
-      if (!shipment) {
-        return res.status(404).json({ error: 'Shipment not found' });
+      await db.query(
+        `UPDATE shipments SET
+          latest_status = 'stored',
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1 AND latest_status = 'received'`,
+        [id]
+      );
+
+      const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Shipment not found or not in RECEIVED status' });
       }
 
-      if (shipment.latestStatus !== 'received') {
-        return res.status(400).json({ error: 'Shipment must be in RECEIVED status to mark as stored' });
-      }
-
-      shipment.latestStatus = 'stored';
-      shipment.updatedAt = new Date().toISOString();
-
-      await writeShipments(shipments);
-      res.json(shipment);
+      res.json(dbRowToShipment(result.rows[0]));
     } catch (error) {
       console.error('Error marking as stored:', error);
       res.status(500).json({ error: error.message });
     }
   }
 
-  static getPostArrivalShipments(req, res) {
+  static async getPostArrivalShipments(req, res) {
     console.log('DEBUG: getPostArrivalShipments method called');
     try {
       const postArrivalStates = [
@@ -619,15 +676,15 @@ export class ShipmentsController {
         'inspection_failed', 'inspection_passed', 'receiving', 'received'
       ];
 
-      const postArrivalShipments = shipments.filter(s =>
-        postArrivalStates.includes(s.latestStatus)
+      const result = await db.query(
+        `SELECT * FROM shipments WHERE latest_status = ANY($1::text[])`,
+        [postArrivalStates]
       );
 
-      res.json(postArrivalShipments);
+      res.json(result.rows.map(dbRowToShipment));
     } catch (error) {
       console.error('Error getting post-arrival shipments:', error);
       res.status(500).json({ error: error.message });
     }
   }
 }
-// Restart server
