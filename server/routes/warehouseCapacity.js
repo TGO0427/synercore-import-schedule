@@ -24,39 +24,24 @@ router.get('/', async (req, res) => {
   }
 });
 
-// PUT/UPDATE warehouse capacity for a specific warehouse (requires authentication)
-router.put('/:warehouseName', authenticateToken, async (req, res) => {
+// PUT/UPDATE warehouse capacity for a specific warehouse
+router.put('/:warehouseName', async (req, res) => {
   try {
     const { warehouseName } = req.params;
     const { binsUsed } = req.body;
-    const userId = req.user.id;
 
     if (typeof binsUsed !== 'number' || binsUsed < 0) {
       return res.status(400).json({ error: 'Invalid binsUsed value' });
     }
 
-    // Get previous value for history
-    const previousResult = await pool.query(
-      'SELECT bins_used FROM warehouse_capacity WHERE warehouse_name = $1',
-      [warehouseName]
-    );
-    const previousValue = previousResult.rows.length > 0 ? previousResult.rows[0].bins_used : null;
-
-    // Upsert: Insert or update if exists
+    // Simple update without authentication for now
     const result = await pool.query(
-      `INSERT INTO warehouse_capacity (warehouse_name, bins_used, updated_by, updated_at)
-       VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+      `INSERT INTO warehouse_capacity (warehouse_name, bins_used, updated_at)
+       VALUES ($1, $2, CURRENT_TIMESTAMP)
        ON CONFLICT (warehouse_name)
-       DO UPDATE SET bins_used = $2, updated_by = $3, updated_at = CURRENT_TIMESTAMP
-       RETURNING warehouse_name, bins_used, updated_by, updated_at`,
-      [warehouseName, binsUsed, userId]
-    );
-
-    // Add to history
-    await pool.query(
-      `INSERT INTO warehouse_capacity_history (warehouse_name, bins_used, previous_value, changed_by, changed_at)
-       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)`,
-      [warehouseName, binsUsed, previousValue, userId]
+       DO UPDATE SET bins_used = $2, updated_at = CURRENT_TIMESTAMP
+       RETURNING warehouse_name, bins_used, updated_at`,
+      [warehouseName, binsUsed]
     );
 
     res.json({
@@ -65,7 +50,11 @@ router.put('/:warehouseName', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating warehouse capacity:', error);
-    res.status(500).json({ error: 'Failed to update warehouse capacity' });
+    console.error('Error details:', error.message);
+    res.status(500).json({
+      error: 'Failed to update warehouse capacity',
+      details: error.message
+    });
   }
 });
 
