@@ -726,7 +726,7 @@ function App() {
               }}
               title={`Logged in as ${username}`}
             >
-              ⚙️ Settings
+              👤 User
             </button>
             <button
               onClick={handleLogout}
