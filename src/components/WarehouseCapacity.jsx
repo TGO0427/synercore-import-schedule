@@ -68,20 +68,30 @@ const SimpleBinInput = ({ warehouseKey, initialValue, maxValue, onUpdate }) => {
 
 function WarehouseCapacity({ shipments }) {
   const [selectedWarehouse, setSelectedWarehouse] = useState('all');
-  const [editableBinsUsed, setEditableBinsUsed] = useState(() => {
-    // Load from localStorage on initial render
-    try {
-      const saved = localStorage.getItem('warehouseBinsUsed');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
+  const [editableBinsUsed, setEditableBinsUsed] = useState({});
   const editableBinsUsedRef = useRef({});
+  const [isLoadingCapacity, setIsLoadingCapacity] = useState(true);
 
-  // Initialize ref with localStorage data
+  // Load warehouse capacity data from database on mount
   useEffect(() => {
-    editableBinsUsedRef.current = { ...editableBinsUsed };
+    const loadCapacityData = async () => {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+        const response = await fetch(`${apiUrl}/api/warehouse-capacity`);
+
+        if (response.ok) {
+          const data = await response.json();
+          setEditableBinsUsed(data);
+          editableBinsUsedRef.current = { ...data };
+        }
+      } catch (error) {
+        console.warn('Failed to load warehouse capacity data:', error);
+      } finally {
+        setIsLoadingCapacity(false);
+      }
+    };
+
+    loadCapacityData();
   }, []);
 
   // Memoize current month weeks to avoid recalculating on every render
@@ -222,21 +232,35 @@ function WarehouseCapacity({ shipments }) {
     return { warehouseStats, currentWeek };
   }, [shipments, editableBinsUsed, currentMonthWeeks]);
 
-  const handleBinsUsedChange = useCallback((warehouse, newValue) => {
+  const handleBinsUsedChange = useCallback(async (warehouse, newValue) => {
     const updatedBinsUsed = {
       ...editableBinsUsed,
       [warehouse]: newValue
     };
-    
+
     // Update both state and ref for consistency
     setEditableBinsUsed(updatedBinsUsed);
     editableBinsUsedRef.current[warehouse] = newValue;
-    
-    // Save to localStorage
+
+    // Save to database
     try {
-      localStorage.setItem('warehouseBinsUsed', JSON.stringify(updatedBinsUsed));
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      const response = await fetch(`${apiUrl}/api/warehouse-capacity/${encodeURIComponent(warehouse)}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ binsUsed: newValue }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save warehouse capacity');
+      }
+
+      console.log(`✓ Saved ${warehouse} bins used: ${newValue}`);
     } catch (error) {
-      console.warn('Failed to save bins used data to localStorage:', error);
+      console.error('Failed to save bins used data to database:', error);
+      alert(`Failed to save changes for ${warehouse}. Please try again.`);
     }
   }, [editableBinsUsed]);
 

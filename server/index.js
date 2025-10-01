@@ -12,6 +12,7 @@ import quotesRouter from './routes/quotes.js';
 import reportsRouter from './routes/reports.js';
 import emailImportRouter from './routes/emailImport.js';
 import adminRouter from './routes/admin.js';
+import warehouseCapacityRouter from './routes/warehouseCapacity.js';
 
 // __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -71,6 +72,7 @@ app.use('/api/quotes', quotesRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/email-import', emailImportRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/warehouse-capacity', warehouseCapacityRouter);
 
 /* ---------------- Endpoints ---------------- */
 app.post('/api/documents/upload', upload.array('documents', 10), async (req, res, next) => {

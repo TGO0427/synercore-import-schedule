@@ -46,6 +46,13 @@ CREATE TABLE IF NOT EXISTS suppliers (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Warehouse capacity table
+CREATE TABLE IF NOT EXISTS warehouse_capacity (
+  warehouse_name VARCHAR(255) PRIMARY KEY,
+  bins_used INTEGER NOT NULL DEFAULT 0,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_shipments_supplier ON shipments(supplier);
 CREATE INDEX IF NOT EXISTS idx_shipments_status ON shipments(latest_status);
