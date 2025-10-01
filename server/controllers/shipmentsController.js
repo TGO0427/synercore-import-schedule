@@ -15,6 +15,7 @@ function dbRowToShipment(row) {
     productName: row.product_name,
     quantity: row.quantity ? parseFloat(row.quantity) : null,
     cbm: row.cbm ? parseFloat(row.cbm) : null,
+    palletQty: row.pallet_qty ? parseFloat(row.pallet_qty) : null,
     receivingWarehouse: row.receiving_warehouse,
     notes: row.notes,
     updatedAt: row.updated_at,
@@ -104,9 +105,9 @@ export class ShipmentsController {
       await db.query(
         `INSERT INTO shipments (
           id, supplier, order_ref, final_pod, latest_status, week_number,
-          product_name, quantity, cbm, receiving_warehouse, notes,
+          product_name, quantity, cbm, pallet_qty, receiving_warehouse, notes,
           forwarding_agent, incoterm, vessel_name, selected_week_date
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
         [
           id,
           shipmentData.supplier,
@@ -117,6 +118,7 @@ export class ShipmentsController {
           shipmentData.productName || null,
           shipmentData.quantity || null,
           shipmentData.cbm || null,
+          shipmentData.palletQty || null,
           shipmentData.receivingWarehouse || null,
           shipmentData.notes || null,
           shipmentData.forwardingAgent || null,
@@ -148,14 +150,15 @@ export class ShipmentsController {
           product_name = COALESCE($6, product_name),
           quantity = COALESCE($7, quantity),
           cbm = COALESCE($8, cbm),
-          receiving_warehouse = COALESCE($9, receiving_warehouse),
-          notes = COALESCE($10, notes),
-          forwarding_agent = COALESCE($11, forwarding_agent),
-          incoterm = COALESCE($12, incoterm),
-          vessel_name = COALESCE($13, vessel_name),
-          selected_week_date = COALESCE($14, selected_week_date),
+          pallet_qty = COALESCE($9, pallet_qty),
+          receiving_warehouse = COALESCE($10, receiving_warehouse),
+          notes = COALESCE($11, notes),
+          forwarding_agent = COALESCE($12, forwarding_agent),
+          incoterm = COALESCE($13, incoterm),
+          vessel_name = COALESCE($14, vessel_name),
+          selected_week_date = COALESCE($15, selected_week_date),
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = $15`,
+        WHERE id = $16`,
         [
           data.supplier,
           data.orderRef,
@@ -165,6 +168,7 @@ export class ShipmentsController {
           data.productName,
           data.quantity,
           data.cbm,
+          data.palletQty,
           data.receivingWarehouse,
           data.notes,
           data.forwardingAgent,

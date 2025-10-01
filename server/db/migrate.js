@@ -47,9 +47,9 @@ async function migrate() {
           await db.query(
             `INSERT INTO shipments (
               id, supplier, order_ref, final_pod, latest_status, week_number,
-              product_name, quantity, cbm, receiving_warehouse, notes, updated_at,
+              product_name, quantity, cbm, pallet_qty, receiving_warehouse, notes, updated_at,
               forwarding_agent, incoterm, vessel_name, selected_week_date
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
             ON CONFLICT (id) DO UPDATE SET
               supplier = EXCLUDED.supplier,
               order_ref = EXCLUDED.order_ref,
@@ -59,6 +59,7 @@ async function migrate() {
               product_name = EXCLUDED.product_name,
               quantity = EXCLUDED.quantity,
               cbm = EXCLUDED.cbm,
+              pallet_qty = EXCLUDED.pallet_qty,
               receiving_warehouse = EXCLUDED.receiving_warehouse,
               notes = EXCLUDED.notes,
               updated_at = EXCLUDED.updated_at,
@@ -76,6 +77,7 @@ async function migrate() {
               shipment.productName || null,
               shipment.quantity || null,
               shipment.cbm || null,
+              shipment.palletQty || null,
               shipment.receivingWarehouse || null,
               shipment.notes || null,
               shipment.updatedAt || new Date().toISOString(),

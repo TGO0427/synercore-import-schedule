@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS shipments (
   product_name VARCHAR(500),
   quantity NUMERIC,
   cbm NUMERIC,
+  pallet_qty NUMERIC,
   receiving_warehouse VARCHAR(255),
   notes TEXT,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
