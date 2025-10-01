@@ -10,6 +10,22 @@ async function migrate() {
   try {
     console.log('🔄 Starting database migration...');
 
+    // Check if DATABASE_URL is set
+    if (!process.env.DATABASE_URL) {
+      console.log('⚠️  DATABASE_URL not set, skipping migration');
+      process.exit(0);
+      return;
+    }
+
+    // Test database connection
+    try {
+      await db.query('SELECT 1');
+      console.log('✓ Database connection successful');
+    } catch (error) {
+      console.error('❌ Database connection failed:', error.message);
+      process.exit(1);
+    }
+
     // Read and execute schema
     const schemaSQL = await fs.readFile(path.join(__dirname, 'schema.sql'), 'utf8');
     await db.query(schemaSQL);
