@@ -76,7 +76,7 @@ function WarehouseCapacity({ shipments }) {
   useEffect(() => {
     const loadCapacityData = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
         const response = await fetch(`${apiUrl}/api/warehouse-capacity`);
 
         if (response.ok) {
@@ -244,7 +244,7 @@ function WarehouseCapacity({ shipments }) {
 
     // Save to database
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
       const response = await fetch(`${apiUrl}/api/warehouse-capacity/${encodeURIComponent(warehouse)}`, {
         method: 'PUT',
         headers: {
@@ -260,7 +260,9 @@ function WarehouseCapacity({ shipments }) {
       console.log(`✓ Saved ${warehouse} bins used: ${newValue}`);
     } catch (error) {
       console.error('Failed to save bins used data to database:', error);
-      alert(`Failed to save changes for ${warehouse}. Please try again.`);
+      console.error('API URL used:', import.meta.env.VITE_API_BASE_URL);
+      console.error('Full error:', error.message);
+      alert(`Failed to save changes for ${warehouse}. Please check console for details and try again.`);
     }
   }, [editableBinsUsed]);
 
