@@ -15,6 +15,7 @@ import NotificationContainer from './components/NotificationContainer';
 import SynercoreLogo from './components/SynercoreLogo';
 import AlertHub from './components/AlertHub';
 import UserSettings from './components/UserSettings';
+import HelpGuide from './components/HelpGuide';
 import { ExcelProcessor } from './utils/excelProcessor';
 import { Supplier } from './types/supplier';
 import { computeShipmentAlerts, createCustomAlert } from './utils/alerts';
@@ -50,6 +51,9 @@ function App() {
 
   // User Settings state
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Help Guide state
+  const [helpOpen, setHelpOpen] = useState(false);
 
   // prevent hammering the API during background polling
   const lastFetchRef = useRef({ shipments: 0, suppliers: 0 });
@@ -728,6 +732,9 @@ function App() {
           <li><button className={activeView === 'rates' ? 'active' : ''} onClick={() => setActiveView('rates')}>💰 Rates & Quotes</button></li>
           <li><button className={activeView === 'stored' ? 'active' : ''} onClick={() => setActiveView('stored')}>🏪 Warehouse Stored</button></li>
           <li style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
+            <button onClick={() => setHelpOpen(true)} style={{ width: '100%', textAlign: 'left' }}>📚 Help & Guide</button>
+          </li>
+          <li>
             <button onClick={() => setSettingsOpen(true)} style={{ width: '100%', textAlign: 'left' }}>👤 User Settings</button>
           </li>
           <li>
@@ -933,6 +940,11 @@ function App() {
         <UserSettings
           username={username}
           onClose={() => setSettingsOpen(false)}
+        />
+      )}
+      {helpOpen && (
+        <HelpGuide
+          onClose={() => setHelpOpen(false)}
         />
       )}
     </div>
