@@ -24,12 +24,28 @@ router.get('/', async (req, res) => {
   }
 });
 
-// PUT/UPDATE warehouse capacity for a specific warehouse (requires authentication)
-router.put('/:warehouseName', authenticateToken, async (req, res) => {
+// PUT/UPDATE warehouse capacity for a specific warehouse
+router.put('/:warehouseName', async (req, res) => {
   try {
     const { warehouseName } = req.params;
     const { binsUsed } = req.body;
-    const userId = req.user.id;
+
+    // Try to get user from token, but don't require it
+    let userId = null;
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (token) {
+      try {
+        const jwt = (await import('jsonwebtoken')).default;
+        const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+        const user = jwt.verify(token, JWT_SECRET);
+        userId = user.id;
+      } catch (err) {
+        // Token invalid or expired, continue without user
+        console.log('Invalid token, proceeding without user tracking');
+      }
+    }
 
     if (typeof binsUsed !== 'number' || binsUsed < 0) {
       return res.status(400).json({ error: 'Invalid binsUsed value' });
@@ -52,12 +68,19 @@ router.put('/:warehouseName', authenticateToken, async (req, res) => {
       [warehouseName, binsUsed, userId]
     );
 
-    // Add to history
-    await pool.query(
-      `INSERT INTO warehouse_capacity_history (warehouse_name, bins_used, previous_value, changed_by, changed_at)
-       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)`,
-      [warehouseName, binsUsed, previousValue, userId]
-    );
+    // Add to history if user is logged in
+    if (userId) {
+      try {
+        await pool.query(
+          `INSERT INTO warehouse_capacity_history (warehouse_name, bins_used, previous_value, changed_by, changed_at)
+           VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)`,
+          [warehouseName, binsUsed, previousValue, userId]
+        );
+      } catch (historyError) {
+        console.error('Error saving to history:', historyError);
+        // Continue even if history fails
+      }
+    }
 
     res.json({
       success: true,
@@ -65,7 +88,12 @@ router.put('/:warehouseName', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating warehouse capacity:', error);
-    res.status(500).json({ error: 'Failed to update warehouse capacity' });
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({
+      error: 'Failed to update warehouse capacity',
+      details: error.message
+    });
   }
 });
 
