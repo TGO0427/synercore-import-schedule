@@ -14,6 +14,7 @@ import LoginPage from './components/LoginPage';
 import NotificationContainer from './components/NotificationContainer';
 import SynercoreLogo from './components/SynercoreLogo';
 import AlertHub from './components/AlertHub';
+import UserSettings from './components/UserSettings';
 import { ExcelProcessor } from './utils/excelProcessor';
 import { Supplier } from './types/supplier';
 import { computeShipmentAlerts, createCustomAlert } from './utils/alerts';
@@ -46,6 +47,9 @@ function App() {
   // Alert Hub state
   const [alertHubOpen, setAlertHubOpen] = useState(false);
   const [alerts, setAlerts] = useState([]);
+
+  // User Settings state
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // prevent hammering the API during background polling
   const lastFetchRef = useRef({ shipments: 0, suppliers: 0 });
@@ -708,21 +712,37 @@ function App() {
       <div className="sidebar">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h2>Import Supply Chain Management</h2>
-          <button
-            onClick={handleLogout}
-            style={{
-              padding: '6px 12px',
-              backgroundColor: '#dc3545',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '0.8rem'
-            }}
-            title={`Logged in as ${username}`}
-          >
-            Logout
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => setSettingsOpen(true)}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: '#667eea',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.8rem'
+              }}
+              title={`Logged in as ${username}`}
+            >
+              ⚙️ Settings
+            </button>
+            <button
+              onClick={handleLogout}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: '#dc3545',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.8rem'
+              }}
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
         <ul className="sidebar-nav">
@@ -931,6 +951,12 @@ function App() {
         onDismiss={handleAlertDismiss}
         onMarkRead={handleAlertMarkRead}
       />
+      {settingsOpen && (
+        <UserSettings
+          username={username}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
     </div>
   );
 }
