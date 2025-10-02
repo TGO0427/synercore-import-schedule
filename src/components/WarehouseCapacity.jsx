@@ -134,8 +134,8 @@ function WarehouseCapacity({ shipments }) {
 
     currentMonthShipments.forEach(shipment => {
       const warehouse = shipment.receivingWarehouse || shipment.finalPod || 'Unassigned';
-      // Use palletQty field, or migrate existing CBM values (which were actually pallet quantities)
-      const pallets = shipment.palletQty || shipment.cbm || 0;
+      // Use palletQty field only
+      const pallets = shipment.palletQty || 0;
       const weekNumber = parseInt(shipment.weekNumber) || currentWeek;
 
       // Debug current week shipments for our target warehouses
@@ -695,7 +695,7 @@ function WarehouseCapacity({ shipments }) {
         const totalPalletsFromQty = incomingShipments.reduce((sum, s) => sum + (s.palletQty || 0), 0);
         const totalQuantity = incomingShipments.reduce((sum, s) => sum + (s.quantity || 0), 0);
         const totalPallets = incomingShipments.reduce((sum, s) => {
-          return sum + (s.palletQty || s.cbm || 0);
+          return sum + (s.palletQty || 0);
         }, 0);
 
         // Summary boxes (4 across)
@@ -1072,7 +1072,7 @@ function WarehouseCapacity({ shipments }) {
       .map(shipment => ({
         name: shipment.productName || 'Unknown Product',
         quantity: shipment.quantity || 0,
-        palletQty: shipment.palletQty || shipment.cbm || 0,
+        palletQty: shipment.palletQty || 0,
         warehouse: shipment.receivingWarehouse || shipment.finalPod || 'Unassigned',
         weekNumber: shipment.weekNumber || currentWeek,
         id: shipment.id
@@ -1376,7 +1376,7 @@ function WarehouseCapacity({ shipments }) {
     const warehouseData = incomingShipments.reduce((acc, shipment) => {
       const warehouse = shipment.receivingWarehouse || shipment.finalPod || 'Unassigned';
       const quantity = shipment.quantity || 0;
-      const pallets = shipment.palletQty || shipment.cbm || 0;
+      const pallets = shipment.palletQty || 0;
       
       if (!acc[warehouse]) {
         acc[warehouse] = { palletQty: 0, quantity: 0, pallets: 0, products: [] };
@@ -1387,7 +1387,7 @@ function WarehouseCapacity({ shipments }) {
       acc[warehouse].pallets += pallets;
       acc[warehouse].products.push({
         name: shipment.productName || 'Unknown Product',
-        palletQty: shipment.palletQty || shipment.cbm || 0,
+        palletQty: shipment.palletQty || 0,
         quantity: quantity,
         pallets: pallets,
         status: shipment.latestStatus
@@ -1548,7 +1548,7 @@ function WarehouseCapacity({ shipments }) {
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#9c27b0', marginBottom: '0.5rem' }}>
                   {incomingShipments.reduce((sum, s) => {
-                    return sum + (s.palletQty || s.cbm || 0);
+                    return sum + (s.palletQty || 0);
                   }, 0).toLocaleString()}
                 </div>
                 <div style={{ fontSize: '0.9rem', color: '#666', fontWeight: '500' }}>

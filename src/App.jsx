@@ -174,11 +174,11 @@ function App() {
       const normalized = (data || []).map(s => ({
         ...s,
         quantity: Number(s.quantity) || 0,
-        cbm: Number(s.cbm) || 0,
+        palletQty: Number(s.palletQty) || 0,
         weekNumber: Number(s.weekNumber) || 0,
       }));
 
-      console.table(normalized.slice(0, 5).map(x => ({ prod: x.productName, cbm: x.cbm, type: typeof x.cbm })));
+      console.table(normalized.slice(0, 5).map(x => ({ prod: x.productName, palletQty: x.palletQty, type: typeof x.palletQty })));
 
       // Always replace array to force downstream children (WeekCalendar) to re-render with fresh values
       setShipments(normalized);
@@ -307,7 +307,6 @@ function App() {
         weekNumber: Number(s.weekNumber) || 0,
         productName: s.productName,
         quantity: Number(s.quantity) || 0,
-        cbm: Number(s.cbm) || 0,
         palletQty: Number(s.palletQty) || 0,
         receivingWarehouse: s.receivingWarehouse,
         forwardingAgent: s.forwardingAgent ?? '',
@@ -319,7 +318,7 @@ function App() {
       const payload = processedShipments.map(toPlain);
 
       console.table(payload.slice(0, 5).map(x => ({
-        prod: x.productName, qty: x.quantity, cbm: x.cbm, type: typeof x.cbm
+        prod: x.productName, qty: x.quantity, palletQty: x.palletQty, type: typeof x.palletQty
       })));
 
       const response = await fetch(getApiUrl('/api/shipments/bulk-import'), {
@@ -350,9 +349,9 @@ function App() {
       await fetchShipments();
       await fetchSuppliers();
 
-      // If server dropped CBM, patch UI using what we just sent (match by orderRef)
-      const cbmByOrderRef = new Map(payload.map(s => [s.orderRef, s.cbm]));
-      setShipments(prev => prev.map(s => ({ ...s, cbm: cbmByOrderRef.get(s.orderRef) ?? s.cbm })));
+      // Ensure palletQty is preserved in UI after import (match by orderRef)
+      const palletQtyByOrderRef = new Map(payload.map(s => [s.orderRef, s.palletQty]));
+      setShipments(prev => prev.map(s => ({ ...s, palletQty: palletQtyByOrderRef.get(s.orderRef) ?? s.palletQty })));
     } catch (err) {
       console.error('App: File upload error:', err);
       showError(`Failed to process file: ${err.message}`);
