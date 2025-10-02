@@ -197,7 +197,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
       const totalPalletQty = filteredAndSortedProducts.reduce((sum, p) => sum + normNum(p.palletQty), 0);
       const uniqueWarehouses = new Set(filteredAndSortedProducts.map(p => p.receivingWarehouse || 'Unassigned')).size;
 
-      worksheetData.push([`Total Products: ${filteredAndSortedProducts.length}`, '', `Total Quantity: ${totalQuantity}`, '', `Total Pallet Qty: ${totalPalletQty.toFixed(0)}`, '', `Warehouses: ${uniqueWarehouses}`]);
+      worksheetData.push([`Total Products: ${filteredAndSortedProducts.length}`, '', `Total Quantity: ${totalQuantity}`, '', `Total Pallet Qty: ${totalPalletQty}`, '', `Warehouses: ${uniqueWarehouses}`]);
       
       if (selectedWarehouse !== 'all') {
         worksheetData.push([`Filtered by Warehouse: ${selectedWarehouse}`]);
@@ -251,7 +251,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
       worksheetData.push([
         'TOTALS:',
         totalQuantity,
-        totalCbm.toFixed(2),
+        totalPalletQty,
         `${uniqueWarehouses} warehouses`,
         '',
         '',
@@ -300,7 +300,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
         ['Key Metrics'],
         ['Total Products:', filteredAndSortedProducts.length],
         ['Total Quantity:', totalQuantity],
-        ['Total Pallet Qty:', totalCbm.toFixed(0)],
+        ['Total Pallet Qty:', totalPalletQty],
         ['Unique Warehouses:', uniqueWarehouses],
         [''],
         ['Status Breakdown'],
