@@ -308,7 +308,11 @@ function App() {
         productName: s.productName,
         quantity: Number(s.quantity) || 0,
         cbm: Number(s.cbm) || 0,
+        palletQty: Number(s.palletQty) || 0,
         receivingWarehouse: s.receivingWarehouse,
+        forwardingAgent: s.forwardingAgent ?? '',
+        vesselName: s.vesselName ?? '',
+        incoterm: s.incoterm ?? '',
         notes: s.notes ?? '',
       });
 
