@@ -6,13 +6,22 @@ let pool = null;
 
 export function getPool() {
   if (!pool) {
-    if (!process.env.DATABASE_URL) {
+    // Build connection string from individual vars or use DATABASE_URL
+    let connectionString = process.env.DATABASE_URL;
+
+    if (!connectionString && process.env.PGHOST) {
+      const { PGUSER, PGPASSWORD, PGHOST, PGPORT, PGDATABASE } = process.env;
+      connectionString = `postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}`;
+      console.log('Built DATABASE_URL from individual PG variables');
+    }
+
+    if (!connectionString) {
       console.warn('⚠️  DATABASE_URL environment variable is not set');
-      throw new Error('DATABASE_URL environment variable is not set');
+      throw new Error('DATABASE_URL or PG variables are not set');
     }
 
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString,
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
       max: 20,
       idleTimeoutMillis: 30000,
