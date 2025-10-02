@@ -36,13 +36,18 @@ app.use(cors({
     if (!origin) return cb(null, true);
 
     // Check exact matches
-    if (allowedOrigins.includes(origin)) return cb(null, true);
-
-    // Check Vercel preview deployments
-    if (origin.match(/^https:\/\/synercore-import-schedule.*\.vercel\.app$/)) {
+    if (allowedOrigins.includes(origin)) {
+      console.log(`✓ CORS allowed (exact match): ${origin}`);
       return cb(null, true);
     }
 
+    // Check Vercel preview deployments
+    if (origin.match(/^https:\/\/synercore-import-schedule.*\.vercel\.app$/)) {
+      console.log(`✓ CORS allowed (vercel pattern): ${origin}`);
+      return cb(null, true);
+    }
+
+    console.error(`✗ CORS blocked: ${origin}`);
     cb(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
