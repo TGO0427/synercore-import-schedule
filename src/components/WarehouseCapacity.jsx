@@ -702,7 +702,7 @@ function WarehouseCapacity({ shipments }) {
         const boxWidth = (pageWidth - 50) / 4;
         const summaryData = [
           { value: totalProducts, label: 'Total Products', color: { r: 33, g: 150, b: 243 } },
-          { value: totalPalletsFromQty.toFixed(0), label: 'Total Pallet Qty', color: { r: 76, g: 175, b: 80 } },
+          { value: totalPalletsFromQty.toLocaleString(), label: 'Total Pallet Qty', color: { r: 76, g: 175, b: 80 } },
           { value: totalQuantity.toLocaleString(), label: 'Total Tonnage', color: { r: 255, g: 152, b: 0 } },
           { value: totalPallets.toLocaleString(), label: 'Estimated Pallets', color: { r: 156, g: 39, b: 176 } }
         ];
@@ -1531,7 +1531,7 @@ function WarehouseCapacity({ shipments }) {
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4caf50', marginBottom: '0.5rem' }}>
-                  {incomingShipments.reduce((sum, s) => sum + (s.palletQty || 0), 0).toFixed(0)}
+                  {incomingShipments.reduce((sum, s) => sum + (s.palletQty || 0), 0).toLocaleString()}
                 </div>
                 <div style={{ fontSize: '0.9rem', color: '#666', fontWeight: '500' }}>
                   Total Pallet Qty
