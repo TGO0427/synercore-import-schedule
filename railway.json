@@ -1,2 +1,15 @@
-{ "$schema": "https://railway.app/railway.schema.json" }
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "npm run build"   // Nixpacks already does `npm ci` in install phase
+  },
+  "deploy": {
+    "startCommand": "npx serve -s dist -l ${PORT}",
+    "healthcheckPath": "/",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  }
+}
+
 
