@@ -1,45 +1,38 @@
 {
-  "name": "synercore-import-schedule",
+  "name": "synercore-import-schedule-web",
   "version": "1.0.0",
+  "description": "Synercore Import Schedule – frontend (Vite + React)",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "server": "nodemon server/index.js",
-    "client": "vite",
+    "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --host --port ${PORT}",
-    "start": "serve -s dist -l ${PORT}",          // optional; not used if set in railway.json
-    "migrate": "node server/db/migrate.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "serve -s dist -l ${PORT}"
   },
+  "keywords": [
+    "shipment",
+    "schedule",
+    "import",
+    "logistics",
+    "frontend"
+  ],
+  "author": "Synercore",
+  "license": "ISC",
   "dependencies": {
-    "bcryptjs": "^3.0.2",
     "chart.js": "^4.5.0",
-    "cors": "^2.8.5",
-    "cron-parser": "^5.4.0",
     "date-fns": "^2.30.0",
-    "express": "^4.18.2",
-    "fs-extra": "^11.3.2",
-    "imap": "^0.8.19",
-    "jsonwebtoken": "^9.0.2",
     "jspdf": "^3.0.2",
     "jspdf-autotable": "^5.0.2",
-    "mailparser": "^3.7.4",
-    "multer": "^1.4.5-lts.1",
-    "pdf-parse": "^1.1.1",
-    "pg": "^8.16.3",
+    "react": "^18.2.0",
     "react-chartjs-2": "^5.3.0",
-    "xlsx": "^0.18.5",
-    "serve": "^14.2.3"                            // <-- add this
+    "react-dom": "^18.2.0",
+    "serve": "^14.2.3",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
     "@vitejs/plugin-react": "^4.0.3",
-    "concurrently": "^8.2.0",
-    "nodemon": "^3.0.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
     "vite": "^4.4.5"
   }
 }
