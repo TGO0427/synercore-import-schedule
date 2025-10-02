@@ -45,9 +45,16 @@ export function getPool() {
 
   const useSsl = mustUseSsl(connectionString);
 
+  const sslConfig = useSsl
+    ? {
+        rejectUnauthorized: false,
+        checkServerIdentity: () => undefined // Skip hostname verification
+      }
+    : false;
+
   pool = new Pool({
     connectionString,
-    ssl: useSsl ? { rejectUnauthorized: false } : false,
+    ssl: sslConfig,
     max: parseInt(process.env.PG_POOL_MAX || '20', 10),
     idleTimeoutMillis: parseInt(process.env.PG_IDLE_TIMEOUT_MS || '30000', 10),
     connectionTimeoutMillis: parseInt(process.env.PG_CONNECTION_TIMEOUT_MS || '10000', 10),
