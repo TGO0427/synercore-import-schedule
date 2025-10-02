@@ -248,9 +248,9 @@ export class ShipmentsController {
         await client.query(
           `INSERT INTO shipments (
             id, supplier, order_ref, final_pod, latest_status, week_number,
-            product_name, quantity, cbm, receiving_warehouse, notes, updated_at,
+            product_name, quantity, cbm, pallet_qty, receiving_warehouse, notes, updated_at,
             forwarding_agent, incoterm, vessel_name, selected_week_date
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
           [
             shipment.id,
             shipment.supplier,
@@ -261,6 +261,7 @@ export class ShipmentsController {
             shipment.productName || null,
             shipment.quantity || null,
             shipment.cbm || null,
+            shipment.palletQty || null,
             shipment.receivingWarehouse || null,
             shipment.notes || null,
             shipment.updatedAt || new Date().toISOString(),
