@@ -126,8 +126,10 @@ export class ExcelProcessor {
         productName: (row['PRODUCT NAME'] || row['Product Name'] || this.extractProductName(row['ORDER/REF'] || row['Order/Ref'] || '')),
         quantity: this.parseQuantity(row['QUANTITY'] || row['Quantity'] || row['Qty']),
         palletQty: palletQtyValue,
-        receivingWarehouse: row['RECEIVING WAREHOUSE'] || row['Receiving Warehouse'] || row['FINAL POD'] || row['Final POD'] || '',
+        receivingWarehouse: row['RECEIVING WAREHOUSE'] || row['Receiving Warehouse'] || row['WAREHOUSE'] || row['Warehouse'] || row['FINAL POD'] || row['Final POD'] || '',
         forwardingAgent: row['FORWARDING AGENT'] || row['Forwarding Agent'] || '',
+        vesselName: row['VESSEL NAME'] || row['Vessel Name'] || '',
+        incoterm: row['INCOTERM'] || row['Incoterm'] || '',
         notes: row['NOTES'] || row['Notes'] || row['COMMENTS'] || row['Comments'] || '',
       });
     });
