@@ -46,6 +46,8 @@ export function getPool() {
   // Debug: log connection details (hide password)
   const debugUrl = connectionString.replace(/:[^:@]+@/, ':****@');
   console.log(`Connecting to: ${debugUrl}`);
+  console.log(`DATABASE_URL env var: ${process.env.DATABASE_URL ? 'SET' : 'NOT SET'}`);
+  console.log(`PGHOST env var: ${process.env.PGHOST || 'NOT SET'}`);
 
   const useSsl = mustUseSsl(connectionString);
 
