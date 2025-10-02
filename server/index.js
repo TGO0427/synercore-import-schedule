@@ -1,4 +1,7 @@
 // server/index.js
+// Disable SSL certificate validation for Railway Postgres
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
