@@ -12,7 +12,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
   const [statusFilter, setStatusFilter] = useState('all');
 
   // local edit buffer so we only commit on blur / Enter
-  const [edits, setEdits] = useState({}); // { [id]: { quantity?, cbm?, receivingWarehouse? } }
+  const [edits, setEdits] = useState({}); // { [id]: { quantity?, palletQty?, receivingWarehouse? } }
 
   const normStr = (v) => (v ?? '').toString().toLowerCase();
   const normNum = (v) => {
@@ -24,7 +24,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
     ({
       productName: 'Product',
       quantity: 'Quantity',
-      cbm: 'Pallet Qty',
+      palletQty: 'Pallet Qty',
       receivingWarehouse: 'Receiving Warehouse',
       weekNumber: 'ETA Week',
     }[k] || k);
@@ -45,9 +45,9 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
     [onUpdateShipment]
   );
 
-  const handleCbmUpdate = useCallback(
-    (shipmentId, newCbm) => {
-      onUpdateShipment(shipmentId, { cbm: Number(newCbm) || 0 });
+  const handlePalletQtyUpdate = useCallback(
+    (shipmentId, newPalletQty) => {
+      onUpdateShipment(shipmentId, { palletQty: Number(newPalletQty) || 0 });
     },
     [onUpdateShipment]
   );
@@ -92,7 +92,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
     const pending = edits[shipment.id]?.[field];
     if (pending === undefined) return; // nothing to commit
     if (field === 'quantity') handleQuantityUpdate(shipment.id, pending);
-    else if (field === 'cbm') handleCbmUpdate(shipment.id, pending);
+    else if (field === 'palletQty') handlePalletQtyUpdate(shipment.id, pending);
     else if (field === 'receivingWarehouse') handleWarehouseUpdate(shipment.id, pending);
     cancelEdit(shipment.id, field);
   };
@@ -107,8 +107,8 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
       e.currentTarget.value =
         field === 'quantity'
           ? normNum(shipment.quantity)
-          : field === 'cbm'
-          ? normNum(shipment.cbm)
+          : field === 'palletQty'
+          ? normNum(shipment.palletQty)
           : shipment.receivingWarehouse || '';
       e.currentTarget.blur();
     }
@@ -144,7 +144,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
 
     const key = sortConfig.key;
     const dir = sortConfig.direction === 'asc' ? 1 : -1;
-    const numericKeys = new Set(['quantity', 'cbm', 'weekNumber']);
+    const numericKeys = new Set(['quantity', 'palletQty', 'weekNumber']);
 
     const toComparable = (item) => {
       const val = item?.[key];
@@ -194,10 +194,10 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
       
       // Add summary statistics
       const totalQuantity = filteredAndSortedProducts.reduce((sum, p) => sum + normNum(p.quantity), 0);
-      const totalCbm = filteredAndSortedProducts.reduce((sum, p) => sum + normNum(p.cbm), 0);
+      const totalPalletQty = filteredAndSortedProducts.reduce((sum, p) => sum + normNum(p.palletQty), 0);
       const uniqueWarehouses = new Set(filteredAndSortedProducts.map(p => p.receivingWarehouse || 'Unassigned')).size;
 
-      worksheetData.push([`Total Products: ${filteredAndSortedProducts.length}`, '', `Total Quantity: ${totalQuantity}`, '', `Total Pallet Qty: ${totalCbm.toFixed(0)}`, '', `Warehouses: ${uniqueWarehouses}`]);
+      worksheetData.push([`Total Products: ${filteredAndSortedProducts.length}`, '', `Total Quantity: ${totalQuantity}`, '', `Total Pallet Qty: ${totalPalletQty.toFixed(0)}`, '', `Warehouses: ${uniqueWarehouses}`]);
       
       if (selectedWarehouse !== 'all') {
         worksheetData.push([`Filtered by Warehouse: ${selectedWarehouse}`]);
@@ -235,7 +235,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
         worksheetData.push([
           shipment.productName || '',
           normNum(shipment.quantity),
-          normNum(shipment.cbm),
+          normNum(shipment.palletQty),
           shipment.receivingWarehouse || 'Unassigned',
           `Week ${normNum(shipment.weekNumber)}`,
           shipment.supplier || '',
@@ -595,8 +595,8 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
               <th onClick={() => handleSort('quantity')} style={{ cursor: 'pointer' }}>
                 QUANTITY {sortConfig.key === 'quantity' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
               </th>
-              <th onClick={() => handleSort('cbm')} style={{ cursor: 'pointer' }}>
-                Pallet Qty {sortConfig.key === 'cbm' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+              <th onClick={() => handleSort('palletQty')} style={{ cursor: 'pointer' }}>
+                Pallet Qty {sortConfig.key === 'palletQty' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
               </th>
               <th onClick={() => handleSort('receivingWarehouse')} style={{ cursor: 'pointer' }}>
                 RECEIVING WAREHOUSE {sortConfig.key === 'receivingWarehouse' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
@@ -619,7 +619,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
               filteredAndSortedProducts.map((shipment) => {
                 const draft = edits[shipment.id] || {};
                 const qVal = draft.quantity ?? normNum(shipment.quantity);
-                const cbmVal = draft.cbm ?? normNum(shipment.cbm);
+                const palletQtyVal = draft.palletQty ?? normNum(shipment.palletQty);
                 const whVal = draft.receivingWarehouse ?? (shipment.receivingWarehouse || '');
 
                 return (
@@ -648,10 +648,10 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
                       <input
                         type="number"
                         step="0.1"
-                        value={cbmVal}
-                        onChange={(e) => setEdit(shipment.id, 'cbm', e.target.value)}
-                        onBlur={() => commitEdit(shipment, 'cbm')}
-                        onKeyDown={(e) => onFieldKeyDown(e, shipment, 'cbm')}
+                        value={palletQtyVal}
+                        onChange={(e) => setEdit(shipment.id, 'palletQty', e.target.value)}
+                        onBlur={() => commitEdit(shipment, 'palletQty')}
+                        onKeyDown={(e) => onFieldKeyDown(e, shipment, 'palletQty')}
                         placeholder="Pallet Qty"
                         style={{
                           border: '1px solid #ddd',
