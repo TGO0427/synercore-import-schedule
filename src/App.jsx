@@ -334,8 +334,21 @@ function App() {
       }
 
       await response.json();
-      showSuccess(`Successfully imported ${payload.length} shipments`);
+
+      // Auto-create suppliers from imported shipments
+      const uniqueSuppliers = [...new Set(processedShipments.map(s => s.supplier).filter(Boolean))];
+      console.log(`App: Creating ${uniqueSuppliers.length} unique suppliers...`);
+      for (const supplierName of uniqueSuppliers) {
+        try {
+          await createSupplier({ name: supplierName });
+        } catch (err) {
+          console.log(`Supplier "${supplierName}" already exists or failed to create`);
+        }
+      }
+
+      showSuccess(`Successfully imported ${payload.length} shipments and ${uniqueSuppliers.length} suppliers`);
       await fetchShipments();
+      await fetchSuppliers();
 
       // If server dropped CBM, patch UI using what we just sent (match by orderRef)
       const cbmByOrderRef = new Map(payload.map(s => [s.orderRef, s.cbm]));
