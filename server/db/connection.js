@@ -43,6 +43,10 @@ export function getPool() {
     throw new Error('DATABASE_URL not set and PG* vars missing.');
   }
 
+  // Debug: log connection details (hide password)
+  const debugUrl = connectionString.replace(/:[^:@]+@/, ':****@');
+  console.log(`Connecting to: ${debugUrl}`);
+
   const useSsl = mustUseSsl(connectionString);
 
   const sslConfig = useSsl
