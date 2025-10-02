@@ -150,9 +150,10 @@ app.use((err, req, res, _next) => {
 /* ---------------- Async boot ---------------- */
 async function start() {
   try {
-    // Do all async init here (DB connections, loading files, migrations, etc.)
-    // await db.connect();
-    // await loadInitialData();
+    // Initialize database connection pool
+    const { getPool } = await import('./db/connection.js');
+    getPool(); // Force pool creation on startup
+    console.log('✓ Database pool initialized');
 
     isReady = true; // mark ready once init is done
 
