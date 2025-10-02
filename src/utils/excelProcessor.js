@@ -58,18 +58,28 @@ export class ExcelProcessor {
   }
   static mapStatus(statusValue) {
     if (!statusValue) return ShipmentStatus.PLANNED_AIRFREIGHT;
-    const s = statusValue.toString().toLowerCase();
-    if (s.includes('transit roadway') || s.includes('road transit')) return ShipmentStatus.IN_TRANSIT_ROADWAY;
-    if (s.includes('transit seaway') || s.includes('sea transit') || s.includes('maritime')) return ShipmentStatus.IN_TRANSIT_SEAWAY;
-    if (s.includes('transit') || s.includes('shipping')) return ShipmentStatus.IN_TRANSIT_ROADWAY; // default transit
+    const s = statusValue.toString().toLowerCase().replace(/_/g, ' ').trim();
+
+    // Exact matches first
+    if (s === 'in transit seaway' || s === 'in transit sea') return ShipmentStatus.IN_TRANSIT_SEAWAY;
+    if (s === 'in transit roadway' || s === 'in transit road') return ShipmentStatus.IN_TRANSIT_ROADWAY;
+    if (s === 'in transit airfreight' || s === 'in transit air') return ShipmentStatus.IN_TRANSIT_AIRFREIGHT;
+    if (s === 'planned seafreight' || s === 'planned sea') return ShipmentStatus.PLANNED_SEAFREIGHT;
+    if (s === 'planned airfreight' || s === 'planned air') return ShipmentStatus.PLANNED_AIRFREIGHT;
+
+    // Pattern matches
+    if (s.includes('seaway') || s.includes('sea transit') || s.includes('maritime')) return ShipmentStatus.IN_TRANSIT_SEAWAY;
+    if (s.includes('roadway') || s.includes('road transit')) return ShipmentStatus.IN_TRANSIT_ROADWAY;
+    if (s.includes('airfreight') || s.includes('air transit')) return ShipmentStatus.IN_TRANSIT_AIRFREIGHT;
     if (s.includes('moored')) return ShipmentStatus.MOORED;
     if (s.includes('berth working')) return ShipmentStatus.BERTH_WORKING;
     if (s.includes('berth complete')) return ShipmentStatus.BERTH_COMPLETE;
     if (s.includes('arrived pta') || s.includes('pta')) return ShipmentStatus.ARRIVED_PTA;
     if (s.includes('arrived klm') || s.includes('klm')) return ShipmentStatus.ARRIVED_KLM;
-    if (s.includes('arrived') || s.includes('delivered')) return ShipmentStatus.ARRIVED_PTA; // default arrived
+    if (s.includes('arrived') || s.includes('delivered')) return ShipmentStatus.ARRIVED_PTA;
     if (s.includes('delay')) return ShipmentStatus.DELAYED;
     if (s.includes('cancel')) return ShipmentStatus.CANCELLED;
+
     return ShipmentStatus.PLANNED_AIRFREIGHT;
   }
 
@@ -115,6 +125,10 @@ export class ExcelProcessor {
         (palletQtyHeader ? row[palletQtyHeader] : undefined) ??
         row['PALLET QTY'] ?? row['Pallet Qty'] ?? row['PALLETS'] ?? row['Pallet'] ?? row['Pallet Quantity'] ?? row['pallet qty'] ?? row['pallets'];
       const palletQtyValue = this.parseQuantity(palletQtyRaw);
+
+      if (index < 3) {
+        console.log(`Row ${index} Pallet Qty: header="${palletQtyHeader}", raw="${palletQtyRaw}", parsed=${palletQtyValue}`);
+      }
 
       return new Shipment({
         id: `ship_${Date.now()}_${index}`,
