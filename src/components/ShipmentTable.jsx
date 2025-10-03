@@ -24,6 +24,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
   const [showManualArchiveDialog, setShowManualArchiveDialog] = useState(false);
   const [selectedShipments, setSelectedShipments] = useState([]);
   const [manualArchiveLoading, setManualArchiveLoading] = useState(false);
+  const [edits, setEdits] = useState({}); // Track unsaved changes per shipment
   const [newShipment, setNewShipment] = useState({
     supplier: '',
     orderRef: '',
@@ -111,38 +112,73 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
     onUpdateShipment(shipmentId, updates);
   };
 
-  // Improved debounced text input handler - only updates local state
+  // Track field changes without auto-saving
   const handleTextInputChange = useCallback((shipmentId, field, value) => {
     const key = `${shipmentId}-${field}`;
 
     // Update local state immediately for UI responsiveness
     setLocalTextValues(prev => ({ ...prev, [key]: value }));
 
-    // Clear existing timeout for this specific field
-    if (timeoutRefs.current[key]) {
-      clearTimeout(timeoutRefs.current[key]);
-    }
+    // Track as unsaved edit
+    setEdits(prev => ({
+      ...prev,
+      [shipmentId]: {
+        ...(prev[shipmentId] || {}),
+        [field]: value
+      }
+    }));
 
-    // Set new timeout for debounced update (increased to 3000ms as backup)
-    timeoutRefs.current[key] = setTimeout(() => {
-      onUpdateShipment(shipmentId, { [field]: value });
-      delete timeoutRefs.current[key];
-    }, 3000); // 3000ms debounce - only as backup
-  }, [onUpdateShipment]);
-
-  // Manual blur handler - triggers immediate update when user finishes typing
-  const handleTextInputBlur = useCallback((shipmentId, field, value) => {
-    const key = `${shipmentId}-${field}`;
-
-    // Clear any pending timeout since we're updating now
+    // Clear any existing timeout
     if (timeoutRefs.current[key]) {
       clearTimeout(timeoutRefs.current[key]);
       delete timeoutRefs.current[key];
     }
+  }, []);
 
-    // Update immediately when user finishes typing (blur event)
-    onUpdateShipment(shipmentId, { [field]: value });
-  }, [onUpdateShipment]);
+  // Handle dropdown changes (incoterm, forwardingAgent)
+  const handleDropdownChange = useCallback((shipmentId, field, value) => {
+    setEdits(prev => ({
+      ...prev,
+      [shipmentId]: {
+        ...(prev[shipmentId] || {}),
+        [field]: value
+      }
+    }));
+  }, []);
+
+  // Save all changes for a specific shipment
+  const saveShipment = useCallback((shipmentId) => {
+    const changes = edits[shipmentId];
+    if (!changes || Object.keys(changes).length === 0) return;
+
+    onUpdateShipment(shipmentId, changes);
+
+    // Clear edits and local text values for this shipment
+    setEdits(prev => {
+      const copy = { ...prev };
+      delete copy[shipmentId];
+      return copy;
+    });
+
+    // Clear local text values
+    setLocalTextValues(prev => {
+      const copy = { ...prev };
+      Object.keys(changes).forEach(field => {
+        delete copy[`${shipmentId}-${field}`];
+      });
+      return copy;
+    });
+  }, [edits, onUpdateShipment]);
+
+  // Save all pending changes
+  const saveAllChanges = useCallback(() => {
+    Object.keys(edits).forEach(shipmentId => {
+      saveShipment(shipmentId);
+    });
+  }, [edits, saveShipment]);
+
+  // Count unsaved changes
+  const unsavedCount = Object.keys(edits).length;
 
   // Cleanup effect to clear timeouts on unmount
   useEffect(() => {
@@ -607,6 +643,31 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
    <div className="shipments-table card">
       <div className="table-header">
         <h2>Shipment Schedule</h2>
+
+        {/* Save All Button */}
+        {unsavedCount > 0 && (
+          <button
+            onClick={saveAllChanges}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#ff9800',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '0.95rem',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+            }}
+            title={`Save ${unsavedCount} unsaved ${unsavedCount === 1 ? 'change' : 'changes'}`}
+          >
+            💾 Save All Changes ({unsavedCount})
+          </button>
+        )}
+
         <div className="table-controls" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div className="search-box">
             <input
@@ -833,21 +894,24 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                       type="text"
                       value={(localTextValues[`${shipment.id}-vesselName`] ?? shipment.vesselName) || ''}
                       onChange={(e) => handleTextInputChange(shipment.id, 'vesselName', e.target.value)}
-                      onBlur={(e) => handleTextInputBlur(shipment.id, 'vesselName', e.target.value)}
                       placeholder="Vessel Name"
                       className="input"
                       style={{
-                        minWidth: '120px'
+                        minWidth: '120px',
+                        border: edits[shipment.id]?.vesselName !== undefined ? '2px solid #ff9800' : undefined,
+                        backgroundColor: edits[shipment.id]?.vesselName !== undefined ? '#fff3e0' : undefined,
                       }}
                     />
                   </td>
                   <td>
                     <select
-                      value={shipment.incoterm || ''}
-                      onChange={(e) => onUpdateShipment(shipment.id, { incoterm: e.target.value })}
+                      value={edits[shipment.id]?.incoterm ?? shipment.incoterm || ''}
+                      onChange={(e) => handleDropdownChange(shipment.id, 'incoterm', e.target.value)}
                       className="select"
                       style={{
-                        minWidth: '80px'
+                        minWidth: '80px',
+                        border: edits[shipment.id]?.incoterm !== undefined ? '2px solid #ff9800' : undefined,
+                        backgroundColor: edits[shipment.id]?.incoterm !== undefined ? '#fff3e0' : undefined,
                       }}
                     >
                       <option value="">Select</option>
@@ -866,11 +930,13 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   </td>
                   <td>
                     <select
-                      value={shipment.forwardingAgent || ''}
-                      onChange={(e) => onUpdateShipment(shipment.id, { forwardingAgent: e.target.value })}
+                      value={edits[shipment.id]?.forwardingAgent ?? shipment.forwardingAgent || ''}
+                      onChange={(e) => handleDropdownChange(shipment.id, 'forwardingAgent', e.target.value)}
                       className="select"
                       style={{
-                        minWidth: '120px'
+                        minWidth: '120px',
+                        border: edits[shipment.id]?.forwardingAgent !== undefined ? '2px solid #ff9800' : undefined,
+                        backgroundColor: edits[shipment.id]?.forwardingAgent !== undefined ? '#fff3e0' : undefined,
                       }}
                     >
                       <option value="">Select Agent</option>
@@ -890,7 +956,25 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                     </select>
                   </td>
                   <td>
-                    <div className="actions">
+                    <div className="actions" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                      {edits[shipment.id] && Object.keys(edits[shipment.id]).length > 0 && (
+                        <button
+                          onClick={() => saveShipment(shipment.id)}
+                          style={{
+                            padding: '4px 8px',
+                            backgroundColor: '#4caf50',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.8rem',
+                            fontWeight: 'bold',
+                          }}
+                          title="Save changes for this shipment"
+                        >
+                          💾 Save
+                        </button>
+                      )}
                       <button
                         onClick={() => handleAmendShipment(shipment)}
                         className="btn btn-primary btn-small"
