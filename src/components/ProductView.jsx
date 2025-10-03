@@ -375,55 +375,23 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
 
   const warehouseTotals = useMemo(() => {
     const totals = {};
-    console.log('🔍 WAREHOUSE FILTERING DEBUG - Total shipments to process:', (shipments || []).length);
+    console.log('🔍 WAREHOUSE TOTALS - Total shipments to process:', (shipments || []).length);
 
     (shipments || []).forEach((sh) => {
-      // Log all shipment details for debugging
-      console.log('🚢 Processing shipment:', {
-        orderRef: sh.orderRef,
-        latestStatus: sh.latestStatus,
-        statusType: typeof sh.latestStatus,
-        receivingWarehouse: sh.receivingWarehouse,
-        quantity: sh.quantity,
-        storedDate: sh.storedDate,
-        isArchived: sh.isArchived
-      });
-
-      // Exclude shipments that have arrived and are in post-arrival workflow (including stored)
-      const postArrivalStatuses = [
-        ShipmentStatus.ARRIVED_PTA,
-        ShipmentStatus.ARRIVED_KLM,
-        ShipmentStatus.UNLOADING,
-        ShipmentStatus.INSPECTION_PENDING,
-        ShipmentStatus.INSPECTING,
-        ShipmentStatus.INSPECTION_FAILED,
-        ShipmentStatus.INSPECTION_PASSED,
-        ShipmentStatus.RECEIVING,
-        ShipmentStatus.RECEIVED,
-        ShipmentStatus.STORED
-      ];
-
-      // Debug the exact comparison
-      const shouldFilter = postArrivalStatuses.includes(sh.latestStatus);
-      console.log('📊 Filtering check for', sh.orderRef, ':', {
-        latestStatus: sh.latestStatus,
-        shouldFilter: shouldFilter,
-        postArrivalStatuses: postArrivalStatuses,
-        storedConstant: ShipmentStatus.STORED,
-        exactMatch: sh.latestStatus === ShipmentStatus.STORED
-      });
-
-      if (shouldFilter) {
-        console.log('❌ FILTERED OUT:', sh.orderRef, 'status:', sh.latestStatus);
+      // Only exclude STORED shipments (they're shown separately in Warehouse Stored view)
+      if (sh.latestStatus === ShipmentStatus.STORED) {
+        console.log('❌ FILTERED OUT (stored):', sh.orderRef);
         return;
       }
 
       const warehouse = sh.receivingWarehouse || 'Unassigned';
-      totals[warehouse] = (totals[warehouse] || 0) + normNum(sh.palletQty);
-      console.log('✅ INCLUDED IN WAREHOUSE TOTALS:', sh.orderRef, 'warehouse:', warehouse, 'palletQty:', sh.palletQty, 'status:', sh.latestStatus);
+      const palletQty = normNum(sh.palletQty);
+      totals[warehouse] = (totals[warehouse] || 0) + palletQty;
+
+      console.log('✅ INCLUDED:', sh.orderRef, 'warehouse:', warehouse, 'palletQty:', palletQty, 'running total:', totals[warehouse]);
     });
 
-    console.log('🏁 WAREHOUSE FILTERING COMPLETE - Final warehouse totals:', totals);
+    console.log('🏁 FINAL WAREHOUSE TOTALS:', totals);
     return totals;
   }, [shipments]);
 
