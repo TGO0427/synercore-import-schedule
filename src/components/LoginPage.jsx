@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { authUtils } from '../utils/auth';
 
 function LoginPage({ onLogin }) {
@@ -9,6 +9,36 @@ function LoginPage({ onLogin }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [stars, setStars] = useState([]);
+  const [networkLines, setNetworkLines] = useState([]);
+
+  useEffect(() => {
+    // Generate stars
+    const generatedStars = [];
+    for (let i = 0; i < 100; i++) {
+      generatedStars.push({
+        id: i,
+        left: Math.random() * 100,
+        top: Math.random() * 100,
+        delay: Math.random() * 4
+      });
+    }
+    setStars(generatedStars);
+
+    // Generate network lines
+    const generatedLines = [];
+    for (let i = 0; i < 20; i++) {
+      generatedLines.push({
+        id: i,
+        left: Math.random() * 100,
+        top: Math.random() * 100,
+        width: Math.random() * 200 + 50,
+        rotation: Math.random() * 360,
+        delay: Math.random() * 3
+      });
+    }
+    setNetworkLines(generatedLines);
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -74,6 +104,60 @@ function LoginPage({ onLogin }) {
       position: 'relative',
       overflow: 'hidden'
     }}>
+      {/* Stars Background */}
+      <div style={{
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+        top: 0,
+        left: 0,
+        pointerEvents: 'none'
+      }}>
+        {stars.map(star => (
+          <div
+            key={star.id}
+            style={{
+              position: 'absolute',
+              width: '2px',
+              height: '2px',
+              background: 'white',
+              borderRadius: '50%',
+              left: `${star.left}%`,
+              top: `${star.top}%`,
+              animation: 'twinkle 4s ease-in-out infinite',
+              animationDelay: `${star.delay}s`
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Network Lines */}
+      <div style={{
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+        top: 0,
+        left: 0,
+        pointerEvents: 'none'
+      }}>
+        {networkLines.map(line => (
+          <div
+            key={line.id}
+            style={{
+              position: 'absolute',
+              background: 'linear-gradient(90deg, transparent, rgba(45, 159, 143, 0.5), transparent)',
+              height: '2px',
+              left: `${line.left}%`,
+              top: `${line.top}%`,
+              width: `${line.width}px`,
+              transform: `rotate(${line.rotation}deg)`,
+              animation: 'pulse 3s ease-in-out infinite',
+              animationDelay: `${line.delay}s`
+            }}
+          />
+        ))}
+      </div>
+
       {/* Animated Globe Background */}
       <div style={{
         position: 'absolute',
@@ -282,6 +366,14 @@ function LoginPage({ onLogin }) {
         @keyframes rotate {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        @keyframes twinkle {
+          0%, 100% { opacity: 0.3; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.5); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 1; }
         }
       `}</style>
     </div>
