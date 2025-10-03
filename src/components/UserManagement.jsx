@@ -13,6 +13,7 @@ function UserManagement() {
     role: 'user'
   });
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [showPassword, setShowPassword] = useState(false);
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
 
@@ -242,23 +243,46 @@ function UserManagement() {
                 }}>
                   Password *
                 </label>
-                <input
-                  type="password"
-                  name="password"
-                  value={newUser.password}
-                  onChange={handleInputChange}
-                  disabled={loading}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '2px solid #e1e5e9',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
-                  placeholder="Min 6 characters"
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={newUser.password}
+                    onChange={handleInputChange}
+                    disabled={loading}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      paddingRight: '45px',
+                      border: '2px solid #e1e5e9',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      outline: 'none'
+                    }}
+                    placeholder="Min 6 characters"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '4px 8px',
+                      fontSize: '18px',
+                      color: '#666',
+                      lineHeight: '1'
+                    }}
+                    tabIndex="-1"
+                  >
+                    {showPassword ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </div>
               </div>
 
               <div>
