@@ -680,7 +680,12 @@ function App() {
       case 'capacity':
         return <WarehouseCapacity shipments={shipments} />;
       case 'users':
-        return <UserManagement />;
+        return isAdmin ? <UserManagement /> : (
+          <div style={{ padding: '2rem', textAlign: 'center' }}>
+            <h2>Access Denied</h2>
+            <p>You need administrator privileges to access User Management.</p>
+          </div>
+        );
       case 'suppliers':
         return (
           <SupplierManagement
@@ -730,6 +735,9 @@ function App() {
     return <LoginPage onLogin={handleLogin} />;
   }
 
+  const currentUser = authUtils.getUser();
+  const isAdmin = currentUser?.role === 'admin';
+
   return (
     <div className="container">
       <div className="sidebar">
@@ -742,7 +750,7 @@ function App() {
 
         <ul className="sidebar-nav">
           <li><button className={activeView === 'suppliers' ? 'active' : ''} onClick={() => setActiveView('suppliers')}>🏢 Suppliers</button></li>
-          <li><button className={activeView === 'users' ? 'active' : ''} onClick={() => setActiveView('users')}>👥 User Management</button></li>
+          {isAdmin && <li><button className={activeView === 'users' ? 'active' : ''} onClick={() => setActiveView('users')}>👥 User Management</button></li>}
           <li><button className={activeView === 'capacity' ? 'active' : ''} onClick={() => setActiveView('capacity')}>🏭 Warehouse Capacity</button></li>
           <li><button className={activeView === 'products' ? 'active' : ''} onClick={() => setActiveView('products')}>📋 Product & Warehouse</button></li>
           <li><button className={activeView === 'shipping' ? 'active' : ''} onClick={() => setActiveView('shipping')}>📦 Shipping Schedule</button></li>
