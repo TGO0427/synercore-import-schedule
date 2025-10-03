@@ -36,7 +36,7 @@ function ArchiveView() {
   const viewArchive = async (fileName) => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/shipments/archives/${fileName}`);
+      const response = await fetch(getApiUrl(`/api/shipments/archives/${fileName}`));
       if (!response.ok) throw new Error('Failed to fetch archive data');
       const data = await response.json();
       setArchiveData(data);
@@ -50,7 +50,7 @@ function ArchiveView() {
 
   const handleRenameArchive = async (fileName, newName) => {
     try {
-      const response = await fetch(`/api/shipments/archives/${fileName}/rename`, {
+      const response = await fetch(getApiUrl(`/api/shipments/archives/${fileName}/rename`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
