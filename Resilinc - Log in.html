@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<!-- saved from url=(0051)file:///C:/Users/Tino/Downloads/resilinc-login.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resilinc - Log in</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100%;
+            height: 100vh;
+        }
+
+        .left-panel {
+            flex: 1;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 60px;
+            max-width: 650px;
+        }
+
+        .logo {
+            position: absolute;
+            top: 40px;
+            left: 60px;
+        }
+
+        .logo-text {
+            font-size: 42px;
+            font-weight: 300;
+            color: #1a5f7a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            position: relative;
+        }
+
+        .logo-icon::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #2d9f8f;
+            transform: rotate(45deg);
+            top: 15px;
+            left: 5px;
+        }
+
+        .logo-icon::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #1a5f7a;
+            transform: rotate(45deg);
+            top: 15px;
+            right: 5px;
+        }
+
+        .login-form {
+            max-width: 480px;
+        }
+
+        h1 {
+            font-size: 36px;
+            color: #333;
+            margin-bottom: 12px;
+            font-weight: 400;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 15px;
+        }
+
+        .input-group {
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 20px;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 14px 14px 14px 36px;
+            border: none;
+            border-bottom: 2px solid #ddd;
+            font-size: 15px;
+            transition: border-color 0.3s;
+            background: transparent;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-bottom-color: #2d9f8f;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        .checkbox-label {
+            color: #333;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .links {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 32px;
+        }
+
+        .link {
+            color: #2d9f8f;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .link:hover {
+            text-decoration: underline;
+        }
+
+        .proceed-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #b8dde0 0%, #d4e9eb 100%);
+            border: none;
+            border-radius: 8px;
+            color: #5a8a93;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .proceed-btn:hover {
+            background: linear-gradient(135deg, #a5d1d4 0%, #c5e0e3 100%);
+            transform: translateY(-1px);
+        }
+
+        .privacy-link {
+            position: absolute;
+            bottom: 30px;
+            left: 60px;
+            color: #2d9f8f;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .privacy-link:hover {
+            text-decoration: underline;
+        }
+
+        .right-panel {
+            width: 100%;
+            height: 100vh;
+            background: linear-gradient(135deg, #0a3d62 0%, #1e5a7d 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .globe-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            height: 600px;
+        }
+
+        .globe {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.1), transparent),
+                        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            position: relative;
+            animation: rotate 60s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .network-lines {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+        }
+
+        .line {
+            position: absolute;
+            background: linear-gradient(90deg, transparent, rgba(45, 159, 143, 0.5), transparent);
+            height: 2px;
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .stars {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+        }
+
+        .star {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 4s ease-in-out infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.5); }
+        }
+
+        @media (max-width: 968px) {
+            .globe-container {
+                width: 400px;
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="right-panel">
+        <div class="stars" id="stars"><div class="star" style="left: 50.1225%; top: 59.6653%; animation-delay: 3.76286s;"></div><div class="star" style="left: 3.84371%; top: 82.2162%; animation-delay: 3.1816s;"></div><div class="star" style="left: 88.7529%; top: 2.42707%; animation-delay: 2.41349s;"></div><div class="star" style="left: 8.351%; top: 25.8312%; animation-delay: 2.10356s;"></div><div class="star" style="left: 75.8188%; top: 53.1402%; animation-delay: 0.864418s;"></div><div class="star" style="left: 66.2183%; top: 41.5543%; animation-delay: 2.77497s;"></div><div class="star" style="left: 72.7836%; top: 72.2373%; animation-delay: 0.779556s;"></div><div class="star" style="left: 31.9236%; top: 68.2462%; animation-delay: 2.71209s;"></div><div class="star" style="left: 63.5917%; top: 78.4351%; animation-delay: 0.0869062s;"></div><div class="star" style="left: 86.3044%; top: 17.3887%; animation-delay: 2.48504s;"></div><div class="star" style="left: 27.6709%; top: 24.2274%; animation-delay: 2.85879s;"></div><div class="star" style="left: 92.8957%; top: 53.3578%; animation-delay: 2.62723s;"></div><div class="star" style="left: 48.9304%; top: 90.7502%; animation-delay: 3.21811s;"></div><div class="star" style="left: 54.9607%; top: 39.3485%; animation-delay: 2.40426s;"></div><div class="star" style="left: 15.6647%; top: 98.0383%; animation-delay: 1.34454s;"></div><div class="star" style="left: 3.49655%; top: 32.6887%; animation-delay: 0.780537s;"></div><div class="star" style="left: 81.0901%; top: 86.3793%; animation-delay: 2.75801s;"></div><div class="star" style="left: 31.0082%; top: 25.3044%; animation-delay: 2.11637s;"></div><div class="star" style="left: 22.4379%; top: 11.7585%; animation-delay: 3.41297s;"></div><div class="star" style="left: 72.6007%; top: 70.3791%; animation-delay: 2.77946s;"></div><div class="star" style="left: 93.9063%; top: 31.1599%; animation-delay: 1.23052s;"></div><div class="star" style="left: 65.1952%; top: 10.391%; animation-delay: 1.56357s;"></div><div class="star" style="left: 35.7157%; top: 36.9899%; animation-delay: 0.931595s;"></div><div class="star" style="left: 36.8831%; top: 50.5571%; animation-delay: 3.53708s;"></div><div class="star" style="left: 62.5897%; top: 69.5942%; animation-delay: 0.429563s;"></div><div class="star" style="left: 71.1655%; top: 1.41259%; animation-delay: 1.75234s;"></div><div class="star" style="left: 43.0516%; top: 46.0525%; animation-delay: 2.1878s;"></div><div class="star" style="left: 81.7068%; top: 2.96727%; animation-delay: 2.25442s;"></div><div class="star" style="left: 93.9445%; top: 99.9361%; animation-delay: 2.91413s;"></div><div class="star" style="left: 72.2675%; top: 59.4143%; animation-delay: 1.19749s;"></div><div class="star" style="left: 49.4973%; top: 51.5684%; animation-delay: 0.905634s;"></div><div class="star" style="left: 30.8638%; top: 82.9382%; animation-delay: 0.2696s;"></div><div class="star" style="left: 99.7239%; top: 16.7223%; animation-delay: 2.44581s;"></div><div class="star" style="left: 91.8534%; top: 80.3283%; animation-delay: 1.96202s;"></div><div class="star" style="left: 6.04117%; top: 26.9764%; animation-delay: 2.55293s;"></div><div class="star" style="left: 56.3433%; top: 89.9499%; animation-delay: 1.7387s;"></div><div class="star" style="left: 36.4099%; top: 0.826719%; animation-delay: 0.144839s;"></div><div class="star" style="left: 26.5979%; top: 6.13036%; animation-delay: 2.50189s;"></div><div class="star" style="left: 16.1285%; top: 7.36368%; animation-delay: 2.66038s;"></div><div class="star" style="left: 22.1219%; top: 1.26718%; animation-delay: 2.03326s;"></div><div class="star" style="left: 11.0006%; top: 85.6461%; animation-delay: 1.27248s;"></div><div class="star" style="left: 67.4316%; top: 31.1462%; animation-delay: 1.92062s;"></div><div class="star" style="left: 80.5411%; top: 74.9529%; animation-delay: 2.33214s;"></div><div class="star" style="left: 47.0565%; top: 32.8622%; animation-delay: 1.03699s;"></div><div class="star" style="left: 80.7117%; top: 48.6898%; animation-delay: 3.83043s;"></div><div class="star" style="left: 82.2419%; top: 68.8368%; animation-delay: 2.605s;"></div><div class="star" style="left: 60.8717%; top: 8.5658%; animation-delay: 1.13501s;"></div><div class="star" style="left: 32.6285%; top: 14.8245%; animation-delay: 0.447076s;"></div><div class="star" style="left: 61.0888%; top: 62.4683%; animation-delay: 0.603736s;"></div><div class="star" style="left: 83.6224%; top: 82.1072%; animation-delay: 0.78389s;"></div><div class="star" style="left: 99.2997%; top: 27.5329%; animation-delay: 2.95068s;"></div><div class="star" style="left: 72.301%; top: 1.92162%; animation-delay: 0.75046s;"></div><div class="star" style="left: 99.1989%; top: 86.5979%; animation-delay: 1.60551s;"></div><div class="star" style="left: 20.0873%; top: 68.3315%; animation-delay: 2.1801s;"></div><div class="star" style="left: 83.5655%; top: 19.4282%; animation-delay: 0.341356s;"></div><div class="star" style="left: 84.8726%; top: 42.2823%; animation-delay: 2.00067s;"></div><div class="star" style="left: 78.2361%; top: 23.8255%; animation-delay: 2.38331s;"></div><div class="star" style="left: 1.53659%; top: 98.2623%; animation-delay: 2.31106s;"></div><div class="star" style="left: 80.3219%; top: 2.57621%; animation-delay: 3.08661s;"></div><div class="star" style="left: 55.7731%; top: 44.5691%; animation-delay: 2.07745s;"></div><div class="star" style="left: 88.6487%; top: 89.6237%; animation-delay: 1.77955s;"></div><div class="star" style="left: 97.4155%; top: 27.7432%; animation-delay: 3.29651s;"></div><div class="star" style="left: 76.2652%; top: 23.075%; animation-delay: 3.17068s;"></div><div class="star" style="left: 15.5828%; top: 82.2307%; animation-delay: 0.329545s;"></div><div class="star" style="left: 96.0703%; top: 28.0954%; animation-delay: 0.249019s;"></div><div class="star" style="left: 20.5823%; top: 32.37%; animation-delay: 3.4569s;"></div><div class="star" style="left: 66.9073%; top: 82.5105%; animation-delay: 3.13232s;"></div><div class="star" style="left: 59.947%; top: 99.8042%; animation-delay: 1.736s;"></div><div class="star" style="left: 50.8538%; top: 63.9476%; animation-delay: 0.291691s;"></div><div class="star" style="left: 73.5416%; top: 61.6947%; animation-delay: 2.19728s;"></div><div class="star" style="left: 20.6608%; top: 23.9972%; animation-delay: 3.42666s;"></div><div class="star" style="left: 23.0111%; top: 29.398%; animation-delay: 1.46428s;"></div><div class="star" style="left: 17.4402%; top: 71.0684%; animation-delay: 0.703144s;"></div><div class="star" style="left: 93.7363%; top: 75.2944%; animation-delay: 2.06675s;"></div><div class="star" style="left: 39.2319%; top: 44.173%; animation-delay: 1.44047s;"></div><div class="star" style="left: 93.5964%; top: 86.6339%; animation-delay: 0.958214s;"></div><div class="star" style="left: 72.896%; top: 49.462%; animation-delay: 2.59679s;"></div><div class="star" style="left: 81.6885%; top: 67.5686%; animation-delay: 3.55957s;"></div><div class="star" style="left: 58.8723%; top: 86.3202%; animation-delay: 1.12919s;"></div><div class="star" style="left: 38.2131%; top: 25.5558%; animation-delay: 3.6191s;"></div><div class="star" style="left: 51.9282%; top: 85.4154%; animation-delay: 0.0628707s;"></div><div class="star" style="left: 35.1877%; top: 36.1987%; animation-delay: 3.59182s;"></div><div class="star" style="left: 24.5904%; top: 7.62405%; animation-delay: 2.68278s;"></div><div class="star" style="left: 2.33091%; top: 58.2103%; animation-delay: 0.424266s;"></div><div class="star" style="left: 46.5463%; top: 85.298%; animation-delay: 1.98323s;"></div><div class="star" style="left: 19.3859%; top: 35.6137%; animation-delay: 1.15967s;"></div><div class="star" style="left: 50.1885%; top: 25.1677%; animation-delay: 1.17258s;"></div><div class="star" style="left: 20.5972%; top: 86.5056%; animation-delay: 0.949078s;"></div><div class="star" style="left: 70.5088%; top: 20.2964%; animation-delay: 0.855757s;"></div><div class="star" style="left: 63.0493%; top: 90.6419%; animation-delay: 2.40727s;"></div><div class="star" style="left: 94.6986%; top: 34.5178%; animation-delay: 1.77648s;"></div><div class="star" style="left: 89.0271%; top: 51.4801%; animation-delay: 0.816342s;"></div><div class="star" style="left: 66.0413%; top: 29.9351%; animation-delay: 0.0116157s;"></div><div class="star" style="left: 93.0945%; top: 63.7041%; animation-delay: 2.29011s;"></div><div class="star" style="left: 92.9719%; top: 50.6162%; animation-delay: 2.24457s;"></div><div class="star" style="left: 11.6379%; top: 52.386%; animation-delay: 1.15999s;"></div><div class="star" style="left: 13.202%; top: 6.77289%; animation-delay: 0.131042s;"></div><div class="star" style="left: 45.5246%; top: 81.9344%; animation-delay: 1.03043s;"></div><div class="star" style="left: 81.1708%; top: 58.9074%; animation-delay: 1.06566s;"></div><div class="star" style="left: 54.5012%; top: 82.1222%; animation-delay: 0.687941s;"></div></div>
+        <div class="network-lines" id="network"><div class="line" style="left: 95.2042%; top: 54.6849%; width: 50.1743px; transform: rotate(36.8943deg); animation-delay: 1.98431s;"></div><div class="line" style="left: 75.9796%; top: 33.3946%; width: 124.319px; transform: rotate(196.253deg); animation-delay: 2.5136s;"></div><div class="line" style="left: 97.3282%; top: 89.2422%; width: 231.738px; transform: rotate(95.2997deg); animation-delay: 0.600502s;"></div><div class="line" style="left: 37.631%; top: 25.5907%; width: 224.426px; transform: rotate(353.243deg); animation-delay: 1.27371s;"></div><div class="line" style="left: 33.3414%; top: 85.08%; width: 177.396px; transform: rotate(54.4562deg); animation-delay: 1.86397s;"></div><div class="line" style="left: 82.0016%; top: 93.9789%; width: 70.2187px; transform: rotate(295.19deg); animation-delay: 2.2368s;"></div><div class="line" style="left: 86.6683%; top: 33.0404%; width: 169.427px; transform: rotate(8.21935deg); animation-delay: 2.40353s;"></div><div class="line" style="left: 50.3979%; top: 19.5234%; width: 172.494px; transform: rotate(142.265deg); animation-delay: 0.727283s;"></div><div class="line" style="left: 87.6323%; top: 87.9674%; width: 191.623px; transform: rotate(27.7007deg); animation-delay: 0.930832s;"></div><div class="line" style="left: 95.5979%; top: 95.2994%; width: 214.02px; transform: rotate(83.1898deg); animation-delay: 0.488564s;"></div><div class="line" style="left: 87.5917%; top: 9.19217%; width: 78.2047px; transform: rotate(287.705deg); animation-delay: 2.94143s;"></div><div class="line" style="left: 59.5968%; top: 8.78599%; width: 128.02px; transform: rotate(284.927deg); animation-delay: 0.253963s;"></div><div class="line" style="left: 70.5481%; top: 53.7555%; width: 139.047px; transform: rotate(35.1895deg); animation-delay: 2.75256s;"></div><div class="line" style="left: 51.4463%; top: 67.9076%; width: 89.9876px; transform: rotate(283.044deg); animation-delay: 2.25036s;"></div><div class="line" style="left: 54.8881%; top: 89.2124%; width: 235.94px; transform: rotate(233.049deg); animation-delay: 1.47525s;"></div><div class="line" style="left: 8.87162%; top: 59.4578%; width: 112.225px; transform: rotate(159.461deg); animation-delay: 2.15614s;"></div><div class="line" style="left: 75.2612%; top: 94.3144%; width: 218.591px; transform: rotate(31.6483deg); animation-delay: 0.130672s;"></div><div class="line" style="left: 61.3836%; top: 72.8413%; width: 191.495px; transform: rotate(65.7322deg); animation-delay: 0.565981s;"></div><div class="line" style="left: 20.1537%; top: 34.7742%; width: 156.322px; transform: rotate(331.513deg); animation-delay: 1.96662s;"></div><div class="line" style="left: 89.5045%; top: 0.905123%; width: 157.426px; transform: rotate(154.056deg); animation-delay: 0.762807s;"></div></div>
+        <div class="globe-container">
+            <div class="globe"></div>
+        </div>
+    </div>
+
+    <script>
+        // Generate stars
+        const starsContainer = document.getElementById('stars');
+        for (let i = 0; i < 100; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            star.style.animationDelay = Math.random() * 4 + 's';
+            starsContainer.appendChild(star);
+        }
+
+        // Generate network lines
+        const networkContainer = document.getElementById('network');
+        for (let i = 0; i < 20; i++) {
+            const line = document.createElement('div');
+            line.className = 'line';
+            line.style.left = Math.random() * 100 + '%';
+            line.style.top = Math.random() * 100 + '%';
+            line.style.width = Math.random() * 200 + 50 + 'px';
+            line.style.transform = `rotate(${Math.random() * 360}deg)`;
+            line.style.animationDelay = Math.random() * 3 + 's';
+            networkContainer.appendChild(line);
+        }
+    </script>
+
+</body></html>
