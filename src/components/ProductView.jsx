@@ -97,9 +97,40 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
     cancelEdit(shipment.id, field);
   };
 
+  // Save all changes for a specific shipment
+  const saveShipment = (shipmentId) => {
+    const changes = edits[shipmentId];
+    if (!changes || Object.keys(changes).length === 0) return;
+
+    const updates = {};
+    if (changes.quantity !== undefined) updates.quantity = Number(changes.quantity) || 0;
+    if (changes.palletQty !== undefined) updates.palletQty = Number(changes.palletQty) || 0;
+    if (changes.receivingWarehouse !== undefined) updates.receivingWarehouse = changes.receivingWarehouse;
+
+    onUpdateShipment(shipmentId, updates);
+
+    // Clear edits for this shipment
+    setEdits((prev) => {
+      const copy = { ...prev };
+      delete copy[shipmentId];
+      return copy;
+    });
+  };
+
+  // Save all pending changes
+  const saveAllChanges = () => {
+    Object.keys(edits).forEach((shipmentId) => {
+      saveShipment(shipmentId);
+    });
+  };
+
+  // Count unsaved changes
+  const unsavedCount = Object.keys(edits).length;
+
   const onFieldKeyDown = (e, shipment, field) => {
     if (e.key === 'Enter') {
-      e.currentTarget.blur(); // triggers onBlur -> commit
+      // Just blur, don't save automatically
+      e.currentTarget.blur();
     } else if (e.key === 'Escape') {
       // revert
       cancelEdit(shipment.id, field);
@@ -404,6 +435,31 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
     <div className="product-view">
       <div className="table-header" style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
         <h2 style={{ marginRight: 'auto' }}>Product & Warehouse View</h2>
+
+        {/* Save All Button */}
+        {unsavedCount > 0 && (
+          <button
+            onClick={saveAllChanges}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#ff9800',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '0.95rem',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+            }}
+            title={`Save ${unsavedCount} unsaved ${unsavedCount === 1 ? 'change' : 'changes'}`}
+          >
+            💾 Save All Changes ({unsavedCount})
+          </button>
+        )}
+
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <div className="search-box" style={{ position: 'relative' }}>
             <input
@@ -606,12 +662,13 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
               </th>
               <th>SUPPLIER</th>
               <th>ORDER/REF</th>
+              <th>ACTIONS</th>
             </tr>
           </thead>
           <tbody>
             {filteredAndSortedProducts.length === 0 ? (
               <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '2rem' }}>
+                <td colSpan="8" style={{ textAlign: 'center', padding: '2rem' }}>
                   No products found
                 </td>
               </tr>
@@ -632,14 +689,14 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
                         type="number"
                         value={qVal}
                         onChange={(e) => setEdit(shipment.id, 'quantity', e.target.value)}
-                        onBlur={() => commitEdit(shipment, 'quantity')}
                         onKeyDown={(e) => onFieldKeyDown(e, shipment, 'quantity')}
                         style={{
-                          border: '1px solid #ddd',
+                          border: edits[shipment.id]?.quantity !== undefined ? '2px solid #ff9800' : '1px solid #ddd',
                           padding: '4px 8px',
                           borderRadius: '4px',
                           width: '80px',
                           textAlign: 'center',
+                          backgroundColor: edits[shipment.id]?.quantity !== undefined ? '#fff3e0' : 'white',
                         }}
                         inputMode="decimal"
                       />
@@ -650,12 +707,12 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
                         step="0.1"
                         value={palletQtyVal}
                         onChange={(e) => setEdit(shipment.id, 'palletQty', e.target.value)}
-                        onBlur={() => commitEdit(shipment, 'palletQty')}
                         onKeyDown={(e) => onFieldKeyDown(e, shipment, 'palletQty')}
                         placeholder="Pallet Qty"
                         style={{
-                          border: '1px solid #ddd',
+                          border: edits[shipment.id]?.palletQty !== undefined ? '2px solid #ff9800' : '1px solid #ddd',
                           padding: '4px 8px',
+                          backgroundColor: edits[shipment.id]?.palletQty !== undefined ? '#fff3e0' : 'white',
                           borderRadius: '4px',
                           width: '80px',
                           textAlign: 'center',
@@ -668,14 +725,14 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
                         type="text"
                         value={whVal}
                         onChange={(e) => setEdit(shipment.id, 'receivingWarehouse', e.target.value)}
-                        onBlur={() => commitEdit(shipment, 'receivingWarehouse')}
                         onKeyDown={(e) => onFieldKeyDown(e, shipment, 'receivingWarehouse')}
                         placeholder="Warehouse"
                         style={{
-                          border: '1px solid #ddd',
+                          border: edits[shipment.id]?.receivingWarehouse !== undefined ? '2px solid #ff9800' : '1px solid #ddd',
                           padding: '4px 8px',
                           borderRadius: '4px',
                           width: '120px',
+                          backgroundColor: edits[shipment.id]?.receivingWarehouse !== undefined ? '#fff3e0' : 'white',
                         }}
                       />
                     </td>
@@ -696,6 +753,28 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
                     </td>
                     <td style={{ fontSize: '0.9rem', color: '#666' }}>{shipment.supplier}</td>
                     <td style={{ fontSize: '0.9rem', color: '#666' }}>{shipment.orderRef}</td>
+                    <td>
+                      {edits[shipment.id] && Object.keys(edits[shipment.id]).length > 0 ? (
+                        <button
+                          onClick={() => saveShipment(shipment.id)}
+                          style={{
+                            padding: '4px 12px',
+                            backgroundColor: '#4caf50',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem',
+                            fontWeight: 'bold',
+                          }}
+                          title="Save changes for this row"
+                        >
+                          💾 Save
+                        </button>
+                      ) : (
+                        <span style={{ color: '#999', fontSize: '0.85rem' }}>✓ Saved</span>
+                      )}
+                    </td>
                   </tr>
                 );
               })
