@@ -157,16 +157,36 @@ function WeekCalendar({ onWeekSelect, currentWeek, selectedWeekDate }) {
       {showCalendar && (
         <div
           style={{
-            position: 'absolute',
-            top: '100%',
-            left: '0',
+            position: 'fixed',
             zIndex: 1000,
             backgroundColor: 'white',
             border: '1px solid #ddd',
             borderRadius: '8px',
             padding: '16px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            minWidth: '320px'
+            minWidth: '320px',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}
+          ref={(el) => {
+            if (el) {
+              const button = el.previousElementSibling;
+              const rect = button.getBoundingClientRect();
+              const spaceBelow = window.innerHeight - rect.bottom;
+              const spaceAbove = rect.top;
+              const calendarHeight = 500; // Approximate height
+
+              if (spaceBelow < calendarHeight && spaceAbove > spaceBelow) {
+                // Open upward
+                el.style.bottom = `${window.innerHeight - rect.top}px`;
+                el.style.top = 'auto';
+              } else {
+                // Open downward
+                el.style.top = `${rect.bottom}px`;
+                el.style.bottom = 'auto';
+              }
+              el.style.left = `${rect.left}px`;
+            }
           }}
         >
           {/* Month Navigation Header */}
