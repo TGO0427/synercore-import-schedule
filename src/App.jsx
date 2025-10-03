@@ -339,7 +339,7 @@ function App() {
       console.log(`App: Creating ${uniqueSuppliers.length} unique suppliers...`);
       for (const supplierName of uniqueSuppliers) {
         try {
-          await createSupplier({ name: supplierName });
+          await handleAddSupplier({ name: supplierName });
         } catch (err) {
           console.log(`Supplier "${supplierName}" already exists or failed to create`);
         }
