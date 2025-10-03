@@ -42,7 +42,7 @@ function IncomingProductsChart({ shipments }) {
 
       warehouseData[warehouse].productCount += 1;
       warehouseData[warehouse].totalQuantity += Number(shipment.quantity) || 0;
-      warehouseData[warehouse].totalPallets += Number(shipment.cbm) || 0;
+      warehouseData[warehouse].totalPallets += Number(shipment.palletQty) || 0;
       warehouseData[warehouse].products.add(shipment.productName || 'Unknown');
     });
 
