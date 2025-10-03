@@ -16,6 +16,7 @@ import SynercoreLogo from './components/SynercoreLogo';
 import AlertHub from './components/AlertHub';
 import UserSettings from './components/UserSettings';
 import HelpGuide from './components/HelpGuide';
+import UserManagement from './components/UserManagement';
 import { ExcelProcessor } from './utils/excelProcessor';
 import { Supplier } from './types/supplier';
 import { computeShipmentAlerts, createCustomAlert } from './utils/alerts';
@@ -678,6 +679,8 @@ function App() {
         return <ReportsView shipments={shipments} statusFilter={statusFilter} onStatusFilter={handleStatusCardClick} />;
       case 'capacity':
         return <WarehouseCapacity shipments={shipments} />;
+      case 'users':
+        return <UserManagement />;
       case 'suppliers':
         return (
           <SupplierManagement
@@ -739,6 +742,7 @@ function App() {
 
         <ul className="sidebar-nav">
           <li><button className={activeView === 'suppliers' ? 'active' : ''} onClick={() => setActiveView('suppliers')}>🏢 Suppliers</button></li>
+          <li><button className={activeView === 'users' ? 'active' : ''} onClick={() => setActiveView('users')}>👥 User Management</button></li>
           <li><button className={activeView === 'capacity' ? 'active' : ''} onClick={() => setActiveView('capacity')}>🏭 Warehouse Capacity</button></li>
           <li><button className={activeView === 'products' ? 'active' : ''} onClick={() => setActiveView('products')}>📋 Product & Warehouse</button></li>
           <li><button className={activeView === 'shipping' ? 'active' : ''} onClick={() => setActiveView('shipping')}>📦 Shipping Schedule</button></li>
