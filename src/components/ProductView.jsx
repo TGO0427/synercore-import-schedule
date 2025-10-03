@@ -419,8 +419,8 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
       }
 
       const warehouse = sh.receivingWarehouse || 'Unassigned';
-      totals[warehouse] = (totals[warehouse] || 0) + normNum(sh.quantity);
-      console.log('✅ INCLUDED IN WAREHOUSE TOTALS:', sh.orderRef, 'warehouse:', warehouse, 'quantity:', sh.quantity, 'status:', sh.latestStatus);
+      totals[warehouse] = (totals[warehouse] || 0) + normNum(sh.palletQty);
+      console.log('✅ INCLUDED IN WAREHOUSE TOTALS:', sh.orderRef, 'warehouse:', warehouse, 'palletQty:', sh.palletQty, 'status:', sh.latestStatus);
     });
 
     console.log('🏁 WAREHOUSE FILTERING COMPLETE - Final warehouse totals:', totals);
@@ -599,7 +599,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
 
       {/* Warehouse Summary */}
       <div className="warehouse-summary" style={{ marginBottom: '1rem' }}>
-        <h3 style={{ marginBottom: '0.5rem', color: '#333' }}>Warehouse Summary</h3>
+        <h3 style={{ marginBottom: '0.5rem', color: '#333' }}>Warehouse Summary - Total Pallets by Warehouse</h3>
         <div className="stats-grid" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           {Object.entries(warehouseTotals).map(([warehouse, total]) => (
             <div 
