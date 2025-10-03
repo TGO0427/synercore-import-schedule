@@ -70,8 +70,31 @@ function LoginPage({ onLogin }) {
       alignItems: 'center',
       justifyContent: 'center',
       background: 'linear-gradient(135deg, #0a3d62 0%, #1e5a7d 100%)',
-      padding: '20px'
+      padding: '20px',
+      position: 'relative',
+      overflow: 'hidden'
     }}>
+      {/* Animated Globe Background */}
+      <div style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '600px',
+        height: '600px',
+        opacity: '0.3',
+        pointerEvents: 'none'
+      }}>
+        <div style={{
+          width: '100%',
+          height: '100%',
+          borderRadius: '50%',
+          background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.1), transparent),
+                      url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>')`,
+          position: 'relative',
+          animation: 'rotate 60s linear infinite'
+        }}></div>
+      </div>
       <div style={{
         backgroundColor: 'white',
         borderRadius: '12px',
@@ -250,11 +273,15 @@ function LoginPage({ onLogin }) {
         </div>
       </div>
 
-      {/* CSS for spinner animation */}
+      {/* CSS for animations */}
       <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
+        }
+        @keyframes rotate {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>
