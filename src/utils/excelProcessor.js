@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { Shipment, ShipmentStatus } from '../types/shipment';
+import { getWeekStartDate, getWeekNumber } from './dateUtils';
 
 export class ExcelProcessor {
   // ---- helpers -------------------------------------------------------------
@@ -83,6 +84,35 @@ export class ExcelProcessor {
     return ShipmentStatus.PLANNED_AIRFREIGHT;
   }
 
+  static calculateWeekDate(weekNumber) {
+    if (!weekNumber || weekNumber < 1 || weekNumber > 53) return null;
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentWeek = getWeekNumber(now);
+    const currentMonth = now.getMonth(); // 0-11
+
+    // Smart year detection:
+    // If we're in December (month 11) and importing week 1-10, assume next year
+    // If we're in January (month 0) and importing week 45-53, assume last year
+    let targetYear = currentYear;
+
+    if (currentMonth === 11 && weekNumber <= 10) {
+      targetYear = currentYear + 1;
+    } else if (currentMonth === 0 && weekNumber >= 45) {
+      targetYear = currentYear - 1;
+    } else if (weekNumber < currentWeek - 20) {
+      // If week is more than 20 weeks behind current, it's probably next year
+      targetYear = currentYear + 1;
+    } else if (weekNumber > currentWeek + 20) {
+      // If week is more than 20 weeks ahead of current, it's probably last year
+      targetYear = currentYear - 1;
+    }
+
+    const weekStartDate = getWeekStartDate(weekNumber, targetYear);
+    return weekStartDate.toISOString().split('T')[0]; // Return YYYY-MM-DD format
+  }
+
   // ---- main ---------------------------------------------------------------
   static parseExcelFile(file) {
     return new Promise((resolve, reject) => {
@@ -130,13 +160,17 @@ export class ExcelProcessor {
         console.log(`Row ${index} Pallet Qty: header="${palletQtyHeader}", raw="${palletQtyRaw}", parsed=${palletQtyValue}`);
       }
 
+      const weekNumber = this.parseWeekNumber(row['WEEK NUMBER'] || row['Week Number']);
+      const selectedWeekDate = this.calculateWeekDate(weekNumber);
+
       return new Shipment({
         id: `ship_${Date.now()}_${index}`,
         supplier: row['SUPPLIER'] || row['Supplier'] || '',
         orderRef: row['ORDER/REF'] || row['Order/Ref'] || `ORD-${index + 1}`,
         finalPod: row['FINAL POD'] || row['Final POD'] || '',
         latestStatus: this.mapStatus(row['LATEST STATUS'] || row['Latest Status']),
-        weekNumber: this.parseWeekNumber(row['WEEK NUMBER'] || row['Week Number']),
+        weekNumber: weekNumber,
+        selectedWeekDate: selectedWeekDate,
         productName: (row['PRODUCT NAME'] || row['Product Name'] || this.extractProductName(row['ORDER/REF'] || row['Order/Ref'] || '')),
         quantity: this.parseQuantity(row['QUANTITY'] || row['Quantity'] || row['Qty']),
         palletQty: palletQtyValue,
