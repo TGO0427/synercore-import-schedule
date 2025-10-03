@@ -69,7 +69,7 @@ function LoginPage({ onLogin }) {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'linear-gradient(135deg, #0a3d62 0%, #1e5a7d 100%)',
       padding: '20px'
     }}>
       <div style={{
@@ -78,20 +78,20 @@ function LoginPage({ onLogin }) {
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
         padding: '40px',
         width: '100%',
-        maxWidth: '400px'
+        maxWidth: '480px'
       }}>
         {/* Logo/Header */}
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
           <div style={{
-            fontSize: '24px',
-            fontWeight: 'bold',
-            color: '#2c3e50',
+            fontSize: '36px',
+            fontWeight: '300',
+            color: '#1a5f7a',
             marginBottom: '8px'
           }}>
             📊 Import Supply Chain Management
           </div>
           <div style={{
-            fontSize: '14px',
+            fontSize: '15px',
             color: '#666',
             marginBottom: '20px'
           }}>
@@ -101,16 +101,7 @@ function LoginPage({ onLogin }) {
 
         {/* Login Form */}
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{
-              display: 'block',
-              marginBottom: '8px',
-              fontSize: '14px',
-              fontWeight: '500',
-              color: '#333'
-            }}>
-              Username
-            </label>
+          <div style={{ marginBottom: '24px', position: 'relative' }}>
             <input
               type="text"
               name="username"
@@ -118,30 +109,22 @@ function LoginPage({ onLogin }) {
               onChange={handleInputChange}
               style={{
                 width: '100%',
-                padding: '12px 16px',
-                border: '2px solid #e1e5e9',
-                borderRadius: '8px',
-                fontSize: '14px',
-                transition: 'border-color 0.2s ease',
-                outline: 'none'
+                padding: '14px',
+                border: 'none',
+                borderBottom: '2px solid #ddd',
+                fontSize: '15px',
+                transition: 'border-color 0.3s ease',
+                outline: 'none',
+                background: 'transparent'
               }}
-              onFocus={(e) => e.target.style.borderColor = '#667eea'}
-              onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
-              placeholder="Enter your username"
+              onFocus={(e) => e.target.style.borderBottomColor = '#2d9f8f'}
+              onBlur={(e) => e.target.style.borderBottomColor = '#ddd'}
+              placeholder="Username"
               disabled={loading}
             />
           </div>
 
           <div style={{ marginBottom: '24px' }}>
-            <label style={{
-              display: 'block',
-              marginBottom: '8px',
-              fontSize: '14px',
-              fontWeight: '500',
-              color: '#333'
-            }}>
-              Password
-            </label>
             <div style={{ position: 'relative' }}>
               <input
                 type={showPassword ? "text" : "password"}
@@ -150,17 +133,18 @@ function LoginPage({ onLogin }) {
                 onChange={handleInputChange}
                 style={{
                   width: '100%',
-                  padding: '12px 16px',
+                  padding: '14px',
                   paddingRight: '45px',
-                  border: '2px solid #e1e5e9',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  transition: 'border-color 0.2s ease',
-                  outline: 'none'
+                  border: 'none',
+                  borderBottom: '2px solid #ddd',
+                  fontSize: '15px',
+                  transition: 'border-color 0.3s ease',
+                  outline: 'none',
+                  background: 'transparent'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#667eea'}
-                onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
-                placeholder="Enter your password"
+                onFocus={(e) => e.target.style.borderBottomColor = '#2d9f8f'}
+                onBlur={(e) => e.target.style.borderBottomColor = '#ddd'}
+                placeholder="Password"
                 disabled={loading}
               />
               <button
@@ -205,25 +189,25 @@ function LoginPage({ onLogin }) {
             disabled={loading}
             style={{
               width: '100%',
-              padding: '12px',
-              backgroundColor: loading ? '#9ca3af' : '#667eea',
-              color: 'white',
+              padding: '16px',
+              background: loading ? 'linear-gradient(135deg, #d1d5db 0%, #e5e7eb 100%)' : 'linear-gradient(135deg, #b8dde0 0%, #d4e9eb 100%)',
+              color: loading ? '#6b7280' : '#5a8a93',
               border: 'none',
               borderRadius: '8px',
               fontSize: '16px',
-              fontWeight: '600',
+              fontWeight: '500',
               cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s ease',
+              transition: 'all 0.3s ease',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px'
             }}
             onMouseEnter={(e) => {
-              if (!loading) e.target.style.backgroundColor = '#5a6fd8';
+              if (!loading) e.target.style.background = 'linear-gradient(135deg, #a5d1d4 0%, #c5e0e3 100%)';
             }}
             onMouseLeave={(e) => {
-              if (!loading) e.target.style.backgroundColor = '#667eea';
+              if (!loading) e.target.style.background = 'linear-gradient(135deg, #b8dde0 0%, #d4e9eb 100%)';
             }}
           >
             {loading && (
