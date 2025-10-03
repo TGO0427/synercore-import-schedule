@@ -175,7 +175,27 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
 
     const key = sortConfig.key;
     const dir = sortConfig.direction === 'asc' ? 1 : -1;
-    const numericKeys = new Set(['quantity', 'palletQty', 'weekNumber']);
+    const numericKeys = new Set(['quantity', 'palletQty']);
+
+    // Special handling for weekNumber sorting - use selectedWeekDate for proper chronological order
+    if (key === 'weekNumber') {
+      return [...filtered].sort((a, b) => {
+        const dateA = a.selectedWeekDate ? new Date(a.selectedWeekDate).getTime() : 0;
+        const dateB = b.selectedWeekDate ? new Date(b.selectedWeekDate).getTime() : 0;
+
+        // If both have dates, sort by date
+        if (dateA && dateB) return (dateA - dateB) * dir;
+
+        // If only one has a date, prioritize the one with a date
+        if (dateA && !dateB) return -1 * dir;
+        if (!dateA && dateB) return 1 * dir;
+
+        // If neither has a date, fallback to week number
+        const weekA = normNum(a.weekNumber);
+        const weekB = normNum(b.weekNumber);
+        return (weekA - weekB) * dir;
+      });
+    }
 
     const toComparable = (item) => {
       const val = item?.[key];
