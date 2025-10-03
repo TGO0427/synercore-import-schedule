@@ -13,6 +13,8 @@ function PostArrivalWorkflow() {
     inspectedBy: '',
     inspectionNotes: '',
     inspectionPassed: true,
+    inspectionOnHold: false,
+    holdTypes: [],
     receivedBy: '',
     receivingNotes: '',
     receivedQuantity: '',
@@ -242,7 +244,9 @@ function PostArrivalWorkflow() {
         };
       } else if (action === 'complete-inspection') {
         requestBody = {
-          passed: workflowData.inspectionPassed,
+          passed: workflowData.inspectionPassed && !workflowData.inspectionOnHold,
+          onHold: workflowData.inspectionOnHold,
+          holdTypes: workflowData.holdTypes,
           notes: workflowData.inspectionNotes,
           inspectedBy: workflowData.inspectedBy
         };
@@ -274,6 +278,8 @@ function PostArrivalWorkflow() {
           inspectedBy: '',
           inspectionNotes: '',
           inspectionPassed: true,
+          inspectionOnHold: false,
+          holdTypes: [],
           receivedBy: '',
           receivingNotes: '',
           receivedQuantity: '',
@@ -548,25 +554,80 @@ function PostArrivalWorkflow() {
                       <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
                         Inspection Result
                       </label>
-                      <div style={{ display: 'flex', gap: '1rem' }}>
+                      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <input
                             type="radio"
-                            checked={workflowData.inspectionPassed}
-                            onChange={() => setWorkflowData({...workflowData, inspectionPassed: true})}
+                            checked={workflowData.inspectionPassed && !workflowData.inspectionOnHold}
+                            onChange={() => setWorkflowData({...workflowData, inspectionPassed: true, inspectionOnHold: false, holdTypes: []})}
                           />
                           ✅ Passed
                         </label>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <input
                             type="radio"
-                            checked={!workflowData.inspectionPassed}
-                            onChange={() => setWorkflowData({...workflowData, inspectionPassed: false})}
+                            checked={workflowData.inspectionOnHold}
+                            onChange={() => setWorkflowData({...workflowData, inspectionOnHold: true, inspectionPassed: false})}
+                          />
+                          ⏸️ Passed On Hold
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <input
+                            type="radio"
+                            checked={!workflowData.inspectionPassed && !workflowData.inspectionOnHold}
+                            onChange={() => setWorkflowData({...workflowData, inspectionPassed: false, inspectionOnHold: false, holdTypes: []})}
                           />
                           ❌ Failed
                         </label>
                       </div>
                     </div>
+
+                    {workflowData.inspectionOnHold && (
+                      <div style={{ marginBottom: '1rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                          Hold Type(s) <span style={{ color: '#dc3545' }}>*</span>
+                        </label>
+                        <div style={{
+                          border: '2px solid #e1e5e9',
+                          borderRadius: '6px',
+                          padding: '0.75rem',
+                          backgroundColor: '#f8f9fa'
+                        }}>
+                          {['Pending Results', 'Damage Stock', 'Non Compliant Documentation', 'Awaiting COA'].map((type) => (
+                            <label
+                              key={type}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                marginBottom: '0.5rem',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={workflowData.holdTypes.includes(type)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setWorkflowData({
+                                      ...workflowData,
+                                      holdTypes: [...workflowData.holdTypes, type]
+                                    });
+                                  } else {
+                                    setWorkflowData({
+                                      ...workflowData,
+                                      holdTypes: workflowData.holdTypes.filter(t => t !== type)
+                                    });
+                                  }
+                                }}
+                                style={{ cursor: 'pointer' }}
+                              />
+                              <span style={{ fontSize: '0.9rem' }}>{type}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     <div style={{ marginBottom: '1rem' }}>
                       <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
@@ -682,6 +743,14 @@ function PostArrivalWorkflow() {
 
               <button
                 onClick={() => {
+                  // Validate hold types if on hold
+                  if (selectedShipment.latestStatus === 'inspecting' &&
+                      workflowData.inspectionOnHold &&
+                      workflowData.holdTypes.length === 0) {
+                    alert('Please select at least one hold type');
+                    return;
+                  }
+
                   if (selectedShipment.latestStatus === 'inspection_pending') {
                     submitWorkflowAction('start-inspection');
                   } else if (selectedShipment.latestStatus === 'inspecting') {
