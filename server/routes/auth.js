@@ -26,6 +26,61 @@ export const authenticateToken = (req, res, next) => {
   });
 };
 
+// POST /api/auth/setup - Initial admin setup (only works when no users exist)
+router.post('/setup', async (req, res) => {
+  try {
+    const { username, email, password, fullName } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
+
+    // Check if any users exist
+    const userCount = await pool.query('SELECT COUNT(*) FROM users');
+
+    if (parseInt(userCount.rows[0].count) > 0) {
+      return res.status(403).json({ error: 'Setup already completed. Users exist in the system.' });
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Create admin user
+    const id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const result = await pool.query(
+      `INSERT INTO users (id, username, email, password_hash, full_name, role, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, username, email, full_name, role, is_active, created_at`,
+      [id, username, email || null, passwordHash, fullName || null, 'admin', true]
+    );
+
+    const user = result.rows[0];
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.status(201).json({
+      message: 'Admin user created successfully',
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        fullName: user.full_name,
+        role: user.role,
+        isActive: user.is_active
+      },
+      token
+    });
+  } catch (error) {
+    console.error('Error in setup:', error);
+    res.status(500).json({ error: 'Failed to create admin user' });
+  }
+});
+
 // POST /api/auth/register - Register new user
 router.post('/register', async (req, res) => {
   try {
