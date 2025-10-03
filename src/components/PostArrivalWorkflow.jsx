@@ -207,7 +207,7 @@ function PostArrivalWorkflow() {
       setActionLoading(true);
       const endpoint = `/api/shipments/${shipment.id}/${action.replace('_', '-')}`;
 
-      const response = await fetch(endpoint, {
+      const response = await fetch(getApiUrl(endpoint), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -259,7 +259,7 @@ function PostArrivalWorkflow() {
         };
       }
 
-      const response = await fetch(endpoint, {
+      const response = await fetch(getApiUrl(endpoint), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
