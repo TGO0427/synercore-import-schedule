@@ -9,6 +9,11 @@ function UserSettings({ username, onClose }) {
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  });
 
   const user = authUtils.getUser();
 
@@ -185,22 +190,45 @@ function UserSettings({ username, onClose }) {
             }}>
               Current Password
             </label>
-            <input
-              type="password"
-              name="currentPassword"
-              value={passwords.currentPassword}
-              onChange={handleChange}
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '2px solid #e1e5e9',
-                borderRadius: '6px',
-                fontSize: '14px',
-                outline: 'none'
-              }}
-              placeholder="Enter current password"
-            />
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPasswords.current ? "text" : "password"}
+                name="currentPassword"
+                value={passwords.currentPassword}
+                onChange={handleChange}
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  paddingRight: '45px',
+                  border: '2px solid #e1e5e9',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+                placeholder="Enter current password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  fontSize: '18px',
+                  color: '#666',
+                  lineHeight: '1'
+                }}
+                tabIndex="-1"
+              >
+                {showPasswords.current ? '👁️' : '👁️‍🗨️'}
+              </button>
+            </div>
           </div>
 
           <div style={{ marginBottom: '15px' }}>
@@ -213,22 +241,45 @@ function UserSettings({ username, onClose }) {
             }}>
               New Password
             </label>
-            <input
-              type="password"
-              name="newPassword"
-              value={passwords.newPassword}
-              onChange={handleChange}
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '2px solid #e1e5e9',
-                borderRadius: '6px',
-                fontSize: '14px',
-                outline: 'none'
-              }}
-              placeholder="Enter new password (min 6 characters)"
-            />
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPasswords.new ? "text" : "password"}
+                name="newPassword"
+                value={passwords.newPassword}
+                onChange={handleChange}
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  paddingRight: '45px',
+                  border: '2px solid #e1e5e9',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+                placeholder="Enter new password (min 6 characters)"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  fontSize: '18px',
+                  color: '#666',
+                  lineHeight: '1'
+                }}
+                tabIndex="-1"
+              >
+                {showPasswords.new ? '👁️' : '👁️‍🗨️'}
+              </button>
+            </div>
           </div>
 
           <div style={{ marginBottom: '20px' }}>
@@ -241,22 +292,45 @@ function UserSettings({ username, onClose }) {
             }}>
               Confirm New Password
             </label>
-            <input
-              type="password"
-              name="confirmPassword"
-              value={passwords.confirmPassword}
-              onChange={handleChange}
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '2px solid #e1e5e9',
-                borderRadius: '6px',
-                fontSize: '14px',
-                outline: 'none'
-              }}
-              placeholder="Confirm new password"
-            />
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPasswords.confirm ? "text" : "password"}
+                name="confirmPassword"
+                value={passwords.confirmPassword}
+                onChange={handleChange}
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  paddingRight: '45px',
+                  border: '2px solid #e1e5e9',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+                placeholder="Confirm new password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  fontSize: '18px',
+                  color: '#666',
+                  lineHeight: '1'
+                }}
+                tabIndex="-1"
+              >
+                {showPasswords.confirm ? '👁️' : '👁️‍🗨️'}
+              </button>
+            </div>
           </div>
 
           {message.text && (

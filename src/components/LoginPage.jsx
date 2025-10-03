@@ -8,6 +8,7 @@ function LoginPage({ onLogin }) {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -141,25 +142,48 @@ function LoginPage({ onLogin }) {
             }}>
               Password
             </label>
-            <input
-              type="password"
-              name="password"
-              value={credentials.password}
-              onChange={handleInputChange}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                border: '2px solid #e1e5e9',
-                borderRadius: '8px',
-                fontSize: '14px',
-                transition: 'border-color 0.2s ease',
-                outline: 'none'
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#667eea'}
-              onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
-              placeholder="Enter your password"
-              disabled={loading}
-            />
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={credentials.password}
+                onChange={handleInputChange}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  paddingRight: '45px',
+                  border: '2px solid #e1e5e9',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  transition: 'border-color 0.2s ease',
+                  outline: 'none'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
+                placeholder="Enter your password"
+                disabled={loading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  fontSize: '18px',
+                  color: '#666',
+                  lineHeight: '1'
+                }}
+                tabIndex="-1"
+              >
+                {showPassword ? '👁️' : '👁️‍🗨️'}
+              </button>
+            </div>
           </div>
 
           {error && (
