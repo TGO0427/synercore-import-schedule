@@ -13,6 +13,7 @@
     "start": "npm run migrate && node server/index.js",
     "migrate": "node server/db/migrate.js",
     "backfill-week-dates": "node server/db/backfill-week-dates.js",
+    "create-admin": "node server/scripts/createAdminUser.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
