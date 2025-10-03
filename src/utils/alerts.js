@@ -99,25 +99,25 @@ export function computeShipmentAlerts(shipments) {
     if (s.weekNumber) {
       const shipmentWeek = parseInt(s.weekNumber);
 
-      // Current week arrivals
-      if (shipmentWeek === currentWeek && (s.latestStatus === 'planned_airfreight' || s.latestStatus === 'planned_seafreight' || s.latestStatus === 'in_transit_airfreight' || s.latestStatus === 'in_transit_seaway' || s.latestStatus === 'in_transit_roadway')) {
+      // Current week arrivals - show ALL shipments regardless of status
+      if (shipmentWeek === currentWeek) {
         alerts.push({
           ...base,
           id: `ship-${s.id}-week-current`,
           severity: 'info',
           title: 'Arrival This Week',
-          description: `${s.supplier} - ${s.productName || s.orderRef} is scheduled to arrive this week.`
+          description: `${s.supplier} - ${s.productName || s.orderRef} (Week ${shipmentWeek}) - Status: ${s.latestStatus}`
         });
       }
 
-      // Next week arrivals
-      if (shipmentWeek === currentWeek + 1 && (s.latestStatus === 'planned_airfreight' || s.latestStatus === 'planned_seafreight')) {
+      // Next week arrivals - show ALL shipments regardless of status
+      if (shipmentWeek === currentWeek + 1) {
         alerts.push({
           ...base,
           id: `ship-${s.id}-week-next`,
           severity: 'info',
           title: 'Arrival Next Week',
-          description: `${s.supplier} - ${s.productName || s.orderRef} is scheduled to arrive next week.`
+          description: `${s.supplier} - ${s.productName || s.orderRef} (Week ${shipmentWeek}) - Status: ${s.latestStatus}`
         });
       }
 
