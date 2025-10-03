@@ -905,7 +905,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   </td>
                   <td>
                     <select
-                      value={edits[shipment.id]?.incoterm ?? shipment.incoterm || ''}
+                      value={(edits[shipment.id]?.incoterm ?? shipment.incoterm) || ''}
                       onChange={(e) => handleDropdownChange(shipment.id, 'incoterm', e.target.value)}
                       className="select"
                       style={{
@@ -930,7 +930,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   </td>
                   <td>
                     <select
-                      value={edits[shipment.id]?.forwardingAgent ?? shipment.forwardingAgent || ''}
+                      value={(edits[shipment.id]?.forwardingAgent ?? shipment.forwardingAgent) || ''}
                       onChange={(e) => handleDropdownChange(shipment.id, 'forwardingAgent', e.target.value)}
                       className="select"
                       style={{
