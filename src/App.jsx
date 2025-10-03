@@ -750,7 +750,6 @@ function App() {
 
         <ul className="sidebar-nav">
           <li><button className={activeView === 'suppliers' ? 'active' : ''} onClick={() => setActiveView('suppliers')}>🏢 Suppliers</button></li>
-          {isAdmin && <li><button className={activeView === 'users' ? 'active' : ''} onClick={() => setActiveView('users')}>👥 User Management</button></li>}
           <li><button className={activeView === 'capacity' ? 'active' : ''} onClick={() => setActiveView('capacity')}>🏭 Warehouse Capacity</button></li>
           <li><button className={activeView === 'products' ? 'active' : ''} onClick={() => setActiveView('products')}>📋 Product & Warehouse</button></li>
           <li><button className={activeView === 'shipping' ? 'active' : ''} onClick={() => setActiveView('shipping')}>📦 Shipping Schedule</button></li>
@@ -768,6 +767,7 @@ function App() {
           <li>
             <button onClick={handleLogout} style={{ width: '100%', textAlign: 'left', backgroundColor: '#dc3545' }}>🚪 Logout</button>
           </li>
+          {isAdmin && <li><button className={activeView === 'users' ? 'active' : ''} onClick={() => setActiveView('users')}>👥 User Management</button></li>}
         </ul>
 
         {/* External links & quick stats unchanged (kept for brevity) */}
