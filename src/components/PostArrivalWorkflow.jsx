@@ -15,6 +15,8 @@ function PostArrivalWorkflow() {
     inspectionPassed: true,
     inspectionOnHold: false,
     holdTypes: [],
+    inspectionFailed: false,
+    failureReasons: [],
     receivedBy: '',
     receivingNotes: '',
     receivedQuantity: '',
@@ -244,9 +246,11 @@ function PostArrivalWorkflow() {
         };
       } else if (action === 'complete-inspection') {
         requestBody = {
-          passed: workflowData.inspectionPassed && !workflowData.inspectionOnHold,
+          passed: workflowData.inspectionPassed && !workflowData.inspectionOnHold && !workflowData.inspectionFailed,
           onHold: workflowData.inspectionOnHold,
           holdTypes: workflowData.holdTypes,
+          failed: workflowData.inspectionFailed,
+          failureReasons: workflowData.failureReasons,
           notes: workflowData.inspectionNotes,
           inspectedBy: workflowData.inspectedBy
         };
@@ -280,6 +284,8 @@ function PostArrivalWorkflow() {
           inspectionPassed: true,
           inspectionOnHold: false,
           holdTypes: [],
+          inspectionFailed: false,
+          failureReasons: [],
           receivedBy: '',
           receivingNotes: '',
           receivedQuantity: '',
@@ -558,8 +564,8 @@ function PostArrivalWorkflow() {
                         <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <input
                             type="radio"
-                            checked={workflowData.inspectionPassed && !workflowData.inspectionOnHold}
-                            onChange={() => setWorkflowData({...workflowData, inspectionPassed: true, inspectionOnHold: false, holdTypes: []})}
+                            checked={workflowData.inspectionPassed && !workflowData.inspectionOnHold && !workflowData.inspectionFailed}
+                            onChange={() => setWorkflowData({...workflowData, inspectionPassed: true, inspectionOnHold: false, inspectionFailed: false, holdTypes: [], failureReasons: []})}
                           />
                           ✅ Passed
                         </label>
@@ -567,15 +573,15 @@ function PostArrivalWorkflow() {
                           <input
                             type="radio"
                             checked={workflowData.inspectionOnHold}
-                            onChange={() => setWorkflowData({...workflowData, inspectionOnHold: true, inspectionPassed: false})}
+                            onChange={() => setWorkflowData({...workflowData, inspectionOnHold: true, inspectionPassed: false, inspectionFailed: false, failureReasons: []})}
                           />
                           ⏸️ Passed On Hold
                         </label>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <input
                             type="radio"
-                            checked={!workflowData.inspectionPassed && !workflowData.inspectionOnHold}
-                            onChange={() => setWorkflowData({...workflowData, inspectionPassed: false, inspectionOnHold: false, holdTypes: []})}
+                            checked={workflowData.inspectionFailed}
+                            onChange={() => setWorkflowData({...workflowData, inspectionFailed: true, inspectionPassed: false, inspectionOnHold: false, holdTypes: []})}
                           />
                           ❌ Failed
                         </label>
@@ -623,6 +629,53 @@ function PostArrivalWorkflow() {
                                 style={{ cursor: 'pointer' }}
                               />
                               <span style={{ fontSize: '0.9rem' }}>{type}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {workflowData.inspectionFailed && (
+                      <div style={{ marginBottom: '1rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                          Failure Reason(s) <span style={{ color: '#dc3545' }}>*</span>
+                        </label>
+                        <div style={{
+                          border: '2px solid #e1e5e9',
+                          borderRadius: '6px',
+                          padding: '0.75rem',
+                          backgroundColor: '#fff5f5'
+                        }}>
+                          {['No COA', 'Supplier not Approved', 'Damage Stock', 'Expired Stock', 'Non Compliant Documentation'].map((reason) => (
+                            <label
+                              key={reason}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                marginBottom: '0.5rem',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={workflowData.failureReasons.includes(reason)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setWorkflowData({
+                                      ...workflowData,
+                                      failureReasons: [...workflowData.failureReasons, reason]
+                                    });
+                                  } else {
+                                    setWorkflowData({
+                                      ...workflowData,
+                                      failureReasons: workflowData.failureReasons.filter(r => r !== reason)
+                                    });
+                                  }
+                                }}
+                                style={{ cursor: 'pointer' }}
+                              />
+                              <span style={{ fontSize: '0.9rem' }}>{reason}</span>
                             </label>
                           ))}
                         </div>
@@ -748,6 +801,14 @@ function PostArrivalWorkflow() {
                       workflowData.inspectionOnHold &&
                       workflowData.holdTypes.length === 0) {
                     alert('Please select at least one hold type');
+                    return;
+                  }
+
+                  // Validate failure reasons if failed
+                  if (selectedShipment.latestStatus === 'inspecting' &&
+                      workflowData.inspectionFailed &&
+                      workflowData.failureReasons.length === 0) {
+                    alert('Please select at least one failure reason');
                     return;
                   }
 
