@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { authUtils } from '../utils/auth';
-import { getApiUrl } from '../config/api';
 
 function UserManagement() {
   const [users, setUsers] = useState([]);
@@ -15,7 +14,7 @@ function UserManagement() {
   });
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  const apiUrl = getApiUrl();
+  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
 
   useEffect(() => {
     loadUsers();
