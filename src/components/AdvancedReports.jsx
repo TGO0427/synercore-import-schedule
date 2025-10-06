@@ -281,11 +281,12 @@ function AdvancedReports() {
       // Detailed shipment list
       doc.autoTable({
         startY: yPos,
-        head: [['Supplier', 'Order Ref', 'Product', 'Quantity', 'Pallets', 'Status', 'Warehouse']],
+        head: [['Supplier', 'Order Ref', 'Product', 'Week', 'Qty', 'Pallets', 'Status', 'Warehouse']],
         body: filteredShipments.map(s => [
           s.supplier || '',
           s.orderRef || '',
           s.productName || '',
+          s.weekNumber || '-',
           s.quantity || 0,
           s.palletQty || 0,
           s.latestStatus || '',
@@ -738,6 +739,7 @@ function AdvancedReports() {
                     <th style={{ padding: '12px', textAlign: 'left' }}>Supplier</th>
                     <th style={{ padding: '12px', textAlign: 'left' }}>Order Ref</th>
                     <th style={{ padding: '12px', textAlign: 'left' }}>Product</th>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>Week</th>
                     <th style={{ padding: '12px', textAlign: 'right' }}>Quantity</th>
                     <th style={{ padding: '12px', textAlign: 'right' }}>Pallets</th>
                     <th style={{ padding: '12px', textAlign: 'left' }}>Status</th>
@@ -753,6 +755,9 @@ function AdvancedReports() {
                       <td style={{ padding: '10px' }}>{shipment.supplier || '-'}</td>
                       <td style={{ padding: '10px' }}>{shipment.orderRef || '-'}</td>
                       <td style={{ padding: '10px' }}>{shipment.productName || '-'}</td>
+                      <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold', color: '#667eea' }}>
+                        {shipment.weekNumber || '-'}
+                      </td>
                       <td style={{ padding: '10px', textAlign: 'right' }}>{(shipment.quantity || 0).toLocaleString()}</td>
                       <td style={{ padding: '10px', textAlign: 'right' }}>{(shipment.palletQty || 0).toLocaleString()}</td>
                       <td style={{ padding: '10px' }}>
