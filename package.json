@@ -12,6 +12,8 @@
     "preview": "vite preview",
     "start": "npm run migrate && node server/index.js",
     "migrate": "node server/db/migrate.js",
+    "migrate:rejection": "node server/db/add-rejection-migration.js",
+    "setup:db": "npm run migrate && npm run migrate:rejection",
     "backfill-week-dates": "node server/db/backfill-week-dates.js",
     "create-admin": "node server/scripts/createAdminUser.js",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -30,6 +32,7 @@
     "cors": "^2.8.5",
     "cron-parser": "^5.4.0",
     "date-fns": "^2.30.0",
+    "dotenv": "^17.2.3",
     "express": "^4.18.2",
     "fs-extra": "^11.3.2",
     "imap": "^0.8.19",

@@ -1,4 +1,9 @@
 // server/index.js
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
+
 // Disable SSL certificate validation for Railway Postgres
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
