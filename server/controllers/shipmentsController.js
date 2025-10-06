@@ -36,7 +36,11 @@ function dbRowToShipment(row) {
     receivingNotes: row.receiving_notes,
     receivedBy: row.received_by,
     receivedQuantity: row.received_quantity ? parseFloat(row.received_quantity) : null,
-    discrepancies: row.discrepancies ? JSON.parse(row.discrepancies) : []
+    discrepancies: row.discrepancies ? JSON.parse(row.discrepancies) : [],
+    // Rejection/Return fields
+    rejectionDate: row.rejection_date,
+    rejectionReason: row.rejection_reason,
+    rejectedBy: row.rejected_by
   };
 }
 
@@ -689,6 +693,82 @@ export class ShipmentsController {
       res.json(result.rows.map(dbRowToShipment));
     } catch (error) {
       console.error('Error getting post-arrival shipments:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async rejectShipment(req, res) {
+    try {
+      const { id } = req.params;
+      const { rejectionReason, rejectedBy, archiveShipment = true } = req.body;
+
+      if (!rejectionReason || !rejectionReason.trim()) {
+        return res.status(400).json({ error: 'Rejection reason is required' });
+      }
+
+      // Get current shipment
+      const current = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      if (current.rows.length === 0) {
+        return res.status(404).json({ error: 'Shipment not found' });
+      }
+
+      const shipment = dbRowToShipment(current.rows[0]);
+
+      // Only allow rejection from inspection_failed status
+      if (shipment.latestStatus !== 'inspection_failed') {
+        return res.status(400).json({ error: 'Only failed inspection shipments can be rejected' });
+      }
+
+      if (archiveShipment) {
+        // Archive the shipment before removing it
+        const shipmentToArchive = {
+          ...shipment,
+          latestStatus: 'rejected',
+          rejectionDate: new Date().toISOString(),
+          rejectionReason: rejectionReason.trim(),
+          rejectedBy: rejectedBy || 'Unknown'
+        };
+
+        try {
+          const archiveResult = archiveService.archiveSpecificShipments([shipmentToArchive]);
+          console.log(`Rejected shipment archived to: ${archiveResult.archiveFileName}`);
+        } catch (archiveError) {
+          console.error('Failed to archive rejected shipment:', archiveError);
+          // Continue with deletion even if archive fails
+        }
+
+        // Delete the shipment
+        await db.query('DELETE FROM shipments WHERE id = $1', [id]);
+
+        res.json({
+          success: true,
+          message: 'Shipment rejected and archived successfully',
+          archived: true,
+          shipmentId: id
+        });
+      } else {
+        // Mark as rejected without archiving
+        await db.query(
+          `UPDATE shipments SET
+            latest_status = 'rejected',
+            rejection_date = CURRENT_TIMESTAMP,
+            rejection_reason = $2,
+            rejected_by = $3,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $1`,
+          [id, rejectionReason.trim(), rejectedBy || 'Unknown']
+        );
+
+        const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+        res.json({
+          success: true,
+          message: 'Shipment rejected successfully',
+          archived: false,
+          shipment: dbRowToShipment(result.rows[0])
+        });
+      }
+    } catch (error) {
+      console.error('Error rejecting shipment:', error);
       res.status(500).json({ error: error.message });
     }
   }

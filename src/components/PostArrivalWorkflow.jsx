@@ -23,6 +23,13 @@ function PostArrivalWorkflow() {
     discrepancies: []
   });
 
+  const [showRejectionDialog, setShowRejectionDialog] = useState(false);
+  const [rejectionData, setRejectionData] = useState({
+    rejectedBy: '',
+    rejectionReason: '',
+    archiveShipment: true
+  });
+
   useEffect(() => {
     fetchPostArrivalShipments();
   }, []);
@@ -108,6 +115,7 @@ function PostArrivalWorkflow() {
       actions.push({ key: 'start-receiving', label: 'Start Receiving', icon: '📋', color: '#6f42c1' });
     } else if (status === 'inspection_failed') {
       actions.push({ key: 'start-inspection', label: 'Re-inspect', icon: '🔍', color: '#17a2b8' });
+      actions.push({ key: 'reject-shipment', label: 'Reject/Return to Supplier', icon: '↩️', color: '#dc3545' });
     } else if (status === 'receiving') {
       actions.push({ key: 'complete-receiving', label: 'Complete Receiving', icon: '✔️', color: '#20c997' });
     } else if (status === 'received') {
@@ -121,6 +129,12 @@ function PostArrivalWorkflow() {
   };
 
   const performWorkflowAction = async (shipment, action) => {
+    if (action === 'reject-shipment') {
+      setSelectedShipment(shipment);
+      setShowRejectionDialog(true);
+      return;
+    }
+
     if (action === 'complete-inspection' || action === 'start-inspection' ||
         action === 'complete-receiving' || action === 'start-receiving') {
       setSelectedShipment(shipment);
@@ -299,6 +313,49 @@ function PostArrivalWorkflow() {
     } catch (error) {
       console.error('Error submitting workflow action:', error);
       alert('Error performing action. Please try again.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const submitRejection = async () => {
+    try {
+      if (!rejectionData.rejectionReason.trim()) {
+        alert('Please provide a rejection reason');
+        return;
+      }
+
+      setActionLoading(true);
+      const response = await fetch(getApiUrl(`/api/shipments/${selectedShipment.id}/reject-shipment`), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          rejectionReason: rejectionData.rejectionReason,
+          rejectedBy: rejectionData.rejectedBy,
+          archiveShipment: rejectionData.archiveShipment
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(result.message || 'Shipment rejected successfully');
+        setShowRejectionDialog(false);
+        setSelectedShipment(null);
+        setRejectionData({
+          rejectedBy: '',
+          rejectionReason: '',
+          archiveShipment: true
+        });
+        await fetchPostArrivalShipments();
+      } else {
+        const error = await response.json();
+        alert(`Error: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error rejecting shipment:', error);
+      alert('Error rejecting shipment. Please try again.');
     } finally {
       setActionLoading(false);
     }
@@ -835,6 +892,151 @@ function PostArrivalWorkflow() {
                 }}
               >
                 {actionLoading ? 'Processing...' : 'Submit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rejection Dialog */}
+      {showRejectionDialog && selectedShipment && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '2rem',
+            borderRadius: '12px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            width: '90%',
+            maxWidth: '500px',
+            maxHeight: '80vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h3 style={{ margin: '0 0 0.5rem 0', color: '#dc3545' }}>
+                ↩️ Reject/Return Shipment to Supplier
+              </h3>
+              <div style={{ color: '#666', fontSize: '0.9rem' }}>
+                {selectedShipment.supplier} - {selectedShipment.orderRef}
+              </div>
+            </div>
+
+            <div style={{
+              backgroundColor: '#fff3cd',
+              border: '1px solid #ffc107',
+              borderRadius: '6px',
+              padding: '1rem',
+              marginBottom: '1.5rem',
+              fontSize: '0.85rem',
+              color: '#856404'
+            }}>
+              ⚠️ This will reject the shipment and remove it from the post-arrival workflow.
+              {rejectionData.archiveShipment && ' The shipment will be archived for record-keeping.'}
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                Rejected By
+              </label>
+              <input
+                type="text"
+                value={rejectionData.rejectedBy}
+                onChange={(e) => setRejectionData({...rejectionData, rejectedBy: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '2px solid #e1e5e9',
+                  borderRadius: '6px',
+                  fontSize: '0.9rem',
+                  outline: 'none'
+                }}
+                placeholder="Enter your name"
+              />
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                Rejection Reason <span style={{ color: '#dc3545' }}>*</span>
+              </label>
+              <textarea
+                value={rejectionData.rejectionReason}
+                onChange={(e) => setRejectionData({...rejectionData, rejectionReason: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '2px solid #e1e5e9',
+                  borderRadius: '6px',
+                  fontSize: '0.9rem',
+                  outline: 'none',
+                  minHeight: '100px',
+                  resize: 'vertical'
+                }}
+                placeholder="Describe why this shipment is being rejected/returned to supplier..."
+              />
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={rejectionData.archiveShipment}
+                  onChange={(e) => setRejectionData({...rejectionData, archiveShipment: e.target.checked})}
+                  style={{ cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '0.9rem' }}>Archive this shipment (recommended for record-keeping)</span>
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowRejectionDialog(false);
+                  setSelectedShipment(null);
+                  setRejectionData({
+                    rejectedBy: '',
+                    rejectionReason: '',
+                    archiveShipment: true
+                  });
+                }}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: '500'
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={submitRejection}
+                disabled={actionLoading || !rejectionData.rejectionReason.trim()}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: actionLoading || !rejectionData.rejectionReason.trim() ? '#ccc' : '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: actionLoading || !rejectionData.rejectionReason.trim() ? 'not-allowed' : 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: '500'
+                }}
+              >
+                {actionLoading ? 'Processing...' : 'Reject & Remove'}
               </button>
             </div>
           </div>

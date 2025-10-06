@@ -29,5 +29,6 @@ router.post('/:id/complete-inspection', ShipmentsController.completeInspection);
 router.post('/:id/start-receiving', ShipmentsController.startReceiving);
 router.post('/:id/complete-receiving', ShipmentsController.completeReceiving);
 router.post('/:id/mark-stored', ShipmentsController.markAsStored);
+router.post('/:id/reject-shipment', ShipmentsController.rejectShipment);
 
 export default router;

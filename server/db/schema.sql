@@ -30,7 +30,11 @@ CREATE TABLE IF NOT EXISTS shipments (
   receiving_notes TEXT,
   received_by VARCHAR(255),
   received_quantity NUMERIC,
-  discrepancies TEXT
+  discrepancies TEXT,
+  -- Rejection/Return workflow fields
+  rejection_date TIMESTAMP,
+  rejection_reason TEXT,
+  rejected_by VARCHAR(255)
 );
 
 -- Suppliers table
