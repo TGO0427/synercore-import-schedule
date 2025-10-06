@@ -415,6 +415,29 @@ export class ShipmentsController {
     }
   }
 
+  static async updateArchive(req, res) {
+    try {
+      const { fileName } = req.params;
+      const { data } = req.body;
+
+      if (!data || !Array.isArray(data)) {
+        return res.status(400).json({ error: 'Invalid data format' });
+      }
+
+      const result = await archiveService.updateArchiveData(fileName, data);
+
+      res.json({
+        success: true,
+        message: 'Archive updated successfully',
+        fileName: result.fileName,
+        totalShipments: result.totalShipments
+      });
+    } catch (error) {
+      console.error('Archive update error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+
   static async performManualArchive(req, res) {
     const client = await db.getPool().connect();
 

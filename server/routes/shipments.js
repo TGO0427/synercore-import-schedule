@@ -7,6 +7,7 @@ router.get('/', ShipmentsController.getAllShipments);
 router.get('/archives', ShipmentsController.getArchives);
 router.get('/archives/:fileName', ShipmentsController.getArchiveData);
 router.put('/archives/:fileName/rename', ShipmentsController.renameArchive);
+router.put('/archives/:fileName', ShipmentsController.updateArchive);
 router.post('/bulk-import', ShipmentsController.bulkImportEndpoint);
 router.get('/status/:status', ShipmentsController.getShipmentsByStatus);
 router.get('/delayed/list', ShipmentsController.getDelayedShipments);

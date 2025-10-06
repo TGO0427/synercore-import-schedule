@@ -207,6 +207,33 @@ class ArchiveService {
       throw error;
     }
   }
+
+  // Update archive data
+  async updateArchiveData(fileName, updatedData) {
+    try {
+      // Check if archive exists
+      const checkResult = await pool.query(
+        `SELECT id FROM archives WHERE file_name = $1`,
+        [fileName]
+      );
+
+      if (checkResult.rows.length === 0) {
+        throw new Error('Archive file not found');
+      }
+
+      // Update archive data
+      await pool.query(
+        `UPDATE archives SET data = $1, total_shipments = $2 WHERE file_name = $3`,
+        [JSON.stringify(updatedData), updatedData.length, fileName]
+      );
+
+      console.log(`Archive updated: ${fileName} with ${updatedData.length} shipments`);
+      return { fileName, totalShipments: updatedData.length };
+    } catch (error) {
+      console.error('Failed to update archive:', error);
+      throw error;
+    }
+  }
 }
 
 export default new ArchiveService();
