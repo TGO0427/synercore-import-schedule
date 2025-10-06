@@ -4,8 +4,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import db from './connection.js';
 
-// Load environment variables from .env file
-dotenv.config();
+// Load environment variables from .env file (only if DATABASE_URL not already provided)
+// Railway CLI automatically sets DATABASE_URL, so we skip .env in that case
+if (!process.env.DATABASE_URL) {
+  dotenv.config();
+}
 
 // Disable SSL certificate validation for Railway Postgres
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
