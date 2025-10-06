@@ -87,7 +87,7 @@ function AdvancedReports() {
 
   // Apply all filters
   const filteredShipments = useMemo(() => {
-    return shipments.filter(shipment => {
+    let filtered = shipments.filter(shipment => {
       // Date range filter
       if (filters.dateRange.start || filters.dateRange.end) {
         const dateField = filters.dateRange.field;
@@ -138,6 +138,21 @@ function AdvancedReports() {
 
       return true;
     });
+
+    // Sort with planned shipments at the bottom (same logic as Shipment Schedule)
+    filtered.sort((a, b) => {
+      // First priority: planned statuses go to bottom
+      const aIsPlanned = a.latestStatus?.startsWith('planned_');
+      const bIsPlanned = b.latestStatus?.startsWith('planned_');
+
+      if (aIsPlanned && !bIsPlanned) return 1;  // a goes after b
+      if (!aIsPlanned && bIsPlanned) return -1; // a goes before b
+
+      // If both planned or both non-planned, maintain original order
+      return 0;
+    });
+
+    return filtered;
   }, [shipments, filters]);
 
   // Apply aggregation
