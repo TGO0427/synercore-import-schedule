@@ -62,22 +62,33 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
       return matchesSearch && matchesStatus;
     });
 
-    if (sortConfig.key) {
-      filtered.sort((a, b) => {
+    // Sort with planned shipments at the bottom
+    filtered.sort((a, b) => {
+      // First priority: planned statuses go to bottom
+      const aIsPlanned = a.latestStatus?.startsWith('planned_');
+      const bIsPlanned = b.latestStatus?.startsWith('planned_');
+
+      if (aIsPlanned && !bIsPlanned) return 1;  // a goes after b
+      if (!aIsPlanned && bIsPlanned) return -1; // a goes before b
+
+      // Second priority: apply user-selected sort if any
+      if (sortConfig.key) {
         const aValue = a[sortConfig.key];
         const bValue = b[sortConfig.key];
-        
+
         if (aValue === null || aValue === undefined) return 1;
         if (bValue === null || bValue === undefined) return -1;
-        
+
         if (aValue instanceof Date && bValue instanceof Date) {
           return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
         }
-        
+
         const comparison = aValue.toString().localeCompare(bValue.toString());
         return sortConfig.direction === 'asc' ? comparison : -comparison;
-      });
-    }
+      }
+
+      return 0;
+    });
 
     return filtered;
   }, [shipments, searchTerm, statusFilter, sortConfig]);
