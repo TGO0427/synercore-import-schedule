@@ -42,6 +42,7 @@ function HelpGuide({ onClose }) {
               <li><strong>📦 Shipping Schedule</strong> - Track all shipments</li>
               <li><strong>📋 Post-Arrival Workflow</strong> - Manage unloading, inspection, receiving</li>
               <li><strong>📊 Reports</strong> - Generate analytics and exports</li>
+              <li><strong>📈 Advanced Reports</strong> - Custom filters and data analysis</li>
               <li><strong>📦 Shipment Archives</strong> - Access archived shipments</li>
               <li><strong>💰 Rates & Quotes</strong> - Get shipping quotes</li>
               <li><strong>🏪 Warehouse Stored</strong> - View stored inventory</li>
@@ -141,10 +142,11 @@ function HelpGuide({ onClose }) {
 
             <h3>Updating Current Bins</h3>
             <ol>
-              <li>Click on the <strong>Current Bins Utilized</strong> number</li>
-              <li>Enter the actual number of bins currently in use</li>
-              <li>Click outside the field or press Enter</li>
-              <li>Your change is saved automatically with your username</li>
+              <li>Scroll to the <strong>📝 Edit Current Bins Utilized</strong> panel at the top</li>
+              <li>Enter the actual number of bins currently in use for each warehouse</li>
+              <li>Fields with pending changes show orange highlight</li>
+              <li>Click <strong>"💾 Save All Changes"</strong> button to save</li>
+              <li>Changes are saved with your username for audit trail</li>
             </ol>
 
             <h3>Weekly Capacity Inflow</h3>
@@ -308,6 +310,64 @@ function HelpGuide({ onClose }) {
               <li>Click "Generate Report"</li>
               <li>Download or view in browser</li>
             </ol>
+
+            <h3>Advanced Reports</h3>
+            <p>For more powerful analysis, use the <strong>📈 Advanced Reports</strong> module:</p>
+
+            <h4>Custom Filters</h4>
+            <p>Apply multiple filters simultaneously:</p>
+            <ul>
+              <li><strong>Date Range</strong> - Filter by created date, updated date, ETA, or ETD</li>
+              <li><strong>Status</strong> - Select multiple shipment statuses</li>
+              <li><strong>Warehouse</strong> - Filter by destination warehouse</li>
+              <li><strong>Supplier</strong> - Select one or more suppliers</li>
+              <li><strong>Product</strong> - Filter by product type</li>
+              <li><strong>Week Number</strong> - Filter by arrival week</li>
+              <li><strong>Forwarding Agent</strong> - Filter by shipping agent</li>
+              <li><strong>Incoterms</strong> - Filter by shipping terms</li>
+              <li><strong>Vessel Name</strong> - Filter by specific vessel</li>
+              <li><strong>Priority Level</strong> - Filter by urgency</li>
+              <li><strong>Inspection Status</strong> - Filter by quality check status</li>
+              <li><strong>Receiving Status</strong> - Filter by receiving status</li>
+              <li><strong>Quantity Range</strong> - Filter by min/max quantity</li>
+              <li><strong>Pallet Range</strong> - Filter by min/max pallet count</li>
+              <li><strong>Search Term</strong> - Free text search across multiple fields</li>
+            </ul>
+
+            <h4>Data Aggregation</h4>
+            <p>Group and analyze your data by:</p>
+            <ul>
+              <li><strong>Supplier</strong> - Total shipments, quantities, and pallets per supplier</li>
+              <li><strong>Warehouse</strong> - Analyze distribution across warehouses</li>
+              <li><strong>Status</strong> - See counts and totals per shipment status</li>
+              <li><strong>Product</strong> - Aggregate by product type</li>
+              <li><strong>Week</strong> - Group by arrival week for trend analysis</li>
+              <li><strong>Month</strong> - Monthly aggregation for long-term planning</li>
+              <li><strong>Forwarding Agent</strong> - Compare agent performance</li>
+            </ul>
+
+            <h4>Metrics Displayed</h4>
+            <p>Each aggregation shows:</p>
+            <ul>
+              <li><strong>Count</strong> - Number of shipments in group</li>
+              <li><strong>Total Quantity</strong> - Sum of all quantities (tonnage)</li>
+              <li><strong>Total Pallets</strong> - Sum of all pallets</li>
+              <li><strong>Average Quantity</strong> - Mean quantity per shipment</li>
+            </ul>
+
+            <h4>Export Options</h4>
+            <ul>
+              <li><strong>📊 Export Excel</strong> - Multi-sheet workbook with summary and data</li>
+              <li><strong>📄 Export PDF</strong> - Formatted report for printing and sharing</li>
+            </ul>
+
+            <h4>Important Notes</h4>
+            <ul>
+              <li>✅ Planned shipments always appear at the bottom of the list</li>
+              <li>✅ Week numbers are displayed for easy time-based analysis</li>
+              <li>✅ Filters can be combined for very specific queries</li>
+              <li>✅ Excel exports include both summary and detail sheets</li>
+            </ul>
 
             <h3>Scheduled Reports</h3>
             <p>Contact your administrator to set up automated daily/weekly reports via email.</p>
