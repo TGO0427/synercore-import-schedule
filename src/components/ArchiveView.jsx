@@ -173,20 +173,40 @@ function ArchiveView() {
     });
   }, [archives, selectedMonth, searchTerm]);
 
-  // Generate month options for the selector (last 12 months)
+  // Generate month options dynamically based on actual archives
   const monthOptions = useMemo(() => {
-    const options = [];
-    const now = new Date();
-
-    for (let i = 0; i < 12; i++) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const label = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-      options.push({ value, label });
+    if (archives.length === 0) {
+      // If no archives yet, show last 12 months
+      const options = [];
+      const now = new Date();
+      for (let i = 0; i < 12; i++) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const label = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+        options.push({ value, label });
+      }
+      return options;
     }
 
-    return options;
-  }, []);
+    // Extract unique months from archives
+    const monthsSet = new Set();
+    archives.forEach(archive => {
+      const archiveDate = new Date(archive.archivedAt);
+      const monthValue = `${archiveDate.getFullYear()}-${String(archiveDate.getMonth() + 1).padStart(2, '0')}`;
+      monthsSet.add(monthValue);
+    });
+
+    // Convert to array and sort (newest first)
+    const monthsArray = Array.from(monthsSet).sort((a, b) => b.localeCompare(a));
+
+    // Convert to options format
+    return monthsArray.map(value => {
+      const [year, month] = value.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+      const label = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+      return { value, label };
+    });
+  }, [archives]);
 
   // Calculate monthly statistics
   const monthlyStats = useMemo(() => {

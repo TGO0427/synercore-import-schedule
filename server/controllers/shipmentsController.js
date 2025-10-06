@@ -304,26 +304,29 @@ export class ShipmentsController {
     }
   }
 
-  static getArchives(req, res) {
+  static async getArchives(req, res) {
     try {
-      const archives = archiveService.getArchivedFiles().map(fileName => {
-        const stats = archiveService.getArchivedData(fileName);
-        return {
-          fileName,
-          archivedAt: stats?.archivedAt,
-          totalShipments: stats?.totalShipments || 0
-        };
-      });
+      const fileNames = await archiveService.getArchivedFiles();
+      const archives = await Promise.all(
+        fileNames.map(async (fileName) => {
+          const stats = await archiveService.getArchivedData(fileName);
+          return {
+            fileName,
+            archivedAt: stats?.archivedAt,
+            totalShipments: stats?.totalShipments || 0
+          };
+        })
+      );
       res.json(archives);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
   }
 
-  static getArchiveData(req, res) {
+  static async getArchiveData(req, res) {
     try {
       const { fileName } = req.params;
-      const archiveData = archiveService.getArchivedData(fileName);
+      const archiveData = await archiveService.getArchivedData(fileName);
       if (!archiveData) {
         return res.status(404).json({ error: 'Archive not found' });
       }
@@ -357,7 +360,7 @@ export class ShipmentsController {
       const result = await client.query('SELECT * FROM shipments');
       const allShipments = result.rows.map(dbRowToShipment);
 
-      const archiveResult = archiveService.archiveOldArrivedShipments(allShipments, parseInt(daysOld));
+      const archiveResult = await archiveService.archiveOldArrivedShipments(allShipments, parseInt(daysOld));
 
       // Delete archived shipments
       const archivedIds = archiveResult.remaining.length < allShipments.length
@@ -397,7 +400,7 @@ export class ShipmentsController {
         return res.status(400).json({ error: 'New name is required' });
       }
 
-      const result = archiveService.renameArchiveFile(fileName, newName.trim());
+      const result = await archiveService.renameArchiveFile(fileName, newName.trim());
 
       res.json({
         success: true,
@@ -437,7 +440,7 @@ export class ShipmentsController {
       }
 
       // Create archive
-      const archiveResult = archiveService.archiveSpecificShipments(shipmentsToArchive);
+      const archiveResult = await archiveService.archiveSpecificShipments(shipmentsToArchive);
 
       // Remove archived shipments
       await client.query(

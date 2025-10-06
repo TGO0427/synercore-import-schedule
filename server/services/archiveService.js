@@ -1,19 +1,11 @@
-import fs from 'fs';
-import path from 'path';
+import pool from '../db/connection.js';
 
 class ArchiveService {
   constructor() {
-    this.archiveDir = path.join(process.cwd(), 'server', 'archive');
-    this.ensureArchiveDir();
+    // Database-based archive system (no file system dependency)
   }
 
-  ensureArchiveDir() {
-    if (!fs.existsSync(this.archiveDir)) {
-      fs.mkdirSync(this.archiveDir, { recursive: true });
-    }
-  }
-
-  archiveCurrentData(shipments) {
+  async archiveCurrentData(shipments) {
     if (!shipments || shipments.length === 0) {
       console.log('Archive: No data to archive');
       return;
@@ -21,16 +13,13 @@ class ArchiveService {
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const archiveFileName = `shipments_${timestamp}.json`;
-    const archiveFilePath = path.join(this.archiveDir, archiveFileName);
-
-    const archiveData = {
-      archivedAt: new Date().toISOString(),
-      totalShipments: shipments.length,
-      data: shipments
-    };
 
     try {
-      fs.writeFileSync(archiveFilePath, JSON.stringify(archiveData, null, 2));
+      await pool.query(
+        `INSERT INTO archives (file_name, archived_at, total_shipments, data)
+         VALUES ($1, CURRENT_TIMESTAMP, $2, $3)`,
+        [archiveFileName, shipments.length, JSON.stringify(shipments)]
+      );
       console.log(`Archive: Successfully archived ${shipments.length} shipments to ${archiveFileName}`);
       return archiveFileName;
     } catch (error) {
@@ -39,21 +28,35 @@ class ArchiveService {
     }
   }
 
-  getArchivedFiles() {
+  async getArchivedFiles() {
     try {
-      const files = fs.readdirSync(this.archiveDir);
-      return files.filter(file => file.endsWith('.json')).sort().reverse();
+      const result = await pool.query(
+        `SELECT file_name FROM archives ORDER BY archived_at DESC`
+      );
+      return result.rows.map(row => row.file_name);
     } catch (error) {
       console.error('Archive: Failed to read archive directory:', error);
       return [];
     }
   }
 
-  getArchivedData(fileName) {
+  async getArchivedData(fileName) {
     try {
-      const filePath = path.join(this.archiveDir, fileName);
-      const data = fs.readFileSync(filePath, 'utf8');
-      return JSON.parse(data);
+      const result = await pool.query(
+        `SELECT archived_at, total_shipments, data FROM archives WHERE file_name = $1`,
+        [fileName]
+      );
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      const row = result.rows[0];
+      return {
+        archivedAt: row.archived_at,
+        totalShipments: row.total_shipments,
+        data: typeof row.data === 'string' ? JSON.parse(row.data) : row.data
+      };
     } catch (error) {
       console.error('Archive: Failed to read archived file:', error);
       return null;
@@ -74,7 +77,7 @@ class ArchiveService {
     });
   }
 
-  archiveOldArrivedShipments(allShipments, daysOld = 30) {
+  async archiveOldArrivedShipments(allShipments, daysOld = 30) {
     const shipmentsToArchive = this.findOldArrivedShipments(allShipments, daysOld);
 
     if (shipmentsToArchive.length === 0) {
@@ -85,7 +88,6 @@ class ArchiveService {
     // Archive the old shipments
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const archiveFileName = `auto_archive_arrived_${timestamp}.json`;
-    const archiveFilePath = path.join(this.archiveDir, archiveFileName);
 
     const archiveData = {
       archivedAt: new Date().toISOString(),
@@ -97,7 +99,11 @@ class ArchiveService {
     };
 
     try {
-      fs.writeFileSync(archiveFilePath, JSON.stringify(archiveData, null, 2));
+      await pool.query(
+        `INSERT INTO archives (file_name, archived_at, total_shipments, data)
+         VALUES ($1, CURRENT_TIMESTAMP, $2, $3)`,
+        [archiveFileName, shipmentsToArchive.length, JSON.stringify(shipmentsToArchive)]
+      );
       console.log(`Auto-Archive: Successfully archived ${shipmentsToArchive.length} old ARRIVED shipments to ${archiveFileName}`);
 
       // Return the remaining shipments (non-archived)
@@ -135,38 +141,32 @@ class ArchiveService {
   }
 
   // Rename archive file functionality
-  renameArchiveFile(oldFileName, newDisplayName) {
+  async renameArchiveFile(oldFileName, newDisplayName) {
     try {
-      const oldPath = path.join(this.archiveDir, oldFileName);
+      // Check if archive exists
+      const checkResult = await pool.query(
+        `SELECT id, data FROM archives WHERE file_name = $1`,
+        [oldFileName]
+      );
 
-      // Check if old file exists
-      if (!fs.existsSync(oldPath)) {
+      if (checkResult.rows.length === 0) {
         throw new Error('Archive file not found');
       }
 
-      // Read the archive data
-      const archiveData = JSON.parse(fs.readFileSync(oldPath, 'utf8'));
-
-      // Create new filename with sanitized display name
+      // Generate new filename based on display name and timestamp
       const sanitizeForFilename = (str) => {
         return str.replace(/[^\w\-._]/g, '_').replace(/_{2,}/g, '_').replace(/^_+|_+$/g, '');
       };
 
-      // Generate new filename based on display name and timestamp
-      const timestamp = new Date(archiveData.archivedAt).toISOString().replace(/[:.]/g, '-');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const sanitizedName = sanitizeForFilename(newDisplayName);
       const newFileName = `custom_archive_${sanitizedName}_${timestamp}.json`;
-      const newPath = path.join(this.archiveDir, newFileName);
 
-      // Update archive data with custom name
-      archiveData.customName = newDisplayName;
-      archiveData.originalFileName = oldFileName;
-
-      // Write to new file
-      fs.writeFileSync(newPath, JSON.stringify(archiveData, null, 2));
-
-      // Delete old file
-      fs.unlinkSync(oldPath);
+      // Update filename
+      await pool.query(
+        `UPDATE archives SET file_name = $1 WHERE file_name = $2`,
+        [newFileName, oldFileName]
+      );
 
       console.log(`Archive renamed: ${oldFileName} -> ${newFileName}`);
       return { oldFileName, newFileName, customName: newDisplayName };
@@ -177,7 +177,7 @@ class ArchiveService {
   }
 
   // Manual archive functionality for specific shipments
-  archiveSpecificShipments(shipmentsToArchive) {
+  async archiveSpecificShipments(shipmentsToArchive) {
     if (!shipmentsToArchive || shipmentsToArchive.length === 0) {
       throw new Error('No shipments provided for manual archive');
     }
@@ -189,18 +189,13 @@ class ArchiveService {
     };
     const orderRefs = shipmentsToArchive.map(s => sanitizeForFilename(s.orderRef)).join('_');
     const archiveFileName = `manual_archive_${orderRefs}_${timestamp}.json`;
-    const archiveFilePath = path.join(this.archiveDir, archiveFileName);
-
-    const archiveData = {
-      archivedAt: new Date().toISOString(),
-      totalShipments: shipmentsToArchive.length,
-      archiveType: 'manual',
-      archiveReason: 'Manual archive of selected ARRIVED shipments',
-      data: shipmentsToArchive
-    };
 
     try {
-      fs.writeFileSync(archiveFilePath, JSON.stringify(archiveData, null, 2));
+      await pool.query(
+        `INSERT INTO archives (file_name, archived_at, total_shipments, data)
+         VALUES ($1, CURRENT_TIMESTAMP, $2, $3)`,
+        [archiveFileName, shipmentsToArchive.length, JSON.stringify(shipmentsToArchive)]
+      );
       console.log(`Manual Archive: Successfully archived ${shipmentsToArchive.length} shipments to ${archiveFileName}`);
 
       return {

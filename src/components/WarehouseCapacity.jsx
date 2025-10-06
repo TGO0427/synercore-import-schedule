@@ -313,10 +313,13 @@ function WarehouseCapacity({ shipments }) {
         }
 
         if (!response.ok) {
-          throw new Error('Failed to save warehouse capacity');
+          const errorText = await response.text();
+          console.error(`Error response from server for ${warehouse}:`, response.status, errorText);
+          throw new Error(`Failed to save warehouse capacity: ${response.status} ${errorText}`);
         }
 
-        console.log(`✓ Saved ${warehouse} bins used: ${newValue} by ${user?.username}`);
+        const result = await response.json();
+        console.log(`✓ Saved ${warehouse} bins used: ${newValue}`, result);
         successCount++;
       } catch (error) {
         console.error(`Failed to save ${warehouse}:`, error.message);
@@ -331,6 +334,8 @@ function WarehouseCapacity({ shipments }) {
 
     if (failCount > 0) {
       alert(`Saved ${successCount} changes, but ${failCount} failed. Please check console for details.`);
+    } else if (successCount > 0) {
+      alert(`✓ Successfully saved ${successCount} ${successCount === 1 ? 'change' : 'changes'}!`);
     }
   }, [pendingChanges, editableBinsUsed]);
 
