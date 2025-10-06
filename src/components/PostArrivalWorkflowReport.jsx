@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { getApiUrl } from '../config/api';
 
 const POST_ARRIVAL_STATUSES = [
   'arrived',
@@ -34,9 +35,67 @@ const STATUS_COLORS = {
 };
 
 function PostArrivalWorkflowReport({ shipments }) {
+  const [archivedShipments, setArchivedShipments] = useState([]);
+  const [loadingArchives, setLoadingArchives] = useState(true);
+
+  // Fetch recently archived shipments (last 30 days) to include in the report
+  useEffect(() => {
+    const fetchRecentArchives = async () => {
+      try {
+        setLoadingArchives(true);
+        const response = await fetch(getApiUrl('/api/shipments/archives'));
+        if (!response.ok) throw new Error('Failed to fetch archives');
+
+        const archives = await response.json();
+
+        // Get archives from last 30 days
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const recentArchives = archives.filter(archive =>
+          new Date(archive.archivedAt) >= thirtyDaysAgo
+        );
+
+        // Fetch data from each recent archive
+        const archiveData = await Promise.all(
+          recentArchives.map(async (archive) => {
+            try {
+              const dataResponse = await fetch(getApiUrl(`/api/shipments/archives/${archive.fileName}`));
+              if (!dataResponse.ok) return [];
+              const data = await dataResponse.json();
+              return data.data || [];
+            } catch (error) {
+              console.error(`Error fetching archive ${archive.fileName}:`, error);
+              return [];
+            }
+          })
+        );
+
+        // Flatten all archived shipments
+        const allArchivedShipments = archiveData.flat();
+
+        // Filter for only post-arrival workflow statuses
+        const relevantArchived = allArchivedShipments.filter(shipment =>
+          POST_ARRIVAL_STATUSES.includes(shipment.latestStatus)
+        );
+
+        setArchivedShipments(relevantArchived);
+      } catch (error) {
+        console.error('Error fetching recent archives:', error);
+      } finally {
+        setLoadingArchives(false);
+      }
+    };
+
+    fetchRecentArchives();
+  }, []);
+
   const workflowAnalytics = useMemo(() => {
+    // Combine active and archived shipments for the report
+    const allShipments = [...shipments, ...archivedShipments];
+
     // Filter shipments that are in post-arrival workflow
-    const postArrivalShipments = shipments.filter(shipment =>
+    const postArrivalShipments = allShipments.filter(shipment =>
       POST_ARRIVAL_STATUSES.includes(shipment.latestStatus)
     );
 
@@ -169,7 +228,7 @@ function PostArrivalWorkflowReport({ shipments }) {
         arrived: statusCounts.arrived
       }
     };
-  }, [shipments]);
+  }, [shipments, archivedShipments]);
 
   const WorkflowStatusChart = ({ data }) => {
     const total = Object.values(data).reduce((sum, count) => sum + count, 0);
@@ -573,7 +632,7 @@ function PostArrivalWorkflowReport({ shipments }) {
       </div>
 
       <div className="full-width-section">
-        <SupplierWorkflowTable data={workflowAnalytics.supplierWorkflow} shipments={shipments} />
+        <SupplierWorkflowTable data={workflowAnalytics.supplierWorkflow} shipments={[...shipments, ...archivedShipments]} />
       </div>
 
       <div className="time-tracking-section">
