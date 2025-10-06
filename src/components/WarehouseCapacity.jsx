@@ -41,23 +41,35 @@ const getCurrentMonthWeeks = () => {
 // Simple input that tracks changes without auto-saving
 const SimpleBinInput = ({ warehouseKey, initialValue, maxValue, onUpdate, hasUnsavedChanges }) => {
   const [localValue, setLocalValue] = React.useState(initialValue);
+  const mountedRef = React.useRef(false);
 
-  // Update local value when initialValue changes from parent
+  // Only update local value from parent on first mount, not on subsequent updates
   React.useEffect(() => {
-    setLocalValue(initialValue);
+    if (!mountedRef.current) {
+      setLocalValue(initialValue);
+      mountedRef.current = true;
+    }
   }, [initialValue]);
+
+  const handleChange = (e) => {
+    const rawValue = e.target.value;
+    setLocalValue(rawValue); // Update local state immediately for smooth typing
+  };
+
+  const handleBlur = () => {
+    // Only update parent when user is done typing
+    const numValue = Math.max(0, Math.min(parseInt(localValue) || 0, maxValue));
+    setLocalValue(numValue); // Clean up the display value
+    onUpdate(warehouseKey, numValue);
+  };
 
   return (
     <input
       key={`${warehouseKey}-simple`}
       type="number"
       value={localValue}
-      onChange={(e) => {
-        const rawValue = e.target.value;
-        setLocalValue(rawValue); // Allow typing
-        const numValue = Math.max(0, Math.min(parseInt(rawValue) || 0, maxValue));
-        onUpdate(warehouseKey, numValue);
-      }}
+      onChange={handleChange}
+      onBlur={handleBlur}
       onFocus={(e) => e.target.select()}
       style={{
         padding: '4px 8px',
@@ -706,8 +718,8 @@ function WarehouseCapacity({ shipments }) {
       // Add Incoming Products Summary (like ProductBreakdownChart) - Current Month Only, excluding stored shipments
       const incomingShipments = shipments.filter(shipment => {
         const isIncoming = shipment.latestStatus === 'planned_airfreight' || shipment.latestStatus === 'planned_seafreight' ||
-          shipment.latestStatus === 'in_transit_airfreight' || shipment.latestStatus === 'in_transit_roadway' ||
-          shipment.latestStatus === 'in_transit_seaway';
+          shipment.latestStatus === 'in_transit_airfreight' || shipment.latestStatus === 'air_customs_clearance' ||
+          shipment.latestStatus === 'in_transit_roadway' || shipment.latestStatus === 'in_transit_seaway';
 
         const weekNumber = parseInt(shipment.weekNumber) || currentWeek;
         const isCurrentMonth = currentMonthWeeks.includes(weekNumber);
@@ -800,7 +812,7 @@ function WarehouseCapacity({ shipments }) {
   }, [warehouseData, selectedWarehouse, shipments]);
 
 
-  const CapacityCard = React.memo(({ warehouse, stats, onBinsUsedChange, onCardClick, isSelected }) => {
+  const CapacityCard = React.memo(({ warehouse, stats, onBinsUsedChange, onCardClick, isSelected, editableBinsUsed, pendingChanges }) => {
     const utilizationPercent = stats.binUtilizationPercent;
     const availableCapacity = stats.maxCapacity - stats.totalProjected;
     
@@ -908,13 +920,17 @@ function WarehouseCapacity({ shipments }) {
           <div>
             <div style={{ color: '#666', marginBottom: '0.25rem' }}>Current Bins Utilized</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <SimpleBinInput
-                warehouseKey={warehouse}
-                initialValue={editableBinsUsed[warehouse] !== undefined ? editableBinsUsed[warehouse] : stats.usedBins}
-                maxValue={stats.totalBins}
-                onUpdate={onBinsUsedChange}
-                hasUnsavedChanges={pendingChanges[warehouse] !== undefined}
-              />
+              <div style={{
+                fontWeight: 'bold',
+                fontSize: '1.1rem',
+                color: '#2c3e50',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                backgroundColor: pendingChanges[warehouse] !== undefined ? '#fff3e0' : '#f8f9fa',
+                border: pendingChanges[warehouse] !== undefined ? '2px solid #ff9800' : '2px solid transparent'
+              }}>
+                {editableBinsUsed[warehouse] !== undefined ? editableBinsUsed[warehouse] : stats.usedBins}
+              </div>
               <span style={{ fontSize: '0.9rem', color: '#666' }}>bins</span>
             </div>
             <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '0.25rem' }}>
@@ -1402,8 +1418,8 @@ function WarehouseCapacity({ shipments }) {
     // Filter to show only planned and in-transit shipments (incoming) within current month, excluding stored shipments
     const incomingShipments = shipments.filter(shipment => {
       const isIncoming = shipment.latestStatus === 'planned_airfreight' || shipment.latestStatus === 'planned_seafreight' ||
-        shipment.latestStatus === 'in_transit_airfreight' || shipment.latestStatus === 'in_transit_roadway' ||
-        shipment.latestStatus === 'in_transit_seaway';
+        shipment.latestStatus === 'in_transit_airfreight' || shipment.latestStatus === 'air_customs_clearance' ||
+        shipment.latestStatus === 'in_transit_roadway' || shipment.latestStatus === 'in_transit_seaway';
 
       const weekNumber = parseInt(shipment.weekNumber) || currentWeek;
       const isCurrentMonth = currentMonthWeeks.includes(weekNumber);
@@ -1801,6 +1817,65 @@ function WarehouseCapacity({ shipments }) {
         </button>
       </div>
 
+      {/* Edit Panel for Current Bins Utilized */}
+      <div style={{
+        backgroundColor: 'white',
+        padding: '1.5rem',
+        borderRadius: '12px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        marginBottom: '2rem'
+      }}>
+        <h3 style={{ color: '#2c3e50', marginBottom: '1rem', fontSize: '1.1rem' }}>
+          📝 Edit Current Bins Utilized
+        </h3>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+          gap: '1rem'
+        }}>
+          {filteredWarehouses.map(([warehouse, stats]) => (
+            <div key={warehouse} style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.75rem',
+              backgroundColor: pendingChanges[warehouse] !== undefined ? '#fff3e0' : '#f8f9fa',
+              borderRadius: '8px',
+              border: pendingChanges[warehouse] !== undefined ? '2px solid #ff9800' : '2px solid #e0e0e0'
+            }}>
+              <label style={{
+                flex: 1,
+                fontWeight: '500',
+                color: '#2c3e50',
+                fontSize: '0.9rem'
+              }}>
+                {warehouse}:
+              </label>
+              <input
+                type="number"
+                value={editableBinsUsed[warehouse] !== undefined ? editableBinsUsed[warehouse] : stats.usedBins}
+                onChange={(e) => {
+                  const value = Math.max(0, Math.min(parseInt(e.target.value) || 0, stats.totalBins));
+                  handleBinsUsedChange(warehouse, value);
+                }}
+                style={{
+                  width: '80px',
+                  padding: '6px 8px',
+                  border: '2px solid #ddd',
+                  borderRadius: '6px',
+                  fontSize: '1rem',
+                  fontWeight: 'bold',
+                  textAlign: 'center'
+                }}
+                min="0"
+                max={stats.totalBins}
+              />
+              <span style={{ fontSize: '0.85rem', color: '#666' }}>/ {stats.totalBins}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Capacity Cards Grid */}
       <div style={{
         display: 'grid',
@@ -1809,13 +1884,15 @@ function WarehouseCapacity({ shipments }) {
         marginBottom: '2rem'
       }}>
         {filteredWarehouses.map(([warehouse, stats]) => (
-          <CapacityCard 
-            key={warehouse} 
-            warehouse={warehouse} 
-            stats={stats} 
+          <CapacityCard
+            key={warehouse}
+            warehouse={warehouse}
+            stats={stats}
             onBinsUsedChange={handleBinsUsedChange}
             onCardClick={handleCardClick}
             isSelected={selectedWarehouse === warehouse}
+            editableBinsUsed={editableBinsUsed}
+            pendingChanges={pendingChanges}
           />
         ))}
       </div>
