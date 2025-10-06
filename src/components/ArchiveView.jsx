@@ -13,6 +13,27 @@ function ArchiveView() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+
+  // Auto-select month with archives when archives load
+  useEffect(() => {
+    if (archives.length > 0 && selectedMonth) {
+      const hasArchivesInSelectedMonth = archives.some(a =>
+        a.archivedAt.startsWith(selectedMonth)
+      );
+
+      if (!hasArchivesInSelectedMonth) {
+        // Find the most recent month with archives
+        const mostRecentArchive = archives.reduce((latest, archive) =>
+          !latest || archive.archivedAt > latest.archivedAt ? archive : latest
+        , null);
+
+        if (mostRecentArchive) {
+          const archiveMonth = mostRecentArchive.archivedAt.substring(0, 7);
+          setSelectedMonth(archiveMonth);
+        }
+      }
+    }
+  }, [archives]);
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'chart'
 
   useEffect(() => {
