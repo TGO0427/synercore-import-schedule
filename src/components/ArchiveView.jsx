@@ -468,8 +468,8 @@ function ArchiveView() {
             />
           </div>
 
-          <div className="shipments-table">
-            <div className="table-header">
+          <div style={{ display: 'grid', gap: '1.5rem' }}>
+            <div style={{ marginBottom: '1rem' }}>
               <h3>Archived Shipments ({archiveData.data.filter(shipment =>
                 searchTerm === '' ||
                 shipment.supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -479,42 +479,213 @@ function ArchiveView() {
               ).length})</h3>
             </div>
 
-            <table>
-              <thead>
-                <tr>
-                  <th>Supplier</th>
-                  <th>Order/Ref</th>
-                  <th>Product</th>
-                  <th>Final POD</th>
-                  <th>Status</th>
-                  <th>Week</th>
-                  <th>Quantity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {archiveData.data.filter(shipment =>
-                  searchTerm === '' ||
-                  shipment.supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  shipment.orderRef.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  shipment.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  shipment.finalPod.toLowerCase().includes(searchTerm.toLowerCase())
-                ).map((shipment) => (
-                  <tr key={shipment.id}>
-                    <td>{shipment.supplier}</td>
-                    <td>{shipment.orderRef}</td>
-                    <td>{shipment.productName}</td>
-                    <td>{shipment.finalPod}</td>
-                    <td>
-                      <span className={`status-badge status-${shipment.latestStatus}`}>
-                        {shipment.latestStatus}
-                      </span>
-                    </td>
-                    <td>{shipment.weekNumber}</td>
-                    <td>{shipment.quantity}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {archiveData.data.filter(shipment =>
+              searchTerm === '' ||
+              shipment.supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              shipment.orderRef.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              shipment.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              shipment.finalPod.toLowerCase().includes(searchTerm.toLowerCase())
+            ).map((shipment) => (
+              <div key={shipment.id} style={{
+                backgroundColor: 'white',
+                border: '1px solid #e0e0e0',
+                borderRadius: '12px',
+                padding: '1.5rem',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              }}>
+                {/* Header */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  marginBottom: '1.5rem',
+                  paddingBottom: '1rem',
+                  borderBottom: '2px solid #f0f0f0'
+                }}>
+                  <div>
+                    <h3 style={{ margin: '0 0 0.5rem 0', color: '#333', fontSize: '1.2rem' }}>
+                      {shipment.supplier}
+                    </h3>
+                    <div style={{ color: '#666', fontSize: '0.9rem' }}>
+                      📦 {shipment.orderRef}
+                    </div>
+                  </div>
+                  <div>
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '0.5rem 1rem',
+                      backgroundColor: shipment.latestStatus === 'stored' ? '#28a745' :
+                                      shipment.latestStatus === 'rejected' ? '#dc3545' :
+                                      shipment.latestStatus === 'inspection_failed' ? '#ffc107' : '#17a2b8',
+                      color: 'white',
+                      borderRadius: '20px',
+                      fontSize: '0.85rem',
+                      fontWeight: '600'
+                    }}>
+                      {shipment.latestStatus?.replace(/_/g, ' ').toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Basic Information */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '1rem',
+                  marginBottom: '1.5rem'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: '#999', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                      Product
+                    </div>
+                    <div style={{ fontSize: '0.95rem', color: '#333', fontWeight: '500' }}>
+                      {shipment.productName}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: '#999', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                      Destination
+                    </div>
+                    <div style={{ fontSize: '0.95rem', color: '#333', fontWeight: '500' }}>
+                      📍 {shipment.finalPod}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: '#999', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                      Quantity
+                    </div>
+                    <div style={{ fontSize: '0.95rem', color: '#333', fontWeight: '500' }}>
+                      {shipment.quantity?.toLocaleString()} units
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: '#999', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                      Week
+                    </div>
+                    <div style={{ fontSize: '0.95rem', color: '#333', fontWeight: '500' }}>
+                      Week {shipment.weekNumber}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Workflow Timeline */}
+                {(shipment.unloadingStartDate || shipment.inspectionDate || shipment.receivingDate || shipment.rejectionDate) && (
+                  <div style={{
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '8px',
+                    padding: '1rem',
+                    marginBottom: '1rem'
+                  }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: '600', color: '#333', marginBottom: '0.75rem' }}>
+                      📋 Workflow Timeline
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {shipment.unloadingStartDate && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontSize: '1.2rem' }}>🚚</span>
+                          <div>
+                            <div style={{ fontSize: '0.8rem', fontWeight: '500' }}>Unloading Started</div>
+                            <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                              {new Date(shipment.unloadingStartDate).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {shipment.inspectionDate && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontSize: '1.2rem' }}>🔍</span>
+                          <div>
+                            <div style={{ fontSize: '0.8rem', fontWeight: '500' }}>
+                              Inspection {shipment.inspectionStatus === 'passed' ? '✅ Passed' :
+                                         shipment.inspectionStatus === 'failed' ? '❌ Failed' : ''}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                              By {shipment.inspectedBy} on {new Date(shipment.inspectionDate).toLocaleDateString()}
+                            </div>
+                            {shipment.inspectionNotes && (
+                              <div style={{ fontSize: '0.75rem', color: '#666', fontStyle: 'italic', marginTop: '0.25rem' }}>
+                                "{shipment.inspectionNotes}"
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {shipment.receivingDate && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontSize: '1.2rem' }}>📋</span>
+                          <div>
+                            <div style={{ fontSize: '0.8rem', fontWeight: '500' }}>Receiving Completed</div>
+                            <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                              By {shipment.receivedBy} on {new Date(shipment.receivingDate).toLocaleDateString()}
+                            </div>
+                            {shipment.receivedQuantity !== null && (
+                              <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                                Received: {shipment.receivedQuantity} / {shipment.quantity} units
+                              </div>
+                            )}
+                            {shipment.receivingNotes && (
+                              <div style={{ fontSize: '0.75rem', color: '#666', fontStyle: 'italic', marginTop: '0.25rem' }}>
+                                "{shipment.receivingNotes}"
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {shipment.rejectionDate && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontSize: '1.2rem' }}>↩️</span>
+                          <div>
+                            <div style={{ fontSize: '0.8rem', fontWeight: '500', color: '#dc3545' }}>
+                              Rejected/Returned to Supplier
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                              By {shipment.rejectedBy} on {new Date(shipment.rejectionDate).toLocaleDateString()}
+                            </div>
+                            {shipment.rejectionReason && (
+                              <div style={{ fontSize: '0.75rem', color: '#dc3545', fontStyle: 'italic', marginTop: '0.25rem' }}>
+                                Reason: "{shipment.rejectionReason}"
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Additional Details */}
+                {(shipment.cbm || shipment.palletQty || shipment.forwardingAgent || shipment.vesselName) && (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                    gap: '1rem',
+                    fontSize: '0.85rem',
+                    color: '#666'
+                  }}>
+                    {shipment.cbm && (
+                      <div>
+                        <span style={{ fontWeight: '500' }}>CBM:</span> {shipment.cbm}
+                      </div>
+                    )}
+                    {shipment.palletQty && (
+                      <div>
+                        <span style={{ fontWeight: '500' }}>Pallets:</span> {shipment.palletQty}
+                      </div>
+                    )}
+                    {shipment.forwardingAgent && (
+                      <div>
+                        <span style={{ fontWeight: '500' }}>Agent:</span> {shipment.forwardingAgent}
+                      </div>
+                    )}
+                    {shipment.vesselName && (
+                      <div>
+                        <span style={{ fontWeight: '500' }}>Vessel:</span> {shipment.vesselName}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>
