@@ -2,6 +2,7 @@ export const ShipmentStatus = {
   PLANNED_AIRFREIGHT: 'planned_airfreight',
   PLANNED_SEAFREIGHT: 'planned_seafreight',
   IN_TRANSIT_AIRFREIGHT: 'in_transit_airfreight',
+  AIR_CUSTOMS_CLEARANCE: 'air_customs_clearance',
   IN_TRANSIT_ROADWAY: 'in_transit_roadway',
   IN_TRANSIT_SEAWAY: 'in_transit_seaway',
   MOORED: 'moored',

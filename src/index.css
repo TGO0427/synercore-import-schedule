@@ -292,6 +292,11 @@ th {
   color: #f57c00;
 }
 
+.status-air_customs_clearance {
+  background-color: #e1f5fe;
+  color: #0277bd;
+}
+
 .status-arrived {
   background-color: #e8f5e8;
   color: #388e3c;

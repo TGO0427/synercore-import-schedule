@@ -702,6 +702,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 <option value={ShipmentStatus.PLANNED_AIRFREIGHT}>Planned Airfreight</option>
                 <option value={ShipmentStatus.PLANNED_SEAFREIGHT}>Planned Seafreight</option>
                 <option value={ShipmentStatus.IN_TRANSIT_AIRFREIGHT}>In Transit Airfreight</option>
+                <option value={ShipmentStatus.AIR_CUSTOMS_CLEARANCE}>Air Customs Clearance Event</option>
                 <option value={ShipmentStatus.IN_TRANSIT_ROADWAY}>In Transit Roadway</option>
                 <option value={ShipmentStatus.IN_TRANSIT_SEAWAY}>In Transit Seaway</option>
                 <option value={ShipmentStatus.MOORED}>Moored</option>
@@ -871,6 +872,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                       <option value={ShipmentStatus.PLANNED_AIRFREIGHT}>Planned Airfreight</option>
                       <option value={ShipmentStatus.PLANNED_SEAFREIGHT}>Planned Seafreight</option>
                       <option value={ShipmentStatus.IN_TRANSIT_AIRFREIGHT}>In Transit Airfreight</option>
+                      <option value={ShipmentStatus.AIR_CUSTOMS_CLEARANCE}>Air Customs Clearance Event</option>
                       <option value={ShipmentStatus.IN_TRANSIT_ROADWAY}>In Transit Roadway</option>
                       <option value={ShipmentStatus.IN_TRANSIT_SEAWAY}>In Transit Seaway</option>
                       <option value={ShipmentStatus.MOORED}>Moored</option>
@@ -1137,6 +1139,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   <option value="planned_airfreight">Planned Airfreight</option>
                   <option value="planned_seafreight">Planned Seafreight</option>
                   <option value="in_transit_airfreight">In Transit Airfreight</option>
+                  <option value="air_customs_clearance">Air Customs Clearance Event</option>
                   <option value="in_transit">In Transit</option>
                   <option value="arrived">Arrived</option>
                   <option value="delayed">Delayed</option>
@@ -1495,6 +1498,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   <option value="planned_airfreight">Planned Airfreight</option>
                   <option value="planned_seafreight">Planned Seafreight</option>
                   <option value="in_transit_airfreight">In Transit Airfreight</option>
+                  <option value="air_customs_clearance">Air Customs Clearance Event</option>
                   <option value="in_transit">In Transit</option>
                   <option value="arrived">Arrived</option>
                   <option value="delayed">Delayed</option>
