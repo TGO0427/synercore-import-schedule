@@ -40,14 +40,23 @@ const getCurrentMonthWeeks = () => {
 
 // Simple input that tracks changes without auto-saving
 const SimpleBinInput = ({ warehouseKey, initialValue, maxValue, onUpdate, hasUnsavedChanges }) => {
+  const [localValue, setLocalValue] = React.useState(initialValue);
+
+  // Update local value when initialValue changes from parent
+  React.useEffect(() => {
+    setLocalValue(initialValue);
+  }, [initialValue]);
+
   return (
     <input
       key={`${warehouseKey}-simple`}
       type="number"
-      value={initialValue}
+      value={localValue}
       onChange={(e) => {
-        const value = Math.max(0, Math.min(parseInt(e.target.value) || 0, maxValue));
-        onUpdate(warehouseKey, value);
+        const rawValue = e.target.value;
+        setLocalValue(rawValue); // Allow typing
+        const numValue = Math.max(0, Math.min(parseInt(rawValue) || 0, maxValue));
+        onUpdate(warehouseKey, numValue);
       }}
       onFocus={(e) => e.target.select()}
       style={{
