@@ -19,4 +19,5 @@ export default {
   },
   build: { outDir: 'dist' }
 }
+// Deployment timestamp: 2025-10-06
 
