@@ -4,6 +4,7 @@ import ShipmentTable from './components/ShipmentTable';
 import ProductView from './components/ProductView';
 import ArchiveView from './components/ArchiveView';
 import ReportsView from './components/ReportsView';
+import AdvancedReports from './components/AdvancedReports';
 import WarehouseCapacity from './components/WarehouseCapacity';
 import SupplierManagement from './components/SupplierManagement';
 import RatesQuotes from './components/RatesQuotes';
@@ -677,6 +678,8 @@ function App() {
         return <ArchiveView />;
       case 'reports':
         return <ReportsView shipments={shipments} statusFilter={statusFilter} onStatusFilter={handleStatusCardClick} />;
+      case 'advanced-reports':
+        return <AdvancedReports />;
       case 'capacity':
         return <WarehouseCapacity shipments={shipments} />;
       case 'users':
@@ -755,6 +758,7 @@ function App() {
           <li><button className={activeView === 'shipping' ? 'active' : ''} onClick={() => setActiveView('shipping')}>📦 Shipping Schedule</button></li>
           <li><button className={activeView === 'workflow' ? 'active' : ''} onClick={() => setActiveView('workflow')}>📋 Post-Arrival Workflow</button></li>
           <li><button className={activeView === 'reports' ? 'active' : ''} onClick={() => setActiveView('reports')}>📊 Reports</button></li>
+          <li><button className={activeView === 'advanced-reports' ? 'active' : ''} onClick={() => setActiveView('advanced-reports')}>📈 Advanced Reports</button></li>
           <li><button className={activeView === 'archives' ? 'active' : ''} onClick={() => setActiveView('archives')}>📦 Shipment Archives</button></li>
           <li><button className={activeView === 'rates' ? 'active' : ''} onClick={() => setActiveView('rates')}>💰 Rates & Quotes</button></li>
           <li><button className={activeView === 'stored' ? 'active' : ''} onClick={() => setActiveView('stored')}>🏪 Warehouse Stored</button></li>
@@ -887,6 +891,7 @@ function App() {
              activeView === 'shipping' ? '📦 Shipping Schedule' :
              activeView === 'workflow' ? '📋 Post-Arrival Workflow' :
              activeView === 'reports' ? '📊 Reports' :
+             activeView === 'advanced-reports' ? '📈 Advanced Reports' :
              activeView === 'archives' ? '📦 Shipment Archives' :
              activeView === 'rates' ? '💰 Rates & Quotes' :
              activeView === 'stored' ? '🏪 Warehouse Stored' :
