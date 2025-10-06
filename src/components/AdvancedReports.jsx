@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { getApiUrl } from '../config/api';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 function AdvancedReports() {
   const [shipments, setShipments] = useState([]);
@@ -247,6 +248,70 @@ function AdvancedReports() {
       palletRange: { min: '', max: '' },
       searchTerm: ''
     });
+  };
+
+  // Export to Excel
+  const exportToExcel = () => {
+    const wb = XLSX.utils.book_new();
+
+    // Summary Sheet
+    const summaryData = [
+      ['Advanced Shipment Report'],
+      ['Generated:', new Date().toLocaleString()],
+      [],
+      ['Filters Applied:'],
+      ['Date Range:', `${filters.dateRange.start || 'Any'} to ${filters.dateRange.end || 'Any'}`],
+      ['Statuses:', filters.statuses.join(', ') || 'All'],
+      ['Warehouses:', filters.warehouses.join(', ') || 'All'],
+      ['Suppliers:', filters.suppliers.join(', ') || 'All'],
+      [],
+      ['Summary Statistics:'],
+      ['Total Shipments:', filteredShipments.length],
+      ['Total Quantity:', filteredShipments.reduce((sum, s) => sum + (s.quantity || 0), 0)],
+      ['Total Pallets:', filteredShipments.reduce((sum, s) => sum + (s.palletQty || 0), 0)]
+    ];
+
+    const summaryWS = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, summaryWS, 'Summary');
+
+    // Data Sheet
+    if (aggregation.groupBy === 'none') {
+      // Detailed shipment list
+      const dataRows = filteredShipments.map(s => ({
+        'Supplier': s.supplier || '',
+        'Order Ref': s.orderRef || '',
+        'Product': s.productName || '',
+        'Week': s.weekNumber || '',
+        'Quantity': s.quantity || 0,
+        'Pallets': s.palletQty || 0,
+        'Status': s.latestStatus || '',
+        'Warehouse': s.receivingWarehouse || '',
+        'Final POD': s.finalPod || '',
+        'Forwarding Agent': s.forwardingAgent || '',
+        'Incoterm': s.incoterm || '',
+        'Vessel Name': s.vesselName || '',
+        'Notes': s.notes || ''
+      }));
+
+      const dataWS = XLSX.utils.json_to_sheet(dataRows);
+      XLSX.utils.book_append_sheet(wb, dataWS, 'Shipments');
+    } else {
+      // Aggregated data
+      const aggRows = aggregatedData.map(d => ({
+        [aggregation.groupBy.toUpperCase()]: d.group,
+        'Count': d.count,
+        'Total Quantity': d.totalQuantity,
+        'Total Pallets': d.totalPallets,
+        'Avg Quantity': d.avgQuantity.toFixed(2)
+      }));
+
+      const aggWS = XLSX.utils.json_to_sheet(aggRows);
+      XLSX.utils.book_append_sheet(wb, aggWS, 'Aggregated Data');
+    }
+
+    // Save file
+    const fileName = `advanced_report_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
   };
 
   // Export to PDF
@@ -667,20 +732,42 @@ function AdvancedReports() {
             <h3 style={{ margin: 0 }}>
               📊 Results ({aggregation.groupBy === 'none' ? filteredShipments.length : aggregatedData.length} {aggregation.groupBy === 'none' ? 'shipments' : 'groups'})
             </h3>
-            <button
-              onClick={exportToPDF}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#e53e3e',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              📄 Export PDF
-            </button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={exportToExcel}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#10b981'}
+              >
+                📊 Export Excel
+              </button>
+              <button
+                onClick={exportToPDF}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#e53e3e',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#c53030'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#e53e3e'}
+              >
+                📄 Export PDF
+              </button>
+            </div>
           </div>
 
           {/* Summary Stats */}
