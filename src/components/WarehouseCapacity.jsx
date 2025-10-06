@@ -38,28 +38,27 @@ const getCurrentMonthWeeks = () => {
   return weeksInMonth;
 };
 
-// Simple input that just works
-const SimpleBinInput = ({ warehouseKey, initialValue, maxValue, onUpdate }) => {
+// Simple input that tracks changes without auto-saving
+const SimpleBinInput = ({ warehouseKey, initialValue, maxValue, onUpdate, hasUnsavedChanges }) => {
   return (
     <input
       key={`${warehouseKey}-simple`}
       type="number"
-      defaultValue={initialValue}
-      onBlur={(e) => {
+      value={initialValue}
+      onChange={(e) => {
         const value = Math.max(0, Math.min(parseInt(e.target.value) || 0, maxValue));
-        e.target.value = value;
         onUpdate(warehouseKey, value);
       }}
       onFocus={(e) => e.target.select()}
       style={{
         padding: '4px 8px',
         borderRadius: '4px',
-        border: '2px solid #ddd',
+        border: hasUnsavedChanges ? '2px solid #ff9800' : '2px solid #ddd',
         fontSize: '1.1rem',
         fontWeight: 'bold',
         color: '#2c3e50',
         width: '70px',
-        backgroundColor: 'white'
+        backgroundColor: hasUnsavedChanges ? '#fff3e0' : 'white'
       }}
       min="0"
       max={maxValue}
@@ -70,8 +69,10 @@ const SimpleBinInput = ({ warehouseKey, initialValue, maxValue, onUpdate }) => {
 function WarehouseCapacity({ shipments }) {
   const [selectedWarehouse, setSelectedWarehouse] = useState('all');
   const [editableBinsUsed, setEditableBinsUsed] = useState({});
-  const editableBinsUsedRef = useRef({});
+  const [savedBinsUsed, setSavedBinsUsed] = useState({});
+  const [pendingChanges, setPendingChanges] = useState({});
   const [isLoadingCapacity, setIsLoadingCapacity] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Load warehouse capacity data from database on mount
   useEffect(() => {
@@ -83,7 +84,7 @@ function WarehouseCapacity({ shipments }) {
         if (response.ok) {
           const data = await response.json();
           setEditableBinsUsed(data);
-          editableBinsUsedRef.current = { ...data };
+          setSavedBinsUsed(data);
         }
       } catch (error) {
         console.warn('Failed to load warehouse capacity data:', error);
@@ -233,55 +234,84 @@ function WarehouseCapacity({ shipments }) {
     return { warehouseStats, currentWeek };
   }, [shipments, editableBinsUsed, currentMonthWeeks]);
 
-  const handleBinsUsedChange = useCallback(async (warehouse, newValue) => {
+  const handleBinsUsedChange = useCallback((warehouse, newValue) => {
     const updatedBinsUsed = {
       ...editableBinsUsed,
       [warehouse]: newValue
     };
 
-    // Update both state and ref for consistency
     setEditableBinsUsed(updatedBinsUsed);
-    editableBinsUsedRef.current[warehouse] = newValue;
 
-    // Save to database
-    try {
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
-      const token = authUtils.getToken();
-
-      if (!token) {
-        alert('You must be logged in to update warehouse capacity.');
-        return;
-      }
-
-      const response = await fetch(`${apiUrl}/api/warehouse-capacity/${encodeURIComponent(warehouse)}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authUtils.getAuthHeader()
-        },
-        body: JSON.stringify({ binsUsed: newValue }),
+    // Track as pending if different from saved value
+    if (newValue !== savedBinsUsed[warehouse]) {
+      setPendingChanges(prev => ({ ...prev, [warehouse]: newValue }));
+    } else {
+      // Remove from pending if value matches saved value
+      setPendingChanges(prev => {
+        const updated = { ...prev };
+        delete updated[warehouse];
+        return updated;
       });
-
-      if (response.status === 401 || response.status === 403) {
-        alert('Your session has expired. Please log in again.');
-        authUtils.clearAuth();
-        window.location.reload();
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error('Failed to save warehouse capacity');
-      }
-
-      const user = authUtils.getUser();
-      console.log(`✓ Saved ${warehouse} bins used: ${newValue} by ${user?.username}`);
-    } catch (error) {
-      console.error('Failed to save bins used data to database:', error);
-      console.error('API URL used:', import.meta.env.VITE_API_BASE_URL);
-      console.error('Full error:', error.message);
-      alert(`Failed to save changes for ${warehouse}. Please check console for details and try again.`);
     }
-  }, [editableBinsUsed]);
+  }, [editableBinsUsed, savedBinsUsed]);
+
+  const saveAllChanges = useCallback(async () => {
+    if (Object.keys(pendingChanges).length === 0) return;
+
+    setIsSaving(true);
+    const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+    const token = authUtils.getToken();
+
+    if (!token) {
+      alert('You must be logged in to update warehouse capacity.');
+      setIsSaving(false);
+      return;
+    }
+
+    const user = authUtils.getUser();
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const [warehouse, newValue] of Object.entries(pendingChanges)) {
+      try {
+        const response = await fetch(`${apiUrl}/api/warehouse-capacity/${encodeURIComponent(warehouse)}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authUtils.getAuthHeader()
+          },
+          body: JSON.stringify({ binsUsed: newValue }),
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          alert('Your session has expired. Please log in again.');
+          authUtils.clearAuth();
+          window.location.reload();
+          setIsSaving(false);
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error('Failed to save warehouse capacity');
+        }
+
+        console.log(`✓ Saved ${warehouse} bins used: ${newValue} by ${user?.username}`);
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to save ${warehouse}:`, error.message);
+        failCount++;
+      }
+    }
+
+    // Update saved values and clear pending changes
+    setSavedBinsUsed({ ...editableBinsUsed });
+    setPendingChanges({});
+    setIsSaving(false);
+
+    if (failCount > 0) {
+      alert(`Saved ${successCount} changes, but ${failCount} failed. Please check console for details.`);
+    }
+  }, [pendingChanges, editableBinsUsed]);
 
   const handleCardClick = useCallback((warehouse) => {
     // Toggle between selected warehouse and "all"
@@ -869,11 +899,12 @@ function WarehouseCapacity({ shipments }) {
           <div>
             <div style={{ color: '#666', marginBottom: '0.25rem' }}>Current Bins Utilized</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <SimpleBinInput 
+              <SimpleBinInput
                 warehouseKey={warehouse}
                 initialValue={editableBinsUsed[warehouse] !== undefined ? editableBinsUsed[warehouse] : stats.usedBins}
                 maxValue={stats.totalBins}
                 onUpdate={onBinsUsedChange}
+                hasUnsavedChanges={pendingChanges[warehouse] !== undefined}
               />
               <span style={{ fontSize: '0.9rem', color: '#666' }}>bins</span>
             </div>
@@ -1669,7 +1700,7 @@ function WarehouseCapacity({ shipments }) {
         gap: '1rem',
         flexWrap: 'wrap'
       }}>
-        <select 
+        <select
           value={selectedWarehouse}
           onChange={(e) => setSelectedWarehouse(e.target.value)}
           style={{
@@ -1686,6 +1717,47 @@ function WarehouseCapacity({ shipments }) {
             <option key={warehouse} value={warehouse}>{warehouse}</option>
           ))}
         </select>
+
+        {/* Save All Changes Button */}
+        {Object.keys(pendingChanges).length > 0 && (
+          <button
+            onClick={saveAllChanges}
+            disabled={isSaving}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 16px',
+              backgroundColor: isSaving ? '#94a3b8' : '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: isSaving ? 'not-allowed' : 'pointer',
+              fontSize: '0.95rem',
+              fontWeight: '500',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              animation: 'pulse 2s ease-in-out infinite'
+            }}
+            onMouseEnter={(e) => {
+              if (!isSaving) {
+                e.target.style.backgroundColor = '#059669';
+                e.target.style.transform = 'translateY(-1px)';
+                e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isSaving) {
+                e.target.style.backgroundColor = '#10b981';
+                e.target.style.transform = 'none';
+                e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+              }
+            }}
+            title={`Save ${Object.keys(pendingChanges).length} unsaved ${Object.keys(pendingChanges).length === 1 ? 'change' : 'changes'}`}
+          >
+            {isSaving ? '⏳ Saving...' : `💾 Save All Changes (${Object.keys(pendingChanges).length})`}
+          </button>
+        )}
 
         <button
           onClick={handleExportToPDF}
