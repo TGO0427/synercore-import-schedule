@@ -826,6 +826,9 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               <th onClick={() => handleSort('weekNumber')} style={{ cursor: 'pointer' }}>
                 WEEK NUMBER {sortConfig.key === 'weekNumber' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
               </th>
+              <th onClick={() => handleSort('palletQty')} style={{ cursor: 'pointer' }}>
+                PALLET QTY {sortConfig.key === 'palletQty' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+              </th>
               <th onClick={() => handleSort('vesselName')} style={{ cursor: 'pointer' }}>
                 VESSEL NAME {sortConfig.key === 'vesselName' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
               </th>
@@ -841,7 +844,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
           <tbody>
             {filteredAndSortedShipments.length === 0 ? (
               <tr>
-                <td colSpan="10" style={{ textAlign: 'center', padding: '2rem' }}>
+                <td colSpan="11" style={{ textAlign: 'center', padding: '2rem' }}>
                   No shipments found
                 </td>
               </tr>
@@ -900,6 +903,21 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                       currentWeek={shipment.weekNumber ? parseInt(shipment.weekNumber) : null}
                       onWeekSelect={(weekNumber, selectedDate) => handleWeekUpdate(shipment.id, weekNumber, selectedDate)}
                       selectedWeekDate={shipment.selectedWeekDate}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      value={(localTextValues[`${shipment.id}-palletQty`] ?? shipment.palletQty) || ''}
+                      onChange={(e) => handleTextInputChange(shipment.id, 'palletQty', e.target.value)}
+                      placeholder="Pallet Qty"
+                      className="input"
+                      style={{
+                        minWidth: '80px',
+                        border: edits[shipment.id]?.palletQty !== undefined ? '2px solid #ff9800' : undefined,
+                        backgroundColor: edits[shipment.id]?.palletQty !== undefined ? '#fff3e0' : undefined,
+                      }}
+                      min="0"
                     />
                   </td>
                   <td>
