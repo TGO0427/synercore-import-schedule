@@ -70,6 +70,11 @@ app.use(cors({
 }));
 
 /* ---------------- Security Middleware ---------------- */
+// Health check endpoint (before security middleware for Railway)
+app.get('/health', (_req, res) => {
+  res.json({ status: 'OK', ready: isReady, timestamp: new Date().toISOString() });
+});
+
 // Apply helmet security headers
 app.use(helmetConfig);
 
@@ -144,10 +149,6 @@ app.post('/api/upload-excel', authenticateToken, upload.single('file'), (req, re
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
-
-app.get('/health', (_req, res) => {
-  res.json({ status: 'OK', ready: isReady, timestamp: new Date().toISOString() });
 });
 
 /* ---------------- Static (prod) ---------------- */
