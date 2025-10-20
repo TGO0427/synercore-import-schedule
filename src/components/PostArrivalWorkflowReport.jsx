@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
+import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
 
 const POST_ARRIVAL_STATUSES = [
@@ -43,7 +44,7 @@ function PostArrivalWorkflowReport({ shipments }) {
     const fetchRecentArchives = async () => {
       try {
         setLoadingArchives(true);
-        const response = await fetch(getApiUrl('/api/shipments/archives'));
+        const response = await authFetch(getApiUrl('/api/shipments/archives'));
         if (!response.ok) throw new Error('Failed to fetch archives');
 
         const archives = await response.json();
@@ -60,7 +61,7 @@ function PostArrivalWorkflowReport({ shipments }) {
         const archiveData = await Promise.all(
           recentArchives.map(async (archive) => {
             try {
-              const dataResponse = await fetch(getApiUrl(`/api/shipments/archives/${archive.fileName}`));
+              const dataResponse = await authFetch(getApiUrl(`/api/shipments/archives/${archive.fileName}`));
               if (!dataResponse.ok) return [];
               const data = await dataResponse.json();
               return data.data || [];

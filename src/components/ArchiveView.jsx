@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
 
 function ArchiveView() {
@@ -45,7 +46,7 @@ function ArchiveView() {
   const fetchArchives = async () => {
     try {
       setLoading(true);
-      const response = await fetch(getApiUrl('/api/shipments/archives'));
+      const response = await authFetch(getApiUrl('/api/shipments/archives'));
       if (!response.ok) throw new Error('Failed to fetch archives');
       const data = await response.json();
       setArchives(data);
@@ -59,7 +60,7 @@ function ArchiveView() {
   const viewArchive = async (fileName) => {
     try {
       setLoading(true);
-      const response = await fetch(getApiUrl(`/api/shipments/archives/${fileName}`));
+      const response = await authFetch(getApiUrl(`/api/shipments/archives/${fileName}`));
       if (!response.ok) throw new Error('Failed to fetch archive data');
       const data = await response.json();
       setArchiveData(data);
@@ -73,7 +74,7 @@ function ArchiveView() {
 
   const handleRenameArchive = async (fileName, newName) => {
     try {
-      const response = await fetch(getApiUrl(`/api/shipments/archives/${fileName}/rename`), {
+      const response = await authFetch(getApiUrl(`/api/shipments/archives/${fileName}/rename`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -125,7 +126,7 @@ function ArchiveView() {
       );
 
       // Send update to server
-      const response = await fetch(getApiUrl(`/api/shipments/archives/${selectedArchive}`), {
+      const response = await authFetch(getApiUrl(`/api/shipments/archives/${selectedArchive}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'

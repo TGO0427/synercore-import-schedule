@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
@@ -59,7 +60,7 @@ function AdvancedReports() {
   const fetchShipments = async () => {
     try {
       setLoading(true);
-      const response = await fetch(getApiUrl('/api/shipments'));
+      const response = await authFetch(getApiUrl('/api/shipments'));
       if (!response.ok) throw new Error('Failed to fetch shipments');
       const data = await response.json();
       setShipments(data);

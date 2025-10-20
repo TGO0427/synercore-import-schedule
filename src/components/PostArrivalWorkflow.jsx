@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { authFetch } from '../utils/authFetch';
 import { ShipmentStatus, InspectionStatus, ReceivingStatus } from '../types/shipment';
 import { getApiUrl } from '../config/api';
 
@@ -37,7 +38,7 @@ function PostArrivalWorkflow() {
   const fetchPostArrivalShipments = async () => {
     try {
       setLoading(true);
-      const response = await fetch(getApiUrl('/api/shipments/post-arrival'));
+      const response = await authFetch(getApiUrl('/api/shipments/post-arrival'));
       if (response.ok) {
         const shipments = await response.json();
         setPostArrivalShipments(shipments);
@@ -149,7 +150,7 @@ function PostArrivalWorkflow() {
     if (action === 'mark-stored') {
       try {
         setActionLoading(true);
-        const response = await fetch(getApiUrl(`/api/shipments/${shipment.id}`), {
+        const response = await authFetch(getApiUrl(`/api/shipments/${shipment.id}`), {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -181,7 +182,7 @@ function PostArrivalWorkflow() {
       if (confirm(confirmMessage)) {
         try {
           setActionLoading(true);
-          const response = await fetch(getApiUrl(`/api/shipments/${shipment.id}`), {
+          const response = await authFetch(getApiUrl(`/api/shipments/${shipment.id}`), {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -225,7 +226,7 @@ function PostArrivalWorkflow() {
       setActionLoading(true);
       const endpoint = `/api/shipments/${shipment.id}/${action.replace('_', '-')}`;
 
-      const response = await fetch(getApiUrl(endpoint), {
+      const response = await authFetch(getApiUrl(endpoint), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -281,7 +282,7 @@ function PostArrivalWorkflow() {
         };
       }
 
-      const response = await fetch(getApiUrl(endpoint), {
+      const response = await authFetch(getApiUrl(endpoint), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -326,7 +327,7 @@ function PostArrivalWorkflow() {
       }
 
       setActionLoading(true);
-      const response = await fetch(getApiUrl(`/api/shipments/${selectedShipment.id}/reject-shipment`), {
+      const response = await authFetch(getApiUrl(`/api/shipments/${selectedShipment.id}/reject-shipment`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
