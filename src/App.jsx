@@ -36,6 +36,15 @@ async function fetchWithTimeout(url, opts = {}, ms = 10000) {
   }
 }
 
+// ----- authenticated fetch helper -----
+function authFetch(url, options = {}) {
+  const headers = {
+    ...options.headers,
+    ...authUtils.getAuthHeader()
+  };
+  return fetch(url, { ...options, headers });
+}
+
 function App() {
   const [shipments, setShipments] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -147,7 +156,11 @@ function App() {
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           response = await fetchWithTimeout(getApiUrl('/api/shipments'), {
-            headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+            headers: {
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache',
+              ...authUtils.getAuthHeader()
+            }
           }, 10000);
 
           console.log(`App: Fetch attempt ${attempt}, response status: ${response.status}`);
@@ -205,7 +218,9 @@ function App() {
 
       if (!isBackgroundSync) setLoading(true);
 
-      const res = await fetchWithTimeout(getApiUrl('/api/suppliers'), {}, 10000);
+      const res = await fetchWithTimeout(getApiUrl('/api/suppliers'), {
+        headers: authUtils.getAuthHeader()
+      }, 10000);
       if (!res.ok) throw new Error('Failed to fetch suppliers');
       const data = await res.json();
 
@@ -227,7 +242,7 @@ function App() {
   // ---------- CRUD: suppliers ----------
   const handleAddSupplier = async (supplier) => {
     try {
-      const response = await fetch(getApiUrl('/api/suppliers'), {
+      const response = await authFetch(getApiUrl('/api/suppliers'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(supplier)
@@ -240,7 +255,7 @@ function App() {
 
   const handleUpdateSupplier = async (id, updates) => {
     try {
-      const response = await fetch(getApiUrl(`/api/suppliers/${id}`), {
+      const response = await authFetch(getApiUrl(`/api/suppliers/${id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
@@ -254,7 +269,7 @@ function App() {
   const handleDeleteSupplier = async (id) => {
     if (!confirm('Are you sure you want to delete this supplier?')) return;
     try {
-      const response = await fetch(getApiUrl(`/api/suppliers/${id}`), { method: 'DELETE' });
+      const response = await authFetch(getApiUrl(`/api/suppliers/${id}`), { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete supplier');
       await fetchSuppliers();
       showSuccess('Supplier deleted successfully');
@@ -266,7 +281,7 @@ function App() {
     try {
       setLoading(true);
 
-      const response = await fetch(getApiUrl(`/api/suppliers/${supplierId}/import`), {
+      const response = await authFetch(getApiUrl(`/api/suppliers/${supplierId}/import`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scheduleData, documents })
@@ -275,7 +290,7 @@ function App() {
 
       const result = await response.json();
       if (result.scheduleData && result.scheduleData.length > 0) {
-        const shipmentsResponse = await fetch(getApiUrl('/api/shipments/bulk-import'), {
+        const shipmentsResponse = await authFetch(getApiUrl('/api/shipments/bulk-import'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(result.scheduleData)
@@ -323,7 +338,7 @@ function App() {
         prod: x.productName, qty: x.quantity, palletQty: x.palletQty, type: typeof x.palletQty
       })));
 
-      const response = await fetch(getApiUrl('/api/shipments/bulk-import'), {
+      const response = await authFetch(getApiUrl('/api/shipments/bulk-import'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -363,7 +378,7 @@ function App() {
   // ---------- CRUD: shipments ----------
   const handleUpdateShipment = async (id, updates) => {
     try {
-      const response = await fetch(getApiUrl(`/api/shipments/${id}`), {
+      const response = await authFetch(getApiUrl(`/api/shipments/${id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
@@ -378,7 +393,7 @@ function App() {
 
   const handleDeleteShipment = async (id) => {
     try {
-      const response = await fetch(getApiUrl(`/api/shipments/${id}`), { method: 'DELETE' });
+      const response = await authFetch(getApiUrl(`/api/shipments/${id}`), { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete shipment');
       await fetchShipments();
       showSuccess('Shipment deleted successfully');
@@ -387,7 +402,7 @@ function App() {
 
   const handleArchiveShipment = async (id) => {
     try {
-      const response = await fetch(getApiUrl('/api/shipments/manual-archive'), {
+      const response = await authFetch(getApiUrl('/api/shipments/manual-archive'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shipmentIds: [id] })
@@ -400,7 +415,7 @@ function App() {
 
   const handleCreateShipment = async (shipmentData) => {
     try {
-      const response = await fetch(getApiUrl('/api/shipments'), {
+      const response = await authFetch(getApiUrl('/api/shipments'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(shipmentData)
