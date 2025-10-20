@@ -61,6 +61,46 @@ export const validateChangePassword = [
   validate
 ];
 
+export const validateUserUpdate = [
+  param('id').notEmpty().withMessage('User ID is required').trim(),
+  body('username')
+    .notEmpty()
+    .withMessage('Username is required')
+    .isLength({ min: 3, max: 50 })
+    .withMessage('Username must be between 3 and 50 characters')
+    .matches(/^[a-zA-Z0-9_-]+$/)
+    .withMessage('Username can only contain letters, numbers, hyphens, and underscores'),
+  body('email')
+    .optional()
+    .isEmail()
+    .withMessage('Must be a valid email address')
+    .normalizeEmail(),
+  body('fullName')
+    .optional()
+    .isLength({ max: 100 })
+    .withMessage('Full name must be less than 100 characters')
+    .trim(),
+  body('role')
+    .optional()
+    .isIn(['user', 'admin'])
+    .withMessage('Role must be either "user" or "admin"'),
+  body('isActive')
+    .optional()
+    .isBoolean()
+    .withMessage('isActive must be a boolean'),
+  validate
+];
+
+export const validateResetPassword = [
+  param('id').notEmpty().withMessage('User ID is required').trim(),
+  body('newPassword')
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters long')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
+  validate
+];
+
 // Shipment validation rules
 export const validateShipmentCreate = [
   body('orderRef')
