@@ -15,10 +15,10 @@ export const createRateLimiter = (windowMs = 15 * 60 * 1000, max = 100) => {
 };
 
 // Strict rate limiter for auth endpoints
-export const authRateLimiter = createRateLimiter(15 * 60 * 1000, 5); // 5 requests per 15 minutes
+export const authRateLimiter = createRateLimiter(15 * 60 * 1000, 20); // 20 requests per 15 minutes
 
 // General API rate limiter
-export const apiRateLimiter = createRateLimiter(15 * 60 * 1000, 100); // 100 requests per 15 minutes
+export const apiRateLimiter = createRateLimiter(15 * 60 * 1000, 1000); // 1000 requests per 15 minutes
 
 // Helmet security headers configuration
 export const helmetConfig = helmet({
