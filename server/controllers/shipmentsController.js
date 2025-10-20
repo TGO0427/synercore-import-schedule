@@ -62,9 +62,32 @@ export class ShipmentsController {
         query += ` AND (LOWER(order_ref) LIKE $${params.length} OR LOWER(supplier) LIKE $${params.length} OR LOWER(final_pod) LIKE $${params.length})`;
       }
 
-      // Map camelCase to snake_case for sorting
-      const sortColumn = sortBy === 'estimatedArrival' ? 'updated_at' : sortBy.replace(/([A-Z])/g, '_$1').toLowerCase();
-      query += ` ORDER BY ${sortColumn} ${order.toUpperCase()}`;
+      // Whitelist of allowed sort columns to prevent SQL injection
+      const allowedSortColumns = {
+        'updated_at': 'updated_at',
+        'created_at': 'created_at',
+        'estimatedArrival': 'updated_at',
+        'orderRef': 'order_ref',
+        'supplier': 'supplier',
+        'finalPod': 'final_pod',
+        'latestStatus': 'latest_status',
+        'weekNumber': 'week_number',
+        'productName': 'product_name',
+        'quantity': 'quantity',
+        'cbm': 'cbm',
+        'palletQty': 'pallet_qty',
+        'receivingWarehouse': 'receiving_warehouse',
+        'forwardingAgent': 'forwarding_agent',
+        'vesselName': 'vessel_name'
+      };
+
+      // Validate and map sortBy to actual column name
+      const sortColumn = allowedSortColumns[sortBy] || 'updated_at';
+
+      // Validate order direction
+      const sortOrder = order.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+
+      query += ` ORDER BY ${sortColumn} ${sortOrder}`;
 
       const result = await db.query(query, params);
       const shipments = result.rows.map(dbRowToShipment);

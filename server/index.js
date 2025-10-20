@@ -7,8 +7,12 @@ if (!process.env.DATABASE_URL) {
   dotenv.config();
 }
 
-// Disable SSL certificate validation for Railway Postgres
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+// SSL certificate validation (only disable for local development)
+// Railway Postgres connections are handled securely in db/connection.js
+if (process.env.NODE_ENV === 'development' && process.env.DISABLE_SSL_VERIFY === 'true') {
+  console.warn('⚠️  WARNING: SSL certificate validation is disabled for development');
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
 
 import express from 'express';
 import cors from 'cors';
@@ -25,6 +29,7 @@ import emailImportRouter from './routes/emailImport.js';
 import adminRouter from './routes/admin.js';
 import warehouseCapacityRouter from './routes/warehouseCapacity.js';
 import authRouter from './routes/auth.js';
+import { helmetConfig, apiRateLimiter, authRateLimiter, authenticateToken } from './middleware/security.js';
 
 // __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -64,6 +69,13 @@ app.use(cors({
   credentials: true,
 }));
 
+/* ---------------- Security Middleware ---------------- */
+// Apply helmet security headers
+app.use(helmetConfig);
+
+// Apply rate limiting to all API routes
+app.use('/api', apiRateLimiter);
+
 /* ---------------- Parsers ---------------- */
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -83,17 +95,20 @@ app.use('/api', (req, res, next) => {
 });
 
 /* ---------------- Routers ---------------- */
-app.use('/api/auth', authRouter);
-app.use('/api/shipments', shipmentsRouter);
-app.use('/api/suppliers', suppliersRouter);
-app.use('/api/quotes', quotesRouter);
-app.use('/api/reports', reportsRouter);
-app.use('/api/email-import', emailImportRouter);
-app.use('/api/admin', adminRouter);
-app.use('/api/warehouse-capacity', warehouseCapacityRouter);
+// Public routes (no auth required) - with stricter rate limiting for auth endpoints
+app.use('/api/auth', authRateLimiter, authRouter);
+app.use('/api/warehouse-capacity', warehouseCapacityRouter); // Has mixed auth requirements
+
+// Protected routes (auth required)
+app.use('/api/shipments', authenticateToken, shipmentsRouter);
+app.use('/api/suppliers', authenticateToken, suppliersRouter);
+app.use('/api/quotes', authenticateToken, quotesRouter);
+app.use('/api/reports', authenticateToken, reportsRouter);
+app.use('/api/email-import', authenticateToken, emailImportRouter);
+app.use('/api/admin', authenticateToken, adminRouter);
 
 /* ---------------- Endpoints ---------------- */
-app.post('/api/documents/upload', upload.array('documents', 10), async (req, res, next) => {
+app.post('/api/documents/upload', authenticateToken, upload.array('documents', 10), async (req, res, next) => {
   try {
     const { supplierId } = req.body;
     if (!supplierId) return res.status(400).json({ error: 'Supplier ID is required' });
@@ -122,7 +137,7 @@ app.post('/api/documents/upload', upload.array('documents', 10), async (req, res
   }
 });
 
-app.post('/api/upload-excel', upload.single('file'), (req, res) => {
+app.post('/api/upload-excel', authenticateToken, upload.single('file'), (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     res.json({ message: 'File uploaded successfully', filename: req.file.originalname, size: req.file.size });
@@ -149,10 +164,22 @@ app.use((err, req, res, _next) => {
     method: req.method,
     url: req.originalUrl,
     message: err?.message,
-    stack: err?.stack,
+    stack: process.env.NODE_ENV === 'development' ? err?.stack : undefined,
   });
+
   if (res.headersSent) return;
-  res.status(500).json({ error: 'Internal Server Error', detail: err?.message });
+
+  // In production, don't expose error details
+  if (process.env.NODE_ENV === 'production') {
+    res.status(500).json({ error: 'Internal Server Error' });
+  } else {
+    // In development, include error details for debugging
+    res.status(500).json({
+      error: 'Internal Server Error',
+      detail: err?.message,
+      stack: err?.stack
+    });
+  }
 });
 
 /* ---------------- Async boot ---------------- */

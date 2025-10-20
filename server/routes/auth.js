@@ -5,8 +5,13 @@ import pool from '../db/connection.js';
 
 const router = express.Router();
 
-// JWT secret (should be in environment variable in production)
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+// JWT secret (MUST be set in environment variable)
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// Validate JWT_SECRET is configured
+if (!JWT_SECRET) {
+  throw new Error('CRITICAL SECURITY ERROR: JWT_SECRET environment variable is not set. Application cannot start without it.');
+}
 
 // Middleware to verify JWT token
 export const authenticateToken = (req, res, next) => {
