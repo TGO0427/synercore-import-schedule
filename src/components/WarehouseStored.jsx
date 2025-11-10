@@ -80,8 +80,8 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
         let bValue = b[sortConfig.key];
 
         if (sortConfig.key === 'storedDate') {
-          aValue = new Date(aValue || a.estimatedArrival);
-          bValue = new Date(bValue || b.estimatedArrival);
+          aValue = new Date(a.receivingDate || a.updatedAt || a.estimatedArrival);
+          bValue = new Date(b.receivingDate || b.updatedAt || b.estimatedArrival);
         }
 
         if (aValue < bValue) {
@@ -375,7 +375,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                     {shipment.receivingWarehouse || 'N/A'}
                   </td>
                   <td style={{ padding: '12px' }}>
-                    {formatDate(shipment.storedDate || shipment.estimatedArrival)}
+                    {formatDate(shipment.receivingDate || shipment.updatedAt || shipment.estimatedArrival)}
                   </td>
                   <td style={{ padding: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
                     {getStatusBadge(shipment.latestStatus)}
