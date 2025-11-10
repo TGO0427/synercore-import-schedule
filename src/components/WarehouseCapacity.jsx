@@ -135,6 +135,7 @@ function WarehouseCapacity({ shipments }) {
     const warehouseConfigs = {
       'PRETORIA': { totalBins: 650, avgItemsPerBin: 1 },
       'KLAPMUTS': { totalBins: 384, avgItemsPerBin: 1 },
+      'Offsite': { totalBins: 384, avgItemsPerBin: 1 },
       'Warehouse A': { totalBins: 384, avgItemsPerBin: 1 },
       'Warehouse B': { totalBins: 384, avgItemsPerBin: 1 },
       'Warehouse C': { totalBins: 384, avgItemsPerBin: 1 },
@@ -1466,6 +1467,7 @@ function WarehouseCapacity({ shipments }) {
       switch (warehouse) {
         case 'PRETORIA': return '#4caf50';
         case 'KLAPMUTS': return '#2196f3';
+        case 'Offsite': return '#ff9800';
         case 'Unassigned': return '#f44336';
         default: return '#9e9e9e';
       }
