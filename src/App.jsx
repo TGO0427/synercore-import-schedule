@@ -456,6 +456,7 @@ function App() {
         let shippingShipments = shipments.filter(s =>
           s.latestStatus !== 'arrived_pta' &&
           s.latestStatus !== 'arrived_klm' &&
+          s.latestStatus !== 'arrived_offsite' &&
           s.latestStatus !== 'stored' &&
           s.latestStatus !== 'received' &&
           !s.isInPostArrivalWorkflow?.()
@@ -472,7 +473,7 @@ function App() {
           planned_airfreight: 0, planned_seafreight: 0,
           in_transit_airfreight: 0, in_transit_roadway: 0, in_transit_seaway: 0,
           moored: 0, berth_working: 0, berth_complete: 0,
-          arrived_pta: 0, arrived_klm: 0,
+          arrived_pta: 0, arrived_klm: 0, arrived_offsite: 0,
           unloading: 0, inspection_pending: 0, inspecting: 0,
           inspection_failed: 0, inspection_passed: 0,
           receiving: 0, received: 0, stored: 0,
