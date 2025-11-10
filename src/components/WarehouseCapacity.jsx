@@ -147,6 +147,25 @@ function WarehouseCapacity({ shipments }) {
     // Calculate current and projected usage
     const warehouseStats = {};
 
+    // Initialize all warehouses from config with zero stats
+    Object.entries(warehouseConfigs).forEach(([warehouseName, config]) => {
+      warehouseStats[warehouseName] = {
+        totalBins: config.totalBins,
+        avgItemsPerBin: config.avgItemsPerBin,
+        maxCapacity: config.totalBins * config.avgItemsPerBin,
+        currentStock: 0,
+        incoming: 0,
+        currentWeekIncoming: 0,
+        weeklyIncoming: {},
+        totalProjected: 0,
+        usedBins: 0,
+        availableBins: config.totalBins,
+        projectedBinsUsed: 0,
+        binUtilizationPercent: 0,
+        status: 'normal'
+      };
+    });
+
     // Filter shipments to only include those in current month's weeks and exclude stored shipments
     const currentMonthShipments = shipments.filter(shipment => {
       const weekNumber = parseInt(shipment.weekNumber) || currentWeek;
