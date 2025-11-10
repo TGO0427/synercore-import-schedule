@@ -5,10 +5,11 @@ import { getApiUrl } from '../config/api';
 
 function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArchiveShipment, loading }) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [weekFilter, setWeekFilter] = useState('');
+  const [weekFilters, setWeekFilters] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: 'storedDate', direction: 'desc' });
   const [archivedShipments, setArchivedShipments] = useState([]);
   const [loadingArchives, setLoadingArchives] = useState(false);
+  const [showWeekDropdown, setShowWeekDropdown] = useState(false);
 
   // Fetch archived shipments
   useEffect(() => {
@@ -68,7 +69,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
         shipment.supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
         shipment.finalPod.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesWeek = weekFilter === '' || shipment.weekNumber?.toString() === weekFilter;
+      const matchesWeek = weekFilters.length === 0 || weekFilters.includes(shipment.weekNumber);
 
       return matchesSearch && matchesWeek;
     });
@@ -94,7 +95,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     }
 
     return filtered;
-  }, [shipments, archivedShipments, searchTerm, weekFilter, sortConfig]);
+  }, [shipments, archivedShipments, searchTerm, weekFilters, sortConfig]);
 
   const handleSort = (key) => {
     setSortConfig(current => ({
@@ -102,6 +103,19 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
       direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
     }));
   };
+
+  const toggleWeekFilter = (week) => {
+    setWeekFilters(prev =>
+      prev.includes(week)
+        ? prev.filter(w => w !== week)
+        : [...prev, week]
+    );
+  };
+
+  const availableWeeks = useMemo(() => {
+    const allShipments = [...shipments, ...archivedShipments];
+    return [...new Set(allShipments.map(s => s.weekNumber))].filter(Boolean).sort((a, b) => parseInt(a) - parseInt(b));
+  }, [shipments, archivedShipments]);
 
   const getSortIcon = (columnKey) => {
     if (sortConfig.key !== columnKey) return '⚬';
@@ -176,21 +190,67 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
               minWidth: '300px'
             }}
           />
-          <input
-            type="number"
-            placeholder="Filter by week..."
-            value={weekFilter}
-            onChange={(e) => setWeekFilter(e.target.value)}
-            min="1"
-            max="53"
-            style={{
-              padding: '8px 12px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              fontSize: '14px',
-              width: '140px'
-            }}
-          />
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowWeekDropdown(!showWeekDropdown)}
+              style={{
+                padding: '8px 12px',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '14px',
+                backgroundColor: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+            >
+              📅 Week {weekFilters.length > 0 ? `(${weekFilters.length})` : ''}
+              <span style={{ fontSize: '10px' }}>▼</span>
+            </button>
+            {showWeekDropdown && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                backgroundColor: 'white',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                marginTop: '4px',
+                maxHeight: '200px',
+                overflowY: 'auto',
+                minWidth: '120px',
+                zIndex: 10,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              }}>
+                {availableWeeks.map(week => (
+                  <label key={week} style={{
+                    display: 'block',
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    borderBottom: '1px solid #f0f0f0',
+                    fontSize: '14px',
+                    userSelect: 'none'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={weekFilters.includes(week)}
+                      onChange={() => toggleWeekFilter(week)}
+                      style={{ marginRight: '8px' }}
+                    />
+                    Week {week}
+                  </label>
+                ))}
+                {availableWeeks.length === 0 && (
+                  <div style={{ padding: '12px', color: '#999', textAlign: 'center' }}>
+                    No weeks available
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <div style={{ color: '#666', fontSize: '14px' }}>
             {filteredAndSortedShipments.length} stored shipment(s)
           </div>
