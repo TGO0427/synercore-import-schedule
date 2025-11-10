@@ -1,12 +1,67 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ShipmentStatus } from '../types/shipment';
+import { authFetch } from '../utils/authFetch';
+import { getApiUrl } from '../config/api';
 
 function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArchiveShipment, loading }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'storedDate', direction: 'desc' });
+  const [archivedShipments, setArchivedShipments] = useState([]);
+  const [loadingArchives, setLoadingArchives] = useState(false);
+
+  // Fetch archived shipments
+  useEffect(() => {
+    const fetchArchivedShipments = async () => {
+      try {
+        setLoadingArchives(true);
+        const response = await authFetch(getApiUrl('/api/shipments/archives'));
+        if (!response.ok) return;
+
+        const archives = await response.json();
+        const allArchivedShipments = [];
+
+        // Fetch each archive and extract shipments with 'stored' status
+        for (const archive of archives) {
+          try {
+            const archiveResponse = await authFetch(getApiUrl(`/api/shipments/archives/${archive.fileName}`));
+            if (!archiveResponse.ok) continue;
+
+            const archiveData = await archiveResponse.json();
+            if (archiveData && archiveData.data) {
+              // Filter archived shipments that have 'stored' status
+              const storedArchivedShipments = archiveData.data.filter(shipment =>
+                shipment.latestStatus === 'stored'
+              );
+
+              // Mark as archived and add source
+              storedArchivedShipments.forEach(shipment => {
+                shipment.isArchived = true;
+                shipment.archiveSource = archive.fileName;
+              });
+
+              allArchivedShipments.push(...storedArchivedShipments);
+            }
+          } catch (error) {
+            console.error(`Error fetching archive ${archive.fileName}:`, error);
+          }
+        }
+
+        setArchivedShipments(allArchivedShipments);
+      } catch (error) {
+        console.error('Error fetching archives:', error);
+      } finally {
+        setLoadingArchives(false);
+      }
+    };
+
+    fetchArchivedShipments();
+  }, []);
 
   const filteredAndSortedShipments = useMemo(() => {
-    let filtered = shipments.filter(shipment => {
+    // Combine active stored shipments and archived stored shipments
+    const allStoredShipments = [...shipments, ...archivedShipments];
+
+    let filtered = allStoredShipments.filter(shipment => {
       const matchesSearch = searchTerm === '' ||
         shipment.orderRef.toLowerCase().includes(searchTerm.toLowerCase()) ||
         shipment.supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -36,7 +91,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     }
 
     return filtered;
-  }, [shipments, searchTerm, sortConfig]);
+  }, [shipments, archivedShipments, searchTerm, sortConfig]);
 
   const handleSort = (key) => {
     setSortConfig(current => ({
@@ -244,8 +299,20 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                   <td style={{ padding: '12px' }}>
                     {formatDate(shipment.storedDate || shipment.estimatedArrival)}
                   </td>
-                  <td style={{ padding: '12px' }}>
+                  <td style={{ padding: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
                     {getStatusBadge(shipment.latestStatus)}
+                    {shipment.isArchived && (
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        color: 'white',
+                        backgroundColor: '#6c757d'
+                      }}>
+                        ARCHIVED
+                      </span>
+                    )}
                   </td>
                   <td style={{ padding: '12px', textAlign: 'center' }}>
                     <button
