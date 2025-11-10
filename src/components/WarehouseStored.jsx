@@ -5,6 +5,7 @@ import { getApiUrl } from '../config/api';
 
 function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArchiveShipment, loading }) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [weekFilter, setWeekFilter] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'storedDate', direction: 'desc' });
   const [archivedShipments, setArchivedShipments] = useState([]);
   const [loadingArchives, setLoadingArchives] = useState(false);
@@ -67,7 +68,9 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
         shipment.supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
         shipment.finalPod.toLowerCase().includes(searchTerm.toLowerCase());
 
-      return matchesSearch;
+      const matchesWeek = weekFilter === '' || shipment.weekNumber?.toString() === weekFilter;
+
+      return matchesSearch && matchesWeek;
     });
 
     if (sortConfig.key) {
@@ -91,7 +94,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     }
 
     return filtered;
-  }, [shipments, archivedShipments, searchTerm, sortConfig]);
+  }, [shipments, archivedShipments, searchTerm, weekFilter, sortConfig]);
 
   const handleSort = (key) => {
     setSortConfig(current => ({
@@ -171,6 +174,21 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
               borderRadius: '4px',
               fontSize: '14px',
               minWidth: '300px'
+            }}
+          />
+          <input
+            type="number"
+            placeholder="Filter by week..."
+            value={weekFilter}
+            onChange={(e) => setWeekFilter(e.target.value)}
+            min="1"
+            max="53"
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              fontSize: '14px',
+              width: '140px'
             }}
           />
           <div style={{ color: '#666', fontSize: '14px' }}>
