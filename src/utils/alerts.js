@@ -67,12 +67,13 @@ export function computeShipmentAlerts(shipments) {
     }
 
     // Info alerts - general notifications
-    if (s.latestStatus === 'arrived_pta' || s.latestStatus === 'arrived_klm') {
+    if (s.latestStatus === 'arrived_pta' || s.latestStatus === 'arrived_klm' || s.latestStatus === 'arrived_offsite') {
+      const arrivalLocation = s.latestStatus === 'arrived_pta' ? 'PTA' : s.latestStatus === 'arrived_klm' ? 'KLM' : 'Offsite';
       alerts.push({
         ...base,
         severity: 'info',
         title: 'Shipment Arrived',
-        description: `${s.supplier} - ${s.productName || s.orderRef} has arrived at ${s.latestStatus === 'arrived_pta' ? 'PTA' : 'KLM'}.`
+        description: `${s.supplier} - ${s.productName || s.orderRef} has arrived at ${arrivalLocation}.`
       });
     }
 
@@ -136,7 +137,7 @@ export function computeShipmentAlerts(shipments) {
         isOverdue = shipmentWeek < currentWeek;
       }
 
-      if (isOverdue && !['arrived_pta', 'arrived_klm', 'unloading', 'inspection_pending', 'inspecting', 'inspection_failed', 'inspection_passed', 'receiving', 'received', 'stored', 'delayed', 'cancelled'].includes(s.latestStatus)) {
+      if (isOverdue && !['arrived_pta', 'arrived_klm', 'arrived_offsite', 'unloading', 'inspection_pending', 'inspecting', 'inspection_failed', 'inspection_passed', 'receiving', 'received', 'stored', 'delayed', 'cancelled'].includes(s.latestStatus)) {
         alerts.push({
           ...base,
           id: `ship-${s.id}-overdue`,
