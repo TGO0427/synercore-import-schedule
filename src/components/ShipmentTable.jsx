@@ -895,6 +895,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                       <option value={ShipmentStatus.BERTH_COMPLETE}>Berth Complete</option>
                       <option value={ShipmentStatus.ARRIVED_PTA}>Arrived PTA</option>
                       <option value={ShipmentStatus.ARRIVED_KLM}>Arrived KLM</option>
+                      <option value={ShipmentStatus.ARRIVED_OFFSITE}>Arrived OffSite</option>
                       <option value={ShipmentStatus.DELAYED}>Delayed</option>
                       <option value={ShipmentStatus.CANCELLED}>Cancelled</option>
                     </select>
