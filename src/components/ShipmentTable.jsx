@@ -53,7 +53,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
 
       const matchesStatus = statusFilter.includes('all') ||
         statusFilter.includes(shipment.latestStatus) ||
-        (statusFilter.includes('arrived') && (shipment.latestStatus === ShipmentStatus.ARRIVED_PTA || shipment.latestStatus === ShipmentStatus.ARRIVED_KLM));
+        (statusFilter.includes('arrived') && (shipment.latestStatus === ShipmentStatus.ARRIVED_PTA || shipment.latestStatus === ShipmentStatus.ARRIVED_KLM || shipment.latestStatus === ShipmentStatus.ARRIVED_OFFSITE));
 
       if (statusFilter.includes('planned_airfreight')) {
         console.log('Filtering for planned_airfreight, shipment status:', shipment.latestStatus, 'matches:', matchesStatus);
@@ -590,7 +590,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
   };
 
   const handleSelectAllArrived = () => {
-    const arrivedShipments = filteredAndSortedShipments.filter(s => s.latestStatus === 'arrived_pta' || s.latestStatus === 'arrived_klm');
+    const arrivedShipments = filteredAndSortedShipments.filter(s => s.latestStatus === 'arrived_pta' || s.latestStatus === 'arrived_klm' || s.latestStatus === 'arrived_offsite');
     setSelectedShipments(arrivedShipments.map(s => s.id));
   };
 
@@ -607,7 +607,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
 
     const arrivedShipments = selectedShipments.filter(id => {
       const shipment = shipments.find(s => s.id === id);
-      return shipment && (shipment.latestStatus === 'arrived_pta' || shipment.latestStatus === 'arrived_klm');
+      return shipment && (shipment.latestStatus === 'arrived_pta' || shipment.latestStatus === 'arrived_klm' || shipment.latestStatus === 'arrived_offsite');
     });
 
     if (arrivedShipments.length === 0) {
@@ -721,6 +721,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 <option value={ShipmentStatus.BERTH_COMPLETE}>Berth Complete</option>
                 <option value={ShipmentStatus.ARRIVED_PTA}>Arrived PTA</option>
                 <option value={ShipmentStatus.ARRIVED_KLM}>Arrived KLM</option>
+                <option value={ShipmentStatus.ARRIVED_OFFSITE}>Arrived OffSite</option>
                 <option value={ShipmentStatus.DELAYED}>Delayed</option>
                 <option value={ShipmentStatus.CANCELLED}>Cancelled</option>
                 <option value="arrived">Arrived (Combined)</option>
@@ -745,16 +746,16 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               All ({shipments.length})
             </button>
             <button
-              className={(statusFilter.includes(ShipmentStatus.ARRIVED_PTA) || statusFilter.includes(ShipmentStatus.ARRIVED_KLM) || statusFilter.includes('arrived')) ? 'btn btn-success' : 'btn'}
+              className={(statusFilter.includes(ShipmentStatus.ARRIVED_PTA) || statusFilter.includes(ShipmentStatus.ARRIVED_KLM) || statusFilter.includes(ShipmentStatus.ARRIVED_OFFSITE) || statusFilter.includes('arrived')) ? 'btn btn-success' : 'btn'}
               onClick={() => {
-                if (statusFilter.includes('arrived') || statusFilter.includes(ShipmentStatus.ARRIVED_PTA) || statusFilter.includes(ShipmentStatus.ARRIVED_KLM)) {
+                if (statusFilter.includes('arrived') || statusFilter.includes(ShipmentStatus.ARRIVED_PTA) || statusFilter.includes(ShipmentStatus.ARRIVED_KLM) || statusFilter.includes(ShipmentStatus.ARRIVED_OFFSITE)) {
                   setStatusFilter(['all']);
                 } else {
                   setStatusFilter(['arrived']);
                 }
               }}
             >
-              ✅ Arrived ({shipments.filter(s => s.latestStatus === ShipmentStatus.ARRIVED_PTA || s.latestStatus === ShipmentStatus.ARRIVED_KLM).length})
+              ✅ Arrived ({shipments.filter(s => s.latestStatus === ShipmentStatus.ARRIVED_PTA || s.latestStatus === ShipmentStatus.ARRIVED_KLM || s.latestStatus === ShipmentStatus.ARRIVED_OFFSITE).length})
             </button>
           </div>
 
@@ -806,7 +807,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               <th style={{ width: '40px', textAlign: 'center' }}>
                 <input
                   type="checkbox"
-                  checked={selectedShipments.length > 0 && selectedShipments.length === filteredAndSortedShipments.filter(s => s.latestStatus === 'arrived_pta' || s.latestStatus === 'arrived_klm').length}
+                  checked={selectedShipments.length > 0 && selectedShipments.length === filteredAndSortedShipments.filter(s => s.latestStatus === 'arrived_pta' || s.latestStatus === 'arrived_klm' || s.latestStatus === 'arrived_offsite').length}
                   onChange={(e) => e.target.checked ? handleSelectAllArrived() : handleClearSelection()}
                   title="Select all ARRIVED shipments"
                 />
@@ -852,7 +853,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               filteredAndSortedShipments.map(shipment => (
                 <tr key={shipment.id} style={{ backgroundColor: isDelayed(shipment) ? '#fff5f5' : 'white' }}>
                   <td style={{ width: '40px', textAlign: 'center' }}>
-                    {(shipment.latestStatus === 'arrived_pta' || shipment.latestStatus === 'arrived_klm') && (
+                    {(shipment.latestStatus === 'arrived_pta' || shipment.latestStatus === 'arrived_klm' || shipment.latestStatus === 'arrived_offsite') && (
                       <input
                         type="checkbox"
                         checked={selectedShipments.includes(shipment.id)}

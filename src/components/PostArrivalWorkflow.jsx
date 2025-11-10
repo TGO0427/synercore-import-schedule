@@ -56,6 +56,7 @@ function PostArrivalWorkflow() {
     const colors = {
       'arrived_pta': '#28a745',
       'arrived_klm': '#28a745',
+      'arrived_offsite': '#28a745',
       'unloading': '#fd7e14',
       'inspection_pending': '#ffc107',
       'inspecting': '#17a2b8',
@@ -72,6 +73,7 @@ function PostArrivalWorkflow() {
     const icons = {
       'arrived_pta': '🚚',
       'arrived_klm': '🚚',
+      'arrived_offsite': '🚚',
       'unloading': '📦',
       'inspection_pending': '⏳',
       'inspecting': '🔍',
@@ -88,6 +90,7 @@ function PostArrivalWorkflow() {
     const labels = {
       'arrived_pta': 'Arrived PTA',
       'arrived_klm': 'Arrived KLM',
+      'arrived_offsite': 'Arrived OffSite',
       'unloading': 'Unloading',
       'inspection_pending': 'Inspection Pending',
       'inspecting': 'Inspecting',

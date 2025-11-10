@@ -77,6 +77,7 @@ export class ExcelProcessor {
     if (s.includes('berth complete')) return ShipmentStatus.BERTH_COMPLETE;
     if (s.includes('arrived pta') || s.includes('pta')) return ShipmentStatus.ARRIVED_PTA;
     if (s.includes('arrived klm') || s.includes('klm')) return ShipmentStatus.ARRIVED_KLM;
+    if (s.includes('arrived offsite') || s.includes('offsite')) return ShipmentStatus.ARRIVED_OFFSITE;
     if (s.includes('arrived') || s.includes('delivered')) return ShipmentStatus.ARRIVED_PTA;
     if (s.includes('delay')) return ShipmentStatus.DELAYED;
     if (s.includes('cancel')) return ShipmentStatus.CANCELLED;

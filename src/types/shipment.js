@@ -10,6 +10,7 @@ export const ShipmentStatus = {
   BERTH_COMPLETE: 'berth_complete',
   ARRIVED_PTA: 'arrived_pta',
   ARRIVED_KLM: 'arrived_klm',
+  ARRIVED_OFFSITE: 'arrived_offsite',
   DELAYED: 'delayed',
   CANCELLED: 'cancelled',
   // Post-arrival workflow states
@@ -135,7 +136,7 @@ export class Shipment {
   }
 
   isArrived() {
-    return this.latestStatus === ShipmentStatus.ARRIVED_PTA || this.latestStatus === ShipmentStatus.ARRIVED_KLM;
+    return this.latestStatus === ShipmentStatus.ARRIVED_PTA || this.latestStatus === ShipmentStatus.ARRIVED_KLM || this.latestStatus === ShipmentStatus.ARRIVED_OFFSITE;
   }
 
   isInPostArrivalWorkflow() {
