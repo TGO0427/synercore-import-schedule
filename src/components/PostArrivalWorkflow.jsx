@@ -107,7 +107,7 @@ function PostArrivalWorkflow() {
     const actions = [];
     const status = shipment.latestStatus;
 
-    if (status === 'arrived_pta' || status === 'arrived_klm') {
+    if (status === 'arrived_pta' || status === 'arrived_klm' || status === 'arrived_offsite') {
       actions.push({ key: 'start-unloading', label: 'Start Unloading', icon: '📦', color: '#fd7e14' });
     } else if (status === 'unloading') {
       actions.push({ key: 'complete-unloading', label: 'Complete Unloading', icon: '✅', color: '#28a745' });

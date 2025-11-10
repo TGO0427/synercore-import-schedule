@@ -476,7 +476,7 @@ export class ShipmentsController {
 
       // Find shipments to archive
       const result = await client.query(
-        `SELECT * FROM shipments WHERE id = ANY($1::text[]) AND latest_status IN ('arrived_pta', 'arrived_klm', 'stored')`,
+        `SELECT * FROM shipments WHERE id = ANY($1::text[]) AND latest_status IN ('arrived_pta', 'arrived_klm', 'arrived_offsite', 'stored')`,
         [shipmentIds]
       );
       const shipmentsToArchive = result.rows.map(dbRowToShipment);
@@ -523,7 +523,7 @@ export class ShipmentsController {
           latest_status = 'unloading',
           unloading_start_date = CURRENT_TIMESTAMP,
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = $1 AND latest_status IN ('arrived_pta', 'arrived_klm')`,
+        WHERE id = $1 AND latest_status IN ('arrived_pta', 'arrived_klm', 'arrived_offsite')`,
         [id]
       );
 
@@ -730,7 +730,7 @@ export class ShipmentsController {
     console.log('DEBUG: getPostArrivalShipments method called');
     try {
       const postArrivalStates = [
-        'arrived_pta', 'arrived_klm', 'unloading', 'inspection_pending', 'inspecting',
+        'arrived_pta', 'arrived_klm', 'arrived_offsite', 'unloading', 'inspection_pending', 'inspecting',
         'inspection_failed', 'inspection_passed', 'receiving', 'received'
       ];
 
