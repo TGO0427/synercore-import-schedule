@@ -135,13 +135,7 @@ function WarehouseCapacity({ shipments }) {
     const warehouseConfigs = {
       'PRETORIA': { totalBins: 650, avgItemsPerBin: 1 },
       'KLAPMUTS': { totalBins: 384, avgItemsPerBin: 1 },
-      'Offsite': { totalBins: 384, avgItemsPerBin: 1 },
-      'Warehouse A': { totalBins: 384, avgItemsPerBin: 1 },
-      'Warehouse B': { totalBins: 384, avgItemsPerBin: 1 },
-      'Warehouse C': { totalBins: 384, avgItemsPerBin: 1 },
-      'Distribution Center 1': { totalBins: 384, avgItemsPerBin: 1 },
-      'Distribution Center 2': { totalBins: 384, avgItemsPerBin: 1 },
-      'Regional Hub': { totalBins: 384, avgItemsPerBin: 1 }
+      'Offsite': { totalBins: 384, avgItemsPerBin: 1 }
     };
 
     // Calculate current and projected usage
