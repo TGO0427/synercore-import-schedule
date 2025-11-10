@@ -175,7 +175,7 @@ function WarehouseCapacity({ shipments }) {
       const weekNumber = parseInt(shipment.weekNumber) || currentWeek;
 
       // Debug current week shipments for our target warehouses
-      if ((warehouse === 'PRETORIA' || warehouse === 'KLAPMUTS') && weekNumber === currentWeek) {
+      if ((warehouse === 'PRETORIA' || warehouse === 'KLAPMUTS' || warehouse === 'Offsite') && weekNumber === currentWeek) {
         console.log(`Processing shipment for ${warehouse}, week ${weekNumber}: ${shipment.productName?.substring(0, 30)} - Status: ${shipment.latestStatus} - Pallets: ${pallets}`);
       }
 
@@ -237,8 +237,8 @@ function WarehouseCapacity({ shipments }) {
     Object.keys(warehouseStats).forEach(warehouse => {
       const stats = warehouseStats[warehouse];
 
-      // Debug log for PRETORIA and KLAPMUTS
-      if (warehouse === 'PRETORIA' || warehouse === 'KLAPMUTS') {
+      // Debug log for PRETORIA, KLAPMUTS, and Offsite
+      if (warehouse === 'PRETORIA' || warehouse === 'KLAPMUTS' || warehouse === 'Offsite') {
         console.log(`WarehouseCapacity FINAL: ${warehouse} - Total Incoming: ${stats.incoming}, Current Week (${currentWeek}) Incoming: ${stats.currentWeekIncoming || 0}`);
       }
       
