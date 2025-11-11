@@ -349,7 +349,10 @@ function WarehouseCapacity({ shipments }) {
     // Save bins used changes
     for (const [warehouse, newValue] of Object.entries(pendingChanges)) {
       try {
-        const response = await fetch(`${apiUrl}/api/warehouse-capacity/${encodeURIComponent(warehouse)}`, {
+        const url = `${apiUrl}/api/warehouse-capacity/${encodeURIComponent(warehouse)}`;
+        console.log(`📤 Sending: PUT ${url}`, { binsUsed: newValue });
+
+        const response = await fetch(url, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -358,6 +361,8 @@ function WarehouseCapacity({ shipments }) {
           body: JSON.stringify({ binsUsed: newValue }),
         });
 
+        console.log(`📥 Response status for ${warehouse}:`, response.status);
+
         if (response.status === 401 || response.status === 403) {
           alert('Your session has expired. Please log in again.');
           authUtils.clearAuth();
@@ -368,15 +373,15 @@ function WarehouseCapacity({ shipments }) {
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error(`Error response from server for ${warehouse}:`, response.status, errorText);
+          console.error(`❌ Error response from server for ${warehouse}:`, response.status, errorText);
           throw new Error(`Failed to save warehouse capacity: ${response.status} ${errorText}`);
         }
 
         const result = await response.json();
-        console.log(`✓ Saved ${warehouse} bins used: ${newValue}`, result);
+        console.log(`✅ Saved ${warehouse} bins used: ${newValue}`, result);
         successCount++;
       } catch (error) {
-        console.error(`Failed to save ${warehouse}:`, error.message);
+        console.error(`❌ Failed to save ${warehouse}:`, error.message);
         failCount++;
       }
     }
@@ -384,7 +389,10 @@ function WarehouseCapacity({ shipments }) {
     // Save available bins changes
     for (const [warehouse, newValue] of Object.entries(pendingAvailableBinsChanges)) {
       try {
-        const response = await fetch(`${apiUrl}/api/warehouse-capacity/${encodeURIComponent(warehouse)}/available-bins`, {
+        const url = `${apiUrl}/api/warehouse-capacity/${encodeURIComponent(warehouse)}/available-bins`;
+        console.log(`📤 Sending: PUT ${url}`, { availableBins: newValue });
+
+        const response = await fetch(url, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -393,6 +401,8 @@ function WarehouseCapacity({ shipments }) {
           body: JSON.stringify({ availableBins: newValue }),
         });
 
+        console.log(`📥 Response status for ${warehouse}:`, response.status);
+
         if (response.status === 401 || response.status === 403) {
           alert('Your session has expired. Please log in again.');
           authUtils.clearAuth();
@@ -403,15 +413,15 @@ function WarehouseCapacity({ shipments }) {
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error(`Error response from server for ${warehouse}:`, response.status, errorText);
+          console.error(`❌ Error response from server for ${warehouse}:`, response.status, errorText);
           throw new Error(`Failed to save available bins: ${response.status} ${errorText}`);
         }
 
         const result = await response.json();
-        console.log(`✓ Saved ${warehouse} available bins: ${newValue}`, result);
+        console.log(`✅ Saved ${warehouse} available bins: ${newValue}`, result);
         successCount++;
       } catch (error) {
-        console.error(`Failed to save ${warehouse} available bins:`, error.message);
+        console.error(`❌ Failed to save ${warehouse} available bins:`, error.message);
         failCount++;
       }
     }
