@@ -1,9 +1,25 @@
 # 📍 WEEK 2 Features - Location Guide
 
+## Your App Tabs
+You have these tabs in the navigation (left sidebar):
+- 📦 Shipping Schedule
+- 🏢 **Suppliers** ← This is where SupplierManagement lives!
+- 🏭 **Warehouse Capacity** ← This is where we enhance capacity viewing!
+- 📋 Product & Warehouse
+- 📋 Post-Arrival Workflow
+- 📊 Reports
+- 📈 Advanced Reports
+- 📦 Shipment Archives
+- 💰 Rates & Quotes
+- 🏪 Warehouse Stored
+- (Admin only) 👥 User Management
+
+---
+
 ## Where You'll See the New Features
 
 ### 1. 📊 Supplier KPI Dashboard
-**Location:** `SupplierManagement` tab (already exists in your app!)
+**Location:** Click on the `🏢 Suppliers` button in the left sidebar
 
 **Current state:** Shows supplier list with document management
 **New addition:** KPI metrics section at the top of each supplier card
@@ -55,7 +71,7 @@
 ---
 
 ### 2. 📈 Warehouse Capacity Trends
-**Location:** `WarehouseCapacity` tab (enhancing existing component!)
+**Location:** Click on the `🏭 Warehouse Capacity` button in the left sidebar
 
 **Current state:** Shows real-time bin usage for 3 warehouses
 **New addition:** Historical trends + 8-week forecast below current metrics
