@@ -2,12 +2,20 @@ import * as XLSX from 'xlsx';
 import { Shipment, ShipmentStatus } from '../types/shipment';
 import { getWeekStartDate, getWeekNumber } from './dateUtils';
 
+export class ExcelValidationError {
+  constructor(rowIndex, column, message) {
+    this.rowIndex = rowIndex;
+    this.column = column;
+    this.message = message;
+  }
+}
+
 export class ExcelProcessor {
   // ---- helpers -------------------------------------------------------------
   static _normHeader(s) {
     return String(s ?? '')
       .toLowerCase()
-      .replace(/\u00B3/g, '3')  // m³ -> m3
+      .replace(/\u00B³/g, '3')  // m³ -> m3
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -114,10 +122,78 @@ export class ExcelProcessor {
     return weekStartDate.toISOString().split('T')[0]; // Return YYYY-MM-DD format
   }
 
+  // ---- validation ---------------------------------------------------------
+  static validateRow(row, rowIndex) {
+    const errors = [];
+
+    // Supplier is required
+    const supplier = (row['SUPPLIER'] || row['Supplier'] || '').toString().trim();
+    if (!supplier) {
+      errors.push(new ExcelValidationError(rowIndex, 'SUPPLIER', 'Supplier is required'));
+    }
+
+    // Order Ref is required
+    const orderRef = (row['ORDER/REF'] || row['Order/Ref'] || '').toString().trim();
+    if (!orderRef) {
+      errors.push(new ExcelValidationError(rowIndex, 'ORDER/REF', 'Order Reference is required'));
+    }
+
+    // Quantity must be positive number
+    const quantity = this.parseQuantity(row['QUANTITY'] || row['Quantity'] || row['Qty']);
+    if (quantity <= 0) {
+      errors.push(new ExcelValidationError(rowIndex, 'QUANTITY', 'Quantity must be greater than 0'));
+    }
+
+    // Pallet Qty should be positive if provided
+    const palletQtyHeader = this._detectPalletQtyHeader(Object.keys(row));
+    const palletQtyRaw = palletQtyHeader ? row[palletQtyHeader] : undefined;
+    if (palletQtyRaw !== undefined && palletQtyRaw !== '') {
+      const palletQty = this.parseQuantity(palletQtyRaw);
+      if (palletQty < 0) {
+        errors.push(new ExcelValidationError(rowIndex, 'PALLET QTY', 'Pallet Quantity cannot be negative'));
+      }
+    }
+
+    // Week Number validation (1-53)
+    const weekNumber = this.parseWeekNumber(row['WEEK NUMBER'] || row['Week Number']);
+    if (weekNumber && (weekNumber < 1 || weekNumber > 53)) {
+      errors.push(new ExcelValidationError(rowIndex, 'WEEK NUMBER', 'Week Number must be between 1 and 53'));
+    }
+
+    // Warehouse validation
+    const warehouse = (row['RECEIVING WAREHOUSE'] || row['Warehouse'] || row['FINAL POD'] || '').toString().trim();
+    const validWarehouses = ['PRETORIA', 'KLAPMUTS', 'Offsite'];
+    if (warehouse && !validWarehouses.includes(warehouse)) {
+      errors.push(new ExcelValidationError(rowIndex, 'RECEIVING WAREHOUSE', `Warehouse must be one of: ${validWarehouses.join(', ')}`));
+    }
+
+    return errors;
+  }
+
+  static validateData(formattedRows) {
+    const allErrors = [];
+    const validRows = [];
+
+    formattedRows.forEach((row, index) => {
+      // Skip empty rows
+      const supplier = (row['SUPPLIER'] || row['Supplier'] || '').toString().trim();
+      if (!supplier) return;
+
+      const errors = this.validateRow(row, index + 1); // +1 for 1-based row numbering
+      if (errors.length > 0) {
+        allErrors.push(...errors);
+      } else {
+        validRows.push(row);
+      }
+    });
+
+    return { validRows, errors: allErrors };
+  }
+
   // ---- main ---------------------------------------------------------------
   static parseExcelFile(file) {
     return new Promise((resolve, reject) => {
-      console.log('ExcelProcessor v2.2 – parsing:', file.name);
+      console.log('ExcelProcessor v2.3 – parsing:', file.name);
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
@@ -140,6 +216,57 @@ export class ExcelProcessor {
           const shipments = this.convertToShipments(formatted, palletQtyHeader);
           console.log('Converted shipments:', shipments.length);
           resolve(shipments);
+        } catch (err) {
+          console.error('ExcelProcessor: Error', err);
+          reject(err);
+        }
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  static parseExcelFileWithValidation(file) {
+    return new Promise((resolve, reject) => {
+      console.log('ExcelProcessor v2.3 – parsing with validation:', file.name);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const wb = XLSX.read(e.target.result, { type: 'array' });
+          const sheet = wb.Sheets[wb.SheetNames[0]];
+          const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+          const headers = aoa[0] || [];
+          const rows = aoa.slice(1);
+          console.log('Headers:', headers);
+
+          const formatted = rows.map((row) => {
+            const o = {};
+            headers.forEach((h, i) => { o[h] = row[i]; });
+            return o;
+          });
+
+          // Validate data before conversion
+          const { validRows, errors } = this.validateData(formatted);
+          console.log(`Validation: ${validRows.length} valid rows, ${errors.length} errors`);
+
+          if (errors.length > 0) {
+            // Resolve with validation results, don't reject
+            resolve({
+              validRows: [],
+              errors,
+              preview: formatted.slice(0, 5)
+            });
+            return;
+          }
+
+          const palletQtyHeader = this._detectPalletQtyHeader(headers);
+          const shipments = this.convertToShipments(validRows, palletQtyHeader);
+          console.log('Converted shipments:', shipments.length);
+          resolve({
+            validRows: shipments,
+            errors: [],
+            preview: shipments.slice(0, 5)
+          });
         } catch (err) {
           console.error('ExcelProcessor: Error', err);
           reject(err);

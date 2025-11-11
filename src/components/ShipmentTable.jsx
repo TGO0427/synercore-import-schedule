@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { ShipmentStatus } from '../types/shipment';
 import WeekCalendar from './WeekCalendar';
+import BulkStatusUpdate from './BulkStatusUpdate';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { getApiUrl } from '../config/api';
+import { authFetch } from '../utils/authFetch';
 
 function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreateShipment, loading }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,6 +26,8 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
   const [showManualArchiveDialog, setShowManualArchiveDialog] = useState(false);
   const [selectedShipments, setSelectedShipments] = useState([]);
   const [manualArchiveLoading, setManualArchiveLoading] = useState(false);
+  const [showBulkStatusUpdate, setShowBulkStatusUpdate] = useState(false);
+  const [bulkUpdateLoading, setBulkUpdateLoading] = useState(false);
   const [edits, setEdits] = useState({}); // Track unsaved changes per shipment
   const [newShipment, setNewShipment] = useState({
     supplier: '',
@@ -646,6 +650,33 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
     }
   };
 
+  const handleBulkStatusUpdate = async (shipmentIds, newStatus) => {
+    try {
+      setBulkUpdateLoading(true);
+
+      // Update all selected shipments
+      const updatePromises = shipmentIds.map(id => {
+        const shipment = shipments.find(s => s.id === id);
+        if (!shipment) return Promise.resolve();
+
+        return onUpdateShipment({
+          ...shipment,
+          latestStatus: newStatus
+        });
+      });
+
+      await Promise.all(updatePromises);
+
+      setShowBulkStatusUpdate(false);
+      alert(`Successfully updated ${shipmentIds.length} shipment(s) to ${newStatus.replace(/_/g, ' ').toUpperCase()}`);
+    } catch (error) {
+      console.error('Error updating shipments:', error);
+      alert('Error updating shipments. Please try again.');
+    } finally {
+      setBulkUpdateLoading(false);
+    }
+  };
+
   if (loading) {
     return <div className="loading">Loading shipments...</div>;
   }
@@ -796,6 +827,14 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
             title="Manually select and archive ARRIVED shipments"
           >
             🗂️ Manual Archive
+          </button>
+          <button
+            className="btn btn-warning"
+            onClick={() => setShowBulkStatusUpdate(true)}
+            disabled={filteredAndSortedShipments.length === 0}
+            title="Bulk update status for multiple shipments"
+          >
+            📋 Bulk Status Update
           </button>
         </div>
       </div>
@@ -2040,6 +2079,15 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
             </div>
           </div>
         </div>
+      )}
+
+      {/* Bulk Status Update Modal */}
+      {showBulkStatusUpdate && (
+        <BulkStatusUpdate
+          shipments={filteredAndSortedShipments}
+          onBulkUpdate={handleBulkStatusUpdate}
+          onClose={() => setShowBulkStatusUpdate(false)}
+        />
       )}
     </div>
   );

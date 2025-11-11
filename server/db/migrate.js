@@ -41,6 +41,10 @@ async function migrate() {
     await db.query(schemaSQL);
     console.log('✓ Schema created successfully');
 
+    // Apply performance indexes
+    const { addPerformanceIndexes } = await import('./add-performance-indexes.js');
+    await addPerformanceIndexes();
+
     // Load data from JSON files
     const shipmentsFile = path.join(__dirname, '../data/shipments.json');
     const suppliersFile = path.join(__dirname, '../data/suppliers.json');

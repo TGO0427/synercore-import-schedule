@@ -93,3 +93,12 @@ CREATE INDEX IF NOT EXISTS idx_shipments_status ON shipments(latest_status);
 CREATE INDEX IF NOT EXISTS idx_shipments_week ON shipments(week_number);
 CREATE INDEX IF NOT EXISTS idx_shipments_updated ON shipments(updated_at);
 CREATE INDEX IF NOT EXISTS idx_suppliers_name ON suppliers(name);
+
+-- Additional indexes for common filter combinations and lookups
+CREATE INDEX IF NOT EXISTS idx_shipments_warehouse ON shipments(receiving_warehouse);
+CREATE INDEX IF NOT EXISTS idx_shipments_status_week ON shipments(latest_status, week_number);
+CREATE INDEX IF NOT EXISTS idx_shipments_status_warehouse ON shipments(latest_status, receiving_warehouse);
+CREATE INDEX IF NOT EXISTS idx_shipments_order_ref ON shipments(order_ref);
+CREATE INDEX IF NOT EXISTS idx_shipments_created_at ON shipments(created_at);
+CREATE INDEX IF NOT EXISTS idx_shipments_inspection_status ON shipments(inspection_status);
+CREATE INDEX IF NOT EXISTS idx_shipments_receiving_status ON shipments(receiving_status);
