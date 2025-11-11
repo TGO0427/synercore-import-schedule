@@ -81,34 +81,45 @@ router.put('/:warehouseName/available-bins', async (req, res) => {
     const { warehouseName } = req.params;
     const { availableBins } = req.body;
 
-    console.log(`API: Updating available bins for ${warehouseName}: ${availableBins}`);
+    console.log(`\n🔧 [API] Updating available bins for ${warehouseName}: ${availableBins}`);
 
     if (typeof availableBins !== 'number' || availableBins < 0) {
+      console.log(`❌ [API] Invalid availableBins value: ${availableBins}`);
       return res.status(400).json({ error: 'Invalid availableBins value' });
     }
 
-    // Update or insert available_bins
+    console.log(`📝 [API] Executing UPDATE query for ${warehouseName}...`);
+
+    // Update or insert available_bins - ensure bins_used is preserved
     const result = await pool.query(
-      `INSERT INTO warehouse_capacity (warehouse_name, available_bins, updated_at)
-       VALUES ($1, $2, CURRENT_TIMESTAMP)
+      `INSERT INTO warehouse_capacity (warehouse_name, bins_used, available_bins, updated_at)
+       VALUES ($1, COALESCE((SELECT bins_used FROM warehouse_capacity WHERE warehouse_name = $1), 0), $2, CURRENT_TIMESTAMP)
        ON CONFLICT (warehouse_name)
        DO UPDATE SET available_bins = $2, updated_at = CURRENT_TIMESTAMP
        RETURNING warehouse_name, bins_used, available_bins, updated_at`,
       [warehouseName, availableBins]
     );
 
-    console.log(`API: Successfully saved available bins for ${warehouseName}:`, result.rows[0]);
+    console.log(`✅ [API] Query executed. Rows affected: ${result.rowCount}`);
+    console.log(`📊 [API] Returned data:`, JSON.stringify(result.rows[0]));
+
+    if (!result.rows || result.rows.length === 0) {
+      console.log(`⚠️ [API] WARNING: Query returned no rows!`);
+      return res.status(500).json({ error: 'Failed to update: no rows returned' });
+    }
 
     res.json({
       success: true,
       data: result.rows[0]
     });
   } catch (error) {
-    console.error('Error updating available bins:', error);
-    console.error('Error details:', error.message);
+    console.error(`\n❌ [API] ERROR updating available bins for ${warehouseName}:`, error);
+    console.error(`📋 [API] Error details:`, error.message);
+    console.error(`🔍 [API] Error code:`, error.code);
     res.status(500).json({
       error: 'Failed to update available bins',
-      details: error.message
+      details: error.message,
+      code: error.code
     });
   }
 });
@@ -161,11 +172,14 @@ router.put('/:warehouseName', async (req, res) => {
     const { warehouseName } = req.params;
     const { binsUsed } = req.body;
 
-    console.log(`API: Updating bins used for ${warehouseName}: ${binsUsed}`);
+    console.log(`\n🔧 [API] Updating bins used for ${warehouseName}: ${binsUsed}`);
 
     if (typeof binsUsed !== 'number' || binsUsed < 0) {
+      console.log(`❌ [API] Invalid binsUsed value: ${binsUsed}`);
       return res.status(400).json({ error: 'Invalid binsUsed value' });
     }
+
+    console.log(`📝 [API] Executing UPDATE query for ${warehouseName}...`);
 
     // Simple update without authentication for now
     const result = await pool.query(
@@ -173,22 +187,30 @@ router.put('/:warehouseName', async (req, res) => {
        VALUES ($1, $2, CURRENT_TIMESTAMP)
        ON CONFLICT (warehouse_name)
        DO UPDATE SET bins_used = $2, updated_at = CURRENT_TIMESTAMP
-       RETURNING warehouse_name, bins_used, updated_at`,
+       RETURNING warehouse_name, bins_used, available_bins, updated_at`,
       [warehouseName, binsUsed]
     );
 
-    console.log(`API: Successfully saved bins used for ${warehouseName}:`, result.rows[0]);
+    console.log(`✅ [API] Query executed. Rows affected: ${result.rowCount}`);
+    console.log(`📊 [API] Returned data:`, JSON.stringify(result.rows[0]));
+
+    if (!result.rows || result.rows.length === 0) {
+      console.log(`⚠️ [API] WARNING: Query returned no rows!`);
+      return res.status(500).json({ error: 'Failed to update: no rows returned' });
+    }
 
     res.json({
       success: true,
       data: result.rows[0]
     });
   } catch (error) {
-    console.error('Error updating warehouse capacity:', error);
-    console.error('Error details:', error.message);
+    console.error(`\n❌ [API] ERROR updating bins used for ${warehouseName}:`, error);
+    console.error(`📋 [API] Error details:`, error.message);
+    console.error(`🔍 [API] Error code:`, error.code);
     res.status(500).json({
       error: 'Failed to update warehouse capacity',
-      details: error.message
+      details: error.message,
+      code: error.code
     });
   }
 });
