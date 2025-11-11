@@ -3,6 +3,7 @@ import { getCurrentWeekNumber } from '../utils/dateUtils';
 import { jsPDF } from 'jspdf';
 import { ShipmentStatus } from '../types/shipment';
 import { authUtils } from '../utils/auth';
+import CapacityForecastTable from './CapacityForecastTable';
 
 // Helper function to get current month's weeks using consistent week calculation
 const getCurrentMonthWeeks = () => {
@@ -1915,6 +1916,18 @@ function WarehouseCapacity({ shipments }) {
             pendingChanges={pendingChanges}
           />
         ))}
+      </div>
+
+      {/* 8-Week Capacity Forecast */}
+      <div style={{ marginBottom: '2rem' }}>
+        <CapacityForecastTable
+          shipments={shipments}
+          currentBinsUsed={{
+            'PRETORIA': warehouseCapacity.PRETORIA?.binsUsed || 0,
+            'KLAPMUTS': warehouseCapacity.KLAPMUTS?.binsUsed || 0,
+            'Offsite': warehouseCapacity.Offsite?.binsUsed || 0
+          }}
+        />
       </div>
 
       {/* Analytics Charts - Filtered by Selected Warehouse */}
