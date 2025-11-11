@@ -109,15 +109,19 @@ function WarehouseCapacity({ shipments }) {
         if (response.ok) {
           const data = await response.json();
 
+          console.log('📥 Warehouse capacity data loaded:', data);
+
           // Handle both old and new API response formats
           if (data.binsUsed && data.availableBins) {
             // New format with both binsUsed and availableBins
+            console.log('✅ Using new API format (binsUsed + availableBins)');
             setEditableBinsUsed(data.binsUsed);
             setSavedBinsUsed(data.binsUsed);
             setEditableAvailableBins(data.availableBins);
             setSavedAvailableBins(data.availableBins);
           } else {
             // Old format (backward compatibility) - assume it's just bins_used
+            console.log('⚠️ Using old API format (bins_used only)');
             setEditableBinsUsed(data);
             setSavedBinsUsed(data);
           }
