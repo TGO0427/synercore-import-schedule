@@ -28,7 +28,12 @@ export const helmetConfig = helmet({
       styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for React
       scriptSrc: ["'self'"],
       imgSrc: ["'self'", 'data:', 'https:'],
-      connectSrc: ["'self'"],
+      // Allow API connections from Vercel frontend
+      connectSrc: [
+        "'self'",
+        'https://synercore-import-schedule.vercel.app',
+        'https://synercore-import-schedule-*.vercel.app' // Preview deployments
+      ],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
