@@ -8,7 +8,7 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT warehouse_name, bins_used, updated_by, updated_at FROM warehouse_capacity'
+      'SELECT warehouse_name, bins_used, available_bins, updated_by, updated_at FROM warehouse_capacity'
     );
 
     // Convert to object format { warehouse_name: bins_used }
@@ -95,6 +95,40 @@ router.get('/:warehouseName/history', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error fetching warehouse capacity history:', error);
     res.status(500).json({ error: 'Failed to fetch history' });
+  }
+});
+
+// PUT/UPDATE available bins for a specific warehouse
+router.put('/:warehouseName/available-bins', async (req, res) => {
+  try {
+    const { warehouseName } = req.params;
+    const { availableBins } = req.body;
+
+    if (typeof availableBins !== 'number' || availableBins < 0) {
+      return res.status(400).json({ error: 'Invalid availableBins value' });
+    }
+
+    // Update or insert available_bins
+    const result = await pool.query(
+      `INSERT INTO warehouse_capacity (warehouse_name, available_bins, updated_at)
+       VALUES ($1, $2, CURRENT_TIMESTAMP)
+       ON CONFLICT (warehouse_name)
+       DO UPDATE SET available_bins = $2, updated_at = CURRENT_TIMESTAMP
+       RETURNING warehouse_name, bins_used, available_bins, updated_at`,
+      [warehouseName, availableBins]
+    );
+
+    res.json({
+      success: true,
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error updating available bins:', error);
+    console.error('Error details:', error.message);
+    res.status(500).json({
+      error: 'Failed to update available bins',
+      details: error.message
+    });
   }
 });
 

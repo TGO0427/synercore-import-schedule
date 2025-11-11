@@ -45,6 +45,10 @@ async function migrate() {
     const { addPerformanceIndexes } = await import('./add-performance-indexes.js');
     await addPerformanceIndexes();
 
+    // Add available_bins column
+    const addAvailableBinsColumn = await import('./add-available-bins.js');
+    await addAvailableBinsColumn.default();
+
     // Load data from JSON files
     const shipmentsFile = path.join(__dirname, '../data/shipments.json');
     const suppliersFile = path.join(__dirname, '../data/suppliers.json');

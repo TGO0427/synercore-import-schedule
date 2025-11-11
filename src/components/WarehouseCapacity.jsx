@@ -93,6 +93,9 @@ function WarehouseCapacity({ shipments }) {
   const [editableBinsUsed, setEditableBinsUsed] = useState({});
   const [savedBinsUsed, setSavedBinsUsed] = useState({});
   const [pendingChanges, setPendingChanges] = useState({});
+  const [editableAvailableBins, setEditableAvailableBins] = useState({});
+  const [savedAvailableBins, setSavedAvailableBins] = useState({});
+  const [pendingAvailableBinsChanges, setPendingAvailableBinsChanges] = useState({});
   const [isLoadingCapacity, setIsLoadingCapacity] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -291,8 +294,32 @@ function WarehouseCapacity({ shipments }) {
     }
   }, [editableBinsUsed, savedBinsUsed]);
 
+  const handleAvailableBinsChange = useCallback((warehouse, newValue) => {
+    const updatedAvailableBins = {
+      ...editableAvailableBins,
+      [warehouse]: newValue
+    };
+
+    setEditableAvailableBins(updatedAvailableBins);
+
+    // Track as pending if different from saved value
+    if (newValue !== savedAvailableBins[warehouse]) {
+      setPendingAvailableBinsChanges(prev => ({ ...prev, [warehouse]: newValue }));
+    } else {
+      // Remove from pending if value matches saved value
+      setPendingAvailableBinsChanges(prev => {
+        const updated = { ...prev };
+        delete updated[warehouse];
+        return updated;
+      });
+    }
+  }, [editableAvailableBins, savedAvailableBins]);
+
   const saveAllChanges = useCallback(async () => {
-    if (Object.keys(pendingChanges).length === 0) return;
+    const hasPendingBinsChanges = Object.keys(pendingChanges).length > 0;
+    const hasPendingAvailableBinsChanges = Object.keys(pendingAvailableBinsChanges).length > 0;
+
+    if (!hasPendingBinsChanges && !hasPendingAvailableBinsChanges) return;
 
     setIsSaving(true);
     const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
@@ -308,6 +335,7 @@ function WarehouseCapacity({ shipments }) {
     let successCount = 0;
     let failCount = 0;
 
+    // Save bins used changes
     for (const [warehouse, newValue] of Object.entries(pendingChanges)) {
       try {
         const response = await fetch(`${apiUrl}/api/warehouse-capacity/${encodeURIComponent(warehouse)}`, {
@@ -342,9 +370,46 @@ function WarehouseCapacity({ shipments }) {
       }
     }
 
+    // Save available bins changes
+    for (const [warehouse, newValue] of Object.entries(pendingAvailableBinsChanges)) {
+      try {
+        const response = await fetch(`${apiUrl}/api/warehouse-capacity/${encodeURIComponent(warehouse)}/available-bins`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authUtils.getAuthHeader()
+          },
+          body: JSON.stringify({ availableBins: newValue }),
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          alert('Your session has expired. Please log in again.');
+          authUtils.clearAuth();
+          window.location.reload();
+          setIsSaving(false);
+          return;
+        }
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Error response from server for ${warehouse}:`, response.status, errorText);
+          throw new Error(`Failed to save available bins: ${response.status} ${errorText}`);
+        }
+
+        const result = await response.json();
+        console.log(`✓ Saved ${warehouse} available bins: ${newValue}`, result);
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to save ${warehouse} available bins:`, error.message);
+        failCount++;
+      }
+    }
+
     // Update saved values and clear pending changes
     setSavedBinsUsed({ ...editableBinsUsed });
     setPendingChanges({});
+    setSavedAvailableBins({ ...editableAvailableBins });
+    setPendingAvailableBinsChanges({});
     setIsSaving(false);
 
     if (failCount > 0) {
@@ -352,7 +417,7 @@ function WarehouseCapacity({ shipments }) {
     } else if (successCount > 0) {
       alert(`✓ Successfully saved ${successCount} ${successCount === 1 ? 'change' : 'changes'}!`);
     }
-  }, [pendingChanges, editableBinsUsed]);
+  }, [pendingChanges, pendingAvailableBinsChanges, editableBinsUsed, editableAvailableBins]);
 
   const handleCardClick = useCallback((warehouse) => {
     // Toggle between selected warehouse and "all"
@@ -1765,7 +1830,7 @@ function WarehouseCapacity({ shipments }) {
         </select>
 
         {/* Save All Changes Button */}
-        {Object.keys(pendingChanges).length > 0 && (
+        {(Object.keys(pendingChanges).length > 0 || Object.keys(pendingAvailableBinsChanges).length > 0) && (
           <button
             onClick={saveAllChanges}
             disabled={isSaving}
@@ -1799,9 +1864,9 @@ function WarehouseCapacity({ shipments }) {
                 e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
               }
             }}
-            title={`Save ${Object.keys(pendingChanges).length} unsaved ${Object.keys(pendingChanges).length === 1 ? 'change' : 'changes'}`}
+            title={`Save ${Object.keys(pendingChanges).length + Object.keys(pendingAvailableBinsChanges).length} unsaved ${(Object.keys(pendingChanges).length + Object.keys(pendingAvailableBinsChanges).length) === 1 ? 'change' : 'changes'}`}
           >
-            {isSaving ? '⏳ Saving...' : `💾 Save All Changes (${Object.keys(pendingChanges).length})`}
+            {isSaving ? '⏳ Saving...' : `💾 Save All Changes (${Object.keys(pendingChanges).length + Object.keys(pendingAvailableBinsChanges).length})`}
           </button>
         )}
 
@@ -1892,6 +1957,71 @@ function WarehouseCapacity({ shipments }) {
                 max={stats.totalBins}
               />
               <span style={{ fontSize: '0.85rem', color: '#666' }}>/ {stats.totalBins}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Edit Panel for Available Bins */}
+      <div style={{
+        backgroundColor: 'white',
+        padding: '1.5rem',
+        borderRadius: '12px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        marginBottom: '2rem'
+      }}>
+        <h3 style={{ color: '#2c3e50', marginBottom: '1rem', fontSize: '1.1rem' }}>
+          📦 Adjust Available Bins
+        </h3>
+        <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1rem' }}>
+          Set the number of available bins for each warehouse. This represents bins that can be used for incoming shipments.
+        </p>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+          gap: '1rem'
+        }}>
+          {filteredWarehouses.map(([warehouse, stats]) => (
+            <div key={`available-${warehouse}`} style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+              padding: '0.75rem',
+              backgroundColor: pendingAvailableBinsChanges[warehouse] !== undefined ? '#e8f5e9' : '#f8f9fa',
+              borderRadius: '8px',
+              border: pendingAvailableBinsChanges[warehouse] !== undefined ? '2px solid #4caf50' : '2px solid #e0e0e0'
+            }}>
+              <label style={{
+                fontWeight: '500',
+                color: '#2c3e50',
+                fontSize: '0.9rem'
+              }}>
+                {warehouse}:
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="number"
+                  value={editableAvailableBins[warehouse] !== undefined ? editableAvailableBins[warehouse] : stats.availableBins}
+                  onChange={(e) => {
+                    const value = Math.max(0, parseInt(e.target.value) || 0);
+                    handleAvailableBinsChange(warehouse, value);
+                  }}
+                  style={{
+                    width: '80px',
+                    padding: '6px 8px',
+                    border: '2px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '1rem',
+                    fontWeight: 'bold',
+                    textAlign: 'center'
+                  }}
+                  min="0"
+                />
+                <span style={{ fontSize: '0.85rem', color: '#666' }}>bins</span>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#999', marginTop: '0.25rem' }}>
+                Total capacity: {stats.totalBins} bins
+              </div>
             </div>
           ))}
         </div>
