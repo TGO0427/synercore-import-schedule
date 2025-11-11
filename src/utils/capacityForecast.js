@@ -132,16 +132,17 @@ export class CapacityForecast {
 
   /**
    * Generate smart recommendations based on forecast
+   * Checks all warehouses for alerts and provides recommendations
    */
   static generateRecommendation(warehouseData, weekOffset) {
     const pretoriaData = warehouseData['PRETORIA'];
     const klapmutsData = warehouseData['KLAPMUTS'];
     const offsiteData = warehouseData['Offsite'];
 
-    if (!pretoriaData) return null;
+    if (!pretoriaData && !klapmutsData && !offsiteData) return null;
 
-    // Check for overflow
-    if (pretoriaData.alert === 'overflow') {
+    // PRETORIA overflow check
+    if (pretoriaData && pretoriaData.alert === 'overflow') {
       const overflow = pretoriaData.projectedBinsUsed - pretoriaData.capacity;
       return {
         type: 'overflow',
@@ -150,17 +151,48 @@ export class CapacityForecast {
       };
     }
 
-    // Check for critical
-    if (pretoriaData.alert === 'critical') {
+    // KLAPMUTS overflow check
+    if (klapmutsData && klapmutsData.alert === 'overflow') {
+      const overflow = klapmutsData.projectedBinsUsed - klapmutsData.capacity;
+      return {
+        type: 'overflow',
+        severity: 'critical',
+        message: `⚠️ OVERFLOW: KLAPMUTS will exceed capacity by ${overflow} bins. Urgent action needed!`
+      };
+    }
+
+    // Offsite overflow check
+    if (offsiteData && offsiteData.alert === 'overflow') {
+      const overflow = offsiteData.projectedBinsUsed - offsiteData.capacity;
+      return {
+        type: 'overflow',
+        severity: 'critical',
+        message: `⚠️ OVERFLOW: Offsite will exceed capacity by ${overflow} bins. Urgent action needed!`
+      };
+    }
+
+    // PRETORIA critical check with redistribution suggestions
+    if (pretoriaData && pretoriaData.alert === 'critical') {
       const availableBins = pretoriaData.capacity - pretoriaData.projectedBinsUsed;
 
-      // Recommend redistribution
+      // Try to redistribute to KLAPMUTS
       if (klapmutsData && klapmutsData.percentUsed < 80) {
         const canMove = Math.min(availableBins + 50, klapmutsData.capacity - klapmutsData.projectedBinsUsed);
         return {
           type: 'redistribute',
           severity: 'warning',
           message: `🔴 CRITICAL: Move ~${Math.round(canMove / 1.5)} pallets from PRETORIA to KLAPMUTS`,
+          action: `Reduces PRETORIA to ${Math.round((pretoriaData.projectedBinsUsed - canMove) / pretoriaData.capacity * 100)}%`
+        };
+      }
+
+      // Try to redistribute to Offsite
+      if (offsiteData && offsiteData.percentUsed < 80) {
+        const canMove = Math.min(availableBins + 50, offsiteData.capacity - offsiteData.projectedBinsUsed);
+        return {
+          type: 'redistribute',
+          severity: 'warning',
+          message: `🔴 CRITICAL: Move ~${Math.round(canMove / 1.5)} pallets from PRETORIA to Offsite`,
           action: `Reduces PRETORIA to ${Math.round((pretoriaData.projectedBinsUsed - canMove) / pretoriaData.capacity * 100)}%`
         };
       }
@@ -172,12 +204,61 @@ export class CapacityForecast {
       };
     }
 
-    // Check for warning
-    if (pretoriaData.alert === 'warning') {
+    // KLAPMUTS critical check with redistribution suggestions
+    if (klapmutsData && klapmutsData.alert === 'critical') {
+      const availableBins = klapmutsData.capacity - klapmutsData.projectedBinsUsed;
+
+      // Try to redistribute to Offsite
+      if (offsiteData && offsiteData.percentUsed < 80) {
+        const canMove = Math.min(availableBins + 30, offsiteData.capacity - offsiteData.projectedBinsUsed);
+        return {
+          type: 'redistribute',
+          severity: 'warning',
+          message: `🔴 CRITICAL: Move ~${Math.round(canMove / 1.5)} pallets from KLAPMUTS to Offsite`,
+          action: `Reduces KLAPMUTS to ${Math.round((klapmutsData.projectedBinsUsed - canMove) / klapmutsData.capacity * 100)}%`
+        };
+      }
+
+      return {
+        type: 'critical',
+        severity: 'warning',
+        message: `🔴 CRITICAL: KLAPMUTS at ${klapmutsData.percentUsed}% capacity`
+      };
+    }
+
+    // Offsite critical check
+    if (offsiteData && offsiteData.alert === 'critical') {
+      return {
+        type: 'critical',
+        severity: 'warning',
+        message: `🔴 CRITICAL: Offsite at ${offsiteData.percentUsed}% capacity`
+      };
+    }
+
+    // PRETORIA warning check
+    if (pretoriaData && pretoriaData.alert === 'warning') {
       return {
         type: 'warning',
         severity: 'info',
         message: `⚠️ WARNING: PRETORIA approaching capacity (${pretoriaData.percentUsed}%)`
+      };
+    }
+
+    // KLAPMUTS warning check
+    if (klapmutsData && klapmutsData.alert === 'warning') {
+      return {
+        type: 'warning',
+        severity: 'info',
+        message: `⚠️ WARNING: KLAPMUTS approaching capacity (${klapmutsData.percentUsed}%)`
+      };
+    }
+
+    // Offsite warning check
+    if (offsiteData && offsiteData.alert === 'warning') {
+      return {
+        type: 'warning',
+        severity: 'info',
+        message: `⚠️ WARNING: Offsite approaching capacity (${offsiteData.percentUsed}%)`
       };
     }
 

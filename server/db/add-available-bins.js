@@ -38,18 +38,42 @@ const addAvailableBinsColumn = async () => {
     ];
 
     for (const warehouse of warehouses) {
-      await pool.query(
-        `INSERT INTO warehouse_capacity (warehouse_name, bins_used, available_bins, updated_at)
-         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-         ON CONFLICT (warehouse_name) DO UPDATE SET
-           available_bins = COALESCE(warehouse_capacity.available_bins, $3),
-           updated_at = CURRENT_TIMESTAMP
-         WHERE warehouse_capacity.available_bins IS NULL OR warehouse_capacity.available_bins = 0`,
-        [warehouse.name, 0, warehouse.totalBins]
-      );
+      try {
+        // Check if warehouse exists
+        const checkResult = await pool.query(
+          'SELECT * FROM warehouse_capacity WHERE warehouse_name = $1',
+          [warehouse.name]
+        );
+
+        if (checkResult.rows.length === 0) {
+          // Warehouse doesn't exist, create it
+          await pool.query(
+            `INSERT INTO warehouse_capacity (warehouse_name, bins_used, available_bins, updated_at)
+             VALUES ($1, $2, $3, CURRENT_TIMESTAMP)`,
+            [warehouse.name, 0, warehouse.totalBins]
+          );
+          console.log(`  ✓ Created ${warehouse.name} with ${warehouse.totalBins} available bins`);
+        } else {
+          // Warehouse exists, update if available_bins is null or 0
+          const existing = checkResult.rows[0];
+          if (!existing.available_bins || existing.available_bins === 0) {
+            await pool.query(
+              `UPDATE warehouse_capacity
+               SET available_bins = $2, updated_at = CURRENT_TIMESTAMP
+               WHERE warehouse_name = $1`,
+              [warehouse.name, warehouse.totalBins]
+            );
+            console.log(`  ✓ Updated ${warehouse.name} available_bins to ${warehouse.totalBins}`);
+          } else {
+            console.log(`  ✓ ${warehouse.name} already initialized with ${existing.available_bins} available bins`);
+          }
+        }
+      } catch (error) {
+        console.error(`  ✗ Error initializing ${warehouse.name}:`, error.message);
+      }
     }
 
-    console.log('✓ Initialized all three warehouses with available_bins values');
+    console.log('✓ All three warehouses initialized');
 
     return true;
   } catch (error) {
