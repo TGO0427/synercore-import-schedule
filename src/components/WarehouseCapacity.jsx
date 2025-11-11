@@ -441,6 +441,26 @@ function WarehouseCapacity({ shipments }) {
       alert(`Saved ${successCount} changes, but ${failCount} failed. Please check console for details.`);
     } else if (successCount > 0) {
       alert(`✓ Successfully saved ${successCount} ${successCount === 1 ? 'change' : 'changes'}!`);
+
+      // Reload warehouse capacity data from server to get fresh values
+      console.log('🔄 Reloading warehouse capacity data from server...');
+      try {
+        const response = await fetch(`${apiUrl}/api/warehouse-capacity`);
+        if (response.ok) {
+          const data = await response.json();
+          console.log('📥 Reloaded warehouse capacity data:', data);
+
+          if (data.binsUsed && data.availableBins) {
+            setEditableBinsUsed(data.binsUsed);
+            setSavedBinsUsed(data.binsUsed);
+            setEditableAvailableBins(data.availableBins);
+            setSavedAvailableBins(data.availableBins);
+            console.log('✅ Successfully reloaded all warehouse data');
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to reload warehouse capacity data:', error);
+      }
     }
   }, [pendingChanges, pendingAvailableBinsChanges, editableBinsUsed, editableAvailableBins]);
 
