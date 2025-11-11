@@ -58,7 +58,7 @@ app.use(cors({
     }
 
     // Check Vercel preview deployments
-    if (origin.match(/^https:\/\/synercore-import-schedule.*\.vercel\.app$/)) {
+    if (origin.match(/^https:\/\/synercore-import-schedule[a-zA-Z0-9\-]*\.vercel\.app$/)) {
       console.log(`✓ CORS allowed (vercel pattern): ${origin}`);
       return cb(null, true);
     }
