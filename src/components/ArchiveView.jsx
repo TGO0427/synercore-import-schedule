@@ -907,6 +907,28 @@ function ArchiveView() {
                   </div>
 
                   <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Warehouse</label>
+                    <select
+                      value={editFormData.receivingWarehouse || ''}
+                      onChange={(e) => handleEditFieldChange('receivingWarehouse', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        fontSize: '14px'
+                      }}
+                    >
+                      <option value="">Select Warehouse</option>
+                      <option value="PRETORIA">PRETORIA</option>
+                      <option value="KLAPMUTS">KLAPMUTS</option>
+                      <option value="Offsite">Offsite</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
                     <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Quantity</label>
                     <input
                       type="number"
@@ -921,6 +943,8 @@ function ArchiveView() {
                       }}
                     />
                   </div>
+
+                  <div></div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>

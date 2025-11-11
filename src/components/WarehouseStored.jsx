@@ -57,6 +57,10 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     };
 
     fetchArchivedShipments();
+
+    // Refresh archived shipments every 10 seconds to pick up updates from Archive Edit
+    const interval = setInterval(fetchArchivedShipments, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const filteredAndSortedShipments = useMemo(() => {
