@@ -1923,9 +1923,9 @@ function WarehouseCapacity({ shipments }) {
         <CapacityForecastTable
           shipments={shipments}
           currentBinsUsed={{
-            'PRETORIA': warehouseCapacity.PRETORIA?.binsUsed || 0,
-            'KLAPMUTS': warehouseCapacity.KLAPMUTS?.binsUsed || 0,
-            'Offsite': warehouseCapacity.Offsite?.binsUsed || 0
+            'PRETORIA': warehouseData.warehouseStats['PRETORIA']?.usedBins || 0,
+            'KLAPMUTS': warehouseData.warehouseStats['KLAPMUTS']?.usedBins || 0,
+            'Offsite': warehouseData.warehouseStats['Offsite']?.usedBins || 0
           }}
         />
       </div>
