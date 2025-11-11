@@ -191,6 +191,15 @@ async function start() {
     getPool(); // Force pool creation on startup
     console.log('✓ Database pool initialized');
 
+    // Run database migrations on startup
+    try {
+      const addAvailableBinsColumn = await import('./db/add-available-bins.js');
+      await addAvailableBinsColumn.default();
+    } catch (error) {
+      console.warn('⚠️  Migration warning:', error.message);
+      // Don't fail startup if migration has issues, but log them
+    }
+
     isReady = true; // mark ready once init is done
 
     app.listen(PORT, () => {
