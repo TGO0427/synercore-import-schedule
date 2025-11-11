@@ -64,7 +64,7 @@ export class CapacityForecast {
     // Week 0 = current week
     for (let weekOffset = 0; weekOffset <= 8; weekOffset++) {
       const forecastWeek = currentWeek + weekOffset;
-      const forecast WithWeek = {
+      const forecastWithWeek = {
         weekOffset,
         weekNumber: forecastWeek,
         label: weekOffset === 0 ? 'Now' : `+${weekOffset}w`,
@@ -135,7 +135,7 @@ export class CapacityForecast {
    */
   static generateRecommendation(warehouseData, weekOffset) {
     const pretoriaData = warehouseData['PRETORIA'];
-    const klapmuts Data = warehouseData['KLAPMUTS'];
+    const klapmutsData = warehouseData['KLAPMUTS'];
     const offsiteData = warehouseData['Offsite'];
 
     if (!pretoriaData) return null;
