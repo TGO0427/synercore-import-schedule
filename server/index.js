@@ -67,7 +67,12 @@ app.use(cors({
     cb(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// Explicit CORS preflight handler
+app.options('*', cors());
 
 /* ---------------- Security Middleware ---------------- */
 // Health check endpoint (before security middleware for Railway)
