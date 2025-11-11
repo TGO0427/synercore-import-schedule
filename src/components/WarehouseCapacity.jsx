@@ -108,8 +108,19 @@ function WarehouseCapacity({ shipments }) {
 
         if (response.ok) {
           const data = await response.json();
-          setEditableBinsUsed(data);
-          setSavedBinsUsed(data);
+
+          // Handle both old and new API response formats
+          if (data.binsUsed && data.availableBins) {
+            // New format with both binsUsed and availableBins
+            setEditableBinsUsed(data.binsUsed);
+            setSavedBinsUsed(data.binsUsed);
+            setEditableAvailableBins(data.availableBins);
+            setSavedAvailableBins(data.availableBins);
+          } else {
+            // Old format (backward compatibility) - assume it's just bins_used
+            setEditableBinsUsed(data);
+            setSavedBinsUsed(data);
+          }
         }
       } catch (error) {
         console.warn('Failed to load warehouse capacity data:', error);

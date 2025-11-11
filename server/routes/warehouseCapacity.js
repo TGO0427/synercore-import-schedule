@@ -11,10 +11,14 @@ router.get('/', async (req, res) => {
       'SELECT warehouse_name, bins_used, available_bins, updated_by, updated_at FROM warehouse_capacity'
     );
 
-    // Convert to object format { warehouse_name: bins_used }
-    const capacityData = {};
+    // Convert to object format with both bins_used and available_bins
+    const capacityData = {
+      binsUsed: {},
+      availableBins: {}
+    };
     result.rows.forEach(row => {
-      capacityData[row.warehouse_name] = row.bins_used;
+      capacityData.binsUsed[row.warehouse_name] = row.bins_used || 0;
+      capacityData.availableBins[row.warehouse_name] = row.available_bins || 0;
     });
 
     res.json(capacityData);

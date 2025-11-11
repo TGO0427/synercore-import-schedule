@@ -30,20 +30,26 @@ const addAvailableBinsColumn = async () => {
 
     console.log('✓ Successfully added available_bins column');
 
-    // Initialize available_bins for existing warehouses
-    // PRETORIA: 650 total, KLAPMUTS: 384 total, Offsite: 384 total
-    await pool.query(
-      `UPDATE warehouse_capacity
-       SET available_bins = CASE
-         WHEN warehouse_name = 'PRETORIA' THEN 650 - COALESCE(bins_used, 0)
-         WHEN warehouse_name = 'KLAPMUTS' THEN 384 - COALESCE(bins_used, 0)
-         WHEN warehouse_name = 'Offsite' THEN 384 - COALESCE(bins_used, 0)
-         ELSE 0
-       END
-       WHERE available_bins = 0`
-    );
+    // Ensure all three warehouses are initialized in the table
+    const warehouses = [
+      { name: 'PRETORIA', totalBins: 650 },
+      { name: 'KLAPMUTS', totalBins: 384 },
+      { name: 'Offsite', totalBins: 384 }
+    ];
 
-    console.log('✓ Initialized available_bins values for existing warehouses');
+    for (const warehouse of warehouses) {
+      await pool.query(
+        `INSERT INTO warehouse_capacity (warehouse_name, bins_used, available_bins, updated_at)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+         ON CONFLICT (warehouse_name) DO UPDATE SET
+           available_bins = COALESCE(warehouse_capacity.available_bins, $3),
+           updated_at = CURRENT_TIMESTAMP
+         WHERE warehouse_capacity.available_bins IS NULL OR warehouse_capacity.available_bins = 0`,
+        [warehouse.name, 0, warehouse.totalBins]
+      );
+    }
+
+    console.log('✓ Initialized all three warehouses with available_bins values');
 
     return true;
   } catch (error) {
