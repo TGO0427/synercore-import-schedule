@@ -37,23 +37,22 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-/* ---------------- CORS - Handle preflight FIRST ---------------- */
-app.options('*', (req, res) => {
-  console.log(`[CORS PREFLIGHT] ${req.path} from ${req.headers.origin}`);
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
-  res.header('Access-Control-Allow-Headers', '*');
-  res.header('Access-Control-Max-Age', '86400');
-  res.sendStatus(200);
-});
-
-/* ---------------- CORS - Set headers on all responses  ---------------- */
+/* ============ CRITICAL: CORS must be first and handle ALL requests ============ */
+// Set CORS headers on EVERY response before anything else
 app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, PUT, POST, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+  res.setHeader('Access-Control-Expose-Headers', '*');
+  res.setHeader('Access-Control-Max-Age', '86400');
+
+  // Immediately respond to OPTIONS (preflight) requests
+  if (req.method === 'OPTIONS') {
+    console.log(`[CORS] Preflight ${req.path} - returning 200`);
+    return res.status(200).end();
+  }
+
   console.log(`[CORS] ${req.method} ${req.path}`);
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', '*');
-  res.header('Access-Control-Expose-Headers', '*');
   next();
 });
 
