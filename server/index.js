@@ -62,8 +62,8 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'OK', ready: isReady, timestamp: new Date().toISOString() });
 });
 
-// Apply helmet security headers
-app.use(helmetConfig);
+// Apply helmet security headers (TEMPORARILY DISABLED for CORS debugging)
+// app.use(helmetConfig);
 
 // Apply rate limiting to all API routes
 app.use('/api', apiRateLimiter);
