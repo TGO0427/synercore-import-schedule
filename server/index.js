@@ -38,32 +38,13 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// VERY FIRST MIDDLEWARE - Log every request
-app.use((req, res, next) => {
-  console.log(`[REQUEST] ${req.method} ${req.path} from ${req.headers.origin || 'unknown'}`);
-  next();
-});
-
-/* ============ CORS - Allow all origins and headers ============ */
-console.log('[STARTUP] Applying CORS middleware...');
+/* ============ CORS - Allow all origins and methods ============ */
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: '*', // Allow ALL headers (browser sends cache-control, pragma, etc)
-  credentials: false, // Can't use credentials with origin: '*'
+  allowedHeaders: '*',
+  credentials: false,
 }));
-console.log('[STARTUP] CORS middleware applied');
-
-// Log CORS headers that were set
-app.use((req, res, next) => {
-  const corsHeader = res.getHeader('Access-Control-Allow-Origin');
-  if (corsHeader) {
-    console.log(`[CORS OK] ${req.method} ${req.path} - CORS header: ${corsHeader}`);
-  } else {
-    console.warn(`[CORS MISSING] ${req.method} ${req.path} - NO CORS HEADER SET!`);
-  }
-  next();
-});
 
 /* ---------------- Security Middleware ---------------- */
 // Health check endpoint (before security middleware for Railway)
