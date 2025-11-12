@@ -39,21 +39,20 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 
 /* ---------------- CORS ---------------- */
-const corsOptions = {
-  origin: true, // Allow all origins - browser enforces HTTPS security anyway
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: '*',
-  exposedHeaders: '*',
-  preflightContinue: false,
-  optionsSuccessStatus: 200,
-};
+// Simple CORS that allows all origins and headers
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, Pragma');
+  res.header('Access-Control-Expose-Headers', '*');
 
-// Explicit CORS preflight handler (must use same config)
-app.options('*', cors(corsOptions));
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
 
-// Apply CORS to all requests
-app.use(cors(corsOptions));
+  next();
+});
 
 /* ---------------- Security Middleware ---------------- */
 // Health check endpoint (before security middleware for Railway)
