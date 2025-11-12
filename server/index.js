@@ -38,8 +38,13 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-/* ============ CORS - Use express-cors with minimal config ============ */
-app.use(cors()); // Use default cors() which allows all origins
+/* ============ CORS - Allow all origins and headers ============ */
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'], // Explicitly allow Authorization header
+  credentials: false, // Can't use credentials with origin: '*'
+}));
 
 /* ---------------- Security Middleware ---------------- */
 // Health check endpoint (before security middleware for Railway)
