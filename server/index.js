@@ -40,13 +40,19 @@ const PORT = process.env.PORT || 5001;
 /* ---------------- CORS ---------------- */
 // Simple CORS that allows all origins and headers
 app.use((req, res, next) => {
+  const origin = req.headers.origin || '*';
+  console.log(`[CORS] ${req.method} ${req.path} from origin: ${origin}`);
+
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, Pragma');
   res.header('Access-Control-Expose-Headers', '*');
 
+  console.log(`[CORS] Headers set for ${req.method} ${req.path}`);
+
   // Handle preflight
   if (req.method === 'OPTIONS') {
+    console.log(`[CORS] Responding to preflight with 200`);
     return res.sendStatus(200);
   }
 
