@@ -47,7 +47,8 @@ const allowedOrigins = [
   'https://synercore-import-schedule.vercel.app',
   'https://synercore-import-schedule-*.vercel.app', // Preview deployments
 ];
-app.use(cors({
+
+const corsOptions = {
   origin(origin, cb) {
     if (!origin) return cb(null, true);
 
@@ -69,10 +70,13 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: '*',
-}));
+};
 
-// Explicit CORS preflight handler
-app.options('*', cors());
+// Explicit CORS preflight handler (must use same config)
+app.options('*', cors(corsOptions));
+
+// Apply CORS to all requests
+app.use(cors(corsOptions));
 
 /* ---------------- Security Middleware ---------------- */
 // Health check endpoint (before security middleware for Railway)
