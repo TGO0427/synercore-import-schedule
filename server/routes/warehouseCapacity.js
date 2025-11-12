@@ -93,11 +93,12 @@ router.put('/:warehouseName/available-bins', (req, res) => {
       console.log(`📝 [API] Executing UPDATE query for ${warehouseName}...`);
 
       // Update or insert available_bins - ensure bins_used is preserved
+      // Using $1 for warehouse_name (text) and $2 for availableBins (number)
       const result = await pool.query(
         `INSERT INTO warehouse_capacity (warehouse_name, bins_used, available_bins, updated_at)
-         VALUES ($1, COALESCE((SELECT bins_used FROM warehouse_capacity WHERE warehouse_name = $1), 0), $2, CURRENT_TIMESTAMP)
+         VALUES ($1::text, COALESCE((SELECT bins_used FROM warehouse_capacity WHERE warehouse_name = $1::text), 0), $2::integer, CURRENT_TIMESTAMP)
          ON CONFLICT (warehouse_name)
-         DO UPDATE SET available_bins = $2, updated_at = CURRENT_TIMESTAMP
+         DO UPDATE SET available_bins = $2::integer, updated_at = CURRENT_TIMESTAMP
          RETURNING warehouse_name, bins_used, available_bins, updated_at`,
         [warehouseName, availableBins]
       );
