@@ -193,9 +193,9 @@ router.put('/:warehouseName', async (req, res) => {
     // Simple update without authentication for now
     const result = await pool.query(
       `INSERT INTO warehouse_capacity (warehouse_name, bins_used, updated_at)
-       VALUES ($1, $2, CURRENT_TIMESTAMP)
+       VALUES ($1::text, $2::integer, CURRENT_TIMESTAMP)
        ON CONFLICT (warehouse_name)
-       DO UPDATE SET bins_used = $2, updated_at = CURRENT_TIMESTAMP
+       DO UPDATE SET bins_used = $2::integer, updated_at = CURRENT_TIMESTAMP
        RETURNING warehouse_name, bins_used, available_bins, updated_at`,
       [warehouseName, binsUsed]
     );
