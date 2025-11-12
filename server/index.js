@@ -15,6 +15,7 @@ if (process.env.NODE_ENV === 'development' && process.env.DISABLE_SSL_VERIFY ===
 }
 
 import express from 'express';
+import cors from 'cors';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
@@ -37,24 +38,8 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-/* ============ CRITICAL: CORS must be first and handle ALL requests ============ */
-// Set CORS headers on EVERY response before anything else
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, PUT, POST, DELETE, OPTIONS, PATCH');
-  res.setHeader('Access-Control-Allow-Headers', '*');
-  res.setHeader('Access-Control-Expose-Headers', '*');
-  res.setHeader('Access-Control-Max-Age', '86400');
-
-  // Immediately respond to OPTIONS (preflight) requests
-  if (req.method === 'OPTIONS') {
-    console.log(`[CORS] Preflight ${req.path} - returning 200`);
-    return res.status(200).end();
-  }
-
-  console.log(`[CORS] ${req.method} ${req.path}`);
-  next();
-});
+/* ============ CORS - Use express-cors with minimal config ============ */
+app.use(cors()); // Use default cors() which allows all origins
 
 /* ---------------- Security Middleware ---------------- */
 // Health check endpoint (before security middleware for Railway)
@@ -62,8 +47,8 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'OK', ready: isReady, timestamp: new Date().toISOString() });
 });
 
-// Apply helmet security headers (TEMPORARILY DISABLED for CORS debugging)
-// app.use(helmetConfig);
+// Apply helmet security headers
+app.use(helmetConfig);
 
 // Apply rate limiting to all API routes
 app.use('/api', apiRateLimiter);
