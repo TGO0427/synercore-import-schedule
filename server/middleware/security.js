@@ -41,7 +41,7 @@ export const helmetConfig = helmet({
     },
   },
   crossOriginEmbedderPolicy: false, // Disable for compatibility
-  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginResourcePolicy: false, // Disable to allow our custom CORS headers
 });
 
 // Export authenticateToken for convenience
