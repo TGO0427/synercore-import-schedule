@@ -181,6 +181,9 @@ app.use((err, req, res, _next) => {
 
 /* ---------------- Async boot ---------------- */
 async function start() {
+  console.log('=====================================');
+  console.log('🚀 SERVER STARTING - NEW VERSION');
+  console.log('=====================================');
   try {
     // Initialize database connection pool
     const { getPool } = await import('./db/connection.js');
