@@ -38,6 +38,12 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// VERY FIRST MIDDLEWARE - Log every request
+app.use((req, res, next) => {
+  console.log(`[REQUEST] ${req.method} ${req.path} from ${req.headers.origin || 'unknown'}`);
+  next();
+});
+
 /* ============ CORS - Allow all origins and headers ============ */
 app.use(cors({
   origin: '*',
@@ -45,6 +51,17 @@ app.use(cors({
   allowedHeaders: '*', // Allow ALL headers (browser sends cache-control, pragma, etc)
   credentials: false, // Can't use credentials with origin: '*'
 }));
+
+// Log CORS headers that were set
+app.use((req, res, next) => {
+  const corsHeader = res.getHeader('Access-Control-Allow-Origin');
+  if (corsHeader) {
+    console.log(`[CORS OK] ${req.method} ${req.path} - CORS header: ${corsHeader}`);
+  } else {
+    console.warn(`[CORS MISSING] ${req.method} ${req.path} - NO CORS HEADER SET!`);
+  }
+  next();
+});
 
 /* ---------------- Security Middleware ---------------- */
 // Health check endpoint (before security middleware for Railway)
