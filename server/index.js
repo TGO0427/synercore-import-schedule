@@ -45,12 +45,14 @@ app.use((req, res, next) => {
 });
 
 /* ============ CORS - Allow all origins and headers ============ */
+console.log('[STARTUP] Applying CORS middleware...');
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: '*', // Allow ALL headers (browser sends cache-control, pragma, etc)
   credentials: false, // Can't use credentials with origin: '*'
 }));
+console.log('[STARTUP] CORS middleware applied');
 
 // Log CORS headers that were set
 app.use((req, res, next) => {
