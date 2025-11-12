@@ -39,37 +39,14 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 
 /* ---------------- CORS ---------------- */
-const allowedOrigins = [
-  'http://localhost:3002',
-  'http://127.0.0.1:3002',
-  'http://172.20.18.135:3002',
-  'https://f5797077a9ef.ngrok-free.app',
-  'https://synercore-import-schedule.vercel.app',
-  'https://synercore-import-schedule-*.vercel.app', // Preview deployments
-];
-
 const corsOptions = {
-  origin(origin, cb) {
-    if (!origin) return cb(null, true);
-
-    // Check exact matches
-    if (allowedOrigins.includes(origin)) {
-      console.log(`✓ CORS allowed (exact match): ${origin}`);
-      return cb(null, true);
-    }
-
-    // Check Vercel preview deployments
-    if (origin.match(/^https:\/\/synercore-import-schedule[a-zA-Z0-9\-]*\.vercel\.app$/)) {
-      console.log(`✓ CORS allowed (vercel pattern): ${origin}`);
-      return cb(null, true);
-    }
-
-    console.error(`✗ CORS blocked: ${origin}`);
-    cb(new Error(`CORS blocked: ${origin}`));
-  },
+  origin: true, // Allow all origins - browser enforces HTTPS security anyway
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: '*',
+  exposedHeaders: '*',
+  preflightContinue: false,
+  optionsSuccessStatus: 200,
 };
 
 // Explicit CORS preflight handler (must use same config)
