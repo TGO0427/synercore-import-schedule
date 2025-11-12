@@ -42,7 +42,7 @@ const PORT = process.env.PORT || 5001;
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'], // Explicitly allow Authorization header
+  allowedHeaders: '*', // Allow ALL headers (browser sends cache-control, pragma, etc)
   credentials: false, // Can't use credentials with origin: '*'
 }));
 
