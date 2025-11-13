@@ -77,9 +77,14 @@ function App() {
 
     // Check for new JWT-based auth first
     const user = authUtils.getUser();
-    if (user && authUtils.isAuthenticated()) {
+    const isAuth = user && authUtils.isAuthenticated();
+
+    if (isAuth) {
       setIsAuthenticated(true);
       setUsername(user.username);
+      // Only fetch if authenticated
+      fetchShipments();
+      fetchSuppliers();
     } else {
       // Fallback to legacy localStorage check
       const savedAuth = localStorage.getItem('isAuthenticated');
@@ -87,11 +92,11 @@ function App() {
       if (savedAuth === 'true' && savedUsername) {
         setIsAuthenticated(true);
         setUsername(savedUsername);
+        // Only fetch if authenticated
+        fetchShipments();
+        fetchSuppliers();
       }
     }
-
-    fetchShipments();
-    fetchSuppliers();
 
     const poll = setInterval(() => {
       console.log('App: Auto-refreshing data for real-time sync...');
