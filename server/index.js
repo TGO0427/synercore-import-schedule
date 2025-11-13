@@ -29,6 +29,7 @@ import emailImportRouter from './routes/emailImport.js';
 import adminRouter from './routes/admin.js';
 import warehouseCapacityRouter from './routes/warehouseCapacity.js';
 import authRouter from './routes/auth.js';
+import notificationsRouter from './routes/notifications.js';
 import { helmetConfig, apiRateLimiter, authRateLimiter, authenticateToken } from './middleware/security.js';
 
 // __dirname for ESM
@@ -109,6 +110,7 @@ app.use('/api/quotes', authenticateToken, quotesRouter);
 app.use('/api/reports', authenticateToken, reportsRouter);
 app.use('/api/email-import', authenticateToken, emailImportRouter);
 app.use('/api/admin', authenticateToken, adminRouter);
+app.use('/api/notifications', notificationsRouter); // Auth required within router
 
 /* ---------------- Endpoints ---------------- */
 app.post('/api/documents/upload', authenticateToken, upload.array('documents', 10), async (req, res, next) => {
