@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { authFetch } from '../utils/authFetch';
 import { ShipmentStatus, InspectionStatus, ReceivingStatus } from '../types/shipment';
 import { getApiUrl } from '../config/api';
+import PostArrivalWizard from './PostArrivalWizard';
 
 function PostArrivalWorkflow() {
   const [postArrivalShipments, setPostArrivalShipments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [showWorkflowDialog, setShowWorkflowDialog] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
+  const [useWizard, setUseWizard] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   const [workflowData, setWorkflowData] = useState({
@@ -146,7 +149,19 @@ function PostArrivalWorkflow() {
         ...workflowData,
         receivedQuantity: shipment.quantity || ''
       });
-      setShowWorkflowDialog(true);
+
+      // Offer choice between wizard and traditional form
+      const useWizardChoice = window.confirm(
+        '🎯 Would you like to use the new Step-by-Step Workflow Wizard?\n\n' +
+        '✓ Click OK to use the Wizard (Recommended - Guided experience)\n' +
+        '✗ Click Cancel to use the Traditional Form'
+      );
+
+      if (useWizardChoice) {
+        setShowWizard(true);
+      } else {
+        setShowWorkflowDialog(true);
+      }
       return;
     }
 
@@ -558,6 +573,53 @@ function PostArrivalWorkflow() {
             );
           })}
         </div>
+      )}
+
+      {/* Workflow Wizard - New Step-by-Step UI */}
+      {showWizard && selectedShipment && (
+        <PostArrivalWizard
+          shipment={selectedShipment}
+          onComplete={async (formData) => {
+            // Handle wizard completion
+            try {
+              setActionLoading(true);
+              const response = await authFetch(getApiUrl(`/api/shipments/${selectedShipment.id}`), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  ...selectedShipment,
+                  unloadingStartDate: formData.unloadingStartDate,
+                  inspectionStatus: formData.inspectionStatus,
+                  inspectionDate: formData.inspectionDate,
+                  inspectionNotes: formData.inspectionNotes,
+                  receivingStatus: formData.receivingStatus,
+                  receivingDate: formData.receivingDate,
+                  receivedQuantity: formData.receivedQuantity,
+                  discrepancies: formData.discrepancies,
+                  latestStatus: formData.receivingStatus === 'received' ? 'received' : formData.inspectionStatus
+                })
+              });
+
+              if (response.ok) {
+                alert('✓ Post-arrival workflow completed successfully!');
+                setShowWizard(false);
+                setSelectedShipment(null);
+                fetchPostArrivalShipments(); // Refresh list
+              } else {
+                alert('Failed to save post-arrival workflow');
+              }
+            } catch (error) {
+              console.error('Error saving workflow:', error);
+              alert('Error saving workflow: ' + error.message);
+            } finally {
+              setActionLoading(false);
+            }
+          }}
+          onCancel={() => {
+            setShowWizard(false);
+            setSelectedShipment(null);
+          }}
+        />
       )}
 
       {/* Workflow Dialog */}

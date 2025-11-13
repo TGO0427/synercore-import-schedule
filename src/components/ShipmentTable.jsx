@@ -2,11 +2,13 @@ import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { ShipmentStatus } from '../types/shipment';
 import WeekCalendar from './WeekCalendar';
 import BulkStatusUpdate from './BulkStatusUpdate';
+import FilterPresetManager from './FilterPresetManager';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { getApiUrl } from '../config/api';
 import { authFetch } from '../utils/authFetch';
+import filterPreferencesManager from '../utils/filterPreferences';
 
 function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreateShipment, loading }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -789,6 +791,26 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               ✅ Arrived ({shipments.filter(s => s.latestStatus === ShipmentStatus.ARRIVED_PTA || s.latestStatus === ShipmentStatus.ARRIVED_KLM || s.latestStatus === ShipmentStatus.ARRIVED_OFFSITE).length})
             </button>
           </div>
+
+          <FilterPresetManager
+            viewName="shipments"
+            currentFilters={{
+              search: searchTerm,
+              status: statusFilter
+            }}
+            onLoadPreset={(filters) => {
+              if (filters.search) setSearchTerm(filters.search);
+              if (filters.status) setStatusFilter(filters.status);
+              // Auto-save to search history when loading
+              filterPreferencesManager.addSearchHistory('shipments', filters.search || '');
+            }}
+            onSavePreset={(presetName) => {
+              // Save search term to history when saving preset
+              if (searchTerm) {
+                filterPreferencesManager.addSearchHistory('shipments', searchTerm);
+              }
+            }}
+          />
 
           <button
             className="btn btn-primary"

@@ -10,6 +10,7 @@ import SupplierManagement from './components/SupplierManagement';
 import RatesQuotes from './components/RatesQuotes';
 import PostArrivalWorkflow from './components/PostArrivalWorkflow';
 import WarehouseStored from './components/WarehouseStored';
+import Dashboard from './components/Dashboard';
 import FileUpload from './components/FileUpload';
 import LoginPage from './components/LoginPage';
 import NotificationContainer from './components/NotificationContainer';
@@ -696,6 +697,8 @@ function App() {
         return <ReportsView shipments={shipments} statusFilter={statusFilter} onStatusFilter={handleStatusCardClick} />;
       case 'advanced-reports':
         return <AdvancedReports />;
+      case 'dashboard':
+        return <Dashboard shipments={shipments} />;
       case 'capacity':
         return <WarehouseCapacity shipments={shipments} />;
       case 'users':
@@ -768,6 +771,7 @@ function App() {
         </div>
 
         <ul className="sidebar-nav">
+          <li><button className={activeView === 'dashboard' ? 'active' : ''} onClick={() => setActiveView('dashboard')}>📊 Dashboard</button></li>
           <li><button className={activeView === 'suppliers' ? 'active' : ''} onClick={() => setActiveView('suppliers')}>🏢 Suppliers</button></li>
           <li><button className={activeView === 'capacity' ? 'active' : ''} onClick={() => setActiveView('capacity')}>🏭 Warehouse Capacity</button></li>
           <li><button className={activeView === 'products' ? 'active' : ''} onClick={() => setActiveView('products')}>📋 Product & Warehouse</button></li>
@@ -901,7 +905,8 @@ function App() {
         }}>
           <p style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '0.25rem' }}>Active View:</p>
           <p style={{ fontSize: '0.95rem', fontWeight: 'bold' }}>
-            {activeView === 'suppliers' ? '🏢 Suppliers' :
+            {activeView === 'dashboard' ? '📊 Dashboard' :
+             activeView === 'suppliers' ? '🏢 Suppliers' :
              activeView === 'capacity' ? '🏭 Warehouse Capacity' :
              activeView === 'products' ? '📋 Product & Warehouse' :
              activeView === 'shipping' ? '📦 Shipping Schedule' :
