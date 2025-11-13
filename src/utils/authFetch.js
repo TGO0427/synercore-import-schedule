@@ -1,18 +1,81 @@
-// Authenticated fetch utility
+// Authenticated fetch utility with automatic token refresh
 import { authUtils } from './auth';
+
+let isRefreshing = false;
+let refreshSubscribers = [];
+
+function subscribeTokenRefresh(callback) {
+  refreshSubscribers.push(callback);
+}
+
+function onTokenRefreshed(token) {
+  refreshSubscribers.forEach(callback => callback(token));
+  refreshSubscribers = [];
+}
 
 /**
  * Wrapper around fetch that automatically adds authentication headers
+ * and handles token refresh on 401 responses
  * @param {string} url - The URL to fetch
  * @param {object} options - Fetch options (method, body, headers, etc.)
  * @returns {Promise<Response>}
  */
-export function authFetch(url, options = {}) {
-  return fetch(url, {
+export async function authFetch(url, options = {}) {
+  let response = await fetch(url, {
     ...options,
     headers: {
       ...options.headers,
       ...authUtils.getAuthHeader()
     }
   });
+
+  // Handle 401 Unauthorized (expired access token)
+  if (response.status === 401 && authUtils.getRefreshToken()) {
+    if (!isRefreshing) {
+      isRefreshing = true;
+
+      try {
+        const newToken = await authUtils.refreshToken();
+        isRefreshing = false;
+
+        if (newToken) {
+          onTokenRefreshed(newToken);
+
+          // Retry the original request with new token
+          response = await fetch(url, {
+            ...options,
+            headers: {
+              ...options.headers,
+              ...authUtils.getAuthHeader()
+            }
+          });
+        } else {
+          // Refresh token failed, user needs to login again
+          window.location.href = '/login';
+        }
+      } catch (error) {
+        isRefreshing = false;
+        console.error('Token refresh error:', error);
+        window.location.href = '/login';
+      }
+    } else {
+      // Wait for token refresh to complete
+      await new Promise(resolve => {
+        subscribeTokenRefresh(() => {
+          resolve();
+        });
+      });
+
+      // Retry with refreshed token
+      response = await fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+          ...authUtils.getAuthHeader()
+        }
+      });
+    }
+  }
+
+  return response;
 }

@@ -81,8 +81,12 @@ function LoginPage({ onLogin }) {
         return;
       }
 
-      // Store authentication data
-      authUtils.setAuth(data.token, data.user);
+      // Store authentication data (support both new and legacy response formats)
+      const accessToken = data.accessToken || data.token;
+      const refreshToken = data.refreshToken || null;
+      const expiresIn = data.expiresIn || 604800; // Default to 7 days for legacy format
+
+      authUtils.setAuth(accessToken, refreshToken, data.user, expiresIn);
 
       onLogin(data.user.username);
     } catch (err) {

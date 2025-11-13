@@ -1,17 +1,45 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import pool from '../db/connection.js';
 import { validateUserUpdate, validateResetPassword, validateId } from '../middleware/validation.js';
 
 const router = express.Router();
 
-// JWT secret (MUST be set in environment variable)
+// JWT secrets (MUST be set in environment variables)
 const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || JWT_SECRET + '_refresh';
 
 // Validate JWT_SECRET is configured
 if (!JWT_SECRET) {
   throw new Error('CRITICAL SECURITY ERROR: JWT_SECRET environment variable is not set. Application cannot start without it.');
+}
+
+// Token expiry times
+const ACCESS_TOKEN_EXPIRY = '15m'; // 15 minutes
+const REFRESH_TOKEN_EXPIRY = 7 * 24 * 60 * 60; // 7 days in seconds
+
+// Helper function to create and store refresh token
+async function createRefreshToken(userId, ipAddress = null, userAgent = null) {
+  const refreshToken = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY * 1000);
+
+  try {
+    await pool.query(
+      `INSERT INTO refresh_tokens (user_id, token, expires_at, ip_address, user_agent)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, refreshToken, expiresAt, ipAddress, userAgent]
+    );
+    return refreshToken;
+  } catch (error) {
+    // If table doesn't exist yet, skip storing but still return token
+    // (for backward compatibility during migration)
+    if (error.code === '42P01') {
+      return refreshToken;
+    }
+    throw error;
+  }
 }
 
 // Middleware to verify JWT token
@@ -62,11 +90,18 @@ router.post('/setup', async (req, res) => {
 
     const user = result.rows[0];
 
-    // Generate JWT token
-    const token = jwt.sign(
+    // Generate access token (short-lived)
+    const accessToken = jwt.sign(
       { id: user.id, username: user.username, role: user.role },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: ACCESS_TOKEN_EXPIRY }
+    );
+
+    // Create and store refresh token
+    const refreshToken = await createRefreshToken(
+      user.id,
+      req.ip || req.connection.remoteAddress,
+      req.headers['user-agent']
     );
 
     res.status(201).json({
@@ -79,7 +114,9 @@ router.post('/setup', async (req, res) => {
         role: user.role,
         isActive: user.is_active
       },
-      token
+      accessToken,
+      refreshToken,
+      expiresIn: 900 // 15 minutes in seconds
     });
   } catch (error) {
     console.error('Error in setup:', error);
@@ -120,11 +157,18 @@ router.post('/register', async (req, res) => {
 
     const user = result.rows[0];
 
-    // Generate JWT token
-    const token = jwt.sign(
+    // Generate access token (short-lived)
+    const accessToken = jwt.sign(
       { id: user.id, username: user.username, role: user.role },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: ACCESS_TOKEN_EXPIRY }
+    );
+
+    // Create and store refresh token
+    const refreshToken = await createRefreshToken(
+      user.id,
+      req.ip || req.connection.remoteAddress,
+      req.headers['user-agent']
     );
 
     res.status(201).json({
@@ -137,7 +181,9 @@ router.post('/register', async (req, res) => {
         role: user.role,
         isActive: user.is_active
       },
-      token
+      accessToken,
+      refreshToken,
+      expiresIn: 900 // 15 minutes in seconds
     });
   } catch (error) {
     console.error('Error in register:', error);
@@ -178,11 +224,18 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
+    // Generate access token (short-lived)
+    const accessToken = jwt.sign(
       { id: user.id, username: user.username, role: user.role },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: ACCESS_TOKEN_EXPIRY }
+    );
+
+    // Create and store refresh token
+    const refreshToken = await createRefreshToken(
+      user.id,
+      req.ip || req.connection.remoteAddress,
+      req.headers['user-agent']
     );
 
     res.json({
@@ -195,7 +248,9 @@ router.post('/login', async (req, res) => {
         role: user.role,
         isActive: user.is_active
       },
-      token
+      accessToken,
+      refreshToken,
+      expiresIn: 900 // 15 minutes in seconds
     });
   } catch (error) {
     console.error('Error in login:', error);
@@ -448,6 +503,95 @@ router.delete('/admin/users/:id', authenticateToken, validateId, async (req, res
   } catch (error) {
     console.error('Error deleting user:', error);
     res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// POST /api/auth/refresh - Refresh access token using refresh token
+router.post('/refresh', async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({ error: 'Refresh token is required' });
+    }
+
+    // Check if refresh token exists and is valid (not expired or revoked)
+    try {
+      const tokenResult = await pool.query(
+        `SELECT user_id, expires_at, revoked_at FROM refresh_tokens
+         WHERE token = $1 AND revoked_at IS NULL AND expires_at > NOW()`,
+        [refreshToken]
+      );
+
+      if (tokenResult.rows.length === 0) {
+        return res.status(401).json({ error: 'Invalid or expired refresh token' });
+      }
+
+      const userId = tokenResult.rows[0].user_id;
+
+      // Get user data
+      const userResult = await pool.query(
+        'SELECT id, username, role FROM users WHERE id = $1 AND is_active = true',
+        [userId]
+      );
+
+      if (userResult.rows.length === 0) {
+        return res.status(401).json({ error: 'User not found or inactive' });
+      }
+
+      const user = userResult.rows[0];
+
+      // Generate new access token
+      const newAccessToken = jwt.sign(
+        { id: user.id, username: user.username, role: user.role },
+        JWT_SECRET,
+        { expiresIn: ACCESS_TOKEN_EXPIRY }
+      );
+
+      res.json({
+        accessToken: newAccessToken,
+        expiresIn: 900 // 15 minutes in seconds
+      });
+    } catch (error) {
+      // If refresh_tokens table doesn't exist, allow legacy token refresh
+      if (error.code === '42P01') {
+        return res.status(501).json({ error: 'Token refresh not yet available. Please log in again.' });
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error refreshing token:', error);
+    res.status(500).json({ error: 'Failed to refresh token' });
+  }
+});
+
+// POST /api/auth/logout - Revoke refresh token
+router.post('/logout', authenticateToken, async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.json({ message: 'Logged out successfully' });
+    }
+
+    // Revoke the refresh token
+    try {
+      await pool.query(
+        `UPDATE refresh_tokens SET revoked_at = CURRENT_TIMESTAMP
+         WHERE token = $1 AND user_id = $2`,
+        [refreshToken, req.user.id]
+      );
+    } catch (error) {
+      // If table doesn't exist, just proceed
+      if (error.code !== '42P01') {
+        throw error;
+      }
+    }
+
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Error logging out:', error);
+    res.status(500).json({ error: 'Failed to logout' });
   }
 });
 
