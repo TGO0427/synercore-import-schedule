@@ -38,12 +38,30 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-/* ============ CORS - Allow all origins and methods ============ */
+/* ============ CORS - Whitelist allowed origins ============ */
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3002',
+  'http://localhost:5173',
+  process.env.FRONTEND_URL || 'https://synercore-frontend.vercel.app',
+  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [])
+];
+
 app.use(cors({
-  origin: '*',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS not allowed for this origin'), false);
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: '*',
-  credentials: false,
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  maxAge: 86400, // 24 hours
 }));
 
 /* ---------------- Security Middleware ---------------- */
