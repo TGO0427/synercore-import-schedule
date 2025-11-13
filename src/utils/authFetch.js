@@ -29,8 +29,8 @@ export async function authFetch(url, options = {}) {
     }
   });
 
-  // Handle 401 Unauthorized (expired access token)
-  if (response.status === 401 && authUtils.getRefreshToken()) {
+  // Handle 401 Unauthorized or 403 Forbidden (expired access token)
+  if ((response.status === 401 || response.status === 403) && authUtils.getRefreshToken()) {
     if (!isRefreshing) {
       isRefreshing = true;
 

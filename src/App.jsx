@@ -103,9 +103,12 @@ function App() {
     }
 
     const poll = setInterval(() => {
-      console.log('App: Auto-refreshing data for real-time sync...');
-      fetchShipments(true); // background sync
-      fetchSuppliers(true);
+      // Only poll if authenticated
+      if (authUtils.isAuthenticated()) {
+        console.log('App: Auto-refreshing data for real-time sync...');
+        fetchShipments(true); // background sync
+        fetchSuppliers(true);
+      }
     }, 30000);
 
     return () => clearInterval(poll);
