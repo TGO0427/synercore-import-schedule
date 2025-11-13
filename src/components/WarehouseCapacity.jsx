@@ -1924,8 +1924,78 @@ function WarehouseCapacity({ shipments }) {
     return `${days} ${days === 1 ? 'day' : 'days'} ago`;
   };
 
+  // Helper function to get capacity status and warnings
+  const getCapacityWarnings = () => {
+    const warnings = [];
+
+    Object.entries(warehouseData.warehouseStats || {}).forEach(([warehouse, stats]) => {
+      if (stats.totalBins > 0) {
+        const utilizationPercent = (stats.usedBins / stats.totalBins) * 100;
+
+        // Critical: >= 95%
+        if (utilizationPercent >= 95) {
+          warnings.push({
+            warehouse,
+            severity: 'critical',
+            message: `${warehouse} is AT CAPACITY (${Math.round(utilizationPercent)}%)`,
+            availableBins: stats.availableBins
+          });
+        }
+        // Warning: 80-95%
+        else if (utilizationPercent >= 80) {
+          warnings.push({
+            warehouse,
+            severity: 'warning',
+            message: `${warehouse} capacity WARNING (${Math.round(utilizationPercent)}%)`,
+            availableBins: stats.availableBins
+          });
+        }
+      }
+    });
+
+    return warnings;
+  };
+
+  const capacityWarnings = getCapacityWarnings();
+
   return (
     <div style={{ padding: '2rem', backgroundColor: '#f8f9fc', minHeight: '100vh' }}>
+      {/* Capacity Warnings Banner */}
+      {capacityWarnings.length > 0 && (
+        <div style={{
+          marginBottom: '2rem',
+          padding: '1.5rem',
+          backgroundColor: '#fff3cd',
+          borderLeft: '4px solid #ff6b6b',
+          borderRadius: '8px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        }}>
+          <h3 style={{ margin: '0 0 1rem 0', color: '#d63031' }}>
+            ⚠️ Warehouse Capacity Alerts
+          </h3>
+          <div style={{ display: 'grid', gap: '0.75rem' }}>
+            {capacityWarnings.map((warning, idx) => (
+              <div
+                key={idx}
+                style={{
+                  padding: '0.75rem 1rem',
+                  backgroundColor: warning.severity === 'critical' ? '#ff6b6b' : '#ffa502',
+                  color: 'white',
+                  borderRadius: '6px',
+                  fontWeight: '500',
+                  fontSize: '0.95rem'
+                }}
+              >
+                {warning.severity === 'critical' ? '🚨' : '⚠️'} {warning.message}
+                <div style={{ fontSize: '0.85rem', marginTop: '0.25rem', opacity: 0.9 }}>
+                  Only {warning.availableBins} bin{warning.availableBins !== 1 ? 's' : ''} available
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
         <h2 style={{ color: '#2c3e50', marginBottom: '0.5rem' }}>
           🏭 Warehouse Capacity Management
