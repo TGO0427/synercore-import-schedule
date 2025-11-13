@@ -2,13 +2,17 @@
 class NotificationSounds {
   constructor() {
     this.audioContext = null;
-    this.initAudioContext();
+    this.contextInitialized = false;
+    // Don't initialize AudioContext here - wait for user gesture
   }
 
   initAudioContext() {
+    if (this.contextInitialized) return; // Already initialized
+
     try {
-      // Create AudioContext only when needed to avoid autoplay restrictions
+      // Create AudioContext only after a user gesture to avoid autoplay restrictions
       this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      this.contextInitialized = true;
     } catch (error) {
       console.warn('Web Audio API not supported:', error);
     }
