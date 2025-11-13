@@ -1,6 +1,7 @@
 import { Shipment, ShipmentStatus } from '../../src/types/shipment.js';
 import archiveService from '../services/archiveService.js';
 import db from '../db/connection.js';
+import EmailService from '../services/emailService.js';
 
 // Helper to convert snake_case DB columns to camelCase
 function dbRowToShipment(row) {
@@ -522,7 +523,21 @@ export class ShipmentsController {
         return res.status(404).json({ error: 'Shipment not found or not in ARRIVED status' });
       }
 
-      res.json(dbRowToShipment(result.rows[0]));
+      const shipment = dbRowToShipment(result.rows[0]);
+
+      // Send shipment arrival notification to all users
+      // Get all users and notify them about the shipment arrival
+      try {
+        const usersResult = await db.query('SELECT id, email FROM users');
+        for (const user of usersResult.rows) {
+          await EmailService.notifyShipmentArrival(user.id, shipment);
+        }
+      } catch (notifyError) {
+        console.error('Error sending shipment arrival notifications:', notifyError);
+        // Don't fail the request if notifications fail
+      }
+
+      res.json(shipment);
     } catch (error) {
       console.error('Error starting unloading:', error);
       res.status(500).json({ error: error.message });
@@ -603,7 +618,24 @@ export class ShipmentsController {
         return res.status(404).json({ error: 'Shipment not found or not in INSPECTING status' });
       }
 
-      res.json(dbRowToShipment(result.rows[0]));
+      const shipment = dbRowToShipment(result.rows[0]);
+
+      // Send inspection notification to all users
+      try {
+        const usersResult = await db.query('SELECT id, email FROM users');
+        for (const user of usersResult.rows) {
+          if (passed) {
+            await EmailService.notifyInspectionPassed(user.id, shipment);
+          } else {
+            await EmailService.notifyInspectionFailed(user.id, shipment);
+          }
+        }
+      } catch (notifyError) {
+        console.error('Error sending inspection notifications:', notifyError);
+        // Don't fail the request if notifications fail
+      }
+
+      res.json(shipment);
     } catch (error) {
       console.error('Error completing inspection:', error);
       res.status(500).json({ error: error.message });
@@ -747,6 +779,21 @@ export class ShipmentsController {
       // Only allow rejection from inspection_failed status
       if (shipment.latestStatus !== 'inspection_failed') {
         return res.status(400).json({ error: 'Only failed inspection shipments can be rejected' });
+      }
+
+      // Send rejection notification to all users
+      try {
+        const usersResult = await db.query('SELECT id, email FROM users');
+        for (const user of usersResult.rows) {
+          await EmailService.notifyShipmentRejected(user.id, {
+            ...shipment,
+            rejectionReason: rejectionReason.trim(),
+            rejectedBy: rejectedBy || 'Unknown'
+          });
+        }
+      } catch (notifyError) {
+        console.error('Error sending rejection notifications:', notifyError);
+        // Don't fail the request if notifications fail
       }
 
       if (archiveShipment) {

@@ -309,6 +309,72 @@ export class EmailService {
   }
 
   /**
+   * Send inspection passed notification
+   */
+  static async notifyInspectionPassed(userId, shipment) {
+    const prefs = await this.getPreferences(userId);
+    if (!prefs?.notify_inspection_passed || !prefs?.email_enabled) return;
+
+    const emailAddress = prefs.email_address || (await this.getUserEmail(userId));
+    if (!emailAddress) return;
+
+    const subject = `✅ Inspection Passed: ${shipment.orderRef}`;
+    const htmlContent = `
+      <h2>Inspection Passed</h2>
+      <p>A shipment inspection has passed successfully.</p>
+      <dl>
+        <dt><strong>Order Reference:</strong></dt>
+        <dd>${shipment.orderRef}</dd>
+        <dt><strong>Supplier:</strong></dt>
+        <dd>${shipment.supplier}</dd>
+        <dt><strong>Product:</strong></dt>
+        <dd>${shipment.productName || 'N/A'}</dd>
+        <dt><strong>Warehouse:</strong></dt>
+        <dd>${shipment.receivingWarehouse || shipment.finalPod || 'TBD'}</dd>
+      </dl>
+      <p>This shipment is ready for receiving.</p>
+      <p><a href="https://synercore-import-schedule.vercel.app/post-arrival">View in Post-Arrival Workflow</a></p>
+    `;
+
+    const result = await this.sendEmail(emailAddress, subject, htmlContent);
+    await this.logNotification(userId, 'inspection_passed', subject, htmlContent, shipment.id, result.success ? 'sent' : 'failed', result.error);
+  }
+
+  /**
+   * Send shipment rejection notification
+   */
+  static async notifyShipmentRejected(userId, shipment) {
+    const prefs = await this.getPreferences(userId);
+    if (!prefs?.notify_inspection_failed || !prefs?.email_enabled) return;
+
+    const emailAddress = prefs.email_address || (await this.getUserEmail(userId));
+    if (!emailAddress) return;
+
+    const subject = `❌ Shipment Rejected: ${shipment.orderRef}`;
+    const htmlContent = `
+      <h2>Shipment Rejected</h2>
+      <p>A shipment has been rejected due to failed inspection.</p>
+      <dl>
+        <dt><strong>Order Reference:</strong></dt>
+        <dd>${shipment.orderRef}</dd>
+        <dt><strong>Supplier:</strong></dt>
+        <dd>${shipment.supplier}</dd>
+        <dt><strong>Product:</strong></dt>
+        <dd>${shipment.productName || 'N/A'}</dd>
+        <dt><strong>Rejection Reason:</strong></dt>
+        <dd>${shipment.rejectionReason || 'See system for details'}</dd>
+        <dt><strong>Rejected By:</strong></dt>
+        <dd>${shipment.rejectedBy || 'Unknown'}</dd>
+      </dl>
+      <p>This shipment will be archived for record-keeping.</p>
+      <p><a href="https://synercore-import-schedule.vercel.app/archives">View in Archives</a></p>
+    `;
+
+    const result = await this.sendEmail(emailAddress, subject, htmlContent);
+    await this.logNotification(userId, 'inspection_failed', subject, htmlContent, shipment.id, result.success ? 'sent' : 'failed', result.error);
+  }
+
+  /**
    * Get user's email address from database
    */
   static async getUserEmail(userId) {
