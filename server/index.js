@@ -59,10 +59,13 @@ app.use(cors({
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma'],
   credentials: true,
   maxAge: 86400, // 24 hours
 }));
+
+// Explicitly handle OPTIONS for browsers that need it
+app.options('*', cors());
 
 /* ---------------- Security Middleware ---------------- */
 // Health check endpoint (before security middleware for Railway)
