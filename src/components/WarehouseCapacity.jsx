@@ -114,12 +114,9 @@ function WarehouseCapacity({ shipments }) {
         if (response.ok) {
           const data = await response.json();
 
-          console.log('📥 Warehouse capacity data loaded:', data);
-
           // Handle both old and new API response formats
           if (data.binsUsed && data.availableBins) {
             // New format with binsUsed, availableBins, and optionally totalCapacity
-            console.log('✅ Using new API format (binsUsed + availableBins + totalCapacity)');
             setEditableBinsUsed(data.binsUsed);
             setSavedBinsUsed(data.binsUsed);
             setEditableAvailableBins(data.availableBins);
@@ -130,7 +127,6 @@ function WarehouseCapacity({ shipments }) {
             }
           } else {
             // Old format (backward compatibility) - assume it's just bins_used
-            console.log('⚠️ Using old API format (bins_used only)');
             setEditableBinsUsed(data);
             setSavedBinsUsed(data);
           }
@@ -138,7 +134,7 @@ function WarehouseCapacity({ shipments }) {
           setLastSyncTime(new Date());
         }
       } catch (error) {
-        console.warn('Failed to load warehouse capacity data:', error);
+        // Error loading warehouse capacity data - fail silently and retry
       } finally {
         setIsLoadingCapacity(false);
       }

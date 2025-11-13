@@ -68,21 +68,8 @@ function CurrentWeekStoredReport({ shipments, showTitle = true }) {
   const currentWeekStoredShipments = useMemo(() => {
     // Current active shipments
     const activeShipments = shipments.filter(shipment => {
-      // Debug logging
-      if (shipment.orderRef && shipment.orderRef.includes('APO0016422')) {
-        console.log('DEBUG CurrentWeekStoredReport - APO0016422:', {
-          orderRef: shipment.orderRef,
-          latestStatus: shipment.latestStatus,
-          storedDate: shipment.storedDate,
-          updatedAt: shipment.updatedAt
-        });
-      }
-
       // Check if shipment is stored
       if (shipment.latestStatus !== 'stored') {
-        if (shipment.orderRef && shipment.orderRef.includes('APO0016422')) {
-          console.log('DEBUG: APO0016422 NOT stored, status:', shipment.latestStatus);
-        }
         return false;
       }
 
@@ -92,8 +79,6 @@ function CurrentWeekStoredReport({ shipments, showTitle = true }) {
 
       return shipmentWeek === currentWeek && storedDate.getFullYear() === currentYear;
     });
-
-    console.log('DEBUG CurrentWeekStoredReport: Found', activeShipments.length, 'active stored shipments');
 
     // Combine with archived shipments
     return [...activeShipments, ...archivedShipments];

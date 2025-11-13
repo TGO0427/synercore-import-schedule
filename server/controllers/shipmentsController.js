@@ -92,8 +92,6 @@ export class ShipmentsController {
       const result = await db.query(query, params);
       const shipments = result.rows.map(dbRowToShipment);
 
-      console.log('getAllShipments: Sample values being returned:', shipments.slice(0, 5).map(s => ({ id: s.id, cbm: s.cbm, status: s.latestStatus })));
-
       res.set({
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
@@ -112,7 +110,6 @@ export class ShipmentsController {
   }
 
   static async getShipmentById(req, res) {
-    console.log('DEBUG: getShipmentById method called with id:', req.params.id);
     try {
       const result = await db.query('SELECT * FROM shipments WHERE id = $1', [req.params.id]);
       if (result.rows.length === 0) {
@@ -257,13 +254,11 @@ export class ShipmentsController {
       // Archive existing data before importing
       const existingResult = await client.query('SELECT * FROM shipments');
       if (existingResult.rows.length > 0) {
-        console.log(`Archiving ${existingResult.rows.length} existing shipments before new import`);
         try {
           const existingShipments = existingResult.rows.map(dbRowToShipment);
-          const archiveFileName = archiveService.archiveCurrentData(existingShipments);
-          console.log(`Successfully archived to: ${archiveFileName}`);
+          archiveService.archiveCurrentData(existingShipments);
         } catch (error) {
-          console.error('Failed to archive existing data:', error);
+          // Archive failed - continue with import anyway
         }
       }
 
@@ -301,7 +296,6 @@ export class ShipmentsController {
       }
 
       await client.query('COMMIT');
-      console.log(`Bulk import completed: ${shipmentsData.length} shipments loaded`);
       return shipmentsData.length;
     } catch (error) {
       await client.query('ROLLBACK');
@@ -313,8 +307,6 @@ export class ShipmentsController {
 
   static async bulkImportEndpoint(req, res) {
     try {
-      console.log('Bulk import endpoint called with', req.body.length, 'shipments');
-      console.log('Sample shipment CBM values:', req.body.slice(0, 3).map(s => ({ id: s.id, cbm: s.cbm })));
       const count = await ShipmentsController.bulkImport(req.body);
       res.json({
         success: true,
@@ -378,7 +370,6 @@ export class ShipmentsController {
       await client.query('BEGIN');
 
       const { daysOld = 30 } = req.body;
-      console.log(`Performing auto-archive for ARRIVED shipments older than ${daysOld} days`);
 
       const result = await client.query('SELECT * FROM shipments');
       const allShipments = result.rows.map(dbRowToShipment);
@@ -468,7 +459,6 @@ export class ShipmentsController {
       await client.query('BEGIN');
 
       const { shipmentIds } = req.body;
-      console.log(`Performing manual archive for ${shipmentIds.length} selected shipments`);
 
       if (!shipmentIds || !Array.isArray(shipmentIds) || shipmentIds.length === 0) {
         return res.status(400).json({ error: 'No shipment IDs provided' });
@@ -650,8 +640,6 @@ export class ShipmentsController {
 
   static async completeReceiving(req, res) {
     try {
-      console.log('DEBUG: completeReceiving called for shipment:', req.params.id);
-      console.log('DEBUG: completeReceiving body:', req.body);
       const { id } = req.params;
       const { receivedQuantity, notes, receivedBy, discrepancies } = req.body;
 
@@ -671,12 +659,8 @@ export class ShipmentsController {
 
       if (discrepancies && discrepancies.length > 0) {
         receivingStatus = 'discrepancy';
-        console.log('DEBUG: Setting status to discrepancy');
       } else if (receivedQuantity < parseFloat(shipment.quantity)) {
         receivingStatus = 'partial';
-        console.log('DEBUG: Setting status to partial');
-      } else {
-        console.log('DEBUG: Setting status to received');
       }
 
       await db.query(
@@ -693,8 +677,6 @@ export class ShipmentsController {
       );
 
       const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
-      console.log('DEBUG: Updated shipment status to:', result.rows[0].latest_status);
-
       res.json(dbRowToShipment(result.rows[0]));
     } catch (error) {
       console.error('Error completing receiving:', error);
@@ -727,7 +709,6 @@ export class ShipmentsController {
   }
 
   static async getPostArrivalShipments(req, res) {
-    console.log('DEBUG: getPostArrivalShipments method called');
     try {
       const postArrivalStates = [
         'arrived_pta', 'arrived_klm', 'arrived_offsite', 'unloading', 'inspection_pending', 'inspecting',
@@ -779,11 +760,9 @@ export class ShipmentsController {
         };
 
         try {
-          const archiveResult = archiveService.archiveSpecificShipments([shipmentToArchive]);
-          console.log(`Rejected shipment archived to: ${archiveResult.archiveFileName}`);
+          archiveService.archiveSpecificShipments([shipmentToArchive]);
         } catch (archiveError) {
-          console.error('Failed to archive rejected shipment:', archiveError);
-          // Continue with deletion even if archive fails
+          // Archive failed - continue with deletion anyway
         }
 
         // Delete the shipment
