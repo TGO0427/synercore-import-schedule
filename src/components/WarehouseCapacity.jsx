@@ -156,12 +156,12 @@ function WarehouseCapacity({ shipments }) {
     //   totalShipments: shipments.length,
     //   editableBinsUsedKeys: Object.keys(editableBinsUsed)
     // });
-    
-    // Define warehouse configurations
+
+    // Define warehouse configurations - use editable total capacity from state if available
     const warehouseConfigs = {
-      'PRETORIA': { totalBins: 650, avgItemsPerBin: 1 },
-      'KLAPMUTS': { totalBins: 384, avgItemsPerBin: 1 },
-      'Offsite': { totalBins: 384, avgItemsPerBin: 1 }
+      'PRETORIA': { totalBins: editableTotalCapacity['PRETORIA'] || 650, avgItemsPerBin: 1 },
+      'KLAPMUTS': { totalBins: editableTotalCapacity['KLAPMUTS'] || 384, avgItemsPerBin: 1 },
+      'Offsite': { totalBins: editableTotalCapacity['Offsite'] || 384, avgItemsPerBin: 1 }
     };
 
     // Calculate current and projected usage
@@ -293,7 +293,7 @@ function WarehouseCapacity({ shipments }) {
 
 
     return { warehouseStats, currentWeek };
-  }, [shipments, editableBinsUsed, currentMonthWeeks]);
+  }, [shipments, editableBinsUsed, editableTotalCapacity, currentMonthWeeks]);
 
   const handleBinsUsedChange = useCallback((warehouse, newValue) => {
     const updatedBinsUsed = {
