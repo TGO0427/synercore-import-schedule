@@ -19,6 +19,7 @@ import AlertHub from './components/AlertHub';
 import UserSettings from './components/UserSettings';
 import HelpGuide from './components/HelpGuide';
 import UserManagement from './components/UserManagement';
+import NotificationPreferences from './components/NotificationPreferences';
 import { ExcelProcessor } from './utils/excelProcessor';
 import { Supplier } from './types/supplier';
 import { computeShipmentAlerts, createCustomAlert } from './utils/alerts';
@@ -66,6 +67,9 @@ function App() {
 
   // Help Guide state
   const [helpOpen, setHelpOpen] = useState(false);
+
+  // Notification Preferences state
+  const [notificationPrefsOpen, setNotificationPrefsOpen] = useState(false);
 
   // prevent hammering the API during background polling
   const lastFetchRef = useRef({ shipments: 0, suppliers: 0 });
@@ -794,6 +798,9 @@ function App() {
             <button onClick={() => setSettingsOpen(true)} style={{ width: '100%', textAlign: 'left' }}>👤 User Settings</button>
           </li>
           <li>
+            <button onClick={() => setNotificationPrefsOpen(true)} style={{ width: '100%', textAlign: 'left' }}>📧 Notification Preferences</button>
+          </li>
+          <li>
             <button onClick={handleLogout} style={{ width: '100%', textAlign: 'left', backgroundColor: '#dc3545' }}>🚪 Logout</button>
           </li>
           {isAdmin && <li><button className={activeView === 'users' ? 'active' : ''} onClick={() => setActiveView('users')}>👥 User Management</button></li>}
@@ -1000,6 +1007,31 @@ function App() {
           username={username}
           onClose={() => setSettingsOpen(false)}
         />
+      )}
+      {notificationPrefsOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            backgroundColor: 'white',
+            borderRadius: '8px'
+          }}>
+            <NotificationPreferences
+              onClose={() => setNotificationPrefsOpen(false)}
+            />
+          </div>
+        </div>
       )}
       {helpOpen && (
         <HelpGuide
