@@ -1950,7 +1950,7 @@ function WarehouseCapacity({ shipments }) {
         </select>
 
         {/* Save All Changes Button */}
-        {(Object.keys(pendingChanges).length > 0 || Object.keys(pendingAvailableBinsChanges).length > 0) && (
+        {(Object.keys(pendingChanges).length > 0 || Object.keys(pendingAvailableBinsChanges).length > 0 || Object.keys(pendingTotalCapacityChanges).length > 0) && (
           <button
             onClick={saveAllChanges}
             disabled={isSaving}
@@ -1984,9 +1984,9 @@ function WarehouseCapacity({ shipments }) {
                 e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
               }
             }}
-            title={`Save ${Object.keys(pendingChanges).length + Object.keys(pendingAvailableBinsChanges).length} unsaved ${(Object.keys(pendingChanges).length + Object.keys(pendingAvailableBinsChanges).length) === 1 ? 'change' : 'changes'}`}
+            title={`Save ${Object.keys(pendingChanges).length + Object.keys(pendingAvailableBinsChanges).length + Object.keys(pendingTotalCapacityChanges).length} unsaved ${(Object.keys(pendingChanges).length + Object.keys(pendingAvailableBinsChanges).length + Object.keys(pendingTotalCapacityChanges).length) === 1 ? 'change' : 'changes'}`}
           >
-            {isSaving ? '⏳ Saving...' : `💾 Save All Changes (${Object.keys(pendingChanges).length + Object.keys(pendingAvailableBinsChanges).length})`}
+            {isSaving ? '⏳ Saving...' : `💾 Save All Changes (${Object.keys(pendingChanges).length + Object.keys(pendingAvailableBinsChanges).length + Object.keys(pendingTotalCapacityChanges).length})`}
           </button>
         )}
 
