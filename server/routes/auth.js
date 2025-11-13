@@ -3,7 +3,14 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import pool from '../db/connection.js';
-import { validateUserUpdate, validateResetPassword, validateId } from '../middleware/validation.js';
+import {
+  validateUserUpdate,
+  validateResetPassword,
+  validateId,
+  validateRegister,
+  validateLogin,
+  validateChangePassword
+} from '../middleware/validation.js';
 
 const router = express.Router();
 
@@ -125,7 +132,7 @@ router.post('/setup', async (req, res) => {
 });
 
 // POST /api/auth/register - Register new user
-router.post('/register', async (req, res) => {
+router.post('/register', validateRegister, async (req, res) => {
   try {
     const { username, email, password, fullName } = req.body;
 
@@ -192,7 +199,7 @@ router.post('/register', async (req, res) => {
 });
 
 // POST /api/auth/login - Login user
-router.post('/login', async (req, res) => {
+router.post('/login', validateLogin, async (req, res) => {
   try {
     const { username, password } = req.body;
 
@@ -288,7 +295,7 @@ router.get('/me', authenticateToken, async (req, res) => {
 });
 
 // POST /api/auth/admin/create-user - Create user (admin only)
-router.post('/admin/create-user', authenticateToken, async (req, res) => {
+router.post('/admin/create-user', authenticateToken, validateRegister, async (req, res) => {
   try {
     // Check if requester is admin
     if (req.user.role !== 'admin') {
@@ -596,7 +603,7 @@ router.post('/logout', authenticateToken, async (req, res) => {
 });
 
 // POST /api/auth/change-password - Change own password
-router.post('/change-password', authenticateToken, async (req, res) => {
+router.post('/change-password', authenticateToken, validateChangePassword, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
