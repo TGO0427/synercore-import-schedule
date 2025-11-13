@@ -101,6 +101,8 @@ function WarehouseCapacity({ shipments }) {
   const [pendingTotalCapacityChanges, setPendingTotalCapacityChanges] = useState({});
   const [isLoadingCapacity, setIsLoadingCapacity] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState(null);
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState(null);
 
   // Load warehouse capacity data from database on mount
   useEffect(() => {
@@ -132,6 +134,8 @@ function WarehouseCapacity({ shipments }) {
             setEditableBinsUsed(data);
             setSavedBinsUsed(data);
           }
+          // Update sync time
+          setLastSyncTime(new Date());
         }
       } catch (error) {
         console.warn('Failed to load warehouse capacity data:', error);
@@ -530,6 +534,8 @@ function WarehouseCapacity({ shipments }) {
               setEditableTotalCapacity(data.totalCapacity);
               setSavedTotalCapacity(data.totalCapacity);
             }
+            // Update sync time after successful reload
+            setLastSyncTime(new Date());
             console.log('✅ Successfully reloaded all warehouse data');
           }
         }
@@ -1903,6 +1909,21 @@ function WarehouseCapacity({ shipments }) {
         return warehouse === selectedWarehouse;
       });
 
+  // Helper function to format relative time
+  const getRelativeTime = (date) => {
+    if (!date) return 'Never';
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+
+    if (seconds < 60) return 'Just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+  };
+
   return (
     <div style={{ padding: '2rem', backgroundColor: '#f8f9fc', minHeight: '100vh' }}>
       <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
@@ -1920,6 +1941,26 @@ function WarehouseCapacity({ shipments }) {
             : `Detailed view for ${selectedWarehouse} warehouse - Click another warehouse card or select "All Warehouses" to change view`
           }
         </p>
+        {/* Sync Status Indicator */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          justifyContent: 'center',
+          marginTop: '0.75rem',
+          fontSize: '0.9rem',
+          color: '#666'
+        }}>
+          <span style={{
+            display: 'inline-block',
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            backgroundColor: lastSyncTime ? '#10b981' : '#ccc',
+            animation: lastSyncTime ? 'none' : 'pulse 2s infinite'
+          }}></span>
+          <span>Last synced: {getRelativeTime(lastSyncTime)}</span>
+        </div>
       </div>
 
       {/* Controls */}
