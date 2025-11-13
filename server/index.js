@@ -180,6 +180,14 @@ async function start() {
       // Don't fail startup if migration has issues, but log them
     }
 
+    try {
+      const addTotalCapacityColumn = await import('./db/add-total-capacity.js');
+      await addTotalCapacityColumn.default();
+    } catch (error) {
+      console.warn('⚠️  Migration warning:', error.message);
+      // Don't fail startup if migration has issues, but log them
+    }
+
     isReady = true; // mark ready once init is done
 
     app.listen(PORT, () => {

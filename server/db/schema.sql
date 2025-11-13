@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- Warehouse capacity table
 CREATE TABLE IF NOT EXISTS warehouse_capacity (
   warehouse_name VARCHAR(255) PRIMARY KEY,
+  total_capacity INTEGER DEFAULT 0,
   bins_used INTEGER NOT NULL DEFAULT 0,
   available_bins INTEGER DEFAULT 0,
   updated_by VARCHAR(255),
@@ -105,9 +106,9 @@ CREATE INDEX IF NOT EXISTS idx_shipments_inspection_status ON shipments(inspecti
 CREATE INDEX IF NOT EXISTS idx_shipments_receiving_status ON shipments(receiving_status);
 
 -- Initialize default warehouses if they don't exist
-INSERT INTO warehouse_capacity (warehouse_name, bins_used, available_bins, updated_at)
+INSERT INTO warehouse_capacity (warehouse_name, total_capacity, bins_used, available_bins, updated_at)
 VALUES
-  ('PRETORIA', 0, 650, CURRENT_TIMESTAMP),
-  ('KLAPMUTS', 0, 384, CURRENT_TIMESTAMP),
-  ('Offsite', 0, 384, CURRENT_TIMESTAMP)
+  ('PRETORIA', 650, 0, 650, CURRENT_TIMESTAMP),
+  ('KLAPMUTS', 384, 0, 384, CURRENT_TIMESTAMP),
+  ('Offsite', 384, 0, 384, CURRENT_TIMESTAMP)
 ON CONFLICT (warehouse_name) DO NOTHING;

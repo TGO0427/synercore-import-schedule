@@ -54,15 +54,17 @@ router.get('/history/all', authenticateToken, async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT warehouse_name, bins_used, available_bins, updated_by, updated_at FROM warehouse_capacity'
+      'SELECT warehouse_name, total_capacity, bins_used, available_bins, updated_by, updated_at FROM warehouse_capacity'
     );
 
-    // Convert to object format with both bins_used and available_bins
+    // Convert to object format with total_capacity, bins_used and available_bins
     const capacityData = {
+      totalCapacity: {},
       binsUsed: {},
       availableBins: {}
     };
     result.rows.forEach(row => {
+      capacityData.totalCapacity[row.warehouse_name] = row.total_capacity || 0;
       capacityData.binsUsed[row.warehouse_name] = row.bins_used || 0;
       capacityData.availableBins[row.warehouse_name] = row.available_bins || 0;
     });
@@ -72,6 +74,64 @@ router.get('/', async (req, res) => {
     console.error('Error fetching warehouse capacity:', error);
     res.status(500).json({ error: 'Failed to fetch warehouse capacity data' });
   }
+});
+
+// PUT/UPDATE total capacity for a specific warehouse
+// MUST be before /:warehouseName to match correctly
+router.put('/:warehouseName/total-capacity', (req, res) => {
+  // Wrap in explicit error handler
+  (async () => {
+    try {
+      const { warehouseName } = req.params;
+      const { totalCapacity } = req.body;
+
+      console.log(`\n🔧 [API] Updating total capacity for ${warehouseName}: ${totalCapacity}`);
+
+      if (typeof totalCapacity !== 'number' || totalCapacity < 0) {
+        console.log(`❌ [API] Invalid totalCapacity value: ${totalCapacity}`);
+        return res.status(400).json({ error: 'Invalid totalCapacity value' });
+      }
+
+      console.log(`📝 [API] Executing UPDATE query for ${warehouseName}...`);
+
+      // Update or insert total_capacity - ensure bins_used and available_bins are preserved
+      const result = await pool.query(
+        `INSERT INTO warehouse_capacity (warehouse_name, total_capacity, bins_used, available_bins, updated_at)
+         VALUES ($1::text, $2::integer, COALESCE((SELECT bins_used FROM warehouse_capacity WHERE warehouse_name = $1::text), 0), COALESCE((SELECT available_bins FROM warehouse_capacity WHERE warehouse_name = $1::text), 0), CURRENT_TIMESTAMP)
+         ON CONFLICT (warehouse_name)
+         DO UPDATE SET total_capacity = $2::integer, updated_at = CURRENT_TIMESTAMP
+         RETURNING warehouse_name, total_capacity, bins_used, available_bins, updated_at`,
+        [warehouseName, totalCapacity]
+      );
+
+      console.log(`✅ [API] Query executed. Rows affected: ${result.rowCount}`);
+      console.log(`📊 [API] Returned data:`, JSON.stringify(result.rows[0]));
+
+      if (!result.rows || result.rows.length === 0) {
+        console.log(`⚠️ [API] WARNING: Query returned no rows!`);
+        return res.status(500).json({ error: 'Failed to update: no rows returned' });
+      }
+
+      return res.json({
+        success: true,
+        data: result.rows[0]
+      });
+    } catch (error) {
+      console.error(`\n❌ [API] ERROR updating total capacity:`, error);
+      console.error(`📋 [API] Error details:`, error.message);
+      console.error(`🔍 [API] Error code:`, error.code);
+      return res.status(500).json({
+        error: 'Failed to update total capacity',
+        details: error.message,
+        code: error.code
+      });
+    }
+  })().catch(err => {
+    console.error('[API] UNHANDLED ERROR in PUT route:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
 });
 
 // PUT/UPDATE available bins for a specific warehouse
