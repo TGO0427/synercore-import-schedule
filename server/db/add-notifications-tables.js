@@ -75,6 +75,12 @@ async function createNotificationsTables() {
   }
 }
 
-createNotificationsTables().catch(err => {
-  process.exit(1);
-});
+// Export for use in server startup
+export default createNotificationsTables;
+
+// If run directly, execute immediately
+if (import.meta.url === `file://${process.argv[1]}`) {
+  createNotificationsTables().catch(err => {
+    process.exit(1);
+  });
+}

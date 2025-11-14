@@ -213,6 +213,22 @@ async function start() {
       // Don't fail startup if migration has issues, but log them
     }
 
+    try {
+      const addRefreshTokensTable = await import('./db/add-refresh-tokens-table.js');
+      await addRefreshTokensTable.default();
+    } catch (error) {
+      console.warn('⚠️  Migration warning:', error.message);
+      // Don't fail startup if migration has issues, but log them
+    }
+
+    try {
+      const addNotificationsTables = await import('./db/add-notifications-tables.js');
+      await addNotificationsTables.default();
+    } catch (error) {
+      console.warn('⚠️  Migration warning:', error.message);
+      // Don't fail startup if migration has issues, but log them
+    }
+
     // Initialize notification scheduler
     try {
       const { default: NotificationScheduler } = await import('./jobs/notificationScheduler.js');
