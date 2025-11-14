@@ -1,0 +1,372 @@
+/* Mobile Navigation Styles */
+
+/* Mobile Header */
+.mobile-header {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  gap: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.menu-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 8px;
+  min-width: auto;
+  min-height: auto;
+  color: #003d82;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
+}
+
+.menu-btn:active {
+  opacity: 0.7;
+}
+
+.header-title {
+  flex: 1;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #003d82;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.header-icon-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 8px;
+  min-width: auto;
+  min-height: auto;
+  color: #666;
+  transition: color 0.2s;
+  position: relative;
+}
+
+.header-icon-btn:active {
+  color: #003d82;
+}
+
+.header-icon-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  background: #dc3545;
+  border-radius: 50%;
+  display: none;
+}
+
+.header-icon-btn.has-notification::after {
+  display: block;
+}
+
+/* Hide header on tablet and desktop */
+@media (min-width: 768px) {
+  .mobile-header {
+    display: none;
+  }
+}
+
+/* Sidebar Navigation */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: -100%;
+  width: 80%;
+  max-width: 300px;
+  height: 100vh;
+  background: #003d82;
+  color: white;
+  overflow-y: auto;
+  transition: left 0.3s ease;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar.open {
+  left: 0;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.sidebar-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.sidebar-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.sidebar-close:active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.nav-items {
+  flex: 1;
+  padding: 16px 0;
+  overflow-y: auto;
+}
+
+.nav-link {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  color: white;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 15px;
+  border-radius: 0;
+}
+
+.nav-link:active,
+.nav-link.active {
+  background: rgba(255, 255, 255, 0.15);
+  border-left: 4px solid white;
+  padding-left: 12px;
+  font-weight: 500;
+}
+
+.nav-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  min-width: 24px;
+}
+
+.nav-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 8px 0;
+}
+
+.logout-btn {
+  color: #ff6b6b;
+  padding: 12px 16px;
+}
+
+.logout-btn:active {
+  background: rgba(255, 107, 107, 0.1);
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0);
+  z-index: 998;
+  transition: background 0.3s ease;
+}
+
+.sidebar-overlay.open {
+  display: block;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* Hide sidebar on tablet and desktop */
+@media (min-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+
+  .sidebar-overlay {
+    display: none !important;
+  }
+}
+
+/* Bottom Tab Navigation */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-around;
+  background: white;
+  border-top: 1px solid #e0e0e0;
+  padding: 4px 0;
+  gap: 0;
+  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 4px;
+  text-decoration: none;
+  color: #666;
+  font-size: 11px;
+  gap: 2px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 56px;
+  position: relative;
+}
+
+.bottom-nav-item:active {
+  background: rgba(0, 61, 130, 0.05);
+}
+
+.bottom-nav-item.active {
+  color: #003d82;
+  font-weight: 600;
+}
+
+.bottom-nav-item.active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #003d82;
+}
+
+.bottom-nav-item span:first-child {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.bottom-nav-item span:last-child {
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Hide bottom nav on tablet and desktop */
+@media (min-width: 768px) {
+  .bottom-nav {
+    display: none;
+  }
+}
+
+/* Page content adjustment for bottom nav */
+.page-content {
+  padding-bottom: calc(56px + 12px);
+}
+
+@media (min-width: 768px) {
+  .page-content {
+    padding-bottom: 0;
+  }
+}
+
+/* Animations */
+@media (prefers-reduced-motion: no-preference) {
+  .sidebar {
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .sidebar-overlay {
+    transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .nav-link {
+    transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .bottom-nav-item {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* Accessibility */
+.menu-btn:focus-visible,
+.header-icon-btn:focus-visible,
+.sidebar-close:focus-visible,
+.nav-link:focus-visible,
+.bottom-nav-item:focus-visible {
+  outline: 2px solid #003d82;
+  outline-offset: 2px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .sidebar-overlay,
+  .nav-link,
+  .bottom-nav-item {
+    transition: none;
+  }
+}
+
+/* Print styles */
+@media print {
+  .mobile-header,
+  .sidebar,
+  .bottom-nav,
+  .sidebar-overlay {
+    display: none;
+  }
+
+  .page-content {
+    padding-bottom: 0;
+  }
+}
