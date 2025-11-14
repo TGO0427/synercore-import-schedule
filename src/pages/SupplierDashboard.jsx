@@ -16,7 +16,7 @@ function SupplierDashboard({ onLogout }) {
   useEffect(() => {
     fetchShipments();
     fetchReports();
-  }, []);
+  }, [filter]);
 
   const fetchShipments = async () => {
     try {
@@ -220,11 +220,7 @@ function SupplierDashboard({ onLogout }) {
               <label>Filter by status:</label>
               <select
                 value={filter}
-                onChange={(e) => {
-                  setFilter(e.target.value);
-                  setShipments([]);
-                }}
-                onBlur={() => fetchShipments()}
+                onChange={(e) => setFilter(e.target.value)}
                 style={{
                   padding: '0.5rem',
                   borderRadius: '4px',
