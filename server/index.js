@@ -30,6 +30,7 @@ import adminRouter from './routes/admin.js';
 import warehouseCapacityRouter from './routes/warehouseCapacity.js';
 import authRouter from './routes/auth.js';
 import notificationsRouter from './routes/notifications.js';
+import schedulerAdminRouter from './routes/schedulerAdmin.js';
 import { helmetConfig, apiRateLimiter, authRateLimiter, authenticateToken } from './middleware/security.js';
 
 // __dirname for ESM
@@ -110,6 +111,7 @@ app.use('/api/quotes', authenticateToken, quotesRouter);
 app.use('/api/reports', authenticateToken, reportsRouter);
 app.use('/api/email-import', authenticateToken, emailImportRouter);
 app.use('/api/admin', authenticateToken, adminRouter);
+app.use('/api/admin/scheduler', schedulerAdminRouter); // Auth required within router
 app.use('/api/notifications', notificationsRouter); // Auth required within router
 
 /* ---------------- Endpoints ---------------- */
@@ -209,6 +211,16 @@ async function start() {
     } catch (error) {
       console.warn('⚠️  Migration warning:', error.message);
       // Don't fail startup if migration has issues, but log them
+    }
+
+    // Initialize notification scheduler
+    try {
+      const { default: NotificationScheduler } = await import('./jobs/notificationScheduler.js');
+      NotificationScheduler.initializeJobs();
+      console.log('✓ Notification scheduler initialized');
+    } catch (error) {
+      console.warn('⚠️  Notification scheduler warning:', error.message);
+      // Don't fail startup if scheduler has issues
     }
 
     isReady = true; // mark ready once init is done
