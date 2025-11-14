@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   ScrollView,
@@ -12,47 +12,38 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { storage } from '@/utils/storage';
-import { apiService } from '@/services/api-service';
+import { useAuth } from '@/hooks';
 import { MaterialIcons } from '@expo/vector-icons';
 
 export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('test@example.com');
   const [password, setPassword] = useState('password123');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const { isLoading, error, isAuthenticated, login, clearError } = useAuth();
+
+  // Redirect when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log('Login successful, redirecting to home...');
+      router.replace('/(app)');
+    }
+  }, [isAuthenticated]);
 
   const handleLogin = async () => {
-    setError('');
-    setIsLoading(true);
+    // Clear any previous errors
+    clearError();
+
+    // Validation
+    if (!email || !password) {
+      Alert.alert('Validation Error', 'Please fill in all fields');
+      return;
+    }
 
     try {
-      // Validation
-      if (!email || !password) {
-        setError('Please fill in all fields');
-        setIsLoading(false);
-        return;
-      }
-
-      // Call API
-      const response = await apiService.login(email, password);
-
-      if (response.success) {
-        console.log('Login successful, redirecting to home...');
-        // Redirect to home - use (app) route instead of (tabs)
-        router.replace('/(app)');
-      } else {
-        const errorMessage = response.error || 'Login failed';
-        setError(errorMessage);
-        Alert.alert('Login Error', errorMessage);
-      }
+      await login(email, password);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
-      setError(errorMessage);
       Alert.alert('Login Error', errorMessage);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -76,12 +67,12 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.formContainer}>
-          {error ? (
+          {error && (
             <View style={styles.errorBanner}>
               <MaterialIcons name="error" size={16} color="#F44336" />
               <Text style={styles.errorText}>{error}</Text>
             </View>
-          ) : null}
+          )}
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email</Text>

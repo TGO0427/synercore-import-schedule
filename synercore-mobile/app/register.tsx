@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   ScrollView,
@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { apiService } from '@/services/api-service';
+import { useAuth } from '@/hooks';
 import { MaterialIcons } from '@expo/vector-icons';
 
 export default function RegisterScreen() {
@@ -21,51 +21,41 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const { isLoading, error, isAuthenticated, register, clearError } = useAuth();
+
+  // Redirect when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log('Registration successful, redirecting to home...');
+      router.replace('/(app)');
+    }
+  }, [isAuthenticated]);
 
   const handleRegister = async () => {
-    setError('');
-    setIsLoading(true);
+    // Clear any previous errors
+    clearError();
+
+    // Validation
+    if (!name || !email || !password || !confirmPassword) {
+      Alert.alert('Validation Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Validation Error', 'Passwords do not match');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Validation Error', 'Password must be at least 6 characters');
+      return;
+    }
 
     try {
-      // Validation
-      if (!name || !email || !password || !confirmPassword) {
-        setError('Please fill in all fields');
-        setIsLoading(false);
-        return;
-      }
-
-      if (password !== confirmPassword) {
-        setError('Passwords do not match');
-        setIsLoading(false);
-        return;
-      }
-
-      if (password.length < 6) {
-        setError('Password must be at least 6 characters');
-        setIsLoading(false);
-        return;
-      }
-
-      // Call API
-      const response = await apiService.register(name, email, password);
-
-      if (response.success) {
-        console.log('Registration successful, redirecting to home...');
-        // Redirect to home - use (app) route instead of (tabs)
-        router.replace('/(app)');
-      } else {
-        const errorMessage = response.error || 'Registration failed';
-        setError(errorMessage);
-        Alert.alert('Registration Error', errorMessage);
-      }
+      await register(name, email, password);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Registration failed';
-      setError(errorMessage);
       Alert.alert('Registration Error', errorMessage);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -85,12 +75,12 @@ export default function RegisterScreen() {
         </View>
 
         <View style={styles.formContainer}>
-          {error ? (
+          {error && (
             <View style={styles.errorBanner}>
               <MaterialIcons name="error" size={16} color="#F44336" />
               <Text style={styles.errorText}>{error}</Text>
             </View>
-          ) : null}
+          )}
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Full Name</Text>
