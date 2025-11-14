@@ -21,6 +21,7 @@ import HelpGuide from './components/HelpGuide';
 import UserManagement from './components/UserManagement';
 import NotificationPreferences from './components/NotificationPreferences';
 import OfflineIndicator from './components/OfflineIndicator';
+import SupplierLogin from './pages/SupplierLogin';
 import { ExcelProcessor } from './utils/excelProcessor';
 import { Supplier } from './types/supplier';
 import useWebSocket from './hooks/useWebSocket';
@@ -50,6 +51,11 @@ function authFetch(url, options = {}) {
 }
 
 function App() {
+  // Route to Supplier Portal if URL contains /supplier
+  if (window.location.pathname.startsWith('/supplier')) {
+    return <SupplierLogin />;
+  }
+
   const [shipments, setShipments] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(false);
