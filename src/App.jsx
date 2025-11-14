@@ -77,8 +77,6 @@ function App() {
 
   // ---------- boot ----------
   useEffect(() => {
-    console.log('App: Component mounted, starting initialization...');
-
     // Check for new JWT-based auth first
     const user = authUtils.getUser();
     const isAuth = user && authUtils.isAuthenticated();
@@ -105,7 +103,6 @@ function App() {
     const poll = setInterval(() => {
       // Only poll if authenticated
       if (authUtils.isAuthenticated()) {
-        console.log('App: Auto-refreshing data for real-time sync...');
         fetchShipments(true); // background sync
         fetchSuppliers(true);
       }
@@ -119,9 +116,9 @@ function App() {
     setNotifications(prev => [...prev, { id: Date.now() + Math.random(), type, message, ...options }]);
 
   const removeNotification = (id) => setNotifications(prev => prev.filter(n => n.id !== id));
-  const showSuccess = (m, o = {}) => { console.log('📢 success:', m); addNotification('success', m, o); };
-  const showError   = (m, o = {}) => { console.log('📢 error:', m);   addNotification('error', m, o); };
-  const showWarning = (m, o = {}) => { console.log('📢 warn:', m);    addNotification('warning', m, o); };
+  const showSuccess = (m, o = {}) => { addNotification('success', m, o); };
+  const showError   = (m, o = {}) => { addNotification('error', m, o); };
+  const showWarning = (m, o = {}) => { addNotification('warning', m, o); };
 
   // ---------- alerts ----------
   // Whenever shipments change, recompute alerts
@@ -144,20 +141,18 @@ function App() {
     ...prev
   ]);
 
-  const showInfo    = (m, o = {}) => { console.log('📢 info:', m);    addNotification('info', m, o); };
+  const showInfo    = (m, o = {}) => { addNotification('info', m, o); };
 
   // ---------- data: shipments ----------
   const fetchShipments = async (isBackgroundSync = false) => {
     try {
       const now = Date.now();
       if (isBackgroundSync && (now - lastFetchRef.current.shipments) < FETCH_COOLDOWN) {
-        console.log('App: Skipping shipments fetch - too soon since last fetch');
         return;
       }
       lastFetchRef.current.shipments = now;
 
       if (!isBackgroundSync) {
-        console.log('App: Fetching shipments from API...');
         setLoading(true);
       }
 
@@ -176,8 +171,6 @@ function App() {
             }
           }, 10000);
 
-          console.log(`App: Fetch attempt ${attempt}, response status: ${response.status}`);
-
           if (response.ok) break;
 
           if (response.status === 503 || response.status >= 500) {
@@ -189,7 +182,6 @@ function App() {
           }
         } catch (err) {
           lastError = err;
-          console.warn(`App: Fetch attempt failed: ${err.message}`);
           if (attempt < maxRetries) await new Promise(r => setTimeout(r, retryDelay));
         }
       }
@@ -197,7 +189,6 @@ function App() {
       if (!response || !response.ok) throw lastError || new Error('Failed to fetch shipments after retries');
 
       const data = await response.json();
-      console.log('App: Received shipments data:', data.length, 'items');
 
       const normalized = (data || []).map(s => ({
         ...s,
@@ -205,8 +196,6 @@ function App() {
         palletQty: Number(s.palletQty) || 0,
         weekNumber: Number(s.weekNumber) || 0,
       }));
-
-      console.table(normalized.slice(0, 5).map(x => ({ prod: x.productName, palletQty: x.palletQty, type: typeof x.palletQty })));
 
       // Always replace array to force downstream children (WeekCalendar) to re-render with fresh values
       setShipments(normalized);
@@ -224,7 +213,6 @@ function App() {
     try {
       const now = Date.now();
       if (isBackgroundSync && (now - lastFetchRef.current.suppliers) < FETCH_COOLDOWN) {
-        console.log('App: Skipping suppliers fetch - too soon since last fetch');
         return;
       }
       lastFetchRef.current.suppliers = now;
@@ -321,11 +309,9 @@ function App() {
 
   const handleFileUpload = async (file) => {
     try {
-      console.log('App: Starting file upload:', file.name);
       setLoading(true);
 
       const processedShipments = await ExcelProcessor.parseExcelFile(file);
-      console.log('App: Received processed shipments:', processedShipments.length);
       if (processedShipments.length === 0) throw new Error('No data found in Excel file');
 
       const toPlain = (s) => ({
@@ -347,10 +333,6 @@ function App() {
 
       const payload = processedShipments.map(toPlain);
 
-      console.table(payload.slice(0, 5).map(x => ({
-        prod: x.productName, qty: x.quantity, palletQty: x.palletQty, type: typeof x.palletQty
-      })));
-
       const response = await authFetch(getApiUrl('/api/shipments/bulk-import'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -366,12 +348,11 @@ function App() {
 
       // Auto-create suppliers from imported shipments
       const uniqueSuppliers = [...new Set(processedShipments.map(s => s.supplier).filter(Boolean))];
-      console.log(`App: Creating ${uniqueSuppliers.length} unique suppliers...`);
       for (const supplierName of uniqueSuppliers) {
         try {
           await handleAddSupplier({ name: supplierName });
         } catch (err) {
-          console.log(`Supplier "${supplierName}" already exists or failed to create`);
+          // Supplier already exists or failed to create - suppress error
         }
       }
 
@@ -478,8 +459,6 @@ function App() {
         if (statusFilter) {
           shippingShipments = shippingShipments.filter(s => s.latestStatus === statusFilter);
         }
-        console.log('📦 Shipping Schedule - Total shipments:', shipments.length);
-        console.log('📦 Shipping Schedule - Filtered shipments:', shippingShipments.length);
 
         const stats = {
           total: shippingShipments.length,
@@ -740,8 +719,6 @@ function App() {
         return <PostArrivalWorkflow />;
       case 'stored': {
         const storedShipments = shipments.filter(s => s.latestStatus === 'stored');
-        console.log('🏪 Warehouse Stored - Total shipments:', shipments.length);
-        console.log('🏪 Warehouse Stored - Filtered stored shipments:', storedShipments.length);
         return (
           <WarehouseStored
             shipments={storedShipments}

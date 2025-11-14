@@ -85,14 +85,9 @@ router.put('/:warehouseName/total-capacity', (req, res) => {
       const { warehouseName } = req.params;
       const { totalCapacity } = req.body;
 
-      console.log(`\n🔧 [API] Updating total capacity for ${warehouseName}: ${totalCapacity}`);
-
       if (typeof totalCapacity !== 'number' || totalCapacity < 0) {
-        console.log(`❌ [API] Invalid totalCapacity value: ${totalCapacity}`);
         return res.status(400).json({ error: 'Invalid totalCapacity value' });
       }
-
-      console.log(`📝 [API] Executing UPDATE query for ${warehouseName}...`);
 
       // Update or insert total_capacity - ensure bins_used and available_bins are preserved
       const result = await pool.query(
@@ -104,11 +99,7 @@ router.put('/:warehouseName/total-capacity', (req, res) => {
         [warehouseName, totalCapacity]
       );
 
-      console.log(`✅ [API] Query executed. Rows affected: ${result.rowCount}`);
-      console.log(`📊 [API] Returned data:`, JSON.stringify(result.rows[0]));
-
       if (!result.rows || result.rows.length === 0) {
-        console.log(`⚠️ [API] WARNING: Query returned no rows!`);
         return res.status(500).json({ error: 'Failed to update: no rows returned' });
       }
 
@@ -117,9 +108,7 @@ router.put('/:warehouseName/total-capacity', (req, res) => {
         data: result.rows[0]
       });
     } catch (error) {
-      console.error(`\n❌ [API] ERROR updating total capacity:`, error);
-      console.error(`📋 [API] Error details:`, error.message);
-      console.error(`🔍 [API] Error code:`, error.code);
+      console.error('Error updating total capacity:', error);
       return res.status(500).json({
         error: 'Failed to update total capacity',
         details: error.message,
@@ -127,7 +116,7 @@ router.put('/:warehouseName/total-capacity', (req, res) => {
       });
     }
   })().catch(err => {
-    console.error('[API] UNHANDLED ERROR in PUT route:', err);
+    console.error('Unhandled error in PUT route:', err);
     if (!res.headersSent) {
       res.status(500).json({ error: 'Internal server error' });
     }
@@ -143,14 +132,9 @@ router.put('/:warehouseName/available-bins', (req, res) => {
       const { warehouseName } = req.params;
       const { availableBins } = req.body;
 
-      console.log(`\n🔧 [API] Updating available bins for ${warehouseName}: ${availableBins}`);
-
       if (typeof availableBins !== 'number' || availableBins < 0) {
-        console.log(`❌ [API] Invalid availableBins value: ${availableBins}`);
         return res.status(400).json({ error: 'Invalid availableBins value' });
       }
-
-      console.log(`📝 [API] Executing UPDATE query for ${warehouseName}...`);
 
       // Update or insert available_bins - ensure bins_used is preserved
       // Using $1 for warehouse_name (text) and $2 for availableBins (number)
@@ -163,11 +147,7 @@ router.put('/:warehouseName/available-bins', (req, res) => {
         [warehouseName, availableBins]
       );
 
-      console.log(`✅ [API] Query executed. Rows affected: ${result.rowCount}`);
-      console.log(`📊 [API] Returned data:`, JSON.stringify(result.rows[0]));
-
       if (!result.rows || result.rows.length === 0) {
-        console.log(`⚠️ [API] WARNING: Query returned no rows!`);
         return res.status(500).json({ error: 'Failed to update: no rows returned' });
       }
 
@@ -176,9 +156,7 @@ router.put('/:warehouseName/available-bins', (req, res) => {
         data: result.rows[0]
       });
     } catch (error) {
-      console.error(`\n❌ [API] ERROR updating available bins:`, error);
-      console.error(`📋 [API] Error details:`, error.message);
-      console.error(`🔍 [API] Error code:`, error.code);
+      console.error('Error updating available bins:', error);
       return res.status(500).json({
         error: 'Failed to update available bins',
         details: error.message,
@@ -186,7 +164,7 @@ router.put('/:warehouseName/available-bins', (req, res) => {
       });
     }
   })().catch(err => {
-    console.error('[API] UNHANDLED ERROR in PUT route:', err);
+    console.error('Unhandled error in PUT route:', err);
     if (!res.headersSent) {
       res.status(500).json({ error: 'Internal server error' });
     }
@@ -241,14 +219,9 @@ router.put('/:warehouseName', async (req, res) => {
     const { warehouseName } = req.params;
     const { binsUsed } = req.body;
 
-    console.log(`\n🔧 [API] Updating bins used for ${warehouseName}: ${binsUsed}`);
-
     if (typeof binsUsed !== 'number' || binsUsed < 0) {
-      console.log(`❌ [API] Invalid binsUsed value: ${binsUsed}`);
       return res.status(400).json({ error: 'Invalid binsUsed value' });
     }
-
-    console.log(`📝 [API] Executing UPDATE query for ${warehouseName}...`);
 
     // Simple update without authentication for now
     const result = await pool.query(
@@ -260,11 +233,7 @@ router.put('/:warehouseName', async (req, res) => {
       [warehouseName, binsUsed]
     );
 
-    console.log(`✅ [API] Query executed. Rows affected: ${result.rowCount}`);
-    console.log(`📊 [API] Returned data:`, JSON.stringify(result.rows[0]));
-
     if (!result.rows || result.rows.length === 0) {
-      console.log(`⚠️ [API] WARNING: Query returned no rows!`);
       return res.status(500).json({ error: 'Failed to update: no rows returned' });
     }
 
@@ -273,9 +242,7 @@ router.put('/:warehouseName', async (req, res) => {
       data: result.rows[0]
     });
   } catch (error) {
-    console.error(`\n❌ [API] ERROR updating bins used for ${warehouseName}:`, error);
-    console.error(`📋 [API] Error details:`, error.message);
-    console.error(`🔍 [API] Error code:`, error.code);
+    console.error('Error updating bins used:', error);
     res.status(500).json({
       error: 'Failed to update warehouse capacity',
       details: error.message,

@@ -193,7 +193,6 @@ export class ExcelProcessor {
   // ---- main ---------------------------------------------------------------
   static parseExcelFile(file) {
     return new Promise((resolve, reject) => {
-      console.log('ExcelProcessor v2.3 – parsing:', file.name);
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
@@ -202,7 +201,6 @@ export class ExcelProcessor {
           const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1 });
           const headers = aoa[0] || [];
           const rows = aoa.slice(1);
-          console.log('Headers:', headers);
 
           const formatted = rows.map((row) => {
             const o = {};
@@ -211,10 +209,8 @@ export class ExcelProcessor {
           });
 
           const palletQtyHeader = this._detectPalletQtyHeader(headers);
-          console.log('Detected Pallet Qty header:', palletQtyHeader ?? '(none, using fallback)');
 
           const shipments = this.convertToShipments(formatted, palletQtyHeader);
-          console.log('Converted shipments:', shipments.length);
           resolve(shipments);
         } catch (err) {
           console.error('ExcelProcessor: Error', err);
@@ -228,7 +224,6 @@ export class ExcelProcessor {
 
   static parseExcelFileWithValidation(file) {
     return new Promise((resolve, reject) => {
-      console.log('ExcelProcessor v2.3 – parsing with validation:', file.name);
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
@@ -237,7 +232,6 @@ export class ExcelProcessor {
           const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1 });
           const headers = aoa[0] || [];
           const rows = aoa.slice(1);
-          console.log('Headers:', headers);
 
           const formatted = rows.map((row) => {
             const o = {};
@@ -247,7 +241,6 @@ export class ExcelProcessor {
 
           // Validate data before conversion
           const { validRows, errors } = this.validateData(formatted);
-          console.log(`Validation: ${validRows.length} valid rows, ${errors.length} errors`);
 
           if (errors.length > 0) {
             // Resolve with validation results, don't reject
@@ -261,7 +254,6 @@ export class ExcelProcessor {
 
           const palletQtyHeader = this._detectPalletQtyHeader(headers);
           const shipments = this.convertToShipments(validRows, palletQtyHeader);
-          console.log('Converted shipments:', shipments.length);
           resolve({
             validRows: shipments,
             errors: [],
@@ -283,10 +275,6 @@ export class ExcelProcessor {
         (palletQtyHeader ? row[palletQtyHeader] : undefined) ??
         row['PALLET QTY'] ?? row['Pallet Qty'] ?? row['PALLETS'] ?? row['Pallet'] ?? row['Pallet Quantity'] ?? row['pallet qty'] ?? row['pallets'];
       const palletQtyValue = this.parseQuantity(palletQtyRaw);
-
-      if (index < 3) {
-        console.log(`Row ${index} Pallet Qty: header="${palletQtyHeader}", raw="${palletQtyRaw}", parsed=${palletQtyValue}`);
-      }
 
       const weekNumber = this.parseWeekNumber(row['WEEK NUMBER'] || row['Week Number']);
       const selectedWeekDate = this.calculateWeekDate(weekNumber);

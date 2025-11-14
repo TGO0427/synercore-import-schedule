@@ -13,8 +13,6 @@ class PDFAnalyzer {
 
   async extractTextFromPDF(filePath) {
     try {
-      console.log(`📄 PDF analysis requested for: ${path.basename(filePath)}`);
-
       // For now, return a mock text that will trigger pattern matching
       // In a real implementation, you'd use a PDF parsing library
       const mockText = `
@@ -39,7 +37,6 @@ class PDFAnalyzer {
         Valid until: 31/12/2024
       `;
 
-      console.log(`📄 Mock text analysis - ${mockText.length} characters`);
       return mockText;
     } catch (error) {
       console.error('Error in PDF analysis:', error);
@@ -48,8 +45,6 @@ class PDFAnalyzer {
   }
 
   extractRatesFromText(text) {
-    console.log('🔍 Analyzing text for rates and shipping information...');
-
     const analysis = {
       prices: [],
       routes: [],
@@ -119,13 +114,6 @@ class PDFAnalyzer {
     // Calculate confidence score
     analysis.confidence = this.calculateConfidence(analysis);
 
-    console.log(`🔍 Analysis complete:
-      - Found ${analysis.prices.length} prices
-      - Found ${analysis.routes.length} routes
-      - Found ${analysis.services.length} services
-      - Found ${analysis.transitTimes.length} transit times
-      - Confidence: ${analysis.confidence}%`);
-
     return analysis;
   }
 
@@ -179,8 +167,6 @@ class PDFAnalyzer {
 
   async analyzePDFQuote(filePath) {
     try {
-      console.log(`🔬 Starting comprehensive analysis of: ${path.basename(filePath)}`);
-
       const text = await this.extractTextFromPDF(filePath);
       const analysis = this.extractRatesFromText(text);
 
@@ -193,7 +179,6 @@ class PDFAnalyzer {
         textLength: text.length
       };
 
-      console.log(`🔬 Analysis complete for ${path.basename(filePath)}`);
       return analysis;
 
     } catch (error) {
@@ -203,8 +188,6 @@ class PDFAnalyzer {
   }
 
   generateComparisonReport(analyses) {
-    console.log(`📊 Generating comparison report for ${analyses.length} quotes...`);
-
     const report = {
       summary: {
         totalQuotes: analyses.length,
@@ -297,12 +280,6 @@ class PDFAnalyzer {
 
     // Generate recommendations
     report.recommendations = this.generateRecommendations(report);
-
-    console.log(`📊 Comparison report generated:
-      - ${report.summary.totalQuotes} quotes analyzed
-      - ${report.summary.totalPricesFound} prices found
-      - ${report.bestPrices.length} competitive prices identified
-      - Average confidence: ${report.summary.averageConfidence}%`);
 
     return report;
   }
