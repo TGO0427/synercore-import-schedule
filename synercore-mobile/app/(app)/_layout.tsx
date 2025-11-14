@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/Colors';
+import { Colors } from '@/constants/theme';
 
 export default function AppLayout() {
   const colorScheme = useColorScheme();
