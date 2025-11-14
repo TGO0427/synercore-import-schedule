@@ -1,8 +1,9 @@
 import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
 
 const TUNNEL_HOST = process.env.VITE_TUNNEL_HOST ?? "";
 
-export default {
+export default defineConfig({
   plugins: [react()],
   server: {
     port: 3002,
@@ -17,7 +18,15 @@ export default {
     proxy: { '/api': { target: 'http://localhost:5001', changeOrigin: true, secure: false } },
     hmr: TUNNEL_HOST ? { protocol: 'wss', host: TUNNEL_HOST, clientPort: 443 } : true
   },
-  build: { outDir: 'dist' }
-}
+  build: {
+    outDir: 'dist',
+    rollupOptions: {
+      input: {
+        main: './index.html',
+        supplier: './supplier.html'
+      }
+    }
+  }
+})
 // Deployment timestamp: 2025-10-06
 
