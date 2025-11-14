@@ -16,7 +16,7 @@ export default function Index() {
         console.log('Auth check:', { isAuthenticated, token: token ? 'exists' : 'none' });
 
         // Route to appropriate screen
-        setInitialRoute(isAuthenticated ? '/(tabs)' : '/login');
+        setInitialRoute(isAuthenticated ? '/(app)' : '/login');
       } catch (error) {
         console.error('Auth check failed:', error);
         setInitialRoute('/login');

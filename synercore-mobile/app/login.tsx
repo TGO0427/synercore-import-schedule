@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { storage } from '@/utils/storage';
+import { apiService } from '@/services/api-service';
 import { MaterialIcons } from '@expo/vector-icons';
 
 export default function LoginScreen() {
@@ -27,24 +28,25 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
-      // Simple demo: just store the token and redirect
-      // In real app, you'd call your backend API here
+      // Validation
       if (!email || !password) {
         setError('Please fill in all fields');
+        setIsLoading(false);
         return;
       }
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Call API
+      const response = await apiService.login(email, password);
 
-      // Store token (in real app, this comes from backend)
-      await storage.setItem('authToken', 'demo-token-' + Date.now());
-      await storage.setItem('user', JSON.stringify({ email, name: 'Demo User' }));
-
-      console.log('Login successful, redirecting to home...');
-
-      // Redirect to home
-      router.replace('/(tabs)');
+      if (response.success) {
+        console.log('Login successful, redirecting to home...');
+        // Redirect to home - use (app) route instead of (tabs)
+        router.replace('/(app)');
+      } else {
+        const errorMessage = response.error || 'Login failed';
+        setError(errorMessage);
+        Alert.alert('Login Error', errorMessage);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
       setError(errorMessage);

@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { storage } from '@/utils/storage';
+import { apiService } from '@/services/api-service';
 import { MaterialIcons } from '@expo/vector-icons';
 
 export default function RegisterScreen() {
@@ -32,30 +32,34 @@ export default function RegisterScreen() {
       // Validation
       if (!name || !email || !password || !confirmPassword) {
         setError('Please fill in all fields');
+        setIsLoading(false);
         return;
       }
 
       if (password !== confirmPassword) {
         setError('Passwords do not match');
+        setIsLoading(false);
         return;
       }
 
       if (password.length < 6) {
         setError('Password must be at least 6 characters');
+        setIsLoading(false);
         return;
       }
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Call API
+      const response = await apiService.register(name, email, password);
 
-      // Store token
-      await storage.setItem('authToken', 'demo-token-' + Date.now());
-      await storage.setItem('user', JSON.stringify({ email, name }));
-
-      console.log('Registration successful, redirecting to home...');
-
-      // Redirect to home
-      router.replace('/(tabs)');
+      if (response.success) {
+        console.log('Registration successful, redirecting to home...');
+        // Redirect to home - use (app) route instead of (tabs)
+        router.replace('/(app)');
+      } else {
+        const errorMessage = response.error || 'Registration failed';
+        setError(errorMessage);
+        Alert.alert('Registration Error', errorMessage);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Registration failed';
       setError(errorMessage);
