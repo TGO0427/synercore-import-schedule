@@ -61,10 +61,6 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
         statusFilter.includes(shipment.latestStatus) ||
         (statusFilter.includes('arrived') && (shipment.latestStatus === ShipmentStatus.ARRIVED_PTA || shipment.latestStatus === ShipmentStatus.ARRIVED_KLM || shipment.latestStatus === ShipmentStatus.ARRIVED_OFFSITE));
 
-      if (statusFilter.includes('planned_airfreight')) {
-        console.log('Filtering for planned_airfreight, shipment status:', shipment.latestStatus, 'matches:', matchesStatus);
-      }
-
       return matchesSearch && matchesStatus;
     });
 

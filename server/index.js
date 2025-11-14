@@ -20,6 +20,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
+import http from 'http';
 
 import shipmentsRouter from './routes/shipments.js';
 import suppliersRouter from './routes/suppliers.js';
@@ -33,6 +34,7 @@ import notificationsRouter from './routes/notifications.js';
 import schedulerAdminRouter from './routes/schedulerAdmin.js';
 import supplierPortalRouter from './routes/supplierPortal.js';
 import { helmetConfig, apiRateLimiter, authRateLimiter, authenticateToken } from './middleware/security.js';
+import socketManager from './websocket/socketManager.js';
 
 // __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -40,6 +42,9 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+
+// Create HTTP server for Socket.io compatibility
+const httpServer = http.createServer(app);
 
 /* ============ CORS - Whitelist allowed origins ============ */
 const allowedOrigins = [
@@ -241,10 +246,19 @@ async function start() {
       // Don't fail startup if scheduler has issues
     }
 
+    // Initialize Socket.io for real-time updates
+    try {
+      socketManager.initialize(httpServer);
+      console.log('✓ WebSocket (Socket.io) initialized');
+    } catch (error) {
+      console.warn('⚠️  Socket.io initialization warning:', error.message);
+      // Don't fail startup if Socket.io has issues, but log them
+    }
+
     isReady = true; // mark ready once init is done
 
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+    httpServer.listen(PORT, () => {
+      console.log(`Server running on port ${PORT} (with WebSocket support)`);
     });
 
     // Optional warm-up so first user hit isn't the initializer:

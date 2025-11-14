@@ -20,8 +20,10 @@ import UserSettings from './components/UserSettings';
 import HelpGuide from './components/HelpGuide';
 import UserManagement from './components/UserManagement';
 import NotificationPreferences from './components/NotificationPreferences';
+import OfflineIndicator from './components/OfflineIndicator';
 import { ExcelProcessor } from './utils/excelProcessor';
 import { Supplier } from './types/supplier';
+import useWebSocket from './hooks/useWebSocket';
 import { computeShipmentAlerts, createCustomAlert } from './utils/alerts';
 import { getApiUrl } from './config/api';
 import { authUtils } from './utils/auth';
@@ -71,9 +73,44 @@ function App() {
   // Notification Preferences state
   const [notificationPrefsOpen, setNotificationPrefsOpen] = useState(false);
 
+  // WebSocket integration
+  const { isConnected: wsConnected, onShipmentUpdate, onDocumentUpload, joinShipment, leaveShipment } = useWebSocket();
+
   // prevent hammering the API during background polling
   const lastFetchRef = useRef({ shipments: 0, suppliers: 0 });
   const FETCH_COOLDOWN = 5000; // 5s
+
+  // ---------- WebSocket real-time updates ----------
+  // Listen for shipment updates and refresh affected shipments
+  useEffect(() => {
+    const unsubscribe = onShipmentUpdate((data) => {
+      setShipments(prev => prev.map(s => {
+        if (s.id === data.shipmentId) {
+          return {
+            ...s,
+            latestStatus: data.status || s.latestStatus,
+            inspectionStatus: data.inspectionStatus || s.inspectionStatus,
+            actualArrivalDate: data.actualArrivalDate || s.actualArrivalDate,
+            ...data.shipment
+          };
+        }
+        return s;
+      }));
+      setLastSyncTime(new Date());
+    });
+
+    return unsubscribe;
+  }, [onShipmentUpdate]);
+
+  // Listen for document uploads
+  useEffect(() => {
+    const unsubscribe = onDocumentUpload((data) => {
+      // Trigger notification about document upload
+      showInfo(`📄 Document uploaded: ${data.document.fileName} for shipment ${data.shipmentId}`);
+    });
+
+    return unsubscribe;
+  }, [onDocumentUpload]);
 
   // ---------- boot ----------
   useEffect(() => {
@@ -100,16 +137,17 @@ function App() {
       }
     }
 
+    // Only poll if WebSocket is not connected (fallback to polling)
     const poll = setInterval(() => {
-      // Only poll if authenticated
-      if (authUtils.isAuthenticated()) {
+      // Only poll if authenticated and WebSocket not connected
+      if (authUtils.isAuthenticated() && !wsConnected) {
         fetchShipments(true); // background sync
         fetchSuppliers(true);
       }
     }, 30000);
 
     return () => clearInterval(poll);
-  }, []);
+  }, [wsConnected]);
 
   // ---------- notifications ----------
   const addNotification = (type, message, options = {}) =>
@@ -751,6 +789,7 @@ function App() {
 
   return (
     <div className="container">
+      <OfflineIndicator />
       <div className="sidebar">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h2>Import Supply Chain Management</h2>
