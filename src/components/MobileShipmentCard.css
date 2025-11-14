@@ -1,0 +1,491 @@
+/* Mobile Shipment Card Styles */
+
+/* Shipment Card List Container */
+.shipment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+}
+
+.shipment-list.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Loading State */
+.loading-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  font-size: 16px;
+  color: #666;
+  text-align: center;
+  min-height: 200px;
+}
+
+.loading-spinner::before {
+  content: '';
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  margin-right: 12px;
+  border: 3px solid #e0e0e0;
+  border-top-color: #003d82;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  min-height: 300px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 1px dashed #e0e0e0;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-message {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.empty-hint {
+  font-size: 14px;
+  color: #999;
+  margin: 0;
+}
+
+/* ========== COMPACT CARD LAYOUT ========== */
+.shipment-card-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  min-height: 56px;
+  touch-action: manipulation;
+}
+
+.shipment-card-compact:active {
+  background: #f9f9f9;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card-header-compact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.card-order-ref {
+  font-weight: 600;
+  color: #333;
+  font-size: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-view-btn {
+  padding: 8px 16px;
+  background: #003d82;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-height: auto;
+  min-width: auto;
+}
+
+.card-view-btn:active {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+.card-view-btn:focus-visible {
+  outline: 2px solid #003d82;
+  outline-offset: 2px;
+}
+
+/* ========== FULL CARD LAYOUT ========== */
+.shipment-card {
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  transition: all 0.2s ease;
+  touch-action: manipulation;
+}
+
+.shipment-card:active {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Card Header */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  background: #f9f9f9;
+}
+
+.card-title-section {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 4px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-product {
+  font-size: 13px;
+  color: #666;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Status Badge */
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Card Body */
+.card-body {
+  padding: 12px;
+  flex: 1;
+}
+
+/* Info Grid */
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.info-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-value {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+/* Dates Section */
+.dates-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+  font-size: 12px;
+}
+
+.date-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.date-label {
+  color: #666;
+  font-weight: 500;
+}
+
+.date-value {
+  color: #333;
+  font-weight: 600;
+}
+
+/* Card Footer */
+.card-footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid #eee;
+  background: #f9f9f9;
+}
+
+.card-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: auto;
+  min-width: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.card-btn:active {
+  transform: scale(0.98);
+}
+
+.card-btn:focus-visible {
+  outline: 2px solid;
+  outline-offset: 2px;
+}
+
+.card-btn.primary {
+  background: #003d82;
+  color: white;
+  outline-color: #003d82;
+}
+
+.card-btn.primary:hover {
+  background: #002856;
+}
+
+.card-btn.secondary {
+  background: #f0f0f0;
+  color: #003d82;
+  border: 1px solid #ddd;
+  outline-color: #003d82;
+}
+
+.card-btn.secondary:hover {
+  background: #e8e8e8;
+}
+
+/* ========== RESPONSIVE ADJUSTMENTS ========== */
+
+/* Small devices (576px and up) */
+@media (min-width: 576px) {
+  .shipment-list {
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .shipment-card {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .card-header {
+    padding: 16px;
+  }
+
+  .card-body {
+    padding: 16px;
+  }
+
+  .card-footer {
+    padding: 16px;
+  }
+
+  .info-grid {
+    gap: 16px;
+  }
+
+  .card-btn {
+    padding: 12px 20px;
+  }
+}
+
+/* Tablets (768px and up) */
+@media (min-width: 768px) {
+  .shipment-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    padding: 20px;
+  }
+
+  .shipment-card {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .info-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .card-footer {
+    flex-direction: row;
+  }
+
+  .card-btn {
+    flex: 0 1 auto;
+    min-width: 120px;
+  }
+}
+
+/* Desktops (1024px and up) */
+@media (min-width: 1024px) {
+  .shipment-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    padding: 24px;
+  }
+
+  .shipment-card {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  }
+
+  .card-header {
+    padding: 20px;
+  }
+
+  .card-body {
+    padding: 20px;
+  }
+
+  .card-footer {
+    padding: 20px;
+  }
+
+  .info-grid {
+    gap: 20px;
+  }
+
+  .card-btn {
+    padding: 12px 24px;
+  }
+}
+
+/* Extra Large (1440px and up) */
+@media (min-width: 1440px) {
+  .shipment-list {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 28px;
+    padding: 28px;
+  }
+
+  .shipment-card {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  }
+}
+
+/* ========== ACCESSIBILITY ========== */
+
+/* Focus visible states */
+.shipment-card:focus-within {
+  box-shadow: 0 0 0 3px rgba(0, 61, 130, 0.2);
+}
+
+.card-btn:focus-visible {
+  outline-width: 3px;
+  outline-offset: -3px;
+}
+
+/* High contrast mode */
+@media (prefers-contrast: more) {
+  .status-badge {
+    border: 2px solid currentColor;
+  }
+
+  .card-btn {
+    border-width: 2px;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .shipment-card,
+  .card-btn,
+  .status-badge {
+    transition: none;
+  }
+
+  @keyframes spin {
+    to {
+      transform: none;
+    }
+  }
+}
+
+/* Print styles */
+@media print {
+  .card-footer {
+    display: none;
+  }
+
+  .shipment-list {
+    gap: 12px;
+    padding: 0;
+  }
+
+  .shipment-card {
+    box-shadow: none;
+    border: 1px solid #333;
+    page-break-inside: avoid;
+  }
+}
