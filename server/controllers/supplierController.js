@@ -156,35 +156,58 @@ export class SupplierController {
       const supplierId = req.user.id; // From JWT token
       const { status, limit = 50, offset = 0 } = req.query;
 
+      // Get supplier name from suppliers table for matching
+      const supplierNameResult = await pool.query(
+        'SELECT name FROM suppliers WHERE id = $1',
+        [supplierId]
+      );
+
+      let supplierName = '';
+      if (supplierNameResult.rows.length > 0) {
+        supplierName = supplierNameResult.rows[0].name;
+      }
+
+      // Get all shipments for this supplier by matching supplier names (case-insensitive)
+      // Uses flexible matching: LIKE for partial matches and exact name match
       let query = `
-        SELECT id, orderRef, productName, supplier, quantity, palletQty,
-               latestStatus, expectedArrivalDate, finalPod, receivingWarehouse,
-               weekNumber, incoterm, created_at, updated_at
-        FROM shipments
-        WHERE supplier = (SELECT name FROM suppliers WHERE id = $1)
+        SELECT s.id, s.order_ref as "orderRef", s.product_name as "productName", s.supplier,
+               s.quantity, s.pallet_qty as "palletQty",
+               s.latest_status as "latestStatus", s.final_pod as "finalPod",
+               s.receiving_warehouse as "receivingWarehouse",
+               s.week_number as "weekNumber", s.incoterm, s.created_at, s.updated_at
+        FROM shipments s
+        WHERE s.supplier IS NOT NULL
+        AND (
+          LOWER(s.supplier) LIKE LOWER('%' || $1 || '%')
+          OR LOWER(s.supplier) = LOWER($2)
+        )
       `;
-      const params = [supplierId];
+      const params = [supplierName, supplierName];
 
       // Filter by status if provided
       if (status) {
-        query += ` AND latestStatus = $${params.length + 1}`;
+        query += ` AND s.latest_status = $${params.length + 1}`;
         params.push(status);
       }
 
-      query += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+      query += ` ORDER BY s.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
       params.push(parseInt(limit), parseInt(offset));
 
       const result = await pool.query(query, params);
 
       // Get total count
       let countQuery = `
-        SELECT COUNT(*) FROM shipments
-        WHERE supplier = (SELECT name FROM suppliers WHERE id = $1)
+        SELECT COUNT(*) FROM shipments s
+        WHERE s.supplier IS NOT NULL
+        AND (
+          LOWER(s.supplier) LIKE LOWER('%' || $1 || '%')
+          OR LOWER(s.supplier) = LOWER($2)
+        )
       `;
-      const countParams = [supplierId];
+      const countParams = [supplierName, supplierName];
 
       if (status) {
-        countQuery += ` AND latestStatus = $${countParams.length + 1}`;
+        countQuery += ` AND s.latest_status = $${countParams.length + 1}`;
         countParams.push(status);
       }
 
@@ -211,15 +234,30 @@ export class SupplierController {
       const { shipmentId } = req.params;
       const supplierId = req.user.id;
 
-      // Verify supplier owns this shipment
+      // Get supplier name from suppliers table for matching
+      const supplierNameResult = await pool.query(
+        'SELECT name FROM suppliers WHERE id = $1',
+        [supplierId]
+      );
+
+      let supplierName = '';
+      if (supplierNameResult.rows.length > 0) {
+        supplierName = supplierNameResult.rows[0].name;
+      }
+
+      // Verify supplier owns this shipment (with flexible supplier name matching)
       const shipmentResult = await pool.query(
         `SELECT * FROM shipments s
-         WHERE s.id = $1 AND s.supplier = (SELECT name FROM suppliers WHERE id = $2)`,
-        [shipmentId, supplierId]
+         WHERE s.id = $1
+         AND (
+           LOWER(s.supplier) LIKE LOWER('%' || $2 || '%')
+           OR LOWER(s.supplier) = LOWER($3)
+         )`,
+        [shipmentId, supplierName, supplierName]
       );
 
       if (shipmentResult.rows.length === 0) {
-        return res.status(404).json({ error: 'Shipment not found' });
+        return res.status(404).json({ error: 'Shipment not found or not authorized' });
       }
 
       const shipment = shipmentResult.rows[0];
@@ -266,11 +304,25 @@ export class SupplierController {
         return res.status(400).json({ error: 'Invalid document type' });
       }
 
-      // Verify supplier owns this shipment
+      // Get supplier name from suppliers table for matching
+      const supplierNameResult = await pool.query(
+        'SELECT name FROM suppliers WHERE id = $1',
+        [supplierId]
+      );
+
+      let supplierName = '';
+      if (supplierNameResult.rows.length > 0) {
+        supplierName = supplierNameResult.rows[0].name;
+      }
+
+      // Verify supplier owns this shipment (with flexible supplier name matching)
       const shipmentCheck = await pool.query(
         `SELECT id FROM shipments s
-         WHERE s.id = $1 AND s.supplier = (SELECT name FROM suppliers WHERE id = $2)`,
-        [shipmentId, supplierId]
+         WHERE s.id = $1 AND (
+           LOWER(s.supplier) LIKE LOWER('%' || $2 || '%')
+           OR LOWER(s.supplier) = LOWER($3)
+         )`,
+        [shipmentId, supplierName, supplierName]
       );
 
       if (shipmentCheck.rows.length === 0) {
@@ -325,18 +377,32 @@ export class SupplierController {
     try {
       const supplierId = req.user.id;
 
-      // Get supplier's shipment statistics
+      // Get supplier name from suppliers table for matching
+      const supplierNameResult = await pool.query(
+        'SELECT name FROM suppliers WHERE id = $1',
+        [supplierId]
+      );
+
+      let supplierName = '';
+      if (supplierNameResult.rows.length > 0) {
+        supplierName = supplierNameResult.rows[0].name;
+      }
+
+      // Get supplier's shipment statistics (with flexible supplier name matching)
       const statsResult = await pool.query(
         `SELECT
            COUNT(*) as total_shipments,
-           SUM(CASE WHEN latestStatus = 'received' THEN 1 ELSE 0 END) as delivered,
-           SUM(CASE WHEN latestStatus IN ('arrived_pta', 'arrived_klm', 'arrived_offsite') THEN 1 ELSE 0 END) as arrived,
-           SUM(CASE WHEN latestStatus = 'stored' THEN 1 ELSE 0 END) as stored,
-           SUM(CASE WHEN palletQty IS NOT NULL THEN palletQty ELSE 0 END) as total_pallets,
+           SUM(CASE WHEN latest_status = 'received' THEN 1 ELSE 0 END) as delivered,
+           SUM(CASE WHEN latest_status IN ('arrived_pta', 'arrived_klm', 'arrived_offsite') THEN 1 ELSE 0 END) as arrived,
+           SUM(CASE WHEN latest_status = 'stored' THEN 1 ELSE 0 END) as stored,
+           SUM(CASE WHEN pallet_qty IS NOT NULL THEN pallet_qty ELSE 0 END) as total_pallets,
            SUM(CASE WHEN quantity IS NOT NULL THEN quantity ELSE 0 END) as total_quantity
          FROM shipments
-         WHERE supplier = (SELECT name FROM suppliers WHERE id = $1)`,
-        [supplierId]
+         WHERE (
+           LOWER(supplier) LIKE LOWER('%' || $1 || '%')
+           OR LOWER(supplier) = LOWER($2)
+         )`,
+        [supplierName, supplierName]
       );
 
       // Get document upload statistics
@@ -350,14 +416,17 @@ export class SupplierController {
         [supplierId]
       );
 
-      // Get shipments by status
+      // Get shipments by status (with flexible supplier name matching)
       const statusResult = await pool.query(
-        `SELECT latestStatus, COUNT(*) as count
+        `SELECT latest_status as "latestStatus", COUNT(*) as count
          FROM shipments
-         WHERE supplier = (SELECT name FROM suppliers WHERE id = $1)
-         GROUP BY latestStatus
+         WHERE (
+           LOWER(supplier) LIKE LOWER('%' || $1 || '%')
+           OR LOWER(supplier) = LOWER($2)
+         )
+         GROUP BY latest_status
          ORDER BY count DESC`,
-        [supplierId]
+        [supplierName, supplierName]
       );
 
       res.json({
