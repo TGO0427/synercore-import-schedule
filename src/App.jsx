@@ -788,7 +788,7 @@ function App() {
 
   // Show Supplier Portal if requested
   if (showSupplierPortal) {
-    return <SupplierLogin />;
+    return <SupplierLogin onClose={() => setShowSupplierPortal(false)} />;
   }
 
   const currentUser = authUtils.getUser();
