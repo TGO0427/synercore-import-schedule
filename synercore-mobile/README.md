@@ -1,50 +1,205 @@
-# Welcome to your Expo app 👋
+# Synercore Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A production-ready React Native/Expo application for shipment management with cross-platform support (Web, iOS, Android).
 
-## Get started
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Quick Start
 
 ```bash
-npm run reset-project
+# Install dependencies
+npm install
+
+# Start development server
+npm run web          # Web on http://localhost:8081
+npm start            # Expo Go (for mobile testing)
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Features
 
-## Learn more
+✅ **Authentication**
+- Login/Register with email & password
+- Token-based auth with JWT
+- Persistent session management
 
-To learn more about developing your project with Expo, look at the following resources:
+✅ **Navigation**
+- Bottom tab navigation
+- 5 main screens (Dashboard, Shipments, Products, Warehouse, Profile)
+- Smooth screen transitions
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+✅ **Shipment Tracking**
+- List view with status indicators
+- Detail view with tracking timeline
+- Pull-to-refresh functionality
+- Origin/destination route visualization
 
-## Join the community
+✅ **Inventory Management**
+- Product catalog display
+- Warehouse capacity tracking
+- Zone-based storage management
 
-Join our community of developers creating universal apps.
+✅ **User Management**
+- Profile display
+- Settings preferences
+- Logout functionality
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+✅ **Cross-Platform**
+- Works on Web, iOS, and Android
+- Responsive design
+- Material Design UI
+
+## Project Structure
+
+```
+app/                    # Expo Router pages
+├── _layout.tsx        # Root navigation
+├── index.tsx          # Auth redirect
+├── login.tsx          # Login screen
+├── register.tsx       # Register screen
+└── (app)/             # Main app with tabs
+    ├── index.tsx      # Dashboard
+    ├── products.tsx   # Products
+    ├── warehouse.tsx  # Warehouse
+    ├── profile.tsx    # Profile
+    └── shipments/     # Shipments feature
+
+components/            # Reusable UI components
+config/               # Configuration
+services/             # API client
+utils/                # Utilities (storage, alerts)
+constants/            # Theme & colors
+hooks/                # Custom React hooks
+```
+
+## API Configuration
+
+Update `config/api.ts` with your backend URL:
+
+```typescript
+export const BASE_URL = 'https://your-api.com';
+```
+
+Expected response format for login/register:
+```json
+{
+  "token": "jwt-token-string",
+  "user": {
+    "id": "user-id",
+    "name": "User Name",
+    "email": "user@example.com"
+  }
+}
+```
+
+## Available Scripts
+
+```bash
+npm run web           # Start web dev server
+npm start             # Start Expo Go
+npm run build:web     # Build for web
+npm run test          # Run tests
+npm run lint          # Run linter
+```
+
+## Building for Production
+
+### Web
+```bash
+npm run build:web
+```
+
+### iOS/Android
+```bash
+# Requires Expo Paid Account
+eas build --platform ios
+eas build --platform android
+```
+
+## Documentation
+
+- [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) - Full deployment instructions
+- [../REACT_NATIVE_QUICK_START.md](../REACT_NATIVE_QUICK_START.md) - Quick setup
+- [../REACT_NATIVE_IMPLEMENTATION_GUIDE.md](../REACT_NATIVE_IMPLEMENTATION_GUIDE.md) - Implementation details
+- [../REACT_NATIVE_COMPONENTS.md](../REACT_NATIVE_COMPONENTS.md) - Component library
+- [../REACT_NATIVE_CUSTOM_HOOKS.md](../REACT_NATIVE_CUSTOM_HOOKS.md) - Custom hooks
+
+## Authentication Flow
+
+1. User enters credentials on login/register screen
+2. API call to backend (`POST /api/auth/login` or `POST /api/auth/register`)
+3. Backend returns token and user data
+4. Token stored in secure storage
+5. User redirected to main app (Dashboard)
+6. On app restart, auth check loads previous session
+
+## Technologies
+
+- **React Native** - Cross-platform mobile framework
+- **Expo** - Development platform
+- **Expo Router** - File-based routing
+- **TypeScript** - Type safety
+- **React Navigation** - Navigation library
+- **AsyncStorage** - Secure storage (mobile)
+- **Material Design Icons** - UI icons
+
+## Browser Support
+
+- Chrome/Edge 90+
+- Firefox 88+
+- Safari 14+
+
+## Performance
+
+- Code splitting by route
+- Lazy loading of screens
+- Optimized list rendering
+- Efficient state management
+
+## Security
+
+- HTTPS only for production
+- Token-based authentication
+- Secure token storage
+- Input validation
+- CORS configuration
+
+## Troubleshooting
+
+### Port already in use
+```bash
+# Kill process on port 8081
+lsof -i :8081 | grep LISTEN | awk '{print $2}' | xargs kill -9
+```
+
+### Clear cache
+```bash
+npm start -- --clear
+```
+
+### Reinstall dependencies
+```bash
+rm -rf node_modules && npm install
+```
+
+## Support
+
+For issues or questions:
+1. Check the [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)
+2. Review the troubleshooting section
+3. Check Expo documentation: https://docs.expo.dev
+
+## License
+
+All rights reserved © 2025 Synercore
+
+## Version
+
+Current: 1.0.0
+Last Updated: 2025-11-14
+Status: Production Ready
+
+---
+
+**Next Steps:**
+1. Update `config/api.ts` with your backend URL
+2. Run `npm install`
+3. Test with `npm run web`
+4. Build for production
