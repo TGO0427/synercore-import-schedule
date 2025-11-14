@@ -51,11 +51,6 @@ function authFetch(url, options = {}) {
 }
 
 function App() {
-  // Route to Supplier Portal if URL contains /supplier
-  if (window.location.pathname.startsWith('/supplier')) {
-    return <SupplierLogin />;
-  }
-
   const [shipments, setShipments] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -65,6 +60,7 @@ function App() {
   const [username, setUsername] = useState('');
   const [lastSyncTime, setLastSyncTime] = useState(null);
   const [statusFilter, setStatusFilter] = useState(null); // null = no filter
+  const [showSupplierPortal, setShowSupplierPortal] = useState(false); // New state for supplier portal
 
   // Alert Hub state
   const [alertHubOpen, setAlertHubOpen] = useState(false);
@@ -790,6 +786,11 @@ function App() {
     return <LoginPage onLogin={handleLogin} />;
   }
 
+  // Show Supplier Portal if requested
+  if (showSupplierPortal) {
+    return <SupplierLogin />;
+  }
+
   const currentUser = authUtils.getUser();
   const isAdmin = currentUser?.role === 'admin';
 
@@ -817,6 +818,9 @@ function App() {
           <li><button className={activeView === 'rates' ? 'active' : ''} onClick={() => setActiveView('rates')}>💰 Rates & Quotes</button></li>
           <li><button className={activeView === 'stored' ? 'active' : ''} onClick={() => setActiveView('stored')}>🏪 Warehouse Stored</button></li>
           <li style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
+            <button onClick={() => setShowSupplierPortal(true)} style={{ width: '100%', textAlign: 'left', backgroundColor: '#1e7e8c' }} title="Access the supplier portal">🏢 Supplier Portal</button>
+          </li>
+          <li>
             <button onClick={() => setHelpOpen(true)} style={{ width: '100%', textAlign: 'left' }}>📚 Help & Guide</button>
           </li>
           <li>
