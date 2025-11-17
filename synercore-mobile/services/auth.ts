@@ -1,178 +1,342 @@
+import * as SecureStore from 'expo-secure-store';
+import axios, { AxiosInstance, AxiosError } from 'axios';
 import { storage } from '@/utils/storage';
-import { apiService } from './api-service';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+const TOKEN_KEY = 'authToken';
+const USER_KEY = 'authUser';
 
 export interface User {
   id: string;
-  name: string;
   email: string;
+  name: string;
+  role?: 'user' | 'admin' | 'supplier';
+  avatar?: string;
+  createdAt?: string;
 }
 
 export interface AuthResponse {
   token: string;
   user: User;
+  expiresIn?: number;
+}
+
+interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+interface RegisterRequest {
+  email: string;
+  password: string;
+  name: string;
 }
 
 class AuthService {
-  private user: User | null = null;
+  private api: AxiosInstance;
   private token: string | null = null;
+  private user: User | null = null;
+  private refreshTimeout: NodeJS.Timeout | null = null;
 
-  /**
-   * Initialize auth service by loading stored user and token
-   */
+  constructor() {
+    this.api = axios.create({
+      baseURL: API_URL,
+      timeout: 10000,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    this.setupInterceptors();
+  }
+
+  private setupInterceptors() {
+    // Request interceptor - add auth header
+    this.api.interceptors.request.use(
+      async (config: any) => {
+        const token = this.token || (await this.getToken());
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+      },
+      (error: AxiosError) => Promise.reject(error)
+    );
+
+    // Response interceptor - handle 401 and token refresh
+    this.api.interceptors.response.use(
+      (response: any) => response,
+      async (error: AxiosError) => {
+        const originalRequest = error.config as any;
+
+        // Token expired - try to refresh
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true;
+
+          try {
+            const newToken = await this.refreshToken();
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            return this.api(originalRequest);
+          } catch (refreshError) {
+            // Refresh failed - logout
+            await this.logout();
+            return Promise.reject(refreshError);
+          }
+        }
+
+        return Promise.reject(error);
+      }
+    );
+  }
+
   async initialize(): Promise<void> {
     try {
-      const [storedToken, storedUserJson] = await Promise.all([
-        storage.getItem('authToken'),
-        storage.getItem('user'),
-      ]);
+      const token = await this.getToken();
+      const user = await this.getUser();
 
-      this.token = storedToken;
-      if (storedUserJson) {
-        this.user = JSON.parse(storedUserJson);
+      if (token && user) {
+        this.token = token;
+        this.user = user;
+        this.scheduleTokenRefresh();
       }
     } catch (error) {
       console.error('Failed to initialize auth:', error);
-      this.user = null;
-      this.token = null;
     }
   }
 
-  /**
-   * Get current user
-   */
-  async getUser(): Promise<User | null> {
-    if (!this.user && this.token) {
-      // Try to restore from storage
-      try {
-        const userJson = await storage.getItem('user');
-        if (userJson) {
-          this.user = JSON.parse(userJson);
-        }
-      } catch (error) {
-        console.error('Failed to get user:', error);
-      }
-    }
-    return this.user;
-  }
-
-  /**
-   * Get current token
-   */
-  async getToken(): Promise<string | null> {
-    if (!this.token) {
-      try {
-        this.token = await storage.getItem('authToken');
-      } catch (error) {
-        console.error('Failed to get token:', error);
-      }
-    }
-    return this.token;
-  }
-
-  /**
-   * Check if user is authenticated
-   */
-  async isAuthenticated(): Promise<boolean> {
-    const token = await this.getToken();
-    return !!token;
-  }
-
-  /**
-   * Login with email and password
-   */
   async login(email: string, password: string): Promise<AuthResponse> {
-    const response = await apiService.login(email, password);
+    try {
+      const response = await this.api.post<AuthResponse>('/auth/login', {
+        email,
+        password,
+      });
 
-    if (response.success && response.data) {
-      this.token = response.data.token;
-      this.user = response.data.user;
+      const { token, user } = response.data;
 
-      // Store in local storage
-      await Promise.all([
-        storage.setItem('authToken', response.data.token),
-        storage.setItem('user', JSON.stringify(response.data.user)),
-      ]);
+      this.token = token;
+      this.user = user;
+
+      // Store securely
+      await this.storeToken(token);
+      await this.storeUser(user);
+
+      // Schedule token refresh
+      this.scheduleTokenRefresh(response.data.expiresIn);
 
       return response.data;
+    } catch (error) {
+      throw this.handleError(error);
     }
-
-    throw new Error(response.error || 'Login failed');
   }
 
-  /**
-   * Register new account
-   */
   async register(name: string, email: string, password: string): Promise<AuthResponse> {
-    const response = await apiService.register(name, email, password);
+    try {
+      const response = await this.api.post<AuthResponse>('/auth/register', {
+        name,
+        email,
+        password,
+      });
 
-    if (response.success && response.data) {
-      this.token = response.data.token;
-      this.user = response.data.user;
+      const { token, user } = response.data;
 
-      // Store in local storage
-      await Promise.all([
-        storage.setItem('authToken', response.data.token),
-        storage.setItem('user', JSON.stringify(response.data.user)),
-      ]);
+      this.token = token;
+      this.user = user;
+
+      // Store securely
+      await this.storeToken(token);
+      await this.storeUser(user);
+
+      // Schedule token refresh
+      this.scheduleTokenRefresh(response.data.expiresIn);
 
       return response.data;
+    } catch (error) {
+      throw this.handleError(error);
     }
-
-    throw new Error(response.error || 'Registration failed');
   }
 
-  /**
-   * Logout user
-   */
   async logout(): Promise<void> {
     try {
-      // Call logout endpoint if backend requires it
-      // await apiService.logout();
+      // Call logout endpoint
+      await this.api.post('/auth/logout');
     } catch (error) {
-      console.error('Logout API error:', error);
+      console.warn('Logout endpoint failed:', error);
     } finally {
-      // Clear local state
-      this.user = null;
+      // Clear local state regardless of API call result
       this.token = null;
+      this.user = null;
 
       // Clear storage
-      await Promise.all([
-        storage.removeItem('authToken'),
-        storage.removeItem('user'),
-      ]);
+      try {
+        await SecureStore.deleteItemAsync(TOKEN_KEY);
+        await SecureStore.deleteItemAsync(USER_KEY);
+      } catch (error) {
+        console.warn('Failed to clear secure storage:', error);
+      }
+
+      // Also clear regular storage as fallback
+      await storage.removeItem('authToken');
+      await storage.removeItem('user');
+
+      // Cancel token refresh
+      if (this.refreshTimeout) {
+        clearTimeout(this.refreshTimeout);
+      }
     }
   }
 
-  /**
-   * Refresh auth token (if backend supports it)
-   */
-  async refreshToken(): Promise<string | null> {
+  async refreshToken(): Promise<string> {
     try {
-      // This would call your refresh endpoint
-      // For now, just return current token
-      return this.token;
+      const response = await this.api.post<{ token: string }>('/auth/refresh');
+      const { token } = response.data;
+
+      this.token = token;
+
+      // Store token securely
+      await this.storeToken(token);
+
+      // Reschedule refresh
+      this.scheduleTokenRefresh();
+
+      return token;
     } catch (error) {
-      console.error('Failed to refresh token:', error);
+      // Refresh failed - logout
       await this.logout();
+      throw this.handleError(error);
+    }
+  }
+
+  async getToken(): Promise<string | null> {
+    try {
+      if (this.token) return this.token;
+
+      // Try SecureStore first
+      let token: string | null = null;
+
+      try {
+        token = await SecureStore.getItemAsync(TOKEN_KEY);
+      } catch (error) {
+        console.warn('Failed to get token from SecureStore:', error);
+        // Fallback to regular storage
+        token = await storage.getItem('authToken');
+      }
+
+      if (token) {
+        this.token = token;
+      }
+
+      return token || null;
+    } catch (error) {
+      console.error('Failed to get token:', error);
       return null;
     }
   }
 
-  /**
-   * Update user profile
-   */
-  async updateProfile(updates: Partial<User>): Promise<User> {
-    if (!this.user) {
-      throw new Error('User not authenticated');
+  async getUser(): Promise<User | null> {
+    try {
+      if (this.user) return this.user;
+
+      // Try SecureStore first
+      let userJson: string | null = null;
+
+      try {
+        userJson = await SecureStore.getItemAsync(USER_KEY);
+      } catch (error) {
+        console.warn('Failed to get user from SecureStore:', error);
+        // Fallback to regular storage
+        userJson = await storage.getItem('user');
+      }
+
+      if (userJson) {
+        this.user = JSON.parse(userJson);
+        return this.user;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Failed to get user:', error);
+      return null;
+    }
+  }
+
+  isAuthenticated(): boolean {
+    return !!this.token && !!this.user;
+  }
+
+  getAuthHeader(): { Authorization?: string } {
+    if (this.token) {
+      return { Authorization: `Bearer ${this.token}` };
+    }
+    return {};
+  }
+
+  private async storeToken(token: string): Promise<void> {
+    try {
+      // Try SecureStore first
+      try {
+        await SecureStore.setItemAsync(TOKEN_KEY, token);
+      } catch (error) {
+        console.warn('Failed to store token in SecureStore:', error);
+        // Fallback to regular storage
+        await storage.setItem('authToken', token);
+      }
+    } catch (error) {
+      console.error('Failed to store token:', error);
+    }
+  }
+
+  private async storeUser(user: User): Promise<void> {
+    try {
+      // Try SecureStore first
+      try {
+        await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+      } catch (error) {
+        console.warn('Failed to store user in SecureStore:', error);
+        // Fallback to regular storage
+        await storage.setItem('user', JSON.stringify(user));
+      }
+    } catch (error) {
+      console.error('Failed to store user:', error);
+    }
+  }
+
+  private scheduleTokenRefresh(expiresIn?: number): void {
+    // Cancel existing timeout
+    if (this.refreshTimeout) {
+      clearTimeout(this.refreshTimeout);
     }
 
-    this.user = { ...this.user, ...updates };
+    // Default to 14 minutes (15 minute token expiry - 1 minute buffer)
+    const refreshIn = ((expiresIn || 900) * 1000) - 60000;
 
-    await storage.setItem('user', JSON.stringify(this.user));
+    this.refreshTimeout = setTimeout(() => {
+      this.refreshToken().catch((error) => {
+        console.error('Automatic token refresh failed:', error);
+      });
+    }, Math.max(refreshIn, 1000)) as unknown as NodeJS.Timeout;
+  }
 
-    return this.user;
+  private handleError(error: any): Error {
+    if (axios.isAxiosError(error)) {
+      if (error.response?.data?.message) {
+        return new Error(error.response.data.message);
+      }
+
+      if (error.response?.status === 401) {
+        return new Error('Invalid email or password');
+      }
+
+      if (error.response?.status === 400) {
+        return new Error('Please check your input and try again');
+      }
+
+      if (error.message === 'Network Error') {
+        return new Error('Network error. Please check your connection');
+      }
+    }
+
+    return new Error(error?.message || 'Authentication failed');
   }
 }
 
-// Export singleton instance
 export const authService = new AuthService();
