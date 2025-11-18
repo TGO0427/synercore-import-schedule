@@ -3,6 +3,7 @@ import { View, FlatList, StyleSheet, TouchableOpacity, Text, ActivityIndicator }
 import { MaterialIcons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
+import { apiService } from '@/services';
 
 interface Product {
   id: string;
@@ -24,39 +25,26 @@ export default function ProductsScreen() {
   const loadProducts = async () => {
     try {
       setIsLoading(true);
-      // Simulate API call - replace with real API
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      console.log('📦 Fetching products from API...');
 
-      const mockProducts: Product[] = [
-        {
-          id: '1',
-          name: 'Laptop Computer',
-          sku: 'PROD-001',
-          quantity: 15,
-          price: 999.99,
-          category: 'Electronics',
-        },
-        {
-          id: '2',
-          name: 'Wireless Mouse',
-          sku: 'PROD-002',
-          quantity: 50,
-          price: 29.99,
-          category: 'Accessories',
-        },
-        {
-          id: '3',
-          name: 'USB-C Cable',
-          sku: 'PROD-003',
-          quantity: 120,
-          price: 14.99,
-          category: 'Cables',
-        },
-      ];
+      // Call real API to get products
+      const response = await apiService.getProducts({}, 1, 100);
+      console.log('✅ Products loaded:', response?.data?.length || 0);
 
-      setProducts(mockProducts);
+      // Map backend response to Product interface if needed
+      const fetchedProducts = (response?.data || []).map((item: any) => ({
+        id: item.id,
+        name: item.name || item.product_name,
+        sku: item.sku,
+        quantity: item.quantity || item.quantity_in_stock,
+        price: item.price || item.unit_price,
+        category: item.category,
+      }));
+
+      setProducts(fetchedProducts);
     } catch (error) {
-      console.error('Failed to load products:', error);
+      console.error('❌ Failed to load products:', error);
+      setProducts([]);
     } finally {
       setIsLoading(false);
     }

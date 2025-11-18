@@ -1,189 +1,155 @@
-import React, { useEffect, useState } from 'react';
-import { View, FlatList, StyleSheet, TouchableOpacity, Text, ActivityIndicator, RefreshControl } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import {
+  View,
+  FlatList,
+  StyleSheet,
+  RefreshControl,
+  Text,
+  TextInput,
+  TouchableOpacity,
+} from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusRefresh, useShipments, useNetworkStatus } from '@/hooks';
+import { Header, LoadingSpinner, EmptyState, ShipmentCard } from '@/components';
 import { MaterialIcons } from '@expo/vector-icons';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
-
-interface Shipment {
-  id: string;
-  trackingNumber: string;
-  origin: string;
-  destination: string;
-  status: 'pending' | 'in_transit' | 'delivered' | 'cancelled';
-  estimatedDelivery: string;
-  items: number;
-}
 
 export default function ShipmentsScreen() {
   const router = useRouter();
-  const [shipments, setShipments] = useState<Shipment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const { shipments, isLoading, error, hasMore, refresh, loadMore, setFilter } = useShipments();
+  const { isOnline } = useNetworkStatus();
 
-  useEffect(() => {
-    loadShipments();
-  }, []);
-
-  const loadShipments = async () => {
-    try {
-      setIsLoading(true);
-      // Simulate API call - replace with real API
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      const mockShipments: Shipment[] = [
-        {
-          id: '1',
-          trackingNumber: 'SYN-2024-001',
-          origin: 'Los Angeles, CA',
-          destination: 'New York, NY',
-          status: 'in_transit',
-          estimatedDelivery: '2024-11-20',
-          items: 5,
-        },
-        {
-          id: '2',
-          trackingNumber: 'SYN-2024-002',
-          origin: 'Chicago, IL',
-          destination: 'Boston, MA',
-          status: 'delivered',
-          estimatedDelivery: '2024-11-15',
-          items: 3,
-        },
-        {
-          id: '3',
-          trackingNumber: 'SYN-2024-003',
-          origin: 'Denver, CO',
-          destination: 'Seattle, WA',
-          status: 'pending',
-          estimatedDelivery: '2024-11-22',
-          items: 8,
-        },
-      ];
-
-      setShipments(mockShipments);
-    } catch (error) {
-      console.error('Failed to load shipments:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const onRefresh = async () => {
-    setIsRefreshing(true);
-    await loadShipments();
-    setIsRefreshing(false);
-  };
-
-  const getStatusColor = (status: string): string => {
-    switch (status) {
-      case 'delivered':
-        return '#4CAF50';
-      case 'in_transit':
-        return '#2196F3';
-      case 'pending':
-        return '#FF9800';
-      case 'cancelled':
-        return '#F44336';
-      default:
-        return '#666';
-    }
-  };
-
-  const getStatusIcon = (status: string): string => {
-    switch (status) {
-      case 'delivered':
-        return 'check-circle';
-      case 'in_transit':
-        return 'local-shipping';
-      case 'pending':
-        return 'pending-actions';
-      case 'cancelled':
-        return 'cancel';
-      default:
-        return 'info';
-    }
-  };
-
-  const ShipmentCard = ({ shipment }: { shipment: Shipment }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => router.push(`/(app)/shipments/${shipment.id}`)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.cardHeader}>
-        <View style={styles.trackingInfo}>
-          <ThemedText type="subtitle" style={styles.trackingNumber}>
-            {shipment.trackingNumber}
-          </ThemedText>
-          <ThemedText style={styles.cardDate}>{shipment.estimatedDelivery}</ThemedText>
-        </View>
-        <View
-          style={[
-            styles.statusBadge,
-            { backgroundColor: getStatusColor(shipment.status) },
-          ]}
-        >
-          <MaterialIcons
-            name={getStatusIcon(shipment.status) as any}
-            size={16}
-            color="#fff"
-          />
-          <ThemedText style={styles.statusText}>
-            {shipment.status.replace('_', ' ')}
-          </ThemedText>
-        </View>
-      </View>
-
-      <View style={styles.routeContainer}>
-        <View style={styles.routePoint}>
-          <MaterialIcons name="location-on" size={16} color="#2196F3" />
-          <ThemedText style={styles.routeText} numberOfLines={1}>
-            {shipment.origin}
-          </ThemedText>
-        </View>
-
-        <View style={styles.routeLine} />
-
-        <View style={styles.routePoint}>
-          <MaterialIcons name="location-on" size={16} color="#4CAF50" />
-          <ThemedText style={styles.routeText} numberOfLines={1}>
-            {shipment.destination}
-          </ThemedText>
-        </View>
-      </View>
-
-      <View style={styles.itemsContainer}>
-        <MaterialIcons name="inventory-2" size={16} color="#999" />
-        <ThemedText style={styles.itemsText}>{shipment.items} items</ThemedText>
-      </View>
-    </TouchableOpacity>
+  // Filter shipments based on search text
+  const filteredShipments = shipments.filter((shipment: any) =>
+    shipment.trackingNumber?.toLowerCase().includes(searchText.toLowerCase()) ||
+    shipment.origin?.toLowerCase().includes(searchText.toLowerCase()) ||
+    shipment.destination?.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  if (isLoading) {
+  // Auto-refresh when screen is focused
+  useFocusRefresh(() => {
+    refresh();
+  });
+
+  const handleLoadMore = useCallback(() => {
+    if (!isLoading && hasMore) {
+      loadMore();
+    }
+  }, [isLoading, hasMore, loadMore]);
+
+  const handleShipmentPress = useCallback(
+    (shipmentId: string) => {
+      router.push(`/(app)/shipments/${shipmentId}`);
+    },
+    [router]
+  );
+
+  const handleFilter = useCallback(() => {
+    // Navigate to filter screen (to be implemented)
+    router.push('/(app)/shipments/filter');
+  }, [router]);
+
+  const renderShipmentCard = ({ item }: any) => (
+    <ShipmentCard
+      id={item.id}
+      trackingNumber={item.trackingNumber}
+      status={item.status}
+      origin={item.origin}
+      destination={item.destination}
+      estimatedDelivery={item.estimatedDelivery}
+      onPress={() => handleShipmentPress(item.id)}
+    />
+  );
+
+  const renderFooter = () => {
+    if (!isLoading || shipments.length === 0) return null;
+    return <LoadingSpinner visible message="Loading more..." />;
+  };
+
+  const renderEmpty = () => {
+    if (isLoading) {
+      return <LoadingSpinner fullScreen visible message="Loading shipments..." />;
+    }
+
+    if (error) {
+      return (
+        <EmptyState
+          icon="error"
+          title="Failed to Load"
+          message={error.message}
+          actionLabel="Retry"
+          onAction={refresh}
+        />
+      );
+    }
+
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#2196F3" />
-      </View>
+      <EmptyState
+        icon="local-shipping"
+        title="No Shipments"
+        message="You don't have any shipments yet"
+        actionLabel="Refresh"
+        onAction={refresh}
+      />
     );
-  }
+  };
 
   return (
     <View style={styles.container}>
+      <Header
+        title="Shipments"
+        subtitle={`${filteredShipments.length} of ${shipments.length} total`}
+        showBackButton={false}
+        rightAction={{
+          icon: 'tune',
+          onPress: handleFilter,
+        }}
+      />
+
+      {!isOnline && (
+        <View style={styles.offlineBanner}>
+          <MaterialIcons name="cloud-off" size={16} color="#F44336" />
+          <Text style={styles.offlineText}>You are offline - showing cached data</Text>
+        </View>
+      )}
+
+      <View style={styles.searchContainer}>
+        <MaterialIcons name="search" size={20} color="#666" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search by tracking, origin, or destination..."
+          value={searchText}
+          onChangeText={setSearchText}
+          placeholderTextColor="#999"
+        />
+        {searchText !== '' && (
+          <TouchableOpacity
+            onPress={() => setSearchText('')}
+            style={styles.clearButton}
+          >
+            <MaterialIcons name="close" size={20} color="#666" />
+          </TouchableOpacity>
+        )}
+      </View>
+
       <FlatList
-        data={shipments}
-        renderItem={({ item }) => <ShipmentCard shipment={item} />}
+        data={filteredShipments}
+        renderItem={renderShipmentCard}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={renderEmpty}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <MaterialIcons name="inbox" size={64} color="#ccc" />
-            <ThemedText style={styles.emptyText}>No shipments found</ThemedText>
-          </View>
+          <RefreshControl
+            refreshing={isLoading && shipments.length > 0}
+            onRefresh={refresh}
+            colors={['#2196F3']}
+            tintColor="#2196F3"
+          />
         }
       />
     </View>
@@ -195,99 +161,49 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-  },
   listContent: {
+    flexGrow: 1,
+    paddingVertical: 8,
+  },
+  offlineBanner: {
+    backgroundColor: '#FFEBEE',
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-    gap: 12,
-  },
-  trackingInfo: {
-    flex: 1,
-  },
-  trackingNumber: {
-    marginBottom: 4,
-  },
-  cardDate: {
-    fontSize: 12,
-    color: '#999',
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 6,
-    alignItems: 'center',
-    gap: 4,
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
-  routeContainer: {
-    marginBottom: 12,
-  },
-  routePoint: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    paddingVertical: 10,
     gap: 8,
-    marginVertical: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F44336',
   },
-  routeText: {
-    flex: 1,
+  offlineText: {
+    color: '#F44336',
     fontSize: 13,
+    fontWeight: '500',
+    flex: 1,
   },
-  routeLine: {
-    height: 16,
-    width: 2,
-    backgroundColor: '#ddd',
-    marginLeft: 7,
-    marginVertical: 2,
-  },
-  itemsContainer: {
+  searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
+    backgroundColor: '#fff',
+    marginHorizontal: 12,
+    marginVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    gap: 8,
   },
-  itemsText: {
-    fontSize: 12,
-    color: '#666',
+  searchIcon: {
+    marginBottom: 0,
   },
-  emptyContainer: {
+  searchInput: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
+    fontSize: 14,
+    color: '#333',
+    paddingVertical: 8,
   },
-  emptyText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#ccc',
+  clearButton: {
+    padding: 4,
   },
 });

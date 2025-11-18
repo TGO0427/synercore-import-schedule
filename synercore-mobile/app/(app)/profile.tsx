@@ -6,6 +6,7 @@ import { confirmAlert } from '@/utils/alerts';
 import { MaterialIcons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
+import { PasswordChangeModal } from '@/components/PasswordChangeModal';
 
 interface UserProfile {
   name: string;
@@ -20,6 +21,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
 
   useEffect(() => {
     loadUserProfile();
@@ -64,6 +66,21 @@ export default function ProfileScreen() {
         }
       }
     );
+  };
+
+  const handlePasswordChange = async (currentPassword: string, newPassword: string) => {
+    try {
+      console.log('🔐 Password change requested');
+      // TODO: Call actual API endpoint to change password
+      // await apiService.changePassword(currentPassword, newPassword);
+
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      console.log('✅ Password changed successfully');
+    } catch (error) {
+      console.error('Password change failed:', error);
+      throw error;
+    }
   };
 
   if (isLoading) {
@@ -138,7 +155,10 @@ export default function ProfileScreen() {
           Settings
         </ThemedText>
 
-        <TouchableOpacity style={styles.settingRow}>
+        <TouchableOpacity
+          style={styles.settingRow}
+          onPress={() => router.push('/(app)/notification-preferences')}
+        >
           <MaterialIcons name="notifications" size={20} color="#2196F3" />
           <View style={styles.settingContent}>
             <ThemedText style={styles.settingLabel}>Notifications</ThemedText>
@@ -147,7 +167,10 @@ export default function ProfileScreen() {
           <MaterialIcons name="chevron-right" size={24} color="#999" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.settingRow}>
+        <TouchableOpacity
+          style={styles.settingRow}
+          onPress={() => setPasswordModalVisible(true)}
+        >
           <MaterialIcons name="security" size={20} color="#2196F3" />
           <View style={styles.settingContent}>
             <ThemedText style={styles.settingLabel}>Security</ThemedText>
@@ -183,6 +206,12 @@ export default function ProfileScreen() {
         <MaterialIcons name="logout" size={20} color="#fff" />
         <Text style={styles.logoutButtonText}>Logout</Text>
       </TouchableOpacity>
+
+      <PasswordChangeModal
+        visible={passwordModalVisible}
+        onClose={() => setPasswordModalVisible(false)}
+        onSubmit={handlePasswordChange}
+      />
     </ScrollView>
   );
 }

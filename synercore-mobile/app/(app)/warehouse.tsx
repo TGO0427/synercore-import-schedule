@@ -3,6 +3,7 @@ import { View, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
+import { apiService } from '@/services';
 
 interface WarehouseStats {
   totalCapacity: number;
@@ -28,45 +29,33 @@ export default function WarehouseScreen() {
   const loadWarehouseStats = async () => {
     try {
       setIsLoading(true);
-      // Simulate API call - replace with real API
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      console.log('🏭 Fetching warehouse stats from API...');
 
-      const mockStats: WarehouseStats = {
-        totalCapacity: 10000,
-        usedCapacity: 6500,
-        availableCapacity: 3500,
-        occupancyRate: 65,
-        zones: [
-          {
-            name: 'Zone A - Electronics',
-            capacity: 3000,
-            used: 2100,
-            status: 'optimal',
-          },
-          {
-            name: 'Zone B - Textiles',
-            capacity: 2500,
-            used: 2000,
-            status: 'warning',
-          },
-          {
-            name: 'Zone C - Fragile Items',
-            capacity: 2000,
-            used: 1200,
-            status: 'optimal',
-          },
-          {
-            name: 'Zone D - Bulk',
-            capacity: 2500,
-            used: 1200,
-            status: 'optimal',
-          },
-        ],
-      };
+      // Call real API to get warehouse status
+      const response = await apiService.getWarehouseStatus();
+      console.log('✅ Warehouse stats loaded:', response);
 
-      setStats(mockStats);
+      if (response && response.data) {
+        const data = response.data;
+        const stats: WarehouseStats = {
+          totalCapacity: data.total_capacity || data.totalCapacity || 0,
+          usedCapacity: data.used_capacity || data.usedCapacity || 0,
+          availableCapacity: data.available_capacity || data.availableCapacity || 0,
+          occupancyRate: data.occupancy_rate || data.occupancyRate || 0,
+          zones: (data.zones || []).map((zone: any) => ({
+            name: zone.name || zone.zone_name,
+            capacity: zone.capacity || zone.total_capacity,
+            used: zone.used || zone.used_capacity,
+            status: zone.status || 'optimal',
+          })),
+        };
+        setStats(stats);
+      } else {
+        console.warn('⚠️ No warehouse data returned from API');
+      }
     } catch (error) {
-      console.error('Failed to load warehouse stats:', error);
+      console.error('❌ Failed to load warehouse stats:', error);
+      setStats(null);
     } finally {
       setIsLoading(false);
     }

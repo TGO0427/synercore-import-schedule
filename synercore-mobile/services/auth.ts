@@ -3,6 +3,8 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import { storage } from '@/utils/storage';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+console.log('🔗 Auth Service initialized with API_URL:', API_URL);
+console.log('📝 EXPO_PUBLIC_API_URL env var:', process.env.EXPO_PUBLIC_API_URL);
 const TOKEN_KEY = 'authToken';
 const USER_KEY = 'authUser';
 
@@ -16,9 +18,10 @@ export interface User {
 }
 
 export interface AuthResponse {
-  token: string;
+  accessToken: string;
   user: User;
   expiresIn?: number;
+  refreshToken?: string;
 }
 
 interface LoginRequest {
@@ -106,50 +109,85 @@ class AuthService {
 
   async login(email: string, password: string): Promise<AuthResponse> {
     try {
-      const response = await this.api.post<AuthResponse>('/auth/login', {
-        email,
+      console.log('🔐 Login attempt:', { username: email, API_URL });
+      // Backend expects 'username' field, so we use email as username
+      const response = await this.api.post<any>('/auth/login', {
+        username: email,
         password,
       });
+      console.log('✅ Login successful:', response.data.user.username);
 
-      const { token, user } = response.data;
+      const { accessToken } = response.data;
+      // Map backend user response to User interface
+      const user: User = {
+        id: response.data.user.id,
+        email: response.data.user.email,
+        name: response.data.user.fullName || response.data.user.username,
+        role: response.data.user.role,
+      };
 
-      this.token = token;
+      this.token = accessToken;
       this.user = user;
 
       // Store securely
-      await this.storeToken(token);
+      await this.storeToken(accessToken);
       await this.storeUser(user);
 
       // Schedule token refresh
       this.scheduleTokenRefresh(response.data.expiresIn);
 
-      return response.data;
+      return {
+        accessToken,
+        user,
+        expiresIn: response.data.expiresIn,
+      };
     } catch (error) {
+      console.error('❌ Login error:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('📡 Response status:', error.response?.status);
+        console.error('📡 Response data:', error.response?.data);
+        console.error('📡 Request URL:', error.config?.url);
+        console.error('📡 Request baseURL:', error.config?.baseURL);
+      }
       throw this.handleError(error);
     }
   }
 
   async register(name: string, email: string, password: string): Promise<AuthResponse> {
     try {
-      const response = await this.api.post<AuthResponse>('/auth/register', {
-        name,
+      // Backend register endpoint expects username, not email as identifier
+      const username = email.split('@')[0]; // Use part before @ as username
+      const response = await this.api.post<any>('/auth/register', {
+        username,
         email,
         password,
+        fullName: name,
       });
 
-      const { token, user } = response.data;
+      const { accessToken } = response.data;
+      // Map backend user response to User interface
+      const user: User = {
+        id: response.data.user.id,
+        email: response.data.user.email,
+        name: response.data.user.fullName || response.data.user.username,
+        role: response.data.user.role,
+      };
 
-      this.token = token;
+      this.token = accessToken;
       this.user = user;
 
       // Store securely
-      await this.storeToken(token);
+      await this.storeToken(accessToken);
       await this.storeUser(user);
 
       // Schedule token refresh
       this.scheduleTokenRefresh(response.data.expiresIn);
 
-      return response.data;
+      return {
+        accessToken,
+        user,
+        expiresIn: response.data.expiresIn,
+      };
     } catch (error) {
       throw this.handleError(error);
     }

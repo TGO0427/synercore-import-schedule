@@ -2,6 +2,8 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import { authService } from './auth';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+console.log('🔗 API Service initialized with API_URL:', API_URL);
+console.log('📝 EXPO_PUBLIC_API_URL env:', process.env.EXPO_PUBLIC_API_URL);
 
 export interface ApiResponse<T> {
   success: boolean;

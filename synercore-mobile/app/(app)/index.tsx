@@ -6,27 +6,64 @@ import { confirmAlert } from '@/utils/alerts';
 import { MaterialIcons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
+import { apiService } from '@/services';
+
+interface DashboardStats {
+  activeShipments: number;
+  totalProducts: number;
+  warehouseUsage: number;
+}
 
 export default function DashboardScreen() {
   const router = useRouter();
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const [stats, setStats] = useState<DashboardStats>({ activeShipments: 0, totalProducts: 0, warehouseUsage: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadUser = async () => {
+    const loadDashboard = async () => {
       try {
+        setIsLoading(true);
+
+        // Load user from storage
         const userJson = await storage.getItem('user');
         if (userJson) {
           setUser(JSON.parse(userJson));
         }
+
+        // Load stats from API
+        console.log('📊 Fetching dashboard stats...');
+        try {
+          // Get shipments count (active/pending)
+          const shipmentsRes = await apiService.getShipments({ status: 'pending' }, 1, 1);
+          const activeShipments = shipmentsRes?.total || 0;
+
+          // Get products count
+          const productsRes = await apiService.getProducts({}, 1, 1);
+          const totalProducts = productsRes?.total || 0;
+
+          // Get warehouse usage
+          const warehouseRes = await apiService.getWarehouseStatus();
+          const warehouseUsage = warehouseRes?.occupancyRate || 0;
+
+          setStats({
+            activeShipments,
+            totalProducts,
+            warehouseUsage: Math.round(warehouseUsage),
+          });
+          console.log('✅ Dashboard stats loaded:', { activeShipments, totalProducts, warehouseUsage });
+        } catch (apiError) {
+          console.warn('⚠️ Failed to fetch stats from API:', apiError);
+          // Keep default zeros if API fails
+        }
       } catch (error) {
-        console.error('Failed to load user:', error);
+        console.error('Failed to load dashboard:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadUser();
+    loadDashboard();
   }, []);
 
   const handleLogout = () => {
@@ -77,20 +114,20 @@ export default function DashboardScreen() {
 
         <TouchableOpacity style={styles.statCard} onPress={() => router.push('/(app)/shipments')}>
           <MaterialIcons name="local-shipping" size={32} color="#2196F3" />
-          <ThemedText type="subtitle">0</ThemedText>
+          <ThemedText type="subtitle">{stats.activeShipments}</ThemedText>
           <ThemedText style={styles.statLabel}>Active Shipments</ThemedText>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.statCard} onPress={() => router.push('/(app)/products')}>
           <MaterialIcons name="inventory" size={32} color="#FF9800" />
-          <ThemedText type="subtitle">0</ThemedText>
+          <ThemedText type="subtitle">{stats.totalProducts}</ThemedText>
           <ThemedText style={styles.statLabel}>Products</ThemedText>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.statCard} onPress={() => router.push('/(app)/warehouse')}>
           <MaterialIcons name="warehouse" size={32} color="#4CAF50" />
-          <ThemedText type="subtitle">0</ThemedText>
-          <ThemedText style={styles.statLabel}>Warehouse Capacity</ThemedText>
+          <ThemedText type="subtitle">{stats.warehouseUsage}%</ThemedText>
+          <ThemedText style={styles.statLabel}>Warehouse Usage</ThemedText>
         </TouchableOpacity>
       </ThemedView>
 

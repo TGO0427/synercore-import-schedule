@@ -16,10 +16,10 @@ export default function Index() {
         console.log('Auth check:', { isAuthenticated, token: token ? 'exists' : 'none' });
 
         // Route to appropriate screen
-        setInitialRoute(isAuthenticated ? '/(app)' : '/login');
+        setInitialRoute(isAuthenticated ? '/(app)' : '/(auth)/login');
       } catch (error) {
         console.error('Auth check failed:', error);
-        setInitialRoute('/login');
+        setInitialRoute('/(auth)/login');
       } finally {
         setIsReady(true);
       }
