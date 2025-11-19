@@ -37,7 +37,11 @@ async function fetchWithTimeout(url, opts = {}, ms = 10000) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), ms);
   try {
-    return await fetch(url, { ...opts, signal: controller.signal });
+    return await fetch(url, {
+      ...opts,
+      signal: controller.signal,
+      credentials: 'include' // Include credentials with all requests
+    });
   } finally {
     clearTimeout(id);
   }
@@ -49,7 +53,11 @@ function authFetch(url, options = {}) {
     ...options.headers,
     ...authUtils.getAuthHeader()
   };
-  return fetch(url, { ...options, headers });
+  return fetch(url, {
+    ...options,
+    headers,
+    credentials: 'include' // Include credentials (cookies) with cross-origin requests
+  });
 }
 
 function App() {
