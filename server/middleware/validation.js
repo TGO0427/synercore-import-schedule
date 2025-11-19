@@ -186,6 +186,46 @@ export const validateSupplierCreate = [
   validate
 ];
 
+export const validateSupplierUpdate = [
+  param('id').notEmpty().withMessage('Supplier ID is required').trim(),
+  body('name')
+    .optional()
+    .isLength({ max: 200 })
+    .withMessage('Supplier name must be less than 200 characters')
+    .trim(),
+  body('contactPerson')
+    .optional()
+    .isLength({ max: 100 })
+    .withMessage('Contact person must be less than 100 characters')
+    .trim(),
+  body('email')
+    .optional()
+    .isEmail()
+    .withMessage('Must be a valid email address')
+    .normalizeEmail(),
+  body('phone')
+    .optional()
+    .isLength({ max: 50 })
+    .withMessage('Phone must be less than 50 characters')
+    .trim(),
+  body('address')
+    .optional()
+    .isLength({ max: 500 })
+    .withMessage('Address must be less than 500 characters')
+    .trim(),
+  body('country')
+    .optional()
+    .isLength({ max: 100 })
+    .withMessage('Country must be less than 100 characters')
+    .trim(),
+  body('notes')
+    .optional()
+    .isLength({ max: 1000 })
+    .withMessage('Notes must be less than 1000 characters')
+    .trim(),
+  validate
+];
+
 // Warehouse capacity validation
 export const validateWarehouseCapacity = [
   param('warehouseName')

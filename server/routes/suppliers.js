@@ -3,6 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import db from '../db/connection.js';
+import { validateSupplierCreate, validateSupplierUpdate, validateId, validate } from '../middleware/validation.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -51,7 +52,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/suppliers/:id - Get specific supplier
-router.get('/:id', async (req, res) => {
+router.get('/:id', validateId, async (req, res) => {
   try {
     const result = await db.query('SELECT * FROM suppliers WHERE id = $1', [req.params.id]);
 
@@ -67,7 +68,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/suppliers - Create new supplier
-router.post('/', async (req, res) => {
+router.post('/', validateSupplierCreate, async (req, res) => {
   try {
     const id = req.body.id || Date.now().toString();
 
@@ -95,7 +96,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/suppliers/:id - Update supplier
-router.put('/:id', async (req, res) => {
+router.put('/:id', validateSupplierUpdate, async (req, res) => {
   try {
     await db.query(
       `UPDATE suppliers SET
@@ -133,7 +134,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/suppliers/:id - Delete supplier
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', validateId, async (req, res) => {
   try {
     const result = await db.query('DELETE FROM suppliers WHERE id = $1 RETURNING id', [req.params.id]);
 

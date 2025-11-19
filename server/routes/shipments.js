@@ -1,5 +1,6 @@
 import express from 'express';
 import { ShipmentsController } from '../controllers/shipmentsController.js';
+import { validateShipmentCreate, validateShipmentQuery, validateId } from '../middleware/validation.js';
 
 const router = express.Router();
 
@@ -19,17 +20,17 @@ router.post('/manual-archive', ShipmentsController.performManualArchive);
 router.get('/post-arrival', ShipmentsController.getPostArrivalShipments);
 
 // Parameterized routes (must come after specific routes)
-router.get('/:id', ShipmentsController.getShipmentById);
-router.post('/', ShipmentsController.createShipment);
-router.put('/:id', ShipmentsController.updateShipment);
-router.delete('/:id', ShipmentsController.deleteShipment);
-router.post('/:id/start-unloading', ShipmentsController.startUnloading);
-router.post('/:id/complete-unloading', ShipmentsController.completeUnloading);
-router.post('/:id/start-inspection', ShipmentsController.startInspection);
-router.post('/:id/complete-inspection', ShipmentsController.completeInspection);
-router.post('/:id/start-receiving', ShipmentsController.startReceiving);
-router.post('/:id/complete-receiving', ShipmentsController.completeReceiving);
-router.post('/:id/mark-stored', ShipmentsController.markAsStored);
-router.post('/:id/reject-shipment', ShipmentsController.rejectShipment);
+router.get('/:id', validateId, ShipmentsController.getShipmentById);
+router.post('/', validateShipmentCreate, ShipmentsController.createShipment);
+router.put('/:id', validateId, ShipmentsController.updateShipment);
+router.delete('/:id', validateId, ShipmentsController.deleteShipment);
+router.post('/:id/start-unloading', validateId, ShipmentsController.startUnloading);
+router.post('/:id/complete-unloading', validateId, ShipmentsController.completeUnloading);
+router.post('/:id/start-inspection', validateId, ShipmentsController.startInspection);
+router.post('/:id/complete-inspection', validateId, ShipmentsController.completeInspection);
+router.post('/:id/start-receiving', validateId, ShipmentsController.startReceiving);
+router.post('/:id/complete-receiving', validateId, ShipmentsController.completeReceiving);
+router.post('/:id/mark-stored', validateId, ShipmentsController.markAsStored);
+router.post('/:id/reject-shipment', validateId, ShipmentsController.rejectShipment);
 
 export default router;
