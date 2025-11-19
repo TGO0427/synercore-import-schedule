@@ -425,6 +425,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
       const shipmentData = {
         ...newShipment,
         quantity: Number(newShipment.quantity) || 0,
+        cbm: Number(newShipment.cbm) || 0,
         palletQty: Number(newShipment.palletQty) || 0,
         weekNumber: Number(newShipment.weekNumber) || 1,
         createdAt: new Date().toISOString(),
@@ -1279,6 +1280,24 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 />
               </div>
               
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                  CBM (Cubic Meters)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={newShipment.cbm}
+                  onChange={(e) => handleInputChange('cbm', e.target.value)}
+                  className="input"
+                  style={{
+                    width: '100%'
+                  }}
+                  placeholder="Cubic meters"
+                  min="0"
+                />
+              </div>
+
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
                   Pallet Qty
