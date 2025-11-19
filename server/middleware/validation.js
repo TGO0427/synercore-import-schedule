@@ -137,17 +137,30 @@ export const validateShipmentCreate = [
   body('latestStatus')
     .optional()
     .isIn([
-      'planned',
-      'confirmed',
-      'in_transit',
-      'customs_clearance',
+      // Frontend statuses - matches src/types/shipment.js ShipmentStatus
+      'planned_airfreight',
+      'planned_seafreight',
+      'in_transit_airfreight',
       'air_customs_clearance',
-      'arrived',
+      'in_transit_roadway',
+      'in_transit_seaway',
+      'moored',
+      'berth_working',
+      'berth_complete',
+      'arrived_pta',
+      'arrived_klm',
+      'arrived_offsite',
+      'delayed',
+      'cancelled',
+      // Post-arrival workflow states
       'unloading',
-      'inspection',
+      'inspection_pending',
+      'inspecting',
+      'inspection_failed',
+      'inspection_passed',
+      'receiving',
       'received',
-      'rejected',
-      'archived'
+      'stored'
     ])
     .withMessage('Invalid status'),
   validate
@@ -283,17 +296,30 @@ export const validateShipmentQuery = [
   query('status')
     .optional()
     .isIn([
-      'planned',
-      'confirmed',
-      'in_transit',
-      'customs_clearance',
+      // Frontend statuses - matches src/types/shipment.js ShipmentStatus
+      'planned_airfreight',
+      'planned_seafreight',
+      'in_transit_airfreight',
       'air_customs_clearance',
-      'arrived',
+      'in_transit_roadway',
+      'in_transit_seaway',
+      'moored',
+      'berth_working',
+      'berth_complete',
+      'arrived_pta',
+      'arrived_klm',
+      'arrived_offsite',
+      'delayed',
+      'cancelled',
+      // Post-arrival workflow states
       'unloading',
-      'inspection',
+      'inspection_pending',
+      'inspecting',
+      'inspection_failed',
+      'inspection_passed',
+      'receiving',
       'received',
-      'rejected',
-      'archived'
+      'stored'
     ])
     .withMessage('Invalid status'),
   validate
