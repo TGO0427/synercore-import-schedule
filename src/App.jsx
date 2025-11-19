@@ -467,10 +467,17 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(shipmentData)
       });
-      if (!response.ok) throw new Error('Failed to create shipment');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData?.details?.map((d) => d.msg).join(', ') ||
+                            errorData?.error ||
+                            'Failed to create shipment';
+        throw new Error(errorMessage);
+      }
       await fetchShipments();
       showSuccess('Shipment added successfully');
     } catch (err) {
+      console.error('Shipment creation error:', err);
       showError(err.message);
       throw err;
     }

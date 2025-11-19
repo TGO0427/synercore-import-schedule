@@ -5,15 +5,20 @@ import { body, param, query, validationResult } from 'express-validator';
 export const validate = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    const errorArray = errors.array();
     console.error('[VALIDATION] Request failed validation:', {
       method: req.method,
       path: req.path,
       body: req.body,
-      errors: errors.array()
+      errors: errorArray
     });
     return res.status(400).json({
       error: 'Validation failed',
-      details: errors.array()
+      details: errorArray.map(e => ({
+        field: e.param,
+        msg: e.msg,
+        value: e.value
+      }))
     });
   }
   next();
