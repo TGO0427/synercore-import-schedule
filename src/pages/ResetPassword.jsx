@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import './ResetPassword.css';
 
 function ResetPassword({ onBack }) {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
-
+  const [token] = useState('reset-token'); // Placeholder token
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -80,24 +77,6 @@ function ResetPassword({ onBack }) {
       setIsLoading(false);
     }
   };
-
-  if (!token) {
-    return (
-      <div className="reset-password-container">
-        <div className="error-content">
-          <div className="error-icon">⚠️</div>
-          <h2>Invalid Link</h2>
-          <p>The password reset link is invalid or has expired.</p>
-          <button
-            className="back-btn"
-            onClick={onBack}
-          >
-            Request New Link
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="reset-password-container">
