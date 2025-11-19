@@ -16,6 +16,7 @@ if (process.env.NODE_ENV === 'development' && process.env.DISABLE_SSL_VERIFY ===
 
 import express from 'express';
 import cors from 'cors';
+import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
@@ -51,7 +52,7 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3002',
   'http://localhost:5173',
-  process.env.FRONTEND_URL || 'https://synercore-frontend.vercel.app',
+  process.env.FRONTEND_URL || 'https://synercore-import-schedule.vercel.app',
   ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [])
 ];
 
@@ -75,10 +76,11 @@ app.use(cors({
 // Explicitly handle OPTIONS for browsers that need it
 app.options('*', cors());
 
-/* ---------------- Security Middleware ---------------- */
+/* ---------------- Security Middleware & Health Check ---------------- */
 // Health check endpoint (before security middleware for Railway)
+// Returns 200 immediately for Railway health checks
 app.get('/health', (_req, res) => {
-  res.json({ status: 'OK', ready: isReady, timestamp: new Date().toISOString() });
+  res.status(200).json({ status: 'OK', ready: isReady, timestamp: new Date().toISOString() });
 });
 
 // Apply helmet security headers
