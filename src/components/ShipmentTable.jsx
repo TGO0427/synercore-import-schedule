@@ -1282,8 +1282,8 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
               
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
-                  CBM (Cubic Meters)
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#666' }}>
+                  CBM (Cubic Meters) <span style={{ color: '#999', fontSize: '0.85em' }}>Optional</span>
                 </label>
                 <input
                   type="number"
@@ -1294,7 +1294,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   style={{
                     width: '100%'
                   }}
-                  placeholder="Cubic meters"
+                  placeholder="Cubic meters (optional)"
                   min="0"
                 />
               </div>
