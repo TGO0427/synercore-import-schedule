@@ -4,9 +4,11 @@ import { getApiUrl } from '../config/api';
 
 // Determine socket server URL
 const getSocketURL = () => {
-  // In production, use the same origin
+  // In production, use the API base URL from environment
   if (process.env.NODE_ENV === 'production') {
-    return window.location.origin;
+    const apiUrl = getApiUrl('');
+    // Remove /api if present and return the base URL
+    return apiUrl.replace('/api', '');
   }
 
   // In development, connect to backend server
