@@ -60,7 +60,12 @@ export const authenticateToken = (req, res, next) => {
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
-      return res.status(403).json({ error: 'Invalid or expired token' });
+      console.error('JWT verification failed:', {
+        error: err.message,
+        tokenLength: token?.length,
+        hasJWTSecret: !!JWT_SECRET
+      });
+      return res.status(403).json({ error: 'Invalid or expired token', detail: process.env.NODE_ENV === 'development' ? err.message : undefined });
     }
     req.user = user;
     next();
@@ -244,6 +249,12 @@ router.post('/login', validateLogin, async (req, res) => {
       req.ip || req.connection.remoteAddress,
       req.headers['user-agent']
     );
+
+    console.log('[AUTH] Login successful for user:', user.username, {
+      tokenLength: accessToken.length,
+      refreshTokenLength: refreshToken.length,
+      expiresIn: ACCESS_TOKEN_EXPIRY
+    });
 
     res.json({
       message: 'Login successful',
