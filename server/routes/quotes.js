@@ -4,6 +4,7 @@ import path from 'path';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
 import PDFAnalyzer from '../services/pdfAnalyzer.js';
+import { ALLOWED_FILE_TYPES, generateSafeFilename } from '../middleware/fileUpload.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -50,30 +51,48 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ 
+// Enhanced file filter using centralized validation
+const fileFilter = (req, file, cb) => {
+  // Get allowed MIME types for documents (PDF, Excel, Word)
+  const allowedMimes = [
+    ...ALLOWED_FILE_TYPES.pdf.mimes,
+    ...ALLOWED_FILE_TYPES.excel.mimes,
+    ...ALLOWED_FILE_TYPES.word.mimes
+  ];
+
+  if (!allowedMimes.includes(file.mimetype)) {
+    const error = new Error(
+      `Invalid file type: ${file.mimetype}. Allowed types: PDF, Excel, Word`
+    );
+    error.code = 'INVALID_MIME_TYPE';
+    return cb(error, false);
+  }
+
+  // Validate extension
+  const ext = path.extname(file.originalname).toLowerCase();
+  const allowedExtensions = [
+    ...ALLOWED_FILE_TYPES.pdf.extensions,
+    ...ALLOWED_FILE_TYPES.excel.extensions,
+    ...ALLOWED_FILE_TYPES.word.extensions
+  ];
+
+  if (!allowedExtensions.includes(ext)) {
+    const error = new Error(
+      `Invalid file extension: ${ext}. Allowed: ${allowedExtensions.join(', ')}`
+    );
+    error.code = 'INVALID_EXTENSION';
+    return cb(error, false);
+  }
+
+  cb(null, true);
+};
+
+const upload = multer({
   storage: storage,
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
   },
-  fileFilter: (req, file, cb) => {
-    // Allow common document formats
-    const allowedTypes = [
-      'application/pdf',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'text/plain',
-      'text/csv'
-    ];
-    
-    if (allowedTypes.includes(file.mimetype) || 
-        file.originalname.match(/\.(pdf|xlsx?|docx?|txt|csv)$/i)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid file type. Only PDF, Excel, Word, Text, and CSV files are allowed.'));
-    }
-  }
+  fileFilter
 });
 
 // GET /api/quotes/:forwarder - Get all quotes for a forwarder

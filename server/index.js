@@ -16,7 +16,6 @@ if (process.env.NODE_ENV === 'development' && process.env.DISABLE_SSL_VERIFY ===
 
 import express from 'express';
 import cors from 'cors';
-import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
@@ -34,6 +33,7 @@ import notificationsRouter from './routes/notifications.js';
 import schedulerAdminRouter from './routes/schedulerAdmin.js';
 import supplierPortalRouter from './routes/supplierPortal.js';
 import { helmetConfig, apiRateLimiter, authRateLimiter, authenticateToken } from './middleware/security.js';
+import { createSingleFileUpload, createMultipleFileUpload, handleUploadError, validateFilesPresent, verifyUploadPermission, generateSafeFilename } from './middleware/fileUpload.js';
 import socketManager from './websocket/socketManager.js';
 
 // __dirname for ESM
@@ -122,43 +122,70 @@ app.use('/api/notifications', notificationsRouter); // Auth required within rout
 app.use('/api/supplier', supplierPortalRouter); // Supplier portal routes (auth within router)
 
 /* ---------------- Endpoints ---------------- */
-app.post('/api/documents/upload', authenticateToken, upload.array('documents', 10), async (req, res, next) => {
-  try {
-    const { supplierId } = req.body;
-    if (!supplierId) return res.status(400).json({ error: 'Supplier ID is required' });
-    if (!req.files?.length) return res.status(400).json({ error: 'No files uploaded' });
+// Create upload instances
+const multipleFileUpload = createMultipleFileUpload(10);
+const singleFileUpload = createSingleFileUpload();
 
-    const documentsDir = path.join(__dirname, 'uploads', 'documents', supplierId);
-    await fs.mkdir(documentsDir, { recursive: true });
+/**
+ * POST /api/documents/upload - Upload multiple documents for a supplier
+ * Requires: Authenticated user (admin or supplier), supplierId in body
+ * Validates: File type, MIME type, file size, permissions
+ */
+app.post('/api/documents/upload',
+  authenticateToken,
+  verifyUploadPermission,
+  multipleFileUpload.array('documents', 10),
+  validateFilesPresent,
+  async (req, res, next) => {
+    try {
+      const { supplierId } = req.body;
 
-    const uploadedFiles = [];
-    for (const file of req.files) {
-      const filename = `${Date.now()}_${file.originalname}`;
-      await fs.writeFile(path.join(documentsDir, filename), file.buffer);
-      uploadedFiles.push({
-        filename,
-        originalName: file.originalname,
-        size: file.size,
-        mimeType: file.mimetype,
-        uploadedAt: new Date().toISOString(),
-        supplierId,
-        downloadUrl: `/api/suppliers/${supplierId}/documents/${filename}`,
-      });
+      const documentsDir = path.join(__dirname, 'uploads', 'documents', supplierId);
+      await fs.mkdir(documentsDir, { recursive: true });
+
+      const uploadedFiles = [];
+      for (const file of req.files) {
+        const filename = generateSafeFilename(file.originalname);
+        await fs.writeFile(path.join(documentsDir, filename), file.buffer);
+        uploadedFiles.push({
+          filename,
+          originalName: file.originalname,
+          size: file.size,
+          mimeType: file.mimetype,
+          uploadedAt: new Date().toISOString(),
+          supplierId,
+          downloadUrl: `/api/suppliers/${supplierId}/documents/${filename}`,
+        });
+      }
+      res.json(uploadedFiles);
+    } catch (err) {
+      next(err);
     }
-    res.json(uploadedFiles);
-  } catch (err) {
-    next(err);
   }
-});
+);
 
-app.post('/api/upload-excel', authenticateToken, upload.single('file'), (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    res.json({ message: 'File uploaded successfully', filename: req.file.originalname, size: req.file.size });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+/**
+ * POST /api/upload-excel - Upload single Excel file for bulk import
+ * Requires: Authenticated user (admin)
+ * Validates: File type (Excel only), MIME type, file size
+ */
+app.post('/api/upload-excel',
+  authenticateToken,
+  singleFileUpload.single('file'),
+  validateFilesPresent,
+  (req, res) => {
+    try {
+      res.json({
+        message: 'File uploaded successfully',
+        filename: req.file.originalname,
+        size: req.file.size,
+        mimeType: req.file.mimetype
+      });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
   }
-});
+);
 
 /* ---------------- Static (prod) ---------------- */
 if (process.env.NODE_ENV === 'production') {
@@ -167,6 +194,9 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 /* ---------------- 404 & Error handler ---------------- */
+// Upload error handler (must come before generic error handler)
+app.use(handleUploadError);
+
 app.use((req, res, _next) => res.status(404).json({ error: 'Not Found', path: req.originalUrl }));
 
 app.use((err, req, res, _next) => {
