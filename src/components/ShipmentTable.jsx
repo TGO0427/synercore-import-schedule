@@ -424,10 +424,10 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
     try {
       const shipmentData = {
         ...newShipment,
-        quantity: Number(newShipment.quantity) || 0,
-        cbm: Number(newShipment.cbm) || 0,
-        palletQty: Number(newShipment.palletQty) || 0,
-        weekNumber: Number(newShipment.weekNumber) || 1,
+        quantity: newShipment.quantity ? Number(newShipment.quantity) : null,
+        cbm: newShipment.cbm ? Number(newShipment.cbm) : null,
+        palletQty: newShipment.palletQty ? Number(newShipment.palletQty) : null,
+        weekNumber: newShipment.weekNumber ? Number(newShipment.weekNumber) : null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -505,9 +505,10 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
     try {
       const updatedShipment = {
         ...amendingShipment,
-        quantity: Number(amendingShipment.quantity) || 0,
-        palletQty: Number(amendingShipment.palletQty) || 0,
-        weekNumber: Number(amendingShipment.weekNumber) || 1,
+        quantity: amendingShipment.quantity ? Number(amendingShipment.quantity) : null,
+        cbm: amendingShipment.cbm ? Number(amendingShipment.cbm) : null,
+        palletQty: amendingShipment.palletQty ? Number(amendingShipment.palletQty) : null,
+        weekNumber: amendingShipment.weekNumber ? Number(amendingShipment.weekNumber) : null,
         updatedAt: new Date().toISOString()
       };
 
