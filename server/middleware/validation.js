@@ -104,14 +104,12 @@ export const validateResetPassword = [
 // Shipment validation rules
 export const validateShipmentCreate = [
   body('orderRef')
-    .notEmpty()
-    .withMessage('Order reference is required')
+    .optional()
     .isLength({ max: 100 })
     .withMessage('Order reference must be less than 100 characters')
     .trim(),
   body('supplier')
-    .notEmpty()
-    .withMessage('Supplier is required')
+    .optional()
     .isLength({ max: 100 })
     .withMessage('Supplier must be less than 100 characters')
     .trim(),
