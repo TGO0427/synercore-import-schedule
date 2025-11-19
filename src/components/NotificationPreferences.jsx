@@ -199,7 +199,8 @@ function NotificationPreferences({ onClose }) {
             { key: 'notify_warehouse_capacity', label: '⚠️ Warehouse Capacity Alert' },
             { key: 'notify_delayed_shipment', label: '🚨 Delayed Shipment' },
             { key: 'notify_post_arrival_update', label: '📝 Post-Arrival Update' },
-            { key: 'notify_workflow_assigned', label: '📋 Workflow Assigned' }
+            { key: 'notify_workflow_assigned', label: '📋 Workflow Assigned' },
+            { key: 'notify_weekly_reports', label: '📊 Weekly Reports' }
           ].map(({ key, label }) => (
             <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer' }}>
               <input
