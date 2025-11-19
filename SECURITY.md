@@ -4,7 +4,18 @@
 
 This document outlines the security measures implemented in the Synercore Import Schedule application and provides guidance for maintaining security best practices.
 
-## Recent Security Improvements (2025-10-20)
+## Recent Security Improvements
+
+### Latest Updates (2025-11-19)
+
+**Critical Issue #1 - Input Validation Integration**
+- Added comprehensive input validation middleware to all mutation routes
+- Implemented `validateShipmentCreate`, `validateSupplierCreate`, `validateSupplierUpdate` validators
+- All POST, PUT, DELETE operations now validate input before database operations
+- Prevents malicious or malformed data from being stored
+- See: `server/middleware/validation.js`, `server/routes/shipments.js`, `server/routes/suppliers.js`
+
+### Prior Updates (2025-10-20)
 
 A comprehensive security audit was conducted and the following critical improvements were implemented:
 
@@ -238,6 +249,98 @@ Before deploying to production:
 - [ ] All dependencies are up to date (`npm audit`)
 - [ ] Review Railway logs for any errors on startup
 
+## Critical Security Issues - Current Status
+
+### Issue #1: Input Validation ✅ FIXED (2025-11-19)
+- **Severity**: CRITICAL
+- **Status**: RESOLVED
+- **What was fixed**: All mutation endpoints now validate input before processing
+- **Impact**: Prevents invalid/malicious data from being stored in database
+
+### Issue #2: Error Handling Inconsistency ⚠️ PENDING
+- **Severity**: HIGH
+- **Status**: NEEDS FIX
+- **Description**: Error responses across controllers are inconsistent
+- **What needs fixing**:
+  - Standardize all error response format to: `{ error: string, code?: string, details?: object }`
+  - Implement consistent HTTP status codes
+  - Avoid exposing stack traces in production
+- **Files affected**: `server/controllers/*.js`
+- **Estimated effort**: 2 hours
+
+### Issue #3: File Upload Validation ⚠️ PENDING
+- **Severity**: CRITICAL
+- **Status**: NEEDS FIX
+- **Description**: File uploads missing validation and permission checks
+- **What needs fixing**:
+  - Add file type whitelist (PDF, Excel, images only)
+  - Validate file size (10MB limit)
+  - Check file extension matches MIME type
+  - Verify user has permission to upload for specific supplier
+  - Scan for virus/malware
+- **Files affected**: `server/routes/supplierPortal.js`, `server/middleware/upload.js`
+- **Estimated effort**: 2-3 hours
+
+### Issue #4: Supplier Portal Security ⚠️ PENDING
+- **Severity**: CRITICAL
+- **Status**: NEEDS FIX
+- **Description**: Multiple authentication gaps in supplier portal
+- **What needs fixing**:
+  - Implement account lockout after N failed login attempts
+  - Add email verification for supplier registration
+  - Implement password reset via email
+  - Add session timeout (15 minutes)
+  - Restrict supplier to only view their own data
+  - Add CSRF token protection
+- **Files affected**: `server/routes/supplierPortal.js`, `server/controllers/supplierController.js`
+- **Estimated effort**: 3 hours
+
+### Issue #5: WebSocket Error Handling ⚠️ PENDING
+- **Severity**: HIGH
+- **Status**: NEEDS FIX
+- **Description**: WebSocket error handling is incomplete
+- **What needs fixing**:
+  - Broadcast errors to connected clients
+  - Implement reconnection logic
+  - Add error logging
+  - Validate incoming WebSocket messages
+- **Files affected**: `server/websocket/socketManager.js`
+- **Estimated effort**: 1-2 hours
+
+### Issue #6: Rate Limiting Gaps ⚠️ PENDING
+- **Severity**: HIGH
+- **Status**: NEEDS FIX
+- **Description**: Rate limiting not applied to all critical routes
+- **What needs fixing**:
+  - Add rate limiting to file upload routes
+  - Add rate limiting to export/report generation routes
+  - Implement per-user rate limiting (not just per-IP)
+  - Monitor and log rate limit violations
+- **Files affected**: `server/middleware/security.js`, `server/routes/*.js`
+- **Estimated effort**: 1-2 hours
+
+### Issue #7: Workflow State Machine ⚠️ PENDING
+- **Severity**: HIGH
+- **Status**: NEEDS FIX
+- **Description**: Workflow state transitions not validated
+- **What needs fixing**:
+  - Validate state transitions (e.g., can't go from 'received' to 'in_transit')
+  - Implement state machine logic
+  - Prevent invalid status changes
+  - Log all state transitions
+- **Files affected**: `server/controllers/shipmentsController.js`
+- **Estimated effort**: 2-3 hours
+
+### Issue #8: Certificate Validation ⚠️ PENDING
+- **Severity**: MEDIUM
+- **Status**: NEEDS FIX
+- **Description**: Certificate validation disabled in socket client
+- **What needs fixing**:
+  - Enable certificate validation in production
+  - Only disable in development with explicit flag
+- **Files affected**: `src/utils/socketClient.js`
+- **Estimated effort**: 30 minutes
+
 ## Remaining Security Considerations
 
 ### Future Improvements
@@ -270,6 +373,15 @@ Report security vulnerabilities to: [Add contact information]
 
 ## Changelog
 
+### 2025-11-19 - Input Validation Implementation
+- **Fixed**: Input validation not integrated in mutation routes (Critical Issue #1)
+- Added `validateShipmentCreate` middleware to POST/PUT shipment operations
+- Added `validateSupplierCreate` and `validateSupplierUpdate` middleware to supplier operations
+- All workflow action routes now validate IDs before processing
+- Standardized validation error responses
+- Build tested and verified - no breaking changes
+- Updated SECURITY.md with critical security issues tracker
+
 ### 2025-10-20 - Major Security Update
 - Implemented comprehensive authentication on all protected endpoints
 - Added rate limiting (API-wide and auth-specific)
@@ -283,5 +395,6 @@ Report security vulnerabilities to: [Add contact information]
 
 ---
 
-**Last Updated**: October 20, 2025
+**Last Updated**: November 19, 2025
 **Review Frequency**: Quarterly or after any security incident
+**Next Review**: December 19, 2025 (after critical issue #2-8 fixes)
