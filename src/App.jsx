@@ -22,6 +22,8 @@ import UserManagement from './components/UserManagement';
 import NotificationPreferences from './components/NotificationPreferences';
 import OfflineIndicator from './components/OfflineIndicator';
 import SupplierLogin from './pages/SupplierLogin';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import { ExcelProcessor } from './utils/excelProcessor';
 import { Supplier } from './types/supplier';
 import useWebSocket from './hooks/useWebSocket';
@@ -74,6 +76,9 @@ function App() {
 
   // Notification Preferences state
   const [notificationPrefsOpen, setNotificationPrefsOpen] = useState(false);
+
+  // Password Recovery state
+  const [currentView, setCurrentView] = useState('login'); // 'login', 'forgotPassword', 'resetPassword'
 
   // WebSocket integration
   const { isConnected: wsConnected, onShipmentUpdate, onDocumentUpload, joinShipment, leaveShipment } = useWebSocket();
@@ -783,7 +788,18 @@ function App() {
   };
 
   if (!isAuthenticated) {
-    return <LoginPage onLogin={handleLogin} />;
+    if (currentView === 'forgotPassword') {
+      return <ForgotPassword onBack={() => setCurrentView('login')} />;
+    }
+    if (currentView === 'resetPassword') {
+      return <ResetPassword onBack={() => setCurrentView('login')} />;
+    }
+    return (
+      <LoginPage
+        onLogin={handleLogin}
+        onForgotPassword={() => setCurrentView('forgotPassword')}
+      />
+    );
   }
 
   // Show Supplier Portal if requested

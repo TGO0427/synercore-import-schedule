@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { authUtils } from '../utils/auth';
 
-function LoginPage({ onLogin }) {
+function LoginPage({ onLogin, onForgotPassword }) {
   const [credentials, setCredentials] = useState({
     username: '',
     password: ''
@@ -334,6 +334,33 @@ function LoginPage({ onLogin }) {
             {loading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
+
+        {/* Forgot Password Link */}
+        <div style={{
+          marginTop: '16px',
+          textAlign: 'center'
+        }}>
+          <button
+            type="button"
+            onClick={onForgotPassword}
+            disabled={loading}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#667eea',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              fontWeight: '500',
+              textDecoration: 'none',
+              transition: 'color 0.2s',
+              opacity: loading ? 0.6 : 1
+            }}
+            onMouseEnter={(e) => !loading && (e.target.style.color = '#764ba2')}
+            onMouseLeave={(e) => !loading && (e.target.style.color = '#667eea')}
+          >
+            Forgot password?
+          </button>
+        </div>
 
         {/* Info message */}
         <div style={{
