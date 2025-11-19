@@ -121,6 +121,7 @@ export class ShipmentsController {
   static async createShipment(req, res) {
     try {
       const shipmentData = req.body;
+      console.log('[SHIPMENT] Creating shipment with data:', shipmentData);
       const id = `ship_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       await db.query(
