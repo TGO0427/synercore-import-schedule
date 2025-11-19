@@ -2,6 +2,7 @@ import { Shipment, ShipmentStatus } from '../../src/types/shipment.js';
 import archiveService from '../services/archiveService.js';
 import db from '../db/connection.js';
 import EmailService from '../services/emailService.js';
+import { sendError, Errors, AppError } from '../utils/errorHandler.js';
 
 // Helper to convert snake_case DB columns to camelCase
 function dbRowToShipment(row) {
@@ -101,12 +102,7 @@ export class ShipmentsController {
 
       res.json(shipments);
     } catch (error) {
-      console.error('Error in getAllShipments:', error);
-      res.status(500).json({
-        error: error.message,
-        details: 'Failed to retrieve shipments',
-        timestamp: new Date().toISOString()
-      });
+      sendError(res, Errors.DatabaseError('shipment retrieval'), 'getAllShipments');
     }
   }
 
@@ -114,11 +110,11 @@ export class ShipmentsController {
     try {
       const result = await db.query('SELECT * FROM shipments WHERE id = $1', [req.params.id]);
       if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Shipment not found' });
+        throw Errors.NotFound('Shipment');
       }
       res.json(dbRowToShipment(result.rows[0]));
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      sendError(res, error instanceof AppError ? error : Errors.DatabaseError('shipment retrieval'), 'getShipmentById');
     }
   }
 
@@ -156,7 +152,7 @@ export class ShipmentsController {
       const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
       res.status(201).json(dbRowToShipment(result.rows[0]));
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      sendError(res, error instanceof AppError ? error : Errors.DatabaseError('shipment creation'), 'createShipment');
     }
   }
 
@@ -206,12 +202,12 @@ export class ShipmentsController {
 
       const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
       if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Shipment not found' });
+        throw Errors.NotFound('Shipment');
       }
 
       res.json(dbRowToShipment(result.rows[0]));
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      sendError(res, error instanceof AppError ? error : Errors.DatabaseError('shipment update'), 'updateShipment');
     }
   }
 
@@ -219,11 +215,11 @@ export class ShipmentsController {
     try {
       const result = await db.query('DELETE FROM shipments WHERE id = $1 RETURNING id', [req.params.id]);
       if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Shipment not found' });
+        throw Errors.NotFound('Shipment');
       }
       res.status(204).send();
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      sendError(res, error instanceof AppError ? error : Errors.DatabaseError('shipment deletion'), 'deleteShipment');
     }
   }
 
@@ -233,7 +229,7 @@ export class ShipmentsController {
       const result = await db.query('SELECT * FROM shipments WHERE latest_status = $1', [status]);
       res.json(result.rows.map(dbRowToShipment));
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      sendError(res, Errors.DatabaseError('shipment retrieval'), 'getShipmentsByStatus');
     }
   }
 
@@ -242,7 +238,7 @@ export class ShipmentsController {
       const result = await db.query('SELECT * FROM shipments WHERE latest_status = $1', [ShipmentStatus.DELAYED]);
       res.json(result.rows.map(dbRowToShipment));
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      sendError(res, Errors.DatabaseError('shipment retrieval'), 'getDelayedShipments');
     }
   }
 
