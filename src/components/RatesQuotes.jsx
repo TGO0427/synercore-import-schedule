@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { authUtils } from "../utils/auth";
 
 // Vite-friendly, no process.env usage
 // Prefer env, otherwise use '' so requests stay relative and hit the Vite proxy
@@ -58,12 +59,17 @@ function RatesQuotes({ showSuccess, showError, loading }) {
     try {
       const entries = await Promise.all(
         Object.keys(forwarders).map(async (fw) => {
-          const res = await fetch(`${API_BASE}/api/quotes/${fw}`);
+          const res = await fetch(`${API_BASE}/api/quotes/${fw}`, {
+            headers: authUtils.getAuthHeader(),
+            credentials: 'include'
+          });
           if (!res.ok) {
             if (res.status === 404) {
               showError?.(
                 `${forwarders[fw].name} endpoint not found at ${API_BASE}/api/quotes/${fw}`
               );
+            } else if (res.status === 401) {
+              console.warn(`Unauthorized access to ${forwarders[fw].name} quotes - check authentication token`);
             }
             return [fw, []];
           }
@@ -96,6 +102,8 @@ function RatesQuotes({ showSuccess, showError, loading }) {
         {
           method: "POST",
           body: formData,
+          headers: authUtils.getAuthHeader(),
+          credentials: 'include'
         }
       );
 
@@ -126,7 +134,11 @@ function RatesQuotes({ showSuccess, showError, loading }) {
     try {
       const response = await fetch(
         `${API_BASE}/api/quotes/${forwarder}/${encodeURIComponent(filename)}`,
-        { method: "DELETE" }
+        {
+          method: "DELETE",
+          headers: authUtils.getAuthHeader(),
+          credentials: 'include'
+        }
       );
 
       if (!response.ok) {
@@ -160,8 +172,12 @@ function RatesQuotes({ showSuccess, showError, loading }) {
         )}/rename`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...authUtils.getAuthHeader()
+          },
           body: JSON.stringify({ newName: cleanName }),
+          credentials: 'include'
         }
       );
 
@@ -230,7 +246,11 @@ function RatesQuotes({ showSuccess, showError, loading }) {
         `${API_BASE}/api/quotes/${forwarder}/${encodeURIComponent(
           filename
         )}/analyze`,
-        { method: "POST" }
+        {
+          method: "POST",
+          headers: authUtils.getAuthHeader(),
+          credentials: 'include'
+        }
       );
 
       if (!response.ok) {
@@ -285,8 +305,12 @@ function RatesQuotes({ showSuccess, showError, loading }) {
     try {
       const response = await fetch(`${API_BASE}/api/quotes/compare`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...authUtils.getAuthHeader()
+        },
         body: JSON.stringify({ quotes: pdfQuotes }),
+        credentials: 'include'
       });
 
       if (!response.ok) {
