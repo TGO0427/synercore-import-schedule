@@ -30,6 +30,8 @@ import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import http from 'http';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './config/swagger.js';
 
 import shipmentsRouter from './routes/shipments.js';
 import suppliersRouter from './routes/suppliers.js';
@@ -87,6 +89,20 @@ app.use(cors({
 
 // Explicitly handle OPTIONS for browsers that need it
 app.options('*', cors());
+
+// Swagger UI - Available for documentation at /api-docs
+app.use('/api-docs', swaggerUi.serve);
+app.get('/api-docs', swaggerUi.setup(swaggerSpec, {
+  swaggerOptions: {
+    url: '/api-docs/swagger.json'
+  }
+}));
+
+// Swagger JSON endpoint
+app.get('/api-docs/swagger.json', (_req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
 
 /* ---------------- Security Middleware & Health Check ---------------- */
 // Health check endpoint (before security middleware for Railway)
