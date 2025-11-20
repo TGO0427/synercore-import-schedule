@@ -36,7 +36,13 @@ export class SupplierMetrics {
         ShipmentStatus.ARRIVED_KLM,
         ShipmentStatus.ARRIVED_OFFSITE,
         ShipmentStatus.STORED,
-        ShipmentStatus.RECEIVED
+        ShipmentStatus.RECEIVED,
+        // Also accept lowercase versions (from database)
+        'arrived_pta',
+        'arrived_klm',
+        'arrived_offsite',
+        'stored',
+        'received'
       ].includes(s.latestStatus);
 
       if (!isArrived) return false;
@@ -52,7 +58,18 @@ export class SupplierMetrics {
       return actualDate <= new Date(scheduledDate);
     });
 
-    return Math.round((arrivedShipments.length / supplierShipments.length) * 100);
+    const percentage = Math.round((arrivedShipments.length / supplierShipments.length) * 100);
+
+    if (percentage === 0 && supplierShipments.length > 0) {
+      console.log(`[SupplierMetrics] On-time: ${supplierName}`, {
+        total: supplierShipments.length,
+        arrived: arrivedShipments.length,
+        statuses: [...new Set(supplierShipments.map(s => s.latestStatus))],
+        percentage
+      });
+    }
+
+    return percentage;
   }
 
   /**
@@ -64,11 +81,25 @@ export class SupplierMetrics {
 
     if (supplierShipments.length === 0) return null; // No inspections yet
 
-    const passedShipments = supplierShipments.filter(
-      s => s.inspectionStatus === InspectionStatus.PASSED || s.inspectionStatus === 'passed'
-    );
+    const passedShipments = supplierShipments.filter(s => {
+      const isPassedStatus = s.inspectionStatus === InspectionStatus.PASSED ||
+                             s.inspectionStatus === 'passed' ||
+                             s.inspectionStatus === 'PASSED';
+      return isPassedStatus;
+    });
 
-    return Math.round((passedShipments.length / supplierShipments.length) * 100);
+    const percentage = Math.round((passedShipments.length / supplierShipments.length) * 100);
+
+    if (percentage === 0 && supplierShipments.length > 0) {
+      console.log(`[SupplierMetrics] Inspection Pass Rate: ${supplierName}`, {
+        total: supplierShipments.length,
+        passed: passedShipments.length,
+        statuses: [...new Set(supplierShipments.map(s => s.inspectionStatus))],
+        percentage
+      });
+    }
+
+    return percentage;
   }
 
   /**
@@ -92,6 +123,13 @@ export class SupplierMetrics {
     const avgLeadTime = Math.round(
       leadTimes.reduce((a, b) => a + b, 0) / leadTimes.length
     );
+
+    console.log(`[SupplierMetrics] Lead Time: ${supplierName}`, {
+      total: this.getSupplierShipments(shipments, supplierName).length,
+      withDates: supplierShipments.length,
+      avgDays: avgLeadTime,
+      sample: leadTimes.slice(0, 3)
+    });
 
     return avgLeadTime;
   }
