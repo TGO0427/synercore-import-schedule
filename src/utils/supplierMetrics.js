@@ -85,30 +85,46 @@ export class SupplierMetrics {
 
   /**
    * Calculate inspection pass rate for a supplier
+   * Only counts inspections for warehouse stored shipments
    */
   static calculateInspectionPassRate(shipments, supplierName) {
-    const supplierShipments = this.getSupplierShipments(shipments, supplierName)
-      .filter(s => s.inspectionDate);
+    const supplierShipments = this.getSupplierShipments(shipments, supplierName);
 
-    if (supplierShipments.length === 0) return null; // No inspections yet
+    // Filter to warehouse shipments that have been inspected
+    const warehouseInspected = supplierShipments.filter(s => {
+      const isInWarehouse = [
+        ShipmentStatus.STORED,
+        ShipmentStatus.RECEIVED,
+        ShipmentStatus.INSPECTION_PASSED,
+        'stored',
+        'received',
+        'inspection_passed'
+      ].includes(s.latestStatus);
 
-    const passedShipments = supplierShipments.filter(s => {
+      return isInWarehouse && s.inspectionDate;
+    });
+
+    if (warehouseInspected.length === 0) return null; // No warehouse inspections yet
+
+    const passedShipments = warehouseInspected.filter(s => {
       const isPassedStatus = s.inspectionStatus === InspectionStatus.PASSED ||
                              s.inspectionStatus === 'passed' ||
                              s.inspectionStatus === 'PASSED';
       return isPassedStatus;
     });
 
-    const percentage = Math.round((passedShipments.length / supplierShipments.length) * 100);
+    const percentage = Math.round((passedShipments.length / warehouseInspected.length) * 100);
 
-    console.log(`[SupplierMetrics] Inspection: ${supplierName}`, {
-      total: supplierShipments.length,
+    console.log(`[SupplierMetrics] Inspection (Warehouse): ${supplierName}`, {
+      totalShipments: supplierShipments.length,
+      warehouseShipments: warehouseInspected.length,
       passed: passedShipments.length,
-      statuses: [...new Set(supplierShipments.map(s => s.inspectionStatus))],
+      statuses: [...new Set(warehouseInspected.map(s => s.inspectionStatus))],
       percentage,
-      sample: supplierShipments.slice(0, 2).map(s => ({
+      sample: warehouseInspected.slice(0, 2).map(s => ({
         inspectionStatus: s.inspectionStatus,
-        inspectionDate: s.inspectionDate
+        inspectionDate: s.inspectionDate,
+        latestStatus: s.latestStatus
       }))
     });
 
@@ -116,16 +132,30 @@ export class SupplierMetrics {
   }
 
   /**
-   * Calculate average lead time in days
+   * Calculate average lead time in days for warehouse shipments
    * Lead time = actual arrival date - scheduled week date
+   * Only counts shipments that made it to warehouse (stored/received/inspection_passed)
    */
   static calculateAverageLeadTime(shipments, supplierName) {
-    const supplierShipments = this.getSupplierShipments(shipments, supplierName)
-      .filter(s => s.receivingDate && s.weekNumber);
+    const supplierShipments = this.getSupplierShipments(shipments, supplierName);
 
-    if (supplierShipments.length === 0) return null;
+    // Filter to warehouse shipments with receiving dates and week numbers
+    const warehouseWithDates = supplierShipments.filter(s => {
+      const isInWarehouse = [
+        ShipmentStatus.STORED,
+        ShipmentStatus.RECEIVED,
+        ShipmentStatus.INSPECTION_PASSED,
+        'stored',
+        'received',
+        'inspection_passed'
+      ].includes(s.latestStatus);
 
-    const leadTimes = supplierShipments.map(s => {
+      return isInWarehouse && s.receivingDate && s.weekNumber;
+    });
+
+    if (warehouseWithDates.length === 0) return null;
+
+    const leadTimes = warehouseWithDates.map(s => {
       const scheduledDate = new Date(s.selectedWeekDate || this.estimateDateFromWeek(s.weekNumber));
       const actualDate = new Date(s.receivingDate);
       const diffMs = actualDate - scheduledDate;
@@ -137,9 +167,9 @@ export class SupplierMetrics {
       leadTimes.reduce((a, b) => a + b, 0) / leadTimes.length
     );
 
-    console.log(`[SupplierMetrics] Lead Time: ${supplierName}`, {
-      total: this.getSupplierShipments(shipments, supplierName).length,
-      withDates: supplierShipments.length,
+    console.log(`[SupplierMetrics] Lead Time (Warehouse): ${supplierName}`, {
+      totalShipments: supplierShipments.length,
+      warehouseShipments: warehouseWithDates.length,
       avgDays: avgLeadTime,
       sample: leadTimes.slice(0, 3)
     });
@@ -150,6 +180,7 @@ export class SupplierMetrics {
   /**
    * Get 90-day trend for a metric
    * Returns array of values over last 90 days
+   * Only includes warehouse stored shipments (stored/received/inspection_passed)
    */
   static calculateMetricTrend(shipments, supplierName, metric = 'onTime', days = 90) {
     const now = new Date();
@@ -157,9 +188,21 @@ export class SupplierMetrics {
 
     const supplierShipments = this.getSupplierShipments(shipments, supplierName);
 
-    // Group shipments by week
+    // Group warehouse shipments by week
     const weeklyData = {};
     supplierShipments.forEach(s => {
+      // Only count warehouse shipments
+      const isInWarehouse = [
+        ShipmentStatus.STORED,
+        ShipmentStatus.RECEIVED,
+        ShipmentStatus.INSPECTION_PASSED,
+        'stored',
+        'received',
+        'inspection_passed'
+      ].includes(s.latestStatus);
+
+      if (!isInWarehouse) return;
+
       const shipmentDate = new Date(s.receivingDate || s.updatedAt || s.createdAt);
       if (shipmentDate < startDate) return;
 
@@ -176,7 +219,9 @@ export class SupplierMetrics {
       weeklyData[weekKey].total++;
 
       if (metric === 'inspection') {
-        if (s.inspectionStatus === InspectionStatus.PASSED || s.inspectionStatus === 'passed') {
+        if (s.inspectionStatus === InspectionStatus.PASSED ||
+            s.inspectionStatus === 'passed' ||
+            s.inspectionStatus === 'PASSED') {
           weeklyData[weekKey].passed++;
         }
       } else if (metric === 'onTime') {
@@ -216,24 +261,40 @@ export class SupplierMetrics {
 
   /**
    * Get total number of shipments from supplier
+   * Returns warehouse shipments (stored/received/inspection_passed)
    */
   static getTotalShipments(shipments, supplierName) {
-    return this.getSupplierShipments(shipments, supplierName).length;
+    const supplierShipments = this.getSupplierShipments(shipments, supplierName);
+    const warehouseShipments = supplierShipments.filter(s => {
+      const isInWarehouse = [
+        ShipmentStatus.STORED,
+        ShipmentStatus.RECEIVED,
+        ShipmentStatus.INSPECTION_PASSED,
+        'stored',
+        'received',
+        'inspection_passed'
+      ].includes(s.latestStatus);
+      return isInWarehouse;
+    });
+    return warehouseShipments.length;
   }
 
   /**
    * Helper: Check if shipment was on time
+   * Only considers warehouse shipments (stored/received/inspection_passed)
    */
   static isShipmentOnTime(shipment) {
-    const isArrived = [
-      ShipmentStatus.ARRIVED_PTA,
-      ShipmentStatus.ARRIVED_KLM,
-      ShipmentStatus.ARRIVED_OFFSITE,
+    // Only count warehouse shipments
+    const isInWarehouse = [
       ShipmentStatus.STORED,
-      ShipmentStatus.RECEIVED
+      ShipmentStatus.RECEIVED,
+      ShipmentStatus.INSPECTION_PASSED,
+      'stored',
+      'received',
+      'inspection_passed'
     ].includes(shipment.latestStatus);
 
-    if (!isArrived) return false;
+    if (!isInWarehouse) return false;
 
     const arrivedDate = shipment.receivingDate || shipment.updatedAt;
     if (!arrivedDate || !shipment.weekNumber) return true;
