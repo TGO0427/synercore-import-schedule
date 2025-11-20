@@ -1,0 +1,361 @@
+/* ============ SKELETON PULSE ANIMATION ============ */
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 1;
+    background-color: #f0f0f0;
+  }
+  50% {
+    opacity: 0.6;
+    background-color: #e0e0e0;
+  }
+}
+
+.skeleton-pulse {
+  display: block;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  background-color: #f0f0f0;
+}
+
+/* ============ TABLE SKELETON ============ */
+.skeleton-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.skeleton-table-header {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  background-color: #fafafa;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 12px;
+}
+
+.skeleton-table-header-cell {
+  padding: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.skeleton-table-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.skeleton-table-row {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  align-items: center;
+}
+
+.skeleton-table-row:last-child {
+  border-bottom: none;
+}
+
+.skeleton-table-cell {
+  padding: 12px;
+  display: flex;
+  align-items: center;
+}
+
+/* ============ SHIPMENT TABLE SKELETON ============ */
+.skeleton-shipment-table {
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.skeleton-shipment-row {
+  display: flex;
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  align-items: center;
+  gap: 8px;
+}
+
+.skeleton-shipment-row:last-child {
+  border-bottom: none;
+}
+
+/* ============ FORM SKELETON ============ */
+.skeleton-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.skeleton-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-label {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.skeleton-form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+/* ============ CARD SKELETON ============ */
+.skeleton-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #fff;
+}
+
+.skeleton-card-content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-title {
+  margin-bottom: 8px;
+}
+
+.skeleton-text {
+  margin-bottom: 4px;
+}
+
+.skeleton-text:last-child {
+  margin-bottom: 0;
+}
+
+/* ============ CARD GRID SKELETON ============ */
+.skeleton-grid {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 1200px) {
+  .skeleton-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .skeleton-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .skeleton-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============ LIST SKELETON ============ */
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-list-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  align-items: flex-start;
+}
+
+.skeleton-avatar {
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.skeleton-list-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ============ HEADER SKELETON ============ */
+.skeleton-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background-color: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  border-radius: 8px 8px 0 0;
+}
+
+.skeleton-header-nav {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+/* ============ PAGE SKELETON ============ */
+.skeleton-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #fafafa;
+}
+
+.skeleton-page-header {
+  background-color: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 16px 20px;
+}
+
+.skeleton-page-content {
+  display: flex;
+  flex: 1;
+  gap: 20px;
+  padding: 20px;
+}
+
+.skeleton-page-sidebar {
+  width: 250px;
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #e0e0e0;
+}
+
+.skeleton-page-main {
+  flex: 1;
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #e0e0e0;
+}
+
+/* ============ RESPONSIVE DESIGN ============ */
+@media (max-width: 768px) {
+  .skeleton-page-content {
+    flex-direction: column;
+  }
+
+  .skeleton-page-sidebar {
+    width: 100%;
+  }
+
+  .skeleton-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .skeleton-header-nav {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .skeleton-table-header,
+  .skeleton-table-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .skeleton-list-item {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .skeleton-list-content {
+    align-items: center;
+  }
+}
+
+/* ============ LOADING STATE INDICATORS ============ */
+.skeleton-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.2) 20%,
+    rgba(255, 255, 255, 0.5) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ============ DARK MODE SUPPORT ============ */
+@media (prefers-color-scheme: dark) {
+  .skeleton-pulse {
+    background-color: #2a2a2a;
+  }
+
+  @keyframes skeleton-pulse {
+    0%, 100% {
+      opacity: 1;
+      background-color: #2a2a2a;
+    }
+    50% {
+      opacity: 0.6;
+      background-color: #1f1f1f;
+    }
+  }
+
+  .skeleton-table,
+  .skeleton-form,
+  .skeleton-card,
+  .skeleton-list-item,
+  .skeleton-page-sidebar,
+  .skeleton-page-main {
+    border-color: #3a3a3a;
+    background-color: #1f1f1f;
+  }
+
+  .skeleton-table-header {
+    background-color: #252525;
+    border-bottom-color: #3a3a3a;
+  }
+
+  .skeleton-shipment-row {
+    border-bottom-color: #2a2a2a;
+  }
+
+  .skeleton-page {
+    background-color: #1a1a1a;
+  }
+
+  .skeleton-page-header {
+    background-color: #1f1f1f;
+    border-bottom-color: #3a3a3a;
+  }
+}
