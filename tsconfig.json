@@ -1,0 +1,71 @@
+{
+  "compilerOptions": {
+    /* Language and Environment */
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ES2022",
+    "moduleResolution": "node",
+
+    /* Emit Settings */
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist-server",
+    "rootDir": "./server",
+    "removeComments": true,
+    "noEmit": false,
+
+    /* Interop Constraints */
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+
+    /* Type Checking - Strict Compiler Checks */
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "allowUnusedLabels": false,
+    "allowUnreachableCode": false,
+
+    /* Completeness */
+    "skipDefaultLibCheck": true,
+    "skipLibCheck": true,
+
+    /* Path Mapping */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["server/*"],
+      "@config/*": ["server/config/*"],
+      "@middleware/*": ["server/middleware/*"],
+      "@routes/*": ["server/routes/*"],
+      "@utils/*": ["server/utils/*"],
+      "@db/*": ["server/db/*"],
+      "@types/*": ["server/types/*"],
+      "@websocket/*": ["server/websocket/*"],
+      "@jobs/*": ["server/jobs/*"]
+    }
+  },
+  "include": [
+    "server/**/*.ts",
+    "server/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist-server",
+    "server/__tests__",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
+}
