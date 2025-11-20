@@ -29,7 +29,7 @@ function formatTimestamp() {
  * Format context object for display
  */
 function formatContext(context = {}) {
-  if (Object.keys(context).length === 0) return '';
+  if (!context || Object.keys(context).length === 0) return '';
   const parts = Object.entries(context)
     .map(([key, value]) => {
       if (typeof value === 'object') {

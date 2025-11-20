@@ -17,7 +17,12 @@
     "setup:db": "npm run migrate && npm run migrate:rejection && npm run migrate:notifications",
     "backfill-week-dates": "node server/db/backfill-week-dates.js",
     "create-admin": "node server/scripts/createAdminUser.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "NODE_OPTIONS='--experimental-vm-modules' jest",
+    "test:watch": "NODE_OPTIONS='--experimental-vm-modules' jest --watch",
+    "test:coverage": "NODE_OPTIONS='--experimental-vm-modules' jest --coverage",
+    "test:server": "NODE_OPTIONS='--experimental-vm-modules' jest server",
+    "test:utils": "NODE_OPTIONS='--experimental-vm-modules' jest server/utils",
+    "test:middleware": "NODE_OPTIONS='--experimental-vm-modules' jest server/middleware"
   },
   "keywords": [
     "shipment",
@@ -55,13 +60,20 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@jest/globals": "^30.2.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@types/jest": "^30.0.0",
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
+    "@types/supertest": "^6.0.3",
     "@vitejs/plugin-react": "^4.0.3",
     "concurrently": "^8.2.0",
+    "jest": "^30.2.0",
     "nodemon": "^3.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "supertest": "^7.1.4",
     "vite": "^4.4.5"
   }
 }

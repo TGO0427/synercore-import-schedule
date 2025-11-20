@@ -43,6 +43,7 @@ export const errorHandler = (err, req, res, next) => {
  * Convert various error types to AppError
  */
 function convertToAppError(err) {
+  const isDevelopment = process.env.NODE_ENV === 'development';
   // Handle validation errors from express-validator
   if (err.array && typeof err.array === 'function') {
     const errors = err.array();
