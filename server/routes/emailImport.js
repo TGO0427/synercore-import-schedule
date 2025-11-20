@@ -3,6 +3,7 @@ import EmailImporter from '../services/emailImporter.js';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { validateEmailImportConfig } from '../middleware/validation.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -11,7 +12,7 @@ const __dirname = path.dirname(__filename);
 let emailImporter = null;
 
 // Test email connection
-router.post('/test-connection', async (req, res) => {
+router.post('/test-connection', validateEmailImportConfig, async (req, res) => {
   try {
     const { user, password, host, port } = req.body;
 
@@ -43,7 +44,7 @@ router.post('/test-connection', async (req, res) => {
 });
 
 // Start email monitoring
-router.post('/start', async (req, res) => {
+router.post('/start', validateEmailImportConfig, async (req, res) => {
   try {
     if (emailImporter) {
       return res.json({

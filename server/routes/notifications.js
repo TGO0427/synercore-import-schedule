@@ -3,6 +3,7 @@ import express from 'express';
 import pool from '../db/connection.js';
 import { authenticateToken } from './auth.js';
 import EmailService from '../services/emailService.js';
+import { validateNotificationCreate } from '../middleware/validation.js';
 
 const router = express.Router();
 

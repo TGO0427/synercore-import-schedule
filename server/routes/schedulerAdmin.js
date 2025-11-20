@@ -3,6 +3,7 @@ import express from 'express';
 import { authenticateToken } from './auth.js';
 import NotificationScheduler from '../jobs/notificationScheduler.js';
 import pool from '../db/connection.js';
+import { validateSchedulerConfig } from '../middleware/validation.js';
 
 const router = express.Router();
 

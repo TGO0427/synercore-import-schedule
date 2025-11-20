@@ -344,3 +344,91 @@ export const validateId = [
     .trim(),
   validate
 ];
+
+// Quote validation rules
+export const validateQuoteCreate = [
+  body('forwarder')
+    .notEmpty()
+    .withMessage('Forwarder is required')
+    .isIn(['dhl', 'dsv', 'afrigistics'])
+    .withMessage('Forwarder must be one of: dhl, dsv, afrigistics')
+    .trim(),
+  body('fileName')
+    .notEmpty()
+    .withMessage('File name is required')
+    .isLength({ max: 255 })
+    .withMessage('File name must be less than 255 characters'),
+  validate
+];
+
+// Notification validation rules
+export const validateNotificationCreate = [
+  body('userId')
+    .notEmpty()
+    .withMessage('User ID is required')
+    .trim(),
+  body('message')
+    .notEmpty()
+    .withMessage('Message is required')
+    .isLength({ max: 1000 })
+    .withMessage('Message must be less than 1000 characters'),
+  body('type')
+    .optional()
+    .isIn(['info', 'warning', 'error', 'success'])
+    .withMessage('Type must be one of: info, warning, error, success'),
+  validate
+];
+
+// Email import validation rules
+export const validateEmailImportConfig = [
+  body('host')
+    .notEmpty()
+    .withMessage('Email host is required')
+    .isLength({ max: 255 })
+    .withMessage('Host must be less than 255 characters'),
+  body('user')
+    .notEmpty()
+    .withMessage('Email user is required')
+    .isEmail()
+    .withMessage('User must be a valid email address'),
+  body('password')
+    .notEmpty()
+    .withMessage('Password is required'),
+  body('port')
+    .optional()
+    .isInt({ min: 1, max: 65535 })
+    .withMessage('Port must be between 1 and 65535'),
+  validate
+];
+
+// Warehouse capacity validation
+export const validateWarehouseCapacityUpdate = [
+  body('binsUsed')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Bins used must be a non-negative integer'),
+  body('capacity')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Capacity must be a positive integer'),
+  validate
+];
+
+// Scheduler validation rules
+export const validateSchedulerConfig = [
+  body('jobName')
+    .notEmpty()
+    .withMessage('Job name is required')
+    .isLength({ max: 255 })
+    .withMessage('Job name must be less than 255 characters'),
+  body('cronExpression')
+    .notEmpty()
+    .withMessage('Cron expression is required')
+    .isLength({ max: 100 })
+    .withMessage('Cron expression must be less than 100 characters'),
+  body('enabled')
+    .optional()
+    .isBoolean()
+    .withMessage('Enabled must be a boolean'),
+  validate
+];

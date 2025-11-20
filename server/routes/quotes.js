@@ -5,6 +5,7 @@ import multer from 'multer';
 import { fileURLToPath } from 'url';
 import PDFAnalyzer from '../services/pdfAnalyzer.js';
 import { ALLOWED_FILE_TYPES, generateSafeFilename } from '../middleware/fileUpload.js';
+import { validateQuoteCreate } from '../middleware/validation.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);

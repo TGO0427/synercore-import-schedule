@@ -1,6 +1,7 @@
 import express from 'express';
 import pool from '../db/connection.js';
 import { authenticateToken } from './auth.js';
+import { validateWarehouseCapacity, validateWarehouseCapacityUpdate } from '../middleware/validation.js';
 
 const router = express.Router();
 
@@ -78,7 +79,7 @@ router.get('/', async (req, res) => {
 
 // PUT/UPDATE total capacity for a specific warehouse
 // MUST be before /:warehouseName to match correctly
-router.put('/:warehouseName/total-capacity', (req, res) => {
+router.put('/:warehouseName/total-capacity', validateWarehouseCapacity, (req, res) => {
   // Wrap in explicit error handler
   (async () => {
     try {
@@ -125,7 +126,7 @@ router.put('/:warehouseName/total-capacity', (req, res) => {
 
 // PUT/UPDATE available bins for a specific warehouse
 // MUST be before /:warehouseName to match correctly
-router.put('/:warehouseName/available-bins', (req, res) => {
+router.put('/:warehouseName/available-bins', validateWarehouseCapacityUpdate, (req, res) => {
   // Wrap in explicit error handler
   (async () => {
     try {
@@ -214,7 +215,7 @@ router.get('/:warehouseName/history', authenticateToken, async (req, res) => {
 
 // PUT/UPDATE warehouse capacity for a specific warehouse (bins used)
 // MUST be last to avoid conflicting with more specific routes
-router.put('/:warehouseName', async (req, res) => {
+router.put('/:warehouseName', validateWarehouseCapacityUpdate, async (req, res) => {
   try {
     const { warehouseName } = req.params;
     const { binsUsed } = req.body;
