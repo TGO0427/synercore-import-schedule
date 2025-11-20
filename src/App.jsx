@@ -131,7 +131,7 @@ function App() {
   useEffect(() => {
     // Check for new JWT-based auth first
     const user = authUtils.getUser();
-    const isAuth = user && authUtils.isAuthenticated();
+    const isAuth = user && authUtils.isAuthenticated() && !authUtils.isTokenExpired();
 
     if (isAuth) {
       setIsAuthenticated(true);
@@ -140,15 +140,9 @@ function App() {
       fetchShipments();
       fetchSuppliers();
     } else {
-      // Fallback to legacy localStorage check
-      const savedAuth = localStorage.getItem('isAuthenticated');
-      const savedUsername = localStorage.getItem('username');
-      if (savedAuth === 'true' && savedUsername) {
-        setIsAuthenticated(true);
-        setUsername(savedUsername);
-        // Only fetch if authenticated
-        fetchShipments();
-        fetchSuppliers();
+      // Clear any stale auth data
+      if (authUtils.isAuthenticated() || authUtils.getUser()) {
+        authUtils.clearAuth();
       }
     }
 

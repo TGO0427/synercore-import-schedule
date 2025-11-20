@@ -45,9 +45,15 @@ export const authUtils = {
     }
   },
 
-  // Check if user is authenticated
+  // Check if user is authenticated (and token is not expired)
   isAuthenticated() {
-    return !!this.getToken();
+    const token = this.getToken();
+    if (!token) return false;
+    // Also check if token is expired
+    if (this.isTokenExpired()) {
+      return false;
+    }
+    return true;
   },
 
   // Check if access token is expired
