@@ -25,6 +25,8 @@ class SocketManager {
       ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [])
     ];
 
+    console.log('[SocketManager] Initializing with allowed origins:', allowedOrigins);
+
     this.io = new Server(httpServer, {
       cors: {
         origin: allowedOrigins,
@@ -44,7 +46,17 @@ class SocketManager {
     // Handle new connections
     this.io.on('connection', this.handleConnection.bind(this));
 
-    console.log('✓ Socket.io initialized');
+    // Handle connection errors at server level
+    this.io.engine.on('connection_error', (err) => {
+      console.error('[SocketManager] Engine connection error:', {
+        code: err.code,
+        message: err.message,
+        context: err.context
+      });
+    });
+
+    console.log('✓ Socket.io initialized successfully');
+    console.log(`✓ Listening for WebSocket connections on configured transports: websocket, polling`);
     return this.io;
   }
 
@@ -61,6 +73,7 @@ class SocketManager {
         // Allow unauthenticated connections for supplier portal (they have supplier_token in localStorage)
         socket.userId = null;
         socket.userRole = 'guest';
+        console.log(`[SocketManager] Guest connection established: ${socket.id}`);
         return next();
       }
 
@@ -69,10 +82,17 @@ class SocketManager {
       socket.userId = decoded.id;
       socket.userRole = decoded.role || 'user';
 
+      console.log(`[SocketManager] Authenticated connection: userId=${socket.userId}, role=${socket.userRole}, socketId=${socket.id}`);
+
       next();
     } catch (error) {
-      console.error('Socket authentication error:', error.message);
-      next(new Error('Authentication error'));
+      const errorMsg = error.message || 'Unknown authentication error';
+      console.error('[SocketManager] Socket authentication failed:', {
+        error: errorMsg,
+        socketId: socket.id,
+        hasToken: !!socket.handshake.auth.token
+      });
+      next(new Error('Authentication error: ' + errorMsg));
     }
   }
 
@@ -81,7 +101,7 @@ class SocketManager {
    * @param {Socket} socket - Socket.io socket instance
    */
   handleConnection(socket) {
-    console.log(`[Socket] User ${socket.userId || 'guest'} connected: ${socket.id}`);
+    console.log(`[SocketManager] ✓ Connection established: user=${socket.userId || 'guest'}, socketId=${socket.id}`);
 
     // User joins a shipment to watch for updates
     socket.on('join:shipment', (data) => this.handleJoinShipment(socket, data));
@@ -90,7 +110,12 @@ class SocketManager {
     socket.on('leave:shipment', (data) => this.handleLeaveShipment(socket, data));
 
     // Handle disconnection
-    socket.on('disconnect', () => this.handleDisconnect(socket));
+    socket.on('disconnect', (reason) => this.handleDisconnect(socket, reason));
+
+    // Handle connection errors
+    socket.on('error', (error) => {
+      console.error(`[SocketManager] Socket error for ${socket.id}:`, error);
+    });
 
     // Heartbeat for connection keep-alive
     socket.on('ping', () => {
@@ -180,9 +205,10 @@ class SocketManager {
   /**
    * Handle user disconnection
    * @param {Socket} socket - Socket.io socket instance
+   * @param {string} reason - Disconnection reason
    */
-  handleDisconnect(socket) {
-    console.log(`[Socket] User ${socket.userId || 'guest'} disconnected: ${socket.id}`);
+  handleDisconnect(socket, reason) {
+    console.log(`[SocketManager] ✗ Disconnection: user=${socket.userId || 'guest'}, socketId=${socket.id}, reason=${reason}`);
 
     // Clean up all shipment tracking for this user
     if (userViewingShipments.has(socket.userId)) {
