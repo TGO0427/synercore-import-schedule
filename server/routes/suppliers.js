@@ -335,4 +335,178 @@ router.put('/:id/documents/:filename/rename', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/suppliers/metrics - Get performance metrics for all suppliers
+ * Returns KPI data (on-time %, quality %, lead time, grades) for all suppliers
+ */
+router.get('/metrics/all', async (req, res) => {
+  try {
+    // Fetch all suppliers and shipments
+    const suppliersResult = await db.query('SELECT * FROM suppliers ORDER BY name');
+    const shipmentsResult = await db.query('SELECT * FROM shipments');
+
+    const suppliers = suppliersResult.rows.map(dbRowToSupplier);
+    const shipments = shipmentsResult.rows;
+
+    // Calculate metrics for each supplier
+    const metricsData = suppliers.map(supplier => {
+      const supplierShipments = shipments.filter(s =>
+        s.supplier?.toLowerCase().trim() === supplier.name?.toLowerCase().trim()
+      );
+
+      if (supplierShipments.length === 0) {
+        return {
+          supplierName: supplier.name,
+          supplierId: supplier.id,
+          onTimePercent: 0,
+          passRatePercent: null,
+          avgLeadTime: null,
+          totalShipments: 0,
+          grade: { grade: 'N/A', label: 'No Data', color: '#ccc' }
+        };
+      }
+
+      // Calculate on-time delivery %
+      const arrivedShipments = supplierShipments.filter(s => {
+        const isArrived = ['ARRIVED_PTA', 'ARRIVED_KLM', 'ARRIVED_OFFSITE', 'STORED', 'RECEIVED']
+          .includes(s.latest_status);
+        return isArrived;
+      });
+      const onTimePercent = arrivedShipments.length > 0
+        ? Math.round((arrivedShipments.length / supplierShipments.length) * 100)
+        : 0;
+
+      // Calculate inspection pass rate %
+      const inspectedShipments = supplierShipments.filter(s => s.inspection_date);
+      const passRatePercent = inspectedShipments.length > 0
+        ? Math.round((inspectedShipments.filter(s =>
+            s.inspection_status === 'PASSED' || s.inspection_status === 'passed'
+          ).length / inspectedShipments.length) * 100)
+        : null;
+
+      // Calculate average lead time
+      const shippedWithReceiving = supplierShipments.filter(s => s.receiving_date && s.week_number);
+      const avgLeadTime = shippedWithReceiving.length > 0
+        ? Math.round(shippedWithReceiving.reduce((sum, s) => {
+            const scheduled = new Date(s.selected_week_date || `${new Date().getFullYear()}-01-01`);
+            const actual = new Date(s.receiving_date);
+            const diffMs = actual - scheduled;
+            return sum + Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+          }, 0) / shippedWithReceiving.length)
+        : null;
+
+      // Determine grade
+      let grade = { grade: 'C', label: 'Needs Improvement', color: '#dc3545' };
+      if (onTimePercent >= 85 && (passRatePercent === null || passRatePercent >= 90)) {
+        grade = { grade: 'A', label: 'Excellent', color: '#28a745' };
+      } else if (onTimePercent >= 70 && (passRatePercent === null || passRatePercent >= 80)) {
+        grade = { grade: 'B', label: 'Good', color: '#ffc107' };
+      }
+
+      return {
+        supplierName: supplier.name,
+        supplierId: supplier.id,
+        onTimePercent,
+        passRatePercent,
+        avgLeadTime,
+        totalShipments: supplierShipments.length,
+        grade
+      };
+    });
+
+    res.json(metricsData);
+  } catch (error) {
+    console.error('Error fetching metrics:', error);
+    res.status(500).json({ error: 'Failed to fetch supplier metrics' });
+  }
+});
+
+/**
+ * GET /api/suppliers/:id/metrics - Get performance metrics for a specific supplier
+ */
+router.get('/:id/metrics', validateId, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Fetch supplier
+    const supplierResult = await db.query('SELECT * FROM suppliers WHERE id = $1', [id]);
+    if (supplierResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Supplier not found' });
+    }
+
+    const supplier = dbRowToSupplier(supplierResult.rows[0]);
+
+    // Fetch shipments for this supplier
+    const shipmentsResult = await db.query(
+      'SELECT * FROM shipments WHERE LOWER(supplier) = LOWER($1)',
+      [supplier.name]
+    );
+    const shipments = shipmentsResult.rows;
+
+    if (shipments.length === 0) {
+      return res.json({
+        supplier,
+        metrics: {
+          onTimePercent: 0,
+          passRatePercent: null,
+          avgLeadTime: null,
+          totalShipments: 0,
+          grade: { grade: 'N/A', label: 'No Data', color: '#ccc' }
+        }
+      });
+    }
+
+    // Calculate on-time delivery %
+    const arrivedShipments = shipments.filter(s => {
+      const isArrived = ['ARRIVED_PTA', 'ARRIVED_KLM', 'ARRIVED_OFFSITE', 'STORED', 'RECEIVED']
+        .includes(s.latest_status);
+      return isArrived;
+    });
+    const onTimePercent = arrivedShipments.length > 0
+      ? Math.round((arrivedShipments.length / shipments.length) * 100)
+      : 0;
+
+    // Calculate inspection pass rate %
+    const inspectedShipments = shipments.filter(s => s.inspection_date);
+    const passRatePercent = inspectedShipments.length > 0
+      ? Math.round((inspectedShipments.filter(s =>
+          s.inspection_status === 'PASSED' || s.inspection_status === 'passed'
+        ).length / inspectedShipments.length) * 100)
+      : null;
+
+    // Calculate average lead time
+    const shippedWithReceiving = shipments.filter(s => s.receiving_date && s.week_number);
+    const avgLeadTime = shippedWithReceiving.length > 0
+      ? Math.round(shippedWithReceiving.reduce((sum, s) => {
+          const scheduled = new Date(s.selected_week_date || `${new Date().getFullYear()}-01-01`);
+          const actual = new Date(s.receiving_date);
+          const diffMs = actual - scheduled;
+          return sum + Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        }, 0) / shippedWithReceiving.length)
+      : null;
+
+    // Determine grade
+    let grade = { grade: 'C', label: 'Needs Improvement', color: '#dc3545' };
+    if (onTimePercent >= 85 && (passRatePercent === null || passRatePercent >= 90)) {
+      grade = { grade: 'A', label: 'Excellent', color: '#28a745' };
+    } else if (onTimePercent >= 70 && (passRatePercent === null || passRatePercent >= 80)) {
+      grade = { grade: 'B', label: 'Good', color: '#ffc107' };
+    }
+
+    res.json({
+      supplier,
+      metrics: {
+        onTimePercent,
+        passRatePercent,
+        avgLeadTime,
+        totalShipments: shipments.length,
+        grade
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching supplier metrics:', error);
+    res.status(500).json({ error: 'Failed to fetch supplier metrics' });
+  }
+});
+
 export default router;
