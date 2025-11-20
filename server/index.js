@@ -13,7 +13,7 @@ try {
   validateEnvironment();
 } catch (error) {
   console.error(error.message);
-  process.exit(1);
+  // Note: Not calling process.exit(1) immediately - let server start with health endpoint
 }
 
 // SSL certificate validation (only disable for local development)

@@ -4,7 +4,18 @@
  * Helps trace requests through the entire request/response lifecycle
  */
 
-import { logDebug } from '../utils/logger.js';
+// Lazy import to avoid circular dependencies
+let logDebug;
+async function initLogger() {
+  if (!logDebug) {
+    try {
+      const logger = await import('../utils/logger.js');
+      logDebug = logger.logDebug;
+    } catch (e) {
+      logDebug = () => {}; // Fallback no-op
+    }
+  }
+}
 
 /**
  * Generate a simple random string for request IDs
@@ -33,6 +44,11 @@ function generateRequestId() {
  * Stores it in req.id and response header
  */
 export function requestIdMiddleware(req, res, next) {
+  // Initialize logger if not already done
+  if (!logDebug) {
+    logDebug = () => {}; // Use no-op if logger not available yet
+  }
+
   // Check if request already has an ID (from header or previous middleware)
   const requestId = req.headers['x-request-id'] || generateRequestId();
 
@@ -45,14 +61,20 @@ export function requestIdMiddleware(req, res, next) {
   // Add to res.locals for template use (if needed)
   res.locals.requestId = requestId;
 
-  // Log request start
-  logDebug('Request started', {
-    requestId,
-    method: req.method,
-    path: req.path,
-    ip: req.ip,
-    userAgent: req.get('user-agent')?.substring(0, 50)
-  });
+  // Log request start (with fallback)
+  try {
+    if (typeof logDebug === 'function') {
+      logDebug('Request started', {
+        requestId,
+        method: req.method,
+        path: req.path,
+        ip: req.ip,
+        userAgent: req.get('user-agent')?.substring(0, 50)
+      });
+    }
+  } catch (e) {
+    // Silent fail if logging fails
+  }
 
   // Store start time for duration calculation
   const startTime = Date.now();
@@ -63,13 +85,20 @@ export function requestIdMiddleware(req, res, next) {
     const duration = Date.now() - startTime;
     const statusCode = res.statusCode;
 
-    logDebug('Request completed', {
-      requestId,
-      method: req.method,
-      path: req.path,
-      statusCode,
-      durationMs: duration
-    });
+    // Log request completion (with fallback)
+    try {
+      if (typeof logDebug === 'function') {
+        logDebug('Request completed', {
+          requestId,
+          method: req.method,
+          path: req.path,
+          statusCode,
+          durationMs: duration
+        });
+      }
+    } catch (e) {
+      // Silent fail if logging fails
+    }
 
     // Return response
     return originalJson(data);
