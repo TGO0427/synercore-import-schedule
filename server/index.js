@@ -46,6 +46,7 @@ import { helmetConfig, apiRateLimiter, authRateLimiter, authenticateToken } from
 import { createSingleFileUpload, createMultipleFileUpload, handleUploadError, validateFilesPresent, verifyUploadPermission, generateSafeFilename } from './middleware/fileUpload.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
 import { logInfo, logServerStart } from './utils/logger.js';
+import { errorHandler } from './middleware/errorHandler.js';
 import socketManager from './websocket/socketManager.js';
 
 // __dirname for ESM
@@ -213,30 +214,17 @@ if (process.env.NODE_ENV === 'production') {
 // Upload error handler (must come before generic error handler)
 app.use(handleUploadError);
 
-app.use((req, res, _next) => res.status(404).json({ error: 'Not Found', path: req.originalUrl }));
-
-app.use((err, req, res, _next) => {
-  console.error('API ERROR:', {
-    method: req.method,
-    url: req.originalUrl,
-    message: err?.message,
-    stack: process.env.NODE_ENV === 'development' ? err?.stack : undefined,
+// 404 handler (before error handler)
+app.use((req, res, _next) => {
+  res.status(404).json({
+    error: 'Not Found',
+    code: 'NOT_FOUND',
+    path: req.originalUrl
   });
-
-  if (res.headersSent) return;
-
-  // In production, don't expose error details
-  if (process.env.NODE_ENV === 'production') {
-    res.status(500).json({ error: 'Internal Server Error' });
-  } else {
-    // In development, include error details for debugging
-    res.status(500).json({
-      error: 'Internal Server Error',
-      detail: err?.message,
-      stack: err?.stack
-    });
-  }
 });
+
+// Centralized error handler (must be last)
+app.use(errorHandler);
 
 /* ---------------- Async boot ---------------- */
 async function start() {
