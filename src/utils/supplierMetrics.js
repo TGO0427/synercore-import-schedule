@@ -60,14 +60,17 @@ export class SupplierMetrics {
 
     const percentage = Math.round((arrivedShipments.length / supplierShipments.length) * 100);
 
-    if (percentage === 0 && supplierShipments.length > 0) {
-      console.log(`[SupplierMetrics] On-time: ${supplierName}`, {
-        total: supplierShipments.length,
-        arrived: arrivedShipments.length,
-        statuses: [...new Set(supplierShipments.map(s => s.latestStatus))],
-        percentage
-      });
-    }
+    console.log(`[SupplierMetrics] On-time: ${supplierName}`, {
+      total: supplierShipments.length,
+      arrived: arrivedShipments.length,
+      statuses: [...new Set(supplierShipments.map(s => s.latestStatus))],
+      percentage,
+      sample: supplierShipments.slice(0, 2).map(s => ({
+        status: s.latestStatus,
+        receivingDate: s.receivingDate,
+        weekNumber: s.weekNumber
+      }))
+    });
 
     return percentage;
   }
@@ -90,14 +93,16 @@ export class SupplierMetrics {
 
     const percentage = Math.round((passedShipments.length / supplierShipments.length) * 100);
 
-    if (percentage === 0 && supplierShipments.length > 0) {
-      console.log(`[SupplierMetrics] Inspection Pass Rate: ${supplierName}`, {
-        total: supplierShipments.length,
-        passed: passedShipments.length,
-        statuses: [...new Set(supplierShipments.map(s => s.inspectionStatus))],
-        percentage
-      });
-    }
+    console.log(`[SupplierMetrics] Inspection: ${supplierName}`, {
+      total: supplierShipments.length,
+      passed: passedShipments.length,
+      statuses: [...new Set(supplierShipments.map(s => s.inspectionStatus))],
+      percentage,
+      sample: supplierShipments.slice(0, 2).map(s => ({
+        inspectionStatus: s.inspectionStatus,
+        inspectionDate: s.inspectionDate
+      }))
+    });
 
     return percentage;
   }
