@@ -153,7 +153,7 @@ export function logServerStart(port, environment) {
   console.log(`  Port: ${port}`);
   console.log(`  Environment: ${environment}`);
   console.log(`  Log Level: ${LOG_LEVEL_NAMES[CURRENT_LOG_LEVEL]}`);
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 }
 
 /**
