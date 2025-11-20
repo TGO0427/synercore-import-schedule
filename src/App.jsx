@@ -247,6 +247,10 @@ function App() {
       // Always replace array to force downstream children (WeekCalendar) to re-render with fresh values
       setShipments(normalized);
       setLastSyncTime(new Date());
+      console.log('[App] Shipments loaded:', {
+        count: normalized.length,
+        suppliers: [...new Set(normalized.map(s => s.supplier))].sort()
+      });
     } catch (err) {
       console.error('App: Error fetching shipments:', err);
       if (!isBackgroundSync) showError(`Failed to load shipments: ${err.message}`);
@@ -277,6 +281,10 @@ function App() {
         if (prev.length === normalized.length && prev.length > 0) {
           if (prev[0]?.id === normalized[0]?.id) return prev;
         }
+        console.log('[App] Suppliers loaded:', {
+          count: normalized.length,
+          names: normalized.map(s => s.name).sort()
+        });
         return normalized;
       });
     } catch (err) {

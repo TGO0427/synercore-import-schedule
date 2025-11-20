@@ -7,6 +7,16 @@ import MetricsDebugPanel from './MetricsDebugPanel';
 import { getApiUrl } from '../config/api';
 
 function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onUpdateSupplier, onDeleteSupplier, onImportSchedule, showSuccess, showError, loading }) {
+  // Log received data
+  React.useEffect(() => {
+    console.log('[SupplierManagement] Received props:', {
+      suppliersCount: suppliers.length,
+      shipmentsCount: shipments.length,
+      suppliers: suppliers.map(s => s.name),
+      shipmentSuppliers: [...new Set(shipments.map(s => s.supplier))].sort()
+    });
+  }, [suppliers, shipments]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
