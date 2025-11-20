@@ -3,7 +3,17 @@ import { SupplierMetrics } from '../utils/supplierMetrics';
 
 function SupplierKPICard({ supplier, shipments }) {
   const metrics = useMemo(() => {
-    return SupplierMetrics.calculateAllMetrics(shipments, supplier.name);
+    // Try matching by name first, then by code if available
+    const supplierName = supplier.name || supplier.code;
+    const calculatedMetrics = SupplierMetrics.calculateAllMetrics(shipments, supplierName);
+
+    // Debug: Log if no data found for supplier
+    if (calculatedMetrics.totalShipments === 0 && shipments.length > 0) {
+      console.warn(`[SupplierKPICard] No matching shipments for supplier "${supplierName}". Available suppliers in data:`,
+        [...new Set(shipments.map(s => s.supplier).filter(Boolean))]);
+    }
+
+    return calculatedMetrics;
   }, [supplier, shipments]);
 
   const getTrendIndicator = () => {

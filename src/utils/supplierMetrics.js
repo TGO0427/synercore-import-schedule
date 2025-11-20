@@ -7,13 +7,25 @@ import { ShipmentStatus, InspectionStatus } from '../types/shipment';
 
 export class SupplierMetrics {
   /**
+   * Helper: Filter shipments by supplier name
+   * Handles case-insensitive matching
+   */
+  static getSupplierShipments(shipments, supplierName) {
+    if (!supplierName) return [];
+
+    const normalizedName = supplierName.toLowerCase().trim();
+    return shipments.filter(s => {
+      const shipmentSupplier = s.supplier?.toLowerCase().trim();
+      return shipmentSupplier === normalizedName;
+    });
+  }
+
+  /**
    * Calculate on-time delivery percentage for a supplier
    * On-time = shipments that arrived in or before their scheduled week
    */
   static calculateOnTimeDelivery(shipments, supplierName) {
-    const supplierShipments = shipments.filter(
-      s => s.supplier?.toLowerCase() === supplierName?.toLowerCase()
-    );
+    const supplierShipments = this.getSupplierShipments(shipments, supplierName);
 
     if (supplierShipments.length === 0) return 0;
 
@@ -47,9 +59,8 @@ export class SupplierMetrics {
    * Calculate inspection pass rate for a supplier
    */
   static calculateInspectionPassRate(shipments, supplierName) {
-    const supplierShipments = shipments.filter(
-      s => s.supplier?.toLowerCase() === supplierName?.toLowerCase() && s.inspectionDate
-    );
+    const supplierShipments = this.getSupplierShipments(shipments, supplierName)
+      .filter(s => s.inspectionDate);
 
     if (supplierShipments.length === 0) return null; // No inspections yet
 
@@ -65,11 +76,8 @@ export class SupplierMetrics {
    * Lead time = actual arrival date - scheduled week date
    */
   static calculateAverageLeadTime(shipments, supplierName) {
-    const supplierShipments = shipments.filter(
-      s => s.supplier?.toLowerCase() === supplierName?.toLowerCase() &&
-           s.receivingDate &&
-           s.weekNumber
-    );
+    const supplierShipments = this.getSupplierShipments(shipments, supplierName)
+      .filter(s => s.receivingDate && s.weekNumber);
 
     if (supplierShipments.length === 0) return null;
 
@@ -96,9 +104,7 @@ export class SupplierMetrics {
     const now = new Date();
     const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 
-    const supplierShipments = shipments.filter(
-      s => s.supplier?.toLowerCase() === supplierName?.toLowerCase()
-    );
+    const supplierShipments = this.getSupplierShipments(shipments, supplierName);
 
     // Group shipments by week
     const weeklyData = {};
@@ -161,9 +167,7 @@ export class SupplierMetrics {
    * Get total number of shipments from supplier
    */
   static getTotalShipments(shipments, supplierName) {
-    return shipments.filter(
-      s => s.supplier?.toLowerCase() === supplierName?.toLowerCase()
-    ).length;
+    return this.getSupplierShipments(shipments, supplierName).length;
   }
 
   /**

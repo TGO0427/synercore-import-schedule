@@ -3,6 +3,7 @@ import { Supplier, ImportFormat, DocumentType } from '../types/supplier';
 import * as XLSX from 'xlsx';
 import SupplierCharts from './SupplierCharts';
 import SupplierKPICard from './SupplierKPICard';
+import MetricsDebugPanel from './MetricsDebugPanel';
 import { getApiUrl } from '../config/api';
 
 function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onUpdateSupplier, onDeleteSupplier, onImportSchedule, showSuccess, showError, loading }) {
@@ -544,6 +545,11 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
           </button>
         </div>
       </div>
+
+      {/* Debug Panel (Development Only) */}
+      {process.env.NODE_ENV === 'development' && (
+        <MetricsDebugPanel suppliers={filteredSuppliers} shipments={shipments} />
+      )}
 
       {/* KPI Dashboard Section */}
       <div style={{ marginBottom: '2rem' }}>
