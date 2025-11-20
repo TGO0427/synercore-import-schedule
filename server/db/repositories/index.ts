@@ -17,3 +17,7 @@ export { default as supplierRepository } from './SupplierRepository.js';
 export { UserRepository } from './UserRepository.js';
 export type { UserFilter } from './UserRepository.js';
 export { default as userRepository } from './UserRepository.js';
+
+export { QuoteRepository } from './QuoteRepository.js';
+export type { QuoteFilter } from './QuoteRepository.js';
+export { default as quoteRepository } from './QuoteRepository.js';
