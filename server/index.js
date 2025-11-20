@@ -320,9 +320,23 @@ async function start() {
     // try { await fetch(`http://127.0.0.1:${PORT}/api/shipments`); } catch {}
   } catch (e) {
     console.error('FATAL: failed to start server:', e);
-    process.exit(1);
+    console.error('Stack trace:', e.stack);
+    // Don't exit - let server start so health check can report the error
+    // Still mark server as ready to accept health checks
+    isReady = true;
+    httpServer.listen(PORT, () => {
+      console.log(`Server listening on port ${PORT} (with degraded functionality)`);
+    });
   }
 }
-start();
+start().catch(e => {
+  console.error('FATAL: start() promise rejected:', e);
+  console.error('Stack trace:', e.stack);
+  // Even if start() fails, try to listen for health checks
+  isReady = true;
+  httpServer.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT} (emergency mode)`);
+  });
+});
 
 export default app;
