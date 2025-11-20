@@ -21,3 +21,7 @@ export { default as userRepository } from './UserRepository.js';
 export { QuoteRepository } from './QuoteRepository.js';
 export type { QuoteFilter } from './QuoteRepository.js';
 export { default as quoteRepository } from './QuoteRepository.js';
+
+export { WarehouseRepository } from './WarehouseRepository.js';
+export type { WarehouseFilter, WarehouseHistory } from './WarehouseRepository.js';
+export { default as warehouseRepository } from './WarehouseRepository.js';
