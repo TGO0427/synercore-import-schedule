@@ -661,4 +661,119 @@ router.post('/change-password', authenticateToken, validateChangePassword, async
   }
 });
 
+// POST /api/auth/forgot-password - Request password reset email
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    // Find user by email
+    const result = await pool.query(
+      'SELECT id, email, username FROM users WHERE email = $1',
+      [email.toLowerCase()]
+    );
+
+    // Always return success (security: don't reveal if email exists)
+    if (result.rows.length === 0) {
+      return res.json({ message: 'If an account exists with this email, a password reset link has been sent.' });
+    }
+
+    const user = result.rows[0];
+
+    // Generate reset token (valid for 1 hour)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    // Store reset token in database
+    await pool.query(
+      `UPDATE users SET reset_token = $1, reset_token_expiry = $2, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $3`,
+      [resetTokenHash, resetTokenExpiry, user.id]
+    );
+
+    // TODO: Send email with reset link
+    // In production, you would integrate with an email service (SendGrid, Mailgun, etc.)
+    // const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+    // await sendResetEmail(email, user.username, resetLink);
+
+    console.log(`[Auth] Password reset requested for ${email}`);
+    console.log(`[DEV ONLY] Reset token: ${resetToken}`); // Remove in production
+
+    res.json({ message: 'If an account exists with this email, a password reset link has been sent.' });
+  } catch (error) {
+    console.error('[Auth] Error requesting password reset:', error);
+    res.status(500).json({ error: 'Failed to process password reset request' });
+  }
+});
+
+// POST /api/auth/reset-password - Complete password reset with token
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, token, password } = req.body;
+
+    if (!email || !token || !password) {
+      return res.status(400).json({ error: 'Email, token, and password are required' });
+    }
+
+    // Validate password strength
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) {
+      return res.status(400).json({ error: 'Password must contain uppercase, lowercase, and number' });
+    }
+
+    // Find user by email
+    const result = await pool.query(
+      'SELECT id, email, reset_token, reset_token_expiry FROM users WHERE email = $1',
+      [email.toLowerCase()]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = result.rows[0];
+
+    // Verify reset token
+    const resetTokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    if (!user.reset_token || user.reset_token !== resetTokenHash) {
+      return res.status(400).json({ error: 'Invalid reset token' });
+    }
+
+    if (new Date() > user.reset_token_expiry) {
+      return res.status(400).json({ error: 'Reset token has expired' });
+    }
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Update password and clear reset token
+    await pool.query(
+      `UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expiry = NULL, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2`,
+      [passwordHash, user.id]
+    );
+
+    console.log(`[Auth] Password reset completed for ${email}`);
+
+    res.json({ message: 'Password has been reset successfully. You can now login with your new password.' });
+  } catch (error) {
+    console.error('[Auth] Error resetting password:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
 export default router;

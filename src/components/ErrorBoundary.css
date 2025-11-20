@@ -1,0 +1,135 @@
+.error-boundary-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.error-boundary-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  padding: 40px;
+  max-width: 500px;
+  text-align: center;
+}
+
+.error-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.error-boundary-content h1 {
+  color: #1a1a1a;
+  font-size: 28px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.error-boundary-content p {
+  color: #666;
+  font-size: 16px;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.error-details {
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 20px 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.error-details summary {
+  color: #667eea;
+  font-weight: 500;
+  padding: 8px;
+  user-select: none;
+}
+
+.error-stack {
+  background: #1a1a1a;
+  color: #00ff00;
+  padding: 12px;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  overflow-x: auto;
+  margin-top: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.error-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.error-retry-btn,
+.error-home-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.error-retry-btn {
+  background: #667eea;
+  color: white;
+}
+
+.error-retry-btn:hover {
+  background: #5568d3;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.error-home-btn {
+  background: #f0f0f0;
+  color: #1a1a1a;
+  border: 1px solid #e0e0e0;
+}
+
+.error-home-btn:hover {
+  background: #e0e0e0;
+  transform: translateY(-2px);
+}
+
+.error-warning {
+  margin-top: 20px;
+  padding: 12px;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 6px;
+  color: #856404;
+  font-size: 14px;
+}
+
+@media (max-width: 480px) {
+  .error-boundary-content {
+    padding: 24px;
+  }
+
+  .error-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+
+  .error-boundary-content h1 {
+    font-size: 22px;
+  }
+
+  .error-actions {
+    flex-direction: column;
+  }
+}

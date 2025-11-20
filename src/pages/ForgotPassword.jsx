@@ -33,18 +33,17 @@ function ForgotPassword({ onBack }) {
 
     try {
       setIsLoading(true);
-      // TODO: Call API endpoint to send password reset email
-      // const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
-      // const response = await fetch(`${apiUrl}/api/auth/forgot-password`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ email })
-      // });
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+      const response = await fetch(`${apiUrl}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
 
-      console.log('📧 Password reset email would be sent to:', email);
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send reset email');
+      }
 
       setSubmitted(true);
     } catch (error) {

@@ -2,13 +2,29 @@ import React, { useState, useEffect } from 'react';
 import './ResetPassword.css';
 
 function ResetPassword({ onBack }) {
-  const [token] = useState('reset-token'); // Placeholder token
+  const [token, setToken] = useState('');
+  const [email, setEmail] = useState('');
+  const [tokenError, setTokenError] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmError, setConfirmError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  // Extract token and email from URL query parameters on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const resetToken = params.get('token');
+    const resetEmail = params.get('email');
+
+    if (!resetToken || !resetEmail) {
+      setTokenError('Invalid or missing reset link. Please request a new password reset.');
+    } else {
+      setToken(resetToken);
+      setEmail(decodeURIComponent(resetEmail));
+    }
+  }, []);
 
   const validatePassword = (pwd) => {
     return pwd.length >= 8 && /[A-Z]/.test(pwd) && /[a-z]/.test(pwd) && /\d/.test(pwd);
@@ -28,6 +44,10 @@ function ResetPassword({ onBack }) {
     e.preventDefault();
     setPasswordError('');
     setConfirmError('');
+
+    if (tokenError) {
+      return;
+    }
 
     let hasError = false;
 
@@ -51,18 +71,17 @@ function ResetPassword({ onBack }) {
 
     try {
       setIsLoading(true);
-      // TODO: Call API endpoint to reset password
-      // const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
-      // const response = await fetch(`${apiUrl}/api/auth/reset-password`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ token, password })
-      // });
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+      const response = await fetch(`${apiUrl}/api/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, token, password })
+      });
 
-      console.log('🔑 Password reset would be submitted with token:', token);
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to reset password');
+      }
 
       setSubmitted(true);
 
@@ -96,7 +115,13 @@ function ResetPassword({ onBack }) {
               <p>Enter a new password for your account</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="reset-password-form">
+            {tokenError && (
+              <div className="error-alert">
+                <p>{tokenError}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="reset-password-form" disabled={!!tokenError}>
               <div className="form-group">
                 <label htmlFor="password">New Password</label>
                 <input
@@ -105,7 +130,7 @@ function ResetPassword({ onBack }) {
                   placeholder="At least 8 characters"
                   value={password}
                   onChange={handlePasswordChange}
-                  disabled={isLoading}
+                  disabled={isLoading || !!tokenError}
                   className={passwordError ? 'error' : ''}
                 />
                 {passwordError && <span className="error-message">{passwordError}</span>}
@@ -147,7 +172,7 @@ function ResetPassword({ onBack }) {
                   placeholder="Re-enter your password"
                   value={confirmPassword}
                   onChange={handleConfirmChange}
-                  disabled={isLoading}
+                  disabled={isLoading || !!tokenError}
                   className={confirmError ? 'error' : ''}
                 />
                 {confirmError && <span className="error-message">{confirmError}</span>}
@@ -155,7 +180,7 @@ function ResetPassword({ onBack }) {
 
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || !!tokenError}
                 className="submit-btn"
               >
                 {isLoading ? 'Resetting...' : 'Reset Password'}
