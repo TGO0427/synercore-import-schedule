@@ -15,8 +15,8 @@ const REQUIRED_VARS = {
     example: 'your-secret-key-min-32-chars'
   },
   JWT_REFRESH_SECRET: {
-    required: true,
-    description: 'Secret key for JWT refresh tokens',
+    required: false, // Optional, can use JWT_SECRET as fallback
+    description: 'Secret key for JWT refresh tokens (optional, falls back to JWT_SECRET)',
     example: 'your-refresh-secret-min-32-chars'
   },
   NODE_ENV: {
