@@ -22,33 +22,31 @@ export class SupplierMetrics {
 
   /**
    * Calculate on-time delivery percentage for a supplier
-   * On-time = shipments that arrived in or before their scheduled week
+   * On-time = shipments received/stored in or before their scheduled week
+   * Uses warehouse storage data for metrics
    */
   static calculateOnTimeDelivery(shipments, supplierName) {
     const supplierShipments = this.getSupplierShipments(shipments, supplierName);
 
     if (supplierShipments.length === 0) return 0;
 
-    // Count shipments that arrived on time
-    const arrivedShipments = supplierShipments.filter(s => {
-      const isArrived = [
-        ShipmentStatus.ARRIVED_PTA,
-        ShipmentStatus.ARRIVED_KLM,
-        ShipmentStatus.ARRIVED_OFFSITE,
+    // Count shipments that are in warehouse (stored/received) and arrived on time
+    const deliveredShipments = supplierShipments.filter(s => {
+      // Only count shipments that made it to warehouse (stored, received, or inspection_passed)
+      const isInWarehouse = [
         ShipmentStatus.STORED,
         ShipmentStatus.RECEIVED,
+        ShipmentStatus.INSPECTION_PASSED,
         // Also accept lowercase versions (from database)
-        'arrived_pta',
-        'arrived_klm',
-        'arrived_offsite',
         'stored',
-        'received'
+        'received',
+        'inspection_passed'
       ].includes(s.latestStatus);
 
-      if (!isArrived) return false;
+      if (!isInWarehouse) return false;
 
       // Check if arrived on time
-      // If no selectedWeekDate, use estimatedArrival
+      // Use receivingDate (when physically received) or updatedAt as arrival date
       const arrivedDate = s.receivingDate || s.updatedAt;
       if (!arrivedDate || !s.weekNumber) return true; // Assume on-time if missing data
 
@@ -58,18 +56,28 @@ export class SupplierMetrics {
       return actualDate <= new Date(scheduledDate);
     });
 
-    const percentage = Math.round((arrivedShipments.length / supplierShipments.length) * 100);
+    // Only calculate percentage based on warehouse/stored shipments
+    // This aligns with the Warehouse Storage Report data
+    const totalWarehouseShipments = supplierShipments.filter(s => {
+      const isInWarehouse = [
+        'stored', 'received', 'inspection_passed',
+        ShipmentStatus.STORED, ShipmentStatus.RECEIVED, ShipmentStatus.INSPECTION_PASSED
+      ].includes(s.latestStatus);
+      return isInWarehouse;
+    }).length;
 
-    console.log(`[SupplierMetrics] On-time: ${supplierName}`, {
-      total: supplierShipments.length,
-      arrived: arrivedShipments.length,
-      statuses: [...new Set(supplierShipments.map(s => s.latestStatus))],
+    const percentage = totalWarehouseShipments > 0
+      ? Math.round((deliveredShipments.length / totalWarehouseShipments) * 100)
+      : 0;
+
+    console.log(`[SupplierMetrics] On-time (Warehouse): ${supplierName}`, {
+      totalShipments: supplierShipments.length,
+      inWarehouse: totalWarehouseShipments,
+      onTimeInWarehouse: deliveredShipments.length,
       percentage,
-      sample: supplierShipments.slice(0, 2).map(s => ({
-        status: s.latestStatus,
-        receivingDate: s.receivingDate,
-        weekNumber: s.weekNumber
-      }))
+      warehouseStatuses: [...new Set(supplierShipments
+        .filter(s => ['stored', 'received', 'inspection_passed', ShipmentStatus.STORED, ShipmentStatus.RECEIVED].includes(s.latestStatus))
+        .map(s => s.latestStatus))]
     });
 
     return percentage;
