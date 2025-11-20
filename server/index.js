@@ -7,6 +7,15 @@ if (!process.env.DATABASE_URL) {
   dotenv.config();
 }
 
+// Validate environment variables early
+import { validateEnvironment, logEnvironmentInfo } from './utils/envValidator.js';
+try {
+  validateEnvironment();
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
+}
+
 // SSL certificate validation (only disable for local development)
 // Railway Postgres connections are handled securely in db/connection.js
 if (process.env.NODE_ENV === 'development' && process.env.DISABLE_SSL_VERIFY === 'true') {
@@ -35,6 +44,8 @@ import schedulerAdminRouter from './routes/schedulerAdmin.js';
 import supplierPortalRouter from './routes/supplierPortal.js';
 import { helmetConfig, apiRateLimiter, authRateLimiter, authenticateToken } from './middleware/security.js';
 import { createSingleFileUpload, createMultipleFileUpload, handleUploadError, validateFilesPresent, verifyUploadPermission, generateSafeFilename } from './middleware/fileUpload.js';
+import { requestIdMiddleware } from './middleware/requestId.js';
+import { logInfo, logServerStart } from './utils/logger.js';
 import socketManager from './websocket/socketManager.js';
 
 // __dirname for ESM
@@ -82,6 +93,9 @@ app.options('*', cors());
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'OK', ready: isReady, timestamp: new Date().toISOString() });
 });
+
+// Add request ID middleware early (for all requests)
+app.use(requestIdMiddleware);
 
 // Apply helmet security headers
 app.use(helmetConfig);
@@ -298,7 +312,8 @@ async function start() {
     isReady = true; // mark ready once init is done
 
     httpServer.listen(PORT, () => {
-      console.log(`Server running on port ${PORT} (with WebSocket support)`);
+      logServerStart(PORT, process.env.NODE_ENV || 'production');
+      logInfo('WebSocket support enabled');
     });
 
     // Optional warm-up so first user hit isn't the initializer:
