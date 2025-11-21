@@ -238,10 +238,18 @@ function App() {
       const data = await response.json();
 
       const normalized = (data.data || []).map(s => ({
-        ...s,
+        id: s.id,
+        orderRef: s.order_ref,
+        supplier: s.supplier,
         quantity: Number(s.quantity) || 0,
-        palletQty: Number(s.palletQty) || 0,
-        weekNumber: Number(s.weekNumber) || 0,
+        latestStatus: s.latest_status,
+        weekNumber: Number(s.week_number) || 0,
+        weekDate: s.week_date ? new Date(s.week_date) : null,
+        notes: s.notes,
+        createdAt: s.created_at ? new Date(s.created_at) : null,
+        updatedAt: s.updated_at ? new Date(s.updated_at) : null,
+        // Add other fields from the response for compatibility
+        ...s
       }));
 
       // Always replace array to force downstream children (WeekCalendar) to re-render with fresh values
