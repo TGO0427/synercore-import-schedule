@@ -237,7 +237,7 @@ function App() {
 
       const data = await response.json();
 
-      const normalized = (data || []).map(s => ({
+      const normalized = (data.data || []).map(s => ({
         ...s,
         quantity: Number(s.quantity) || 0,
         palletQty: Number(s.palletQty) || 0,
@@ -276,7 +276,7 @@ function App() {
       if (!res.ok) throw new Error('Failed to fetch suppliers');
       const data = await res.json();
 
-      const normalized = data.map(s => Object.assign(new Supplier({}), s));
+      const normalized = (data.data || data || []).map(s => Object.assign(new Supplier({}), s));
       setSuppliers(prev => {
         if (prev.length === normalized.length && prev.length > 0) {
           if (prev[0]?.id === normalized[0]?.id) return prev;
