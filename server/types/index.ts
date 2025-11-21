@@ -320,3 +320,92 @@ export interface ArchiveResult {
   remaining: Shipment[];
   archiveFileName?: string;
 }
+
+/**
+ * WebSocket events and data structures
+ */
+
+/**
+ * Ship viewing metadata
+ */
+export interface ShipmentViewer {
+  userId?: string | null;
+  socketId: string;
+  timestamp: string;
+}
+
+/**
+ * Shipment update event data
+ */
+export interface ShipmentUpdateEvent {
+  shipmentId: string;
+  status?: string;
+  statusChangedAt?: Date;
+  changedBy?: string;
+  shipment?: Partial<Shipment>;
+  inspectionStatus?: string;
+  inventory?: {
+    pallets: number;
+    cartons: number;
+    items: number;
+    weight: number;
+    warehouseLocation: string;
+  };
+  rejectionReason?: string;
+  rejectionDetails?: any;
+  timestamp: string;
+}
+
+/**
+ * Document upload event data
+ */
+export interface DocumentUploadEvent {
+  id: string;
+  fileName: string;
+  documentType: string;
+  fileSize?: number;
+  uploadedAt: Date;
+  uploadedBy: string;
+  isVerified: boolean;
+  uploadedBySupplier?: boolean;
+  timestamp: string;
+}
+
+/**
+ * Warehouse capacity event data
+ */
+export interface WarehouseCapacityEvent {
+  location: string;
+  totalCapacity: number;
+  availableBins: number;
+  usedCapacity: number;
+  timestamp: string;
+}
+
+/**
+ * User viewing notification
+ */
+export interface UserViewingNotification {
+  userId?: string | null;
+  socketId: string;
+  timestamp: string;
+}
+
+/**
+ * User disconnected notification
+ */
+export interface UserDisconnectedNotification {
+  userId?: string | null;
+  socketId: string;
+  viewersCount: number;
+  timestamp: string;
+}
+
+/**
+ * Socket context with authentication
+ */
+export interface AuthenticatedSocket {
+  userId?: string | null;
+  userRole: 'user' | 'admin' | 'supplier' | 'guest';
+  socketId: string;
+}
