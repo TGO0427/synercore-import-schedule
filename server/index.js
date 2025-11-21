@@ -8,7 +8,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 // Validate environment variables early
-import { validateEnvironment, logEnvironmentInfo } from './utils/envValidator.js';
+import { validateEnvironment, logEnvironmentInfo } from './utils/envValidator.ts';
 try {
   validateEnvironment();
 } catch (error) {
@@ -33,31 +33,24 @@ import http from 'http';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger.js';
 
-import shipmentsRouter from './routes/shipments.js';
+import shipmentsRouter from './routes/shipments.ts';
 import suppliersRouter from './routes/suppliers.js';
 import quotesRouter from './routes/quotes.js';
 import reportsRouter from './routes/reports.js';
-import emailImportRouter from './routes/emailImport.js';
-import adminRouter from './routes/admin.js';
+import emailImportRouter from './routes/emailImport.ts';
+import adminRouter from './routes/admin.ts';
 import warehouseCapacityRouter from './routes/warehouseCapacity.js';
 import authRouter from './routes/auth.js';
-import notificationsRouter from './routes/notifications.js';
-import schedulerAdminRouter from './routes/schedulerAdmin.js';
-import supplierPortalRouter from './routes/supplierPortal.js';
+import notificationsRouter from './routes/notifications.ts';
+import schedulerAdminRouter from './routes/schedulerAdmin.ts';
+import supplierPortalRouter from './routes/supplierPortal.ts';
 
-// TypeScript route files (migration in progress)
-// Note: These will be imported as .ts files and compiled by Node with --loader ts-node
-// import emailImportRouter from './routes/emailImport.ts';
-// import adminRouter from './routes/admin.ts';
-// import notificationsRouter from './routes/notifications.ts';
-// import schedulerAdminRouter from './routes/schedulerAdmin.ts';
-// import supplierPortalRouter from './routes/supplierPortal.ts';
 import { helmetConfig, apiRateLimiter, authRateLimiter, authenticateToken } from './middleware/security.js';
 import { createSingleFileUpload, createMultipleFileUpload, handleUploadError, validateFilesPresent, verifyUploadPermission, generateSafeFilename } from './middleware/fileUpload.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
 import { logInfo, logServerStart } from './utils/logger.js';
-import { errorHandler } from './middleware/errorHandler.js';
-import socketManager from './websocket/socketManager.js';
+import { errorHandler } from './middleware/errorHandler.ts';
+import socketManager from './websocket/socketManager.ts';
 
 // __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);

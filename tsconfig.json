@@ -13,11 +13,13 @@
     "outDir": "./dist-server",
     "rootDir": "./server",
     "removeComments": true,
-    "noEmit": false,
+    "noEmit": true,
 
     /* Interop Constraints */
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
 
     /* Type Checking - Strict Compiler Checks */
     "strict": true,

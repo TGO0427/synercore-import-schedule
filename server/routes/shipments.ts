@@ -5,8 +5,8 @@
 
 import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
-import { AppError } from '../utils/AppError.js';
-import { asyncHandler } from '../middleware/errorHandler.js';
+import { AppError } from '../utils/AppError.ts';
+import { asyncHandler } from '../middleware/errorHandler.ts';
 import ShipmentController, {
   type CreateShipmentRequest,
   type UpdateShipmentRequest,

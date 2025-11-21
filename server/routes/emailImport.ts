@@ -4,13 +4,13 @@
  */
 
 import { Router, Request, Response } from 'express';
-import EmailImporter from '../services/emailImporter.js';
+import EmailImporter from '../services/emailImporter.ts';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { validateEmailImportConfig } from '../middleware/validation.js';
-import { AppError } from '../utils/AppError.js';
-import { asyncHandler } from '../middleware/errorHandler.js';
+import { AppError } from '../utils/AppError.ts';
+import { asyncHandler } from '../middleware/errorHandler.ts';
 
 const router = Router();
 const __filename = fileURLToPath(import.meta.url);

@@ -4,7 +4,7 @@
  */
 
 import type { Shipment, ShipmentStatus } from '../types/index.js';
-import { AppError } from '../utils/AppError.js';
+import { AppError } from '../utils/AppError.ts';
 import { shipmentRepository } from '../db/repositories/index.js';
 
 /**

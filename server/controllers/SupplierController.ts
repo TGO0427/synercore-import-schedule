@@ -4,7 +4,7 @@
  */
 
 import type { Supplier } from '../types/index.js';
-import { AppError } from '../utils/AppError.js';
+import { AppError } from '../utils/AppError.ts';
 import { supplierRepository } from '../db/repositories/index.js';
 
 /**

@@ -3,7 +3,7 @@
  * Handles all report-related business logic
  */
 
-import { AppError } from '../utils/AppError.js';
+import { AppError } from '../utils/AppError.ts';
 import ReportService, {
   type GenerateReportRequest,
   type ReportFilterParams

@@ -6,7 +6,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import type { JwtPayload } from '../types/index.js';
-import { AppError } from '../utils/AppError.js';
+import { AppError } from '../utils/AppError.ts';
 
 /**
  * Extend Express Request with user authentication

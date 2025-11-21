@@ -4,7 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { AppError } from '../utils/AppError.js';
+import { AppError } from '../utils/AppError.ts';
 import { logError, logWarn } from '../utils/logger.js';
 
 interface ValidationError {

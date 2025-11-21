@@ -3,7 +3,7 @@
  * Manages shipment archiving and data storage for historical records
  */
 
-import db from '../db/connection.js';
+import db from '../db/connection.ts';
 import type { Shipment } from '../types/index.js';
 
 interface ArchivedData {

@@ -5,6 +5,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { FormInput } from '@/components/FormInput';
 import { Button } from '@/components/Button';
 import { ThemedText } from '@/components/themed-text';
+import { apiService } from '@/services/api';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -58,12 +59,13 @@ export default function ResetPasswordScreen() {
 
     try {
       setIsLoading(true);
-      // TODO: Call API endpoint to reset password
-      // await apiService.resetPassword(token, password);
-      console.log('🔑 Password reset would be submitted with token:', token);
+      const email = params.email as string;
+      if (!email || !token) {
+        throw new Error('Missing email or reset token');
+      }
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await apiService.resetPassword(token, email, password);
+      console.log('✅ Password reset successfully');
 
       setSubmitted(true);
 
@@ -72,7 +74,8 @@ export default function ResetPasswordScreen() {
         router.replace('/(auth)/login');
       }, 2000);
     } catch (error) {
-      setPasswordError('Failed to reset password. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to reset password. Please try again.';
+      setPasswordError(errorMessage);
       console.error('Password reset error:', error);
     } finally {
       setIsLoading(false);

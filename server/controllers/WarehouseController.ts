@@ -4,7 +4,7 @@
  */
 
 import type { WarehouseCapacity } from '../types/index.js';
-import { AppError } from '../utils/AppError.js';
+import { AppError } from '../utils/AppError.ts';
 import { warehouseRepository } from '../db/repositories/index.js';
 
 /**

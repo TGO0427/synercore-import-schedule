@@ -362,6 +362,42 @@ class ApiService {
     }
   }
 
+  // ==================== PASSWORD RESET ====================
+
+  async sendPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await this.api.post<ApiResponse<{ success: boolean; message: string }>>('/auth/forgot-password', { email });
+      return response.data.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async resetPassword(token: string, email: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await this.api.post<ApiResponse<{ success: boolean; message: string }>>('/auth/reset-password', {
+        token,
+        email,
+        password: newPassword,
+      });
+      return response.data.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await this.api.post<ApiResponse<{ success: boolean; message: string }>>('/auth/change-password', {
+        currentPassword,
+        newPassword,
+      });
+      return response.data.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   // ==================== ERROR HANDLING ====================
 
   private handleError(error: any): Error {

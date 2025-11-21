@@ -1,0 +1,69 @@
+{
+  "presets": [
+    ["@babel/preset-env", {
+      "targets": {
+        "node": "18.x",
+        "browsers": [">1%", "last 2 versions", "not dead", "not ie 11"]
+      },
+      "useBuiltIns": "entry",
+      "corejs": 3,
+      "modules": false
+    }],
+    ["@babel/preset-react", {
+      "runtime": "automatic",
+      "development": true
+    }],
+    "@babel/preset-typescript"
+  ],
+  "plugins": [
+    "@babel/plugin-transform-runtime",
+    "@babel/plugin-proposal-class-properties",
+    ["@babel/plugin-proposal-decorators", { "legacy": true }]
+  ],
+  "env": {
+    "development": {
+      "plugins": [
+        "@babel/plugin-transform-runtime"
+      ]
+    },
+    "production": {
+      "presets": [
+        ["@babel/preset-env", {
+          "targets": {
+            "node": "18.x",
+            "browsers": [">1%", "last 2 versions", "not dead"]
+          },
+          "useBuiltIns": "entry",
+          "corejs": 3,
+          "modules": false
+        }],
+        ["@babel/preset-react", {
+          "runtime": "automatic",
+          "development": false
+        }],
+        "@babel/preset-typescript"
+      ],
+      "plugins": [
+        "@babel/plugin-transform-runtime"
+      ]
+    },
+    "test": {
+      "presets": [
+        ["@babel/preset-env", {
+          "targets": {
+            "node": "current"
+          },
+          "modules": "commonjs"
+        }],
+        ["@babel/preset-react", {
+          "runtime": "automatic",
+          "development": true
+        }],
+        "@babel/preset-typescript"
+      ],
+      "plugins": [
+        "@babel/plugin-transform-runtime"
+      ]
+    }
+  }
+}

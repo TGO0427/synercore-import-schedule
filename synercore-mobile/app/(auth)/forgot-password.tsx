@@ -5,6 +5,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { FormInput } from '@/components/FormInput';
 import { Button } from '@/components/Button';
 import { ThemedText } from '@/components/themed-text';
+import { apiService } from '@/services/api';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -38,16 +39,12 @@ export default function ForgotPasswordScreen() {
 
     try {
       setIsLoading(true);
-      // TODO: Call API endpoint to send password reset email
-      // await apiService.sendPasswordReset(email);
-      console.log('📧 Password reset email would be sent to:', email);
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
+      await apiService.sendPasswordReset(email);
+      console.log('✅ Password reset email sent to:', email);
       setSubmitted(true);
     } catch (error) {
-      setEmailError('Failed to send reset email. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send reset email. Please try again.';
+      setEmailError(errorMessage);
       console.error('Password reset error:', error);
     } finally {
       setIsLoading(false);

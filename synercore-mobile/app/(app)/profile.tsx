@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { PasswordChangeModal } from '@/components/PasswordChangeModal';
+import { apiService } from '@/services/api';
 
 interface UserProfile {
   name: string;
@@ -71,11 +72,7 @@ export default function ProfileScreen() {
   const handlePasswordChange = async (currentPassword: string, newPassword: string) => {
     try {
       console.log('🔐 Password change requested');
-      // TODO: Call actual API endpoint to change password
-      // await apiService.changePassword(currentPassword, newPassword);
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await apiService.changePassword(currentPassword, newPassword);
       console.log('✅ Password changed successfully');
     } catch (error) {
       console.error('Password change failed:', error);

@@ -1,7 +1,7 @@
 // Email notification service using nodemailer
 import nodemailer from 'nodemailer';
 import sgTransport from 'nodemailer-sendgrid-transport';
-import pool from '../db/connection.js';
+import pool from '../db/connection.ts';
 import type { Shipment } from '../types/index.js';
 
 // Initialize email transporter
@@ -467,6 +467,57 @@ export class EmailService {
       );
     } catch (error) {
       console.error('Error sending digest:', error);
+    }
+  }
+
+  /**
+   * Send password reset email
+   */
+  static async sendPasswordResetEmail(email: string, username: string, resetLink: string): Promise<EmailResult> {
+    try {
+      const subject = '🔐 Password Reset Request - Synercore Import Schedule';
+      const htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Password Reset Request</h2>
+          <p>Hello <strong>${username}</strong>,</p>
+          <p>We received a request to reset the password for your account. Click the link below to set a new password:</p>
+          <p style="margin: 20px 0;">
+            <a href="${resetLink}" style="display: inline-block; padding: 12px 24px; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">Reset Password</a>
+          </p>
+          <p>Or copy and paste this link in your browser:</p>
+          <p style="word-break: break-all; color: #666; font-family: monospace; font-size: 12px;">${resetLink}</p>
+          <p style="color: #cc0000; font-weight: bold;">⚠️ This link will expire in 1 hour.</p>
+          <p style="color: #666; font-size: 12px; margin-top: 20px;">If you didn't request a password reset, please ignore this email. Your account will remain secure.</p>
+          <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+          <p style="color: #999; font-size: 11px; text-align: center;">
+            This is an automated email from Synercore Import Schedule. Please do not reply to this email.
+          </p>
+        </div>
+      `;
+
+      const textContent = `
+Password Reset Request
+
+Hello ${username},
+
+We received a request to reset the password for your account. Click the link below to set a new password:
+
+${resetLink}
+
+⚠️ This link will expire in 1 hour.
+
+If you didn't request a password reset, please ignore this email. Your account will remain secure.
+
+---
+
+This is an automated email from Synercore Import Schedule. Please do not reply to this email.
+      `;
+
+      return await this.sendEmail(email, subject, htmlContent, textContent);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Error sending password reset email:', error);
+      return { success: false, error: errorMsg };
     }
   }
 }

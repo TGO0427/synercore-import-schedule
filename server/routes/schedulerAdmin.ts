@@ -4,11 +4,11 @@
  */
 
 import { Router, Request, Response, NextFunction } from 'express';
-import { authenticateToken } from '../middleware/auth.js';
-import { AppError } from '../utils/AppError.js';
-import { asyncHandler } from '../middleware/errorHandler.js';
+import { authenticateToken } from '../middleware/auth.ts';
+import { AppError } from '../utils/AppError.ts';
+import { asyncHandler } from '../middleware/errorHandler.ts';
 import NotificationScheduler from '../jobs/notificationScheduler.js';
-import db from '../db/connection.js';
+import db from '../db/connection.ts';
 import type { TypedAuthenticatedRequest } from '../types/api.js';
 
 const router = Router();

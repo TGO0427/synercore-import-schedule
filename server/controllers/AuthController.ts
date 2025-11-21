@@ -6,15 +6,15 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import type { User, AuthTokens } from '../types/index.js';
-import { AppError } from '../utils/AppError.js';
+import { AppError } from '../utils/AppError.ts';
 import { userRepository } from '../db/repositories/index.js';
-import { query, queryOne } from '../db/connection.js';
+import { query, queryOne } from '../db/connection.ts';
 import {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
   TOKEN_CONFIG
-} from '../middleware/auth.js';
+} from '../middleware/auth.ts';
 
 /**
  * Login request body

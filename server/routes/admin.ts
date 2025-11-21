@@ -4,9 +4,9 @@
  */
 
 import { Router, Request, Response } from 'express';
-import db from '../db/connection.js';
-import { AppError } from '../utils/AppError.js';
-import { asyncHandler } from '../middleware/errorHandler.js';
+import db from '../db/connection.ts';
+import { AppError } from '../utils/AppError.ts';
+import { asyncHandler } from '../middleware/errorHandler.ts';
 import type { Supplier, Shipment } from '../types/index.js';
 
 const router = Router();

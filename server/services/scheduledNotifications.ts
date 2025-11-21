@@ -1,5 +1,5 @@
 // Scheduled notification service for automated email digests
-import pool from '../db/connection.js';
+import pool from '../db/connection.ts';
 import EmailService from './emailService.js';
 import type { Shipment } from '../types/index.js';
 

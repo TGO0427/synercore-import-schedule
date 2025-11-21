@@ -4,7 +4,7 @@
  */
 
 import type { Quote } from '../types/index.js';
-import { AppError } from '../utils/AppError.js';
+import { AppError } from '../utils/AppError.ts';
 import { quoteRepository } from '../db/repositories/index.js';
 
 /**
