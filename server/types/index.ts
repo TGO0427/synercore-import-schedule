@@ -285,3 +285,38 @@ export interface ReportFilters {
   supplier?: string;
   type?: 'shipments' | 'suppliers' | 'weekly' | 'monthly';
 }
+
+/**
+ * Archive database model
+ */
+export interface Archive {
+  id?: string;
+  file_name: string;
+  archived_at: Date;
+  total_shipments: number;
+  data: any;
+}
+
+/**
+ * Archive statistics
+ */
+export interface ArchiveStats {
+  eligibleForArchive: number;
+  totalArrived: number;
+  eligibleShipments: Array<{
+    id: string;
+    supplier: string;
+    orderRef: string;
+    arrivedDate: Date;
+    daysOld: number;
+  }>;
+}
+
+/**
+ * Archive result
+ */
+export interface ArchiveResult {
+  archived: number;
+  remaining: Shipment[];
+  archiveFileName?: string;
+}
