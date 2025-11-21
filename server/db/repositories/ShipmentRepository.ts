@@ -78,13 +78,13 @@ export class ShipmentRepository extends BaseRepository<Shipment> {
   }
 
   /**
-   * Find active shipments (not archived)
+   * Find active shipments (not in specific end states)
    */
   async findActive(): Promise<Shipment[]> {
     const sql = `
       SELECT ${this.columns.join(', ')}
       FROM ${this.tableName}
-      WHERE archived_at IS NULL
+      WHERE latest_status NOT IN ('archived', 'stored')
       ORDER BY created_at DESC
     `;
 
@@ -98,8 +98,8 @@ export class ShipmentRepository extends BaseRepository<Shipment> {
     const sql = `
       SELECT ${this.columns.join(', ')}
       FROM ${this.tableName}
-      WHERE archived_at IS NOT NULL
-      ORDER BY archived_at DESC
+      WHERE latest_status = 'archived'
+      ORDER BY created_at DESC
     `;
 
     return queryAll<Shipment>(sql);
@@ -152,7 +152,7 @@ export class ShipmentRepository extends BaseRepository<Shipment> {
   async archive(id: string): Promise<Shipment> {
     const sql = `
       UPDATE ${this.tableName}
-      SET archived_at = NOW(), updated_at = NOW()
+      SET latest_status = 'archived', updated_at = NOW()
       WHERE id = $1
       RETURNING ${this.columns.join(', ')}
     `;
@@ -172,7 +172,7 @@ export class ShipmentRepository extends BaseRepository<Shipment> {
   async unarchive(id: string): Promise<Shipment> {
     const sql = `
       UPDATE ${this.tableName}
-      SET archived_at = NULL, updated_at = NOW()
+      SET latest_status = 'stored', updated_at = NOW()
       WHERE id = $1
       RETURNING ${this.columns.join(', ')}
     `;
@@ -196,7 +196,7 @@ export class ShipmentRepository extends BaseRepository<Shipment> {
         COUNT(CASE WHEN latest_status = 'stored' THEN 1 END) as stored,
         COUNT(CASE WHEN latest_status LIKE 'in_transit%' THEN 1 END) as in_transit,
         COUNT(CASE WHEN latest_status LIKE 'arrived%' THEN 1 END) as arrived,
-        COUNT(CASE WHEN archived_at IS NOT NULL THEN 1 END) as archived
+        COUNT(CASE WHEN latest_status = 'archived' THEN 1 END) as archived
       FROM ${this.tableName}
     `;
 
