@@ -1,6 +1,5 @@
 // Email notification service using nodemailer
 import nodemailer from 'nodemailer';
-import sgTransport from 'nodemailer-sendgrid-transport';
 import pool from '../db/connection.ts';
 import type { Shipment } from '../types/index.js';
 
@@ -21,14 +20,16 @@ function initializeEmailTransporter(): void {
       }
     });
   } else if (process.env.SENDGRID_API_KEY) {
-    // SendGrid support
-    transporter = nodemailer.createTransport(
-      sgTransport({
-        auth: {
-          api_key: process.env.SENDGRID_API_KEY
-        }
-      })
-    );
+    // SendGrid support using SMTP
+    transporter = nodemailer.createTransport({
+      host: 'smtp.sendgrid.net',
+      port: 587,
+      secure: false,
+      auth: {
+        user: 'apikey',
+        pass: process.env.SENDGRID_API_KEY
+      }
+    });
   } else {
     // Development mode - log emails instead of sending
     console.warn('⚠️ Email not configured. Set SMTP_HOST or SENDGRID_API_KEY for production.');
