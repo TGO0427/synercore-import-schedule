@@ -59,6 +59,7 @@ export abstract class BaseRepository<T extends { id: string }> {
    */
   async findAll(options?: QueryOptions): Promise<T[]> {
     let sql = `SELECT ${this.columns.join(', ')} FROM ${this.tableName}`;
+    let params: any[] = [];
 
     // Apply filters
     if (options?.filter) {
@@ -66,6 +67,7 @@ export abstract class BaseRepository<T extends { id: string }> {
       if (filterKeys.length > 0) {
         const whereClause = this.buildWhereClause(options.filter);
         sql += ` WHERE ${whereClause.clause}`;
+        params = whereClause.values;
       }
     }
 
@@ -77,11 +79,11 @@ export abstract class BaseRepository<T extends { id: string }> {
     // Apply pagination
     if (options?.pagination) {
       const limit = options.pagination.limit || 20;
-      const offset = options.pagination.offset || (options.pagination.page || 1 - 1) * limit;
+      const offset = options.pagination.offset || ((options.pagination.page || 1) - 1) * limit;
       sql += ` LIMIT ${limit} OFFSET ${offset}`;
     }
 
-    return queryAll<T>(sql);
+    return queryAll<T>(sql, params.length > 0 ? params : undefined);
   }
 
   /**
