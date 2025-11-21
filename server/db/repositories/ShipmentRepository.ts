@@ -32,8 +32,7 @@ export class ShipmentRepository extends BaseRepository<Shipment> {
     'selected_week_date as week_date',
     'notes',
     'created_at',
-    'updated_at',
-    'archived_at'
+    'updated_at'
   ];
 
   /**
