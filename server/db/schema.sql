@@ -2,6 +2,7 @@
 CREATE TABLE IF NOT EXISTS shipments (
   id VARCHAR(255) PRIMARY KEY,
   supplier VARCHAR(255) NOT NULL,
+  supplier_id TEXT REFERENCES suppliers(id) ON DELETE SET NULL,
   order_ref VARCHAR(255),
   final_pod VARCHAR(255),
   latest_status VARCHAR(50),
@@ -91,6 +92,7 @@ CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_warehouse_capacity_history_warehouse ON warehouse_capacity_history(warehouse_name);
 CREATE INDEX IF NOT EXISTS idx_warehouse_capacity_history_date ON warehouse_capacity_history(changed_at);
 CREATE INDEX IF NOT EXISTS idx_shipments_supplier ON shipments(supplier);
+CREATE INDEX IF NOT EXISTS idx_shipments_supplier_id ON shipments(supplier_id);
 CREATE INDEX IF NOT EXISTS idx_shipments_status ON shipments(latest_status);
 CREATE INDEX IF NOT EXISTS idx_shipments_week ON shipments(week_number);
 CREATE INDEX IF NOT EXISTS idx_shipments_updated ON shipments(updated_at);

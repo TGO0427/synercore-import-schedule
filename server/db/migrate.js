@@ -53,6 +53,10 @@ async function migrate() {
     const addReferentialIntegrity = await import('./add-referential-integrity.js');
     await addReferentialIntegrity.default();
 
+    // Add supplier_id column to shipments table
+    const addSupplierIdToShipments = await import('./add-supplier-id-to-shipments.js');
+    await addSupplierIdToShipments.default();
+
     // Load data from JSON files
     const shipmentsFile = path.join(__dirname, '../data/shipments.json');
     const suppliersFile = path.join(__dirname, '../data/suppliers.json');
