@@ -25,7 +25,6 @@ export class ShipmentRepository extends BaseRepository<Shipment> {
   protected columns = [
     'id',
     'order_ref',
-    'supplier_id',
     'supplier',
     'quantity',
     'latest_status',
