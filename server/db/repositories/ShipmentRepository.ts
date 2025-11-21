@@ -29,7 +29,7 @@ export class ShipmentRepository extends BaseRepository<Shipment> {
     'quantity',
     'latest_status',
     'week_number',
-    'week_date',
+    'selected_week_date as week_date',
     'notes',
     'created_at',
     'updated_at',
