@@ -73,6 +73,29 @@ export const authenticateToken = (req, res, next) => {
   });
 };
 
+// Lenient authentication - allows expired tokens (for logout/cleanup endpoints)
+export const authenticateTokenLenient = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+
+  jwt.verify(token, JWT_SECRET, { ignoreExpiration: true }, (err, user) => {
+    if (err && err.name !== 'TokenExpiredError') {
+      console.error('JWT verification failed:', {
+        error: err.message,
+        tokenLength: token?.length,
+        hasJWTSecret: !!JWT_SECRET
+      });
+      return res.status(403).json({ error: 'Invalid token' });
+    }
+    req.user = user;
+    next();
+  });
+};
+
 // POST /api/auth/setup - Initial admin setup (only works when no users exist)
 router.post('/setup', async (req, res) => {
   try {
@@ -585,7 +608,8 @@ router.post('/refresh', async (req, res) => {
 });
 
 // POST /api/auth/logout - Revoke refresh token
-router.post('/logout', authenticateToken, async (req, res) => {
+// Uses lenient auth to allow expired tokens (user trying to logout)
+router.post('/logout', authenticateTokenLenient, async (req, res) => {
   try {
     const { refreshToken } = req.body;
 

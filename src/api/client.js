@@ -125,9 +125,41 @@ export const authAPI = {
     body: JSON.stringify({ username, password })
   }).then(handleResponse),
 
-  logout: () => request(`${API_BASE}/api/auth/logout`, {
-    method: 'POST'
-  }).then(handleResponse),
+  logout: async () => {
+    // Don't use the standard request() function as it has auto-refresh logic
+    // which conflicts with logout. Make direct fetch call instead.
+    const token = authUtils.getToken();
+    const refreshToken = authUtils.getRefreshToken();
+
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/logout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ refreshToken }),
+        credentials: 'include'
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        // Even if logout fails on server, still clear local auth
+        // This ensures user gets logged out on the frontend
+        const error = new Error(data.error || `HTTP ${response.status}`);
+        error.status = response.status;
+        error.data = data;
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      // Log but don't throw - logout should always clear local state
+      console.error('Logout request failed:', error);
+      throw error;
+    }
+  },
 
   getCurrentUser: () => request(`${API_BASE}/api/auth/me`, {
     method: 'GET'
