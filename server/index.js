@@ -44,6 +44,14 @@ import authRouter from './routes/auth.js';
 import notificationsRouter from './routes/notifications.js';
 import schedulerAdminRouter from './routes/schedulerAdmin.js';
 import supplierPortalRouter from './routes/supplierPortal.js';
+
+// TypeScript route files (migration in progress)
+// Note: These will be imported as .ts files and compiled by Node with --loader ts-node
+// import emailImportRouter from './routes/emailImport.ts';
+// import adminRouter from './routes/admin.ts';
+// import notificationsRouter from './routes/notifications.ts';
+// import schedulerAdminRouter from './routes/schedulerAdmin.ts';
+// import supplierPortalRouter from './routes/supplierPortal.ts';
 import { helmetConfig, apiRateLimiter, authRateLimiter, authenticateToken } from './middleware/security.js';
 import { createSingleFileUpload, createMultipleFileUpload, handleUploadError, validateFilesPresent, verifyUploadPermission, generateSafeFilename } from './middleware/fileUpload.js';
 import { requestIdMiddleware } from './middleware/requestId.js';

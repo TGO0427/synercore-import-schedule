@@ -3,14 +3,15 @@
  * Routes for managing notification scheduler and job execution
  */
 
-import express from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { authenticateToken } from '../middleware/auth.js';
 import { AppError } from '../utils/AppError.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import NotificationScheduler from '../jobs/notificationScheduler.js';
 import db from '../db/connection.js';
+import type { TypedAuthenticatedRequest } from '../types/api.js';
 
-const router = express.Router();
+const router = Router();
 
 // All routes require authentication
 router.use(authenticateToken);
@@ -18,13 +19,13 @@ router.use(authenticateToken);
 /**
  * Middleware to check if user is admin
  */
-async function requireAdmin(req, res, next) {
+async function requireAdmin(req: TypedAuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     if (!req.user?.id) {
       throw AppError.unauthorized('User not authenticated');
     }
 
-    const userResult = await db.query(
+    const userResult = await db.query<{ role: string }>(
       'SELECT role FROM users WHERE id = $1',
       [req.user.id]
     );
@@ -42,7 +43,7 @@ async function requireAdmin(req, res, next) {
 /**
  * GET /api/admin/scheduler/status - Get status of all notification jobs
  */
-router.get('/status', requireAdmin, asyncHandler(async (req, res) => {
+router.get('/status', requireAdmin, asyncHandler(async (req: Request, res: Response) => {
   const jobs = NotificationScheduler.getJobStatus();
   res.json({
     jobs,
@@ -54,7 +55,7 @@ router.get('/status', requireAdmin, asyncHandler(async (req, res) => {
 /**
  * POST /api/admin/scheduler/trigger/:jobName - Manually trigger a job
  */
-router.post('/trigger/:jobName', requireAdmin, asyncHandler(async (req, res) => {
+router.post('/trigger/:jobName', requireAdmin, asyncHandler(async (req: Request, res: Response) => {
   const { jobName } = req.params;
 
   const validJobs = ['daily-digest', 'weekly-digest', 'delayed-check', 'cleanup'];
@@ -73,7 +74,7 @@ router.post('/trigger/:jobName', requireAdmin, asyncHandler(async (req, res) => 
 /**
  * GET /api/admin/scheduler/logs - Get notification scheduler logs
  */
-router.get('/logs', requireAdmin, asyncHandler(async (req, res) => {
+router.get('/logs', requireAdmin, asyncHandler(async (req: Request, res: Response) => {
   const { limit = '50', eventType = null } = req.query;
 
   let query = `
@@ -82,7 +83,7 @@ router.get('/logs', requireAdmin, asyncHandler(async (req, res) => {
     WHERE event_type IN ('daily_digest', 'weekly_digest', 'delayed_shipment_check', 'test_email')
   `;
 
-  const params = [];
+  const params: any[] = [];
 
   if (eventType) {
     query += ` AND event_type = $${params.length + 1}`;
@@ -90,23 +91,27 @@ router.get('/logs', requireAdmin, asyncHandler(async (req, res) => {
   }
 
   query += ` ORDER BY sent_at DESC LIMIT $${params.length + 1}`;
-  params.push(parseInt(limit));
+  params.push(parseInt(limit as string));
 
-  const result = await db.query(query, params);
+  const result = await db.query<any>(query, params);
 
   res.json({
     logs: result,
     count: result.length,
-    limit: parseInt(limit)
+    limit: parseInt(limit as string)
   });
 }));
 
 /**
  * GET /api/admin/scheduler/stats - Get notification statistics
  */
-router.get('/stats', requireAdmin, asyncHandler(async (req, res) => {
+router.get('/stats', requireAdmin, asyncHandler(async (req: Request, res: Response) => {
   // Total notifications sent
-  const totalResult = await db.query(
+  const totalResult = await db.query<{
+    total: string;
+    sent: string;
+    failed: string;
+  }>(
     `SELECT COUNT(*) as total,
             SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as sent,
             SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed
@@ -114,7 +119,12 @@ router.get('/stats', requireAdmin, asyncHandler(async (req, res) => {
   );
 
   // Breakdown by event type
-  const byTypeResult = await db.query(
+  const byTypeResult = await db.query<{
+    event_type: string;
+    count: string;
+    sent: string;
+    failed: string;
+  }>(
     `SELECT event_type, COUNT(*) as count,
             SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as sent,
             SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed
@@ -124,12 +134,15 @@ router.get('/stats', requireAdmin, asyncHandler(async (req, res) => {
   );
 
   // Users with notifications enabled
-  const usersWithEmailResult = await db.query(
+  const usersWithEmailResult = await db.query<{ count: string }>(
     `SELECT COUNT(*) as count FROM notification_preferences WHERE email_enabled = true`
   );
 
   // Users by frequency preference
-  const byFrequencyResult = await db.query(
+  const byFrequencyResult = await db.query<{
+    email_frequency: string;
+    count: string;
+  }>(
     `SELECT email_frequency, COUNT(*) as count
      FROM notification_preferences
      WHERE email_enabled = true
@@ -137,7 +150,12 @@ router.get('/stats', requireAdmin, asyncHandler(async (req, res) => {
   );
 
   // Recent activity (last 7 days)
-  const recentResult = await db.query(
+  const recentResult = await db.query<{
+    date: string;
+    count: string;
+    sent: string;
+    failed: string;
+  }>(
     `SELECT DATE(sent_at) as date, COUNT(*) as count,
             SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as sent,
             SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed
@@ -163,8 +181,11 @@ router.get('/stats', requireAdmin, asyncHandler(async (req, res) => {
 /**
  * POST /api/admin/scheduler/preferences/bulk - Bulk update notification preferences
  */
-router.post('/preferences/bulk', requireAdmin, asyncHandler(async (req, res) => {
-  const { targetUsers, updates } = req.body;
+router.post('/preferences/bulk', requireAdmin, asyncHandler(async (req: Request, res: Response) => {
+  const { targetUsers, updates } = req.body as {
+    targetUsers?: string | string[];
+    updates?: Record<string, any>;
+  };
 
   if (!targetUsers || !updates) {
     throw AppError.badRequest('targetUsers and updates required');

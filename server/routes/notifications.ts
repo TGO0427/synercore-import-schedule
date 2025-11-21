@@ -3,14 +3,15 @@
  * Handles user notification preferences and notification history
  */
 
-import express from 'express';
+import { Router, Request, Response } from 'express';
 import { authenticateToken } from '../middleware/auth.js';
 import { AppError } from '../utils/AppError.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import EmailService from '../services/emailService.js';
 import db from '../db/connection.js';
+import type { TypedAuthenticatedRequest } from '../types/api.js';
 
-const router = express.Router();
+const router = Router();
 
 // All routes require authentication
 router.use(authenticateToken);
@@ -18,7 +19,7 @@ router.use(authenticateToken);
 /**
  * GET /api/notifications/preferences - Get user's notification preferences
  */
-router.get('/preferences', asyncHandler(async (req, res) => {
+router.get('/preferences', asyncHandler(async (req: TypedAuthenticatedRequest, res: Response) => {
   if (!req.user?.id) {
     throw AppError.unauthorized('User not authenticated');
   }
@@ -30,7 +31,7 @@ router.get('/preferences', asyncHandler(async (req, res) => {
 /**
  * PUT /api/notifications/preferences - Update user's notification preferences
  */
-router.put('/preferences', asyncHandler(async (req, res) => {
+router.put('/preferences', asyncHandler(async (req: TypedAuthenticatedRequest, res: Response) => {
   if (!req.user?.id) {
     throw AppError.unauthorized('User not authenticated');
   }
@@ -47,7 +48,7 @@ router.put('/preferences', asyncHandler(async (req, res) => {
 /**
  * GET /api/notifications/history - Get notification log for user
  */
-router.get('/history', asyncHandler(async (req, res) => {
+router.get('/history', asyncHandler(async (req: TypedAuthenticatedRequest, res: Response) => {
   if (!req.user?.id) {
     throw AppError.unauthorized('User not authenticated');
   }
@@ -55,7 +56,7 @@ router.get('/history', asyncHandler(async (req, res) => {
   const { limit = '50', offset = '0', eventType = null } = req.query;
 
   let query = 'SELECT * FROM notification_log WHERE user_id = $1';
-  const params = [req.user.id];
+  const params: any[] = [req.user.id];
 
   if (eventType) {
     query += ' AND event_type = $2';
@@ -63,9 +64,9 @@ router.get('/history', asyncHandler(async (req, res) => {
   }
 
   query += ' ORDER BY sent_at DESC LIMIT $' + (params.length + 1) + ' OFFSET $' + (params.length + 2);
-  params.push(parseInt(limit), parseInt(offset));
+  params.push(parseInt(limit as string), parseInt(offset as string));
 
-  const result = await db.query(query, params);
+  const result = await db.query<any>(query, params);
 
   // Get total count
   let countQuery = 'SELECT COUNT(*) FROM notification_log WHERE user_id = $1';
@@ -73,7 +74,7 @@ router.get('/history', asyncHandler(async (req, res) => {
     countQuery += ' AND event_type = $2';
   }
 
-  const countResult = await db.query(
+  const countResult = await db.query<{ count: string }>(
     countQuery,
     eventType ? [req.user.id, eventType] : [req.user.id]
   );
@@ -82,20 +83,20 @@ router.get('/history', asyncHandler(async (req, res) => {
   res.json({
     notifications: result,
     total,
-    limit: parseInt(limit),
-    offset: parseInt(offset)
+    limit: parseInt(limit as string),
+    offset: parseInt(offset as string)
   });
 }));
 
 /**
  * GET /api/notifications/history/:id - Get specific notification
  */
-router.get('/history/:id', asyncHandler(async (req, res) => {
+router.get('/history/:id', asyncHandler(async (req: TypedAuthenticatedRequest, res: Response) => {
   if (!req.user?.id) {
     throw AppError.unauthorized('User not authenticated');
   }
 
-  const result = await db.query(
+  const result = await db.query<any>(
     'SELECT * FROM notification_log WHERE id = $1 AND user_id = $2',
     [req.params.id, req.user.id]
   );
@@ -110,12 +111,12 @@ router.get('/history/:id', asyncHandler(async (req, res) => {
 /**
  * DELETE /api/notifications/history/:id - Delete notification
  */
-router.delete('/history/:id', asyncHandler(async (req, res) => {
+router.delete('/history/:id', asyncHandler(async (req: TypedAuthenticatedRequest, res: Response) => {
   if (!req.user?.id) {
     throw AppError.unauthorized('User not authenticated');
   }
 
-  const result = await db.query(
+  const result = await db.query<{ id: string }>(
     'DELETE FROM notification_log WHERE id = $1 AND user_id = $2 RETURNING id',
     [req.params.id, req.user.id]
   );
@@ -130,7 +131,7 @@ router.delete('/history/:id', asyncHandler(async (req, res) => {
 /**
  * POST /api/notifications/test - Send test email
  */
-router.post('/test', asyncHandler(async (req, res) => {
+router.post('/test', asyncHandler(async (req: TypedAuthenticatedRequest, res: Response) => {
   if (!req.user?.id) {
     throw AppError.unauthorized('User not authenticated');
   }
@@ -167,13 +168,18 @@ router.post('/test', asyncHandler(async (req, res) => {
 /**
  * GET /api/notifications/stats - Get notification statistics
  */
-router.get('/stats', asyncHandler(async (req, res) => {
+router.get('/stats', asyncHandler(async (req: TypedAuthenticatedRequest, res: Response) => {
   if (!req.user?.id) {
     throw AppError.unauthorized('User not authenticated');
   }
 
   // Count by event type
-  const typeResult = await db.query(
+  const typeResult = await db.query<{
+    event_type: string;
+    count: string;
+    sent: string;
+    failed: string;
+  }>(
     `SELECT event_type, COUNT(*) as count,
             SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as sent,
             SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed
@@ -185,7 +191,11 @@ router.get('/stats', asyncHandler(async (req, res) => {
   );
 
   // Get total counts
-  const totalResult = await db.query(
+  const totalResult = await db.query<{
+    total: string;
+    sent: string;
+    failed: string;
+  }>(
     `SELECT COUNT(*) as total,
             SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as sent,
             SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed

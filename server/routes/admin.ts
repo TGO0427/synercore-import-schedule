@@ -3,22 +3,26 @@
  * One-time data import endpoint for bulk data operations
  */
 
-import express from 'express';
+import { Router, Request, Response } from 'express';
 import db from '../db/connection.js';
 import { AppError } from '../utils/AppError.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import type { Supplier, Shipment } from '../types/index.js';
 
-const router = express.Router();
+const router = Router();
 
 /**
  * POST /api/admin/import-data - One-time data import
  * Requires: shipments and/or suppliers array in request body
  */
-router.post('/import-data', asyncHandler(async (req, res) => {
+router.post('/import-data', asyncHandler(async (req: Request, res: Response) => {
   const client = await db.getPool().connect();
 
   try {
-    const { shipments, suppliers } = req.body;
+    const { shipments, suppliers } = req.body as {
+      shipments?: Partial<Shipment>[];
+      suppliers?: Partial<Supplier>[];
+    };
 
     if (!shipments && !suppliers) {
       throw AppError.badRequest('Provide shipments and/or suppliers data');
@@ -47,14 +51,14 @@ router.post('/import-data', asyncHandler(async (req, res) => {
           [
             supplier.id,
             supplier.name,
-            supplier.contactPerson || null,
+            (supplier as any).contactPerson || null,
             supplier.email || null,
-            supplier.phone || null,
-            supplier.address || null,
-            supplier.country || null,
-            supplier.notes || null,
-            supplier.createdAt || new Date().toISOString(),
-            supplier.updatedAt || new Date().toISOString()
+            (supplier as any).phone || null,
+            (supplier as any).address || null,
+            (supplier as any).country || null,
+            (supplier as any).notes || null,
+            (supplier as any).createdAt || new Date().toISOString(),
+            (supplier as any).updatedAt || new Date().toISOString()
           ]
         );
         suppliersImported++;
@@ -89,20 +93,20 @@ router.post('/import-data', asyncHandler(async (req, res) => {
           [
             shipment.id,
             shipment.supplier,
-            shipment.orderRef || null,
-            shipment.finalPod || null,
-            shipment.latestStatus || null,
-            shipment.weekNumber || null,
-            shipment.productName || null,
+            (shipment as any).orderRef || null,
+            (shipment as any).finalPod || null,
+            shipment.latest_status || null,
+            shipment.week_number || null,
+            (shipment as any).productName || null,
             shipment.quantity || null,
-            shipment.cbm || null,
-            shipment.receivingWarehouse || null,
+            (shipment as any).cbm || null,
+            (shipment as any).receivingWarehouse || null,
             shipment.notes || null,
-            shipment.updatedAt || new Date().toISOString(),
-            shipment.forwardingAgent || null,
-            shipment.incoterm || null,
-            shipment.vesselName || null,
-            shipment.selectedWeekDate || null
+            (shipment as any).updatedAt || new Date().toISOString(),
+            (shipment as any).forwardingAgent || null,
+            (shipment as any).incoterm || null,
+            (shipment as any).vesselName || null,
+            (shipment as any).selectedWeekDate || null
           ]
         );
         shipmentsImported++;
