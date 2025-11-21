@@ -49,6 +49,10 @@ async function migrate() {
     const addAvailableBinsColumn = await import('./add-available-bins.js');
     await addAvailableBinsColumn.default();
 
+    // Add referential integrity constraints
+    const addReferentialIntegrity = await import('./add-referential-integrity.js');
+    await addReferentialIntegrity.default();
+
     // Load data from JSON files
     const shipmentsFile = path.join(__dirname, '../data/shipments.json');
     const suppliersFile = path.join(__dirname, '../data/suppliers.json');
