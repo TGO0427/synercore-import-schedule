@@ -107,7 +107,7 @@ app.get('/api-docs/swagger.json', (_req, res) => {
 
 /* ---------------- Security Middleware & Health Check ---------------- */
 // Health check endpoint (before security middleware for Railway)
-// Returns 200 immediately for Railway health checks
+// Always returns 200 for Railway health checks (even if not fully ready)
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'OK', ready: isReady, timestamp: new Date().toISOString() });
 });
@@ -249,6 +249,12 @@ async function start() {
   console.log('🚀 SERVER STARTING - NEW VERSION');
   console.log('=====================================');
   try {
+    // Start listening IMMEDIATELY for Railway health checks
+    httpServer.listen(PORT, () => {
+      logServerStart(PORT, process.env.NODE_ENV || 'production');
+      console.log('✓ Server listening (initializing in background...)');
+    });
+
     // Initialize database connection pool
     const { getPool } = await import('./db/connection.js');
     getPool(); // Force pool creation on startup
@@ -315,11 +321,8 @@ async function start() {
     }
 
     isReady = true; // mark ready once init is done
-
-    httpServer.listen(PORT, () => {
-      logServerStart(PORT, process.env.NODE_ENV || 'production');
-      logInfo('WebSocket support enabled');
-    });
+    console.log('✓ Full initialization complete');
+    logInfo('WebSocket support enabled');
 
     // Optional warm-up so first user hit isn't the initializer:
     // try { await fetch(`http://127.0.0.1:${PORT}/api/shipments`); } catch {}
