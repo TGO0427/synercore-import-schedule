@@ -839,11 +839,8 @@ function App() {
     <div className="container">
       <OfflineIndicator />
       <div className="sidebar">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div style={{ marginBottom: '1rem' }}>
           <h2>Import Supply Chain Management</h2>
-          <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>
-            Logged in as: <strong>{username}</strong>
-          </div>
         </div>
 
         <ul className="sidebar-nav">
@@ -1029,36 +1026,41 @@ function App() {
           borderBottom: '1px solid #eee', marginBottom: '1rem', width: '100%'
         }}>
           <SynercoreLogo size="medium" />
-          <button
-            onClick={() => setAlertHubOpen(true)}
-            className="btn btn-info"
-            style={{
-              position: 'relative',
-              fontSize: '0.9rem'
-            }}
-            title="Open Alert Hub"
-          >
-            ⚠️ Alerts
-            {alerts.filter(a => !a.read).length > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: '-8px',
-                right: '-8px',
-                backgroundColor: '#ef4444',
-                color: 'white',
-                borderRadius: '50%',
-                minWidth: '20px',
-                height: '20px',
-                fontSize: '0.7rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 'bold'
-              }}>
-                {alerts.filter(a => !a.read).length}
-              </span>
-            )}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ fontSize: '0.9rem', color: '#64748b' }}>
+              Logged in as: <strong style={{ color: '#0f172a' }}>{username}</strong>
+            </div>
+            <button
+              onClick={() => setAlertHubOpen(true)}
+              className="btn btn-info"
+              style={{
+                position: 'relative',
+                fontSize: '0.9rem'
+              }}
+              title="Open Alert Hub"
+            >
+              ⚠️ Alerts
+              {alerts.filter(a => !a.read).length > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '-8px',
+                  right: '-8px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  borderRadius: '50%',
+                  minWidth: '20px',
+                  height: '20px',
+                  fontSize: '0.7rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 'bold'
+                }}>
+                  {alerts.filter(a => !a.read).length}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
         {renderMainContent()}
