@@ -48,13 +48,13 @@
     "express-validator": "^7.2.1",
     "fs-extra": "^11.3.2",
     "helmet": "^8.1.0",
-    "imap": "^0.8.19",
+    "imap": "^0.8.17",
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^3.0.2",
     "jspdf-autotable": "^5.0.2",
     "mailparser": "^3.7.4",
     "multer": "^1.4.5-lts.1",
-    "nodemailer": "^6.9.7",
+    "nodemailer": "^7.0.10",
     "pdf-parse": "^1.1.1",
     "pg": "^8.16.3",
     "react-chartjs-2": "^5.3.0",
@@ -62,7 +62,7 @@
     "socket.io-client": "^4.7.2",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
-    "xlsx": "^0.18.5",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
@@ -101,6 +101,6 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.7.0",
     "typescript": "^5.9.3",
-    "vite": "^4.4.5"
+    "vite": "^7.2.4"
   }
 }
