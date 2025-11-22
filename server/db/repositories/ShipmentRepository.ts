@@ -26,13 +26,37 @@ export class ShipmentRepository extends BaseRepository<Shipment> {
     'id',
     'order_ref',
     'supplier',
+    'product_name',
     'quantity',
+    'pallet_qty',
+    'cbm',
     'latest_status',
     'week_number',
     'selected_week_date as week_date',
+    'final_pod',
+    'receiving_warehouse',
+    'forwarding_agent',
+    'vessel_name',
+    'incoterm',
     'notes',
     'created_at',
-    'updated_at'
+    'updated_at',
+    // Post-arrival workflow fields
+    'unloading_start_date',
+    'unloading_completed_date',
+    'inspection_date',
+    'inspection_status',
+    'inspection_notes',
+    'inspected_by',
+    'receiving_date',
+    'receiving_status',
+    'receiving_notes',
+    'received_by',
+    'received_quantity',
+    'discrepancies',
+    'rejection_date',
+    'rejection_reason',
+    'rejected_by'
   ];
 
   /**
