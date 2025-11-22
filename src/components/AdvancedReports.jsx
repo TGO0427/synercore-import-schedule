@@ -73,17 +73,20 @@ function AdvancedReports() {
         orderRef: s.order_ref || s.orderRef,
         productName: s.product_name || s.productName,
         latestStatus: s.latest_status || s.latestStatus,
-        weekNumber: s.week_number || s.weekNumber,
+        weekNumber: Number(s.week_number || s.weekNumber) || 0,
         receivingWarehouse: s.receiving_warehouse || s.receivingWarehouse,
         forwardingAgent: s.forwarding_agent || s.forwardingAgent,
         vesselName: s.vessel_name || s.vesselName,
-        palletQty: s.pallet_qty || s.palletQty,
+        quantity: Number(s.quantity) || 0,
+        palletQty: Number(s.pallet_qty || s.palletQty) || 0,
+        cbm: Number(s.cbm) || 0,
         createdAt: s.created_at || s.createdAt,
         updatedAt: s.updated_at || s.updatedAt,
         inspectionDate: s.inspection_date || s.inspectionDate,
         inspectionStatus: s.inspection_status || s.inspectionStatus,
         receivingDate: s.receiving_date || s.receivingDate,
-        receivingStatus: s.receiving_status || s.receivingStatus
+        receivingStatus: s.receiving_status || s.receivingStatus,
+        receivedQuantity: Number(s.received_quantity || s.receivedQuantity) || null
       }));
 
       setShipments(normalized);
