@@ -1,74 +1,40 @@
 /* ----------- CSS Variables (Brand System) ----------- */
-/* DARK THEME PREVIEW - Change root to .light-theme and uncomment .dark-theme below to activate */
 :root {
-  /* Core palette - DARK THEME */
-  --bg: #000000;              /* Pure black background */
-  --surface: #0a0a0a;         /* Soft black for cards */
-  --surface-2: #151515;       /* Slightly lighter for headers */
-  --border: #1f1f1f;          /* Subtle borders */
-
-  /* Navy brand & accents - adjusted for dark */
-  --navy-900: #1a3a5f;        /* Lighter navy for visibility */
-  --navy-700: #2f5580;
-  --navy-600: #4070a3;
-
-  /* Accent (teal/cyan) - brighter for contrast */
-  --accent: #14d4d7;          /* primary actions - brighter */
-  --accent-600: #0ea5a8;
-  --accent-100: #0f2829;      /* Dark teal background */
-
-  /* States - adjusted for dark backgrounds */
-  --success: #22c55e;
-  --warning: #fbbf24;
-  --danger:  #f87171;
-  --info:    #60a5fa;
-
-  /* Text - inverted */
-  --text-900: #f1f5f9;        /* Almost white */
-  --text-700: #cbd5e1;        /* Light gray */
-  --text-500: #94a3b8;        /* Medium gray */
-
-  /* Shadows / radius - adapted for dark */
-  --shadow-1: 0 1px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.3);
-  --shadow-2: 0 10px 20px rgba(0,0,0, 0.5);
-  --radius: 10px;
-
-  /* Spacing scale */
-  --sp-1: 6px;  --sp-2: 10px; --sp-3: 14px; --sp-4: 18px; --sp-5: 24px; --sp-6: 32px;
-}
-
-/* ORIGINAL LIGHT THEME - Uncomment this to restore light theme */
-/*
-.light-theme {
+  /* Core palette */
   --bg: #f5f7fb;
   --surface: #ffffff;
   --surface-2: #f0f3f9;
   --border: #e5e9f2;
 
+  /* Navy brand & accents */
   --navy-900: #0b1f3a;
   --navy-700: #143a63;
   --navy-600: #1b4a7f;
 
-  --accent: #0ea5a8;
+  /* Accent (teal/cyan) */
+  --accent: #0ea5a8;         /* primary actions */
   --accent-600: #0a8f91;
   --accent-100: #e6f8f8;
 
+  /* States */
   --success: #10b981;
   --warning: #f59e0b;
   --danger:  #ef4444;
   --info:    #3b82f6;
 
+  /* Text */
   --text-900: #0f172a;
   --text-700: #334155;
   --text-500: #64748b;
 
+  /* Shadows / radius */
   --shadow-1: 0 1px 2px rgba(16,24,40,.06), 0 1px 1px rgba(16,24,40,.04);
   --shadow-2: 0 10px 20px rgba(2, 6, 23, 0.06);
   --radius: 10px;
 
+  /* Spacing scale */
   --sp-1: 6px;  --sp-2: 10px; --sp-3: 14px; --sp-4: 18px; --sp-5: 24px; --sp-6: 32px;
 }
-*/
 
 /* ----------- Global reset-ish ----------- */
 html, body, #root { height: 100%; background: var(--bg); }
@@ -183,7 +149,7 @@ body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI
 .table td {
   padding: 12px 10px; border-bottom: 1px solid var(--border); color: var(--text-900);
 }
-.table tr:hover td { background: rgba(20, 212, 215, 0.05); }
+.table tr:hover td { background: #fafcff; }
 
 /* ----------- Alerts / Pills ----------- */
 .pill { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
