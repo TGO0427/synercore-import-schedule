@@ -60,12 +60,36 @@ function AdvancedReports() {
   const fetchShipments = async () => {
     try {
       setLoading(true);
-      const response = await authFetch(getApiUrl('/api/shipments'));
+      const response = await authFetch(getApiUrl('/api/shipments?limit=1000')); // Get more records for reports
       if (!response.ok) throw new Error('Failed to fetch shipments');
-      const data = await response.json();
-      setShipments(data);
+      const result = await response.json();
+
+      // API returns { data: [...], pagination: {...} }
+      const shipmentsData = result.data || result || [];
+
+      // Convert snake_case to camelCase if needed
+      const normalized = shipmentsData.map(s => ({
+        ...s,
+        orderRef: s.order_ref || s.orderRef,
+        productName: s.product_name || s.productName,
+        latestStatus: s.latest_status || s.latestStatus,
+        weekNumber: s.week_number || s.weekNumber,
+        receivingWarehouse: s.receiving_warehouse || s.receivingWarehouse,
+        forwardingAgent: s.forwarding_agent || s.forwardingAgent,
+        vesselName: s.vessel_name || s.vesselName,
+        palletQty: s.pallet_qty || s.palletQty,
+        createdAt: s.created_at || s.createdAt,
+        updatedAt: s.updated_at || s.updatedAt,
+        inspectionDate: s.inspection_date || s.inspectionDate,
+        inspectionStatus: s.inspection_status || s.inspectionStatus,
+        receivingDate: s.receiving_date || s.receivingDate,
+        receivingStatus: s.receiving_status || s.receivingStatus
+      }));
+
+      setShipments(normalized);
     } catch (error) {
       console.error('Error fetching shipments:', error);
+      setShipments([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
