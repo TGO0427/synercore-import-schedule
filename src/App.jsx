@@ -237,14 +237,43 @@ function App() {
 
       const data = await response.json();
 
+      // Convert snake_case API response to camelCase for frontend
       const normalized = (data.data || []).map(s => ({
-        ...s,
-        // Ensure numeric fields are properly parsed
+        id: s.id,
+        orderRef: s.order_ref || s.orderRef,
+        supplier: s.supplier,
+        productName: s.product_name || s.productName,
         quantity: Number(s.quantity) || 0,
-        palletQty: Number(s.palletQty) || 0,
+        palletQty: Number(s.pallet_qty || s.palletQty) || 0,
         cbm: Number(s.cbm) || 0,
-        weekNumber: Number(s.weekNumber) || 0,
-        receivedQuantity: s.receivedQuantity ? Number(s.receivedQuantity) : null
+        latestStatus: s.latest_status || s.latestStatus,
+        weekNumber: Number(s.week_number || s.weekNumber) || 0,
+        weekDate: s.week_date || s.weekDate,
+        selectedWeekDate: s.selected_week_date || s.selectedWeekDate,
+        finalPod: s.final_pod || s.finalPod,
+        receivingWarehouse: s.receiving_warehouse || s.receivingWarehouse,
+        forwardingAgent: s.forwarding_agent || s.forwardingAgent,
+        vesselName: s.vessel_name || s.vesselName,
+        incoterm: s.incoterm,
+        notes: s.notes,
+        createdAt: s.created_at || s.createdAt,
+        updatedAt: s.updated_at || s.updatedAt,
+        receivedQuantity: s.received_quantity || s.receivedQuantity ? Number(s.received_quantity || s.receivedQuantity) : null,
+        // Post-arrival workflow fields
+        unloadingStartDate: s.unloading_start_date || s.unloadingStartDate,
+        unloadingCompletedDate: s.unloading_completed_date || s.unloadingCompletedDate,
+        inspectionDate: s.inspection_date || s.inspectionDate,
+        inspectionStatus: s.inspection_status || s.inspectionStatus,
+        inspectionNotes: s.inspection_notes || s.inspectionNotes,
+        inspectedBy: s.inspected_by || s.inspectedBy,
+        receivingDate: s.receiving_date || s.receivingDate,
+        receivingStatus: s.receiving_status || s.receivingStatus,
+        receivingNotes: s.receiving_notes || s.receivingNotes,
+        receivedBy: s.received_by || s.receivedBy,
+        discrepancies: s.discrepancies,
+        rejectionDate: s.rejection_date || s.rejectionDate,
+        rejectionReason: s.rejection_reason || s.rejectionReason,
+        rejectedBy: s.rejected_by || s.rejectedBy
       }));
 
       // Always replace array to force downstream children (WeekCalendar) to re-render with fresh values
