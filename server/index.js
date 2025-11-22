@@ -250,9 +250,19 @@ async function start() {
   console.log('=====================================');
   try {
     // Start listening IMMEDIATELY for Railway health checks
-    httpServer.listen(PORT, () => {
-      logServerStart(PORT, process.env.NODE_ENV || 'production');
-      console.log('✓ Server listening (initializing in background...)');
+    // Bind to 0.0.0.0 to accept external connections on Railway
+    httpServer.listen(PORT, '0.0.0.0', () => {
+      console.log('✓ Server listening on port', PORT);
+      console.log('✓ Environment:', process.env.NODE_ENV || 'production');
+      console.log('✓ Initializing database and services in background...');
+    });
+
+    // Handle server errors
+    httpServer.on('error', (err) => {
+      console.error('❌ Server error:', err);
+      if (err.code === 'EADDRINUSE') {
+        console.error(`Port ${PORT} is already in use`);
+      }
     });
 
     // Initialize database connection pool
@@ -327,24 +337,19 @@ async function start() {
     // Optional warm-up so first user hit isn't the initializer:
     // try { await fetch(`http://127.0.0.1:${PORT}/api/shipments`); } catch {}
   } catch (e) {
-    console.error('FATAL: failed to start server:', e);
+    console.error('FATAL: failed to initialize:', e);
     console.error('Stack trace:', e.stack);
-    // Don't exit - let server start so health check can report the error
-    // Still mark server as ready to accept health checks
+    // Server is already listening from above, just mark as ready with degraded functionality
     isReady = true;
-    httpServer.listen(PORT, () => {
-      console.log(`Server listening on port ${PORT} (with degraded functionality)`);
-    });
+    console.log('⚠️  Server running with degraded functionality');
   }
 }
 start().catch(e => {
   console.error('FATAL: start() promise rejected:', e);
   console.error('Stack trace:', e.stack);
-  // Even if start() fails, try to listen for health checks
+  // Server should already be listening, just ensure isReady is set
   isReady = true;
-  httpServer.listen(PORT, () => {
-    console.log(`Server listening on port ${PORT} (emergency mode)`);
-  });
+  console.log('⚠️  Server in emergency mode');
 });
 
 export default app;
