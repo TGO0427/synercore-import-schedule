@@ -62,6 +62,10 @@ export function initializeSentry() {
  * Express middleware for Sentry request handling
  */
 export function getSentryRequestHandler() {
+  // Return no-op middleware if Sentry is not initialized
+  if (!SENTRY_DSN) {
+    return (req, res, next) => next();
+  }
   return Sentry.Handlers.requestHandler();
 }
 
@@ -69,6 +73,10 @@ export function getSentryRequestHandler() {
  * Express middleware for Sentry error handling
  */
 export function getSentryErrorHandler() {
+  // Return no-op middleware if Sentry is not initialized
+  if (!SENTRY_DSN) {
+    return (err, req, res, next) => next(err);
+  }
   return Sentry.Handlers.errorHandler();
 }
 

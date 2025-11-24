@@ -3,7 +3,6 @@
  */
 
 import * as Sentry from '@sentry/react';
-import { BrowserTracing } from '@sentry/tracing';
 
 const SENTRY_DSN = process.env.REACT_APP_SENTRY_DSN;
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -23,24 +22,15 @@ export function initializeSentry() {
       dsn: SENTRY_DSN,
       environment: NODE_ENV,
       integrations: [
-        new BrowserTracing({
-          // Set sampling rate for performance monitoring
-          tracingOrigins: [
-            /^\//,
-            // Match API URLs
+        // Built-in integrations are included by default
+        Sentry.httpClientIntegration({
+          failedRequestTargets: [
             /synercore-import-schedule-production\.up\.railway\.app/,
             /localhost/,
           ],
-          routingInstrumentation: Sentry.reactRouterV6Instrumentation(window.history),
-        }),
-        new Sentry.Replay({
-          maskAllText: true,
-          blockAllMedia: true,
         }),
       ],
       tracesSampleRate: NODE_ENV === 'production' ? 0.1 : 1.0,
-      replaysSessionSampleRate: NODE_ENV === 'production' ? 0.1 : 0.5,
-      replaysOnErrorSampleRate: 1.0, // Always capture replays on errors
       maxBreadcrumbs: 50,
       beforeSend(event, hint) {
         // Filter out client-side errors that aren't worth tracking
