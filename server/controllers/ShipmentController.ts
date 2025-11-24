@@ -144,11 +144,23 @@ export class ShipmentController {
     // Verify shipment exists
     await this.getShipment(id);
 
-    // Update shipment
-    const shipment = await shipmentRepository.update(id, {
-      ...data,
+    // Convert camelCase to snake_case for database
+    const dbData: Record<string, any> = {
       updated_at: new Date()
-    } as Partial<Shipment>);
+    };
+
+    if (data.latestStatus !== undefined) {
+      dbData.latest_status = data.latestStatus;
+    }
+    if (data.quantity !== undefined) {
+      dbData.quantity = data.quantity;
+    }
+    if (data.notes !== undefined) {
+      dbData.notes = data.notes;
+    }
+
+    // Update shipment
+    const shipment = await shipmentRepository.update(id, dbData as Partial<Shipment>);
 
     return shipment;
   }
