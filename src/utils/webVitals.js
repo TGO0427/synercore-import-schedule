@@ -4,7 +4,7 @@
  * Automatically sent to Sentry for analysis
  */
 
-import { onCLS, onFID, onFCP, onLCP, onTTFB } from 'web-vitals';
+import { onCLS, onINP, onFCP, onLCP, onTTFB } from 'web-vitals';
 import * as Sentry from '@sentry/react';
 
 /**
@@ -22,13 +22,13 @@ export function initWebVitals() {
       reportMetric(metric, 'LCP');
     });
 
-    // First Input Delay - measures interactivity
-    onFID((metric) => {
-      if (metric.value > 100) {
-        // Good threshold is < 100ms
-        Sentry.captureMessage(`FID is ${metric.value}ms - consider optimization`, 'warning');
+    // Interaction to Next Paint - measures interactivity
+    onINP((metric) => {
+      if (metric.value > 200) {
+        // Good threshold is < 200ms (INP replaced FID)
+        Sentry.captureMessage(`INP is ${metric.value}ms - consider optimization`, 'warning');
       }
-      reportMetric(metric, 'FID');
+      reportMetric(metric, 'INP');
     });
 
     // Cumulative Layout Shift - measures visual stability
@@ -103,8 +103,8 @@ export async function getWebVitalsScores() {
       }
     });
 
-    onFID((metric) => {
-      scores.fid = metric.value;
+    onINP((metric) => {
+      scores.inp = metric.value;
       completed++;
       if (completed === 5) {
         clearTimeout(timeout);
@@ -148,7 +148,7 @@ export async function getWebVitalsScores() {
 export function getMetricRating(metricName, value) {
   const thresholds = {
     LCP: { good: 2500, needsImprovement: 4000 },
-    FID: { good: 100, needsImprovement: 300 },
+    INP: { good: 200, needsImprovement: 500 },
     CLS: { good: 0.1, needsImprovement: 0.25 },
     FCP: { good: 1800, needsImprovement: 3000 },
     TTFB: { good: 600, needsImprovement: 1200 },
@@ -173,8 +173,8 @@ export function logWebVitalsToConsole() {
       console.log(`📊 LCP: ${metric.value}ms (${metric.rating})`);
     });
 
-    onFID((metric) => {
-      console.log(`📊 FID: ${metric.value}ms (${metric.rating})`);
+    onINP((metric) => {
+      console.log(`📊 INP: ${metric.value}ms (${metric.rating})`);
     });
 
     onCLS((metric) => {
