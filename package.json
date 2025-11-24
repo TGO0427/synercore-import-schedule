@@ -40,6 +40,10 @@
     "npm": ">=10.0.0"
   },
   "dependencies": {
+    "@sentry/integrations": "^7.114.0",
+    "@sentry/node": "^10.26.0",
+    "@sentry/react": "^10.26.0",
+    "@sentry/tracing": "^7.120.4",
     "bcryptjs": "^3.0.2",
     "chart.js": "^4.5.0",
     "cors": "^2.8.5",
@@ -66,6 +70,7 @@
     "socket.io-client": "^4.7.2",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
+    "web-vitals": "^5.1.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zustand": "^5.0.8"
   },

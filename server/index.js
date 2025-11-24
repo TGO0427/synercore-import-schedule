@@ -7,6 +7,10 @@ if (!process.env.DATABASE_URL) {
   dotenv.config();
 }
 
+// Initialize Sentry early for error tracking
+import { initializeSentry, getSentryRequestHandler, getSentryErrorHandler } from './config/sentry.js';
+initializeSentry();
+
 // Validate environment variables early
 import { validateEnvironment, logEnvironmentInfo } from './utils/envValidator.ts';
 try {
@@ -114,6 +118,9 @@ app.get('/health', (_req, res) => {
 
 // Add request ID middleware early (for all requests)
 app.use(requestIdMiddleware);
+
+// Add Sentry request handler for error tracking (after requestIdMiddleware, before other middleware)
+app.use(getSentryRequestHandler());
 
 // Apply helmet security headers
 app.use(helmetConfig);
@@ -239,6 +246,9 @@ app.use((req, res, _next) => {
     path: req.originalUrl
   });
 });
+
+// Sentry error handler (must be before custom error handler)
+app.use(getSentryErrorHandler());
 
 // Centralized error handler (must be last)
 app.use(errorHandler);

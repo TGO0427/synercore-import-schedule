@@ -30,7 +30,12 @@ import useWebSocket from './hooks/useWebSocket';
 import { computeShipmentAlerts, createCustomAlert } from './utils/alerts';
 import { getApiUrl } from './config/api';
 import { authUtils } from './utils/auth';
+import { initWebVitals, logWebVitalsToConsole } from './utils/webVitals';
 import './theme.css';
+
+// Initialize Web Vitals monitoring
+initWebVitals();
+logWebVitalsToConsole();
 
 // ----- real timeout helper for fetch (since fetch doesn't honor a "timeout" option) -----
 async function fetchWithTimeout(url, opts = {}, ms = 10000) {
