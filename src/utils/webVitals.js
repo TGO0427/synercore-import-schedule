@@ -4,7 +4,7 @@
  * Automatically sent to Sentry for analysis
  */
 
-import { getCLS, getFID, getFCP, getLCP, getTTFB } from 'web-vitals';
+import { onCLS, onFID, onFCP, onLCP, onTTFB } from 'web-vitals';
 import * as Sentry from '@sentry/react';
 
 /**
@@ -12,46 +12,50 @@ import * as Sentry from '@sentry/react';
  * Call this in your app initialization
  */
 export function initWebVitals() {
-  // Largest Contentful Paint - measures loading performance
-  getLCP((metric) => {
-    if (metric.value > 2500) {
-      // Good threshold is < 2.5s
-      Sentry.captureMessage(`LCP is ${metric.value}ms - consider optimization`, 'warning');
-    }
-    reportMetric(metric, 'LCP');
-  });
+  try {
+    // Largest Contentful Paint - measures loading performance
+    onLCP((metric) => {
+      if (metric.value > 2500) {
+        // Good threshold is < 2.5s
+        Sentry.captureMessage(`LCP is ${metric.value}ms - consider optimization`, 'warning');
+      }
+      reportMetric(metric, 'LCP');
+    });
 
-  // First Input Delay - measures interactivity
-  getFID((metric) => {
-    if (metric.value > 100) {
-      // Good threshold is < 100ms
-      Sentry.captureMessage(`FID is ${metric.value}ms - consider optimization`, 'warning');
-    }
-    reportMetric(metric, 'FID');
-  });
+    // First Input Delay - measures interactivity
+    onFID((metric) => {
+      if (metric.value > 100) {
+        // Good threshold is < 100ms
+        Sentry.captureMessage(`FID is ${metric.value}ms - consider optimization`, 'warning');
+      }
+      reportMetric(metric, 'FID');
+    });
 
-  // Cumulative Layout Shift - measures visual stability
-  getCLS((metric) => {
-    if (metric.value > 0.1) {
-      // Good threshold is < 0.1
-      Sentry.captureMessage(`CLS is ${metric.value} - consider optimization`, 'warning');
-    }
-    reportMetric(metric, 'CLS');
-  });
+    // Cumulative Layout Shift - measures visual stability
+    onCLS((metric) => {
+      if (metric.value > 0.1) {
+        // Good threshold is < 0.1
+        Sentry.captureMessage(`CLS is ${metric.value} - consider optimization`, 'warning');
+      }
+      reportMetric(metric, 'CLS');
+    });
 
-  // First Contentful Paint - measures when first content appears
-  getFCP((metric) => {
-    reportMetric(metric, 'FCP');
-  });
+    // First Contentful Paint - measures when first content appears
+    onFCP((metric) => {
+      reportMetric(metric, 'FCP');
+    });
 
-  // Time to First Byte - measures server response time
-  getTTFB((metric) => {
-    if (metric.value > 600) {
-      // Good threshold is < 600ms
-      Sentry.captureMessage(`TTFB is ${metric.value}ms - server may need optimization`, 'info');
-    }
-    reportMetric(metric, 'TTFB');
-  });
+    // Time to First Byte - measures server response time
+    onTTFB((metric) => {
+      if (metric.value > 600) {
+        // Good threshold is < 600ms
+        Sentry.captureMessage(`TTFB is ${metric.value}ms - server may need optimization`, 'info');
+      }
+      reportMetric(metric, 'TTFB');
+    });
+  } catch (error) {
+    console.warn('Web Vitals initialization failed:', error);
+  }
 }
 
 /**
@@ -80,40 +84,59 @@ function reportMetric(metric, name) {
 /**
  * Get current Web Vitals scores
  * Returns a promise with all current metrics
+ * Note: Web Vitals are callback-based, this collects them when available
  */
 export async function getWebVitalsScores() {
   return new Promise((resolve) => {
     const scores = {};
     let completed = 0;
+    const timeout = setTimeout(() => {
+      resolve(scores); // Return whatever we have after 5 seconds
+    }, 5000);
 
-    getLCP((metric) => {
+    onLCP((metric) => {
       scores.lcp = metric.value;
       completed++;
-      if (completed === 5) resolve(scores);
+      if (completed === 5) {
+        clearTimeout(timeout);
+        resolve(scores);
+      }
     });
 
-    getFID((metric) => {
+    onFID((metric) => {
       scores.fid = metric.value;
       completed++;
-      if (completed === 5) resolve(scores);
+      if (completed === 5) {
+        clearTimeout(timeout);
+        resolve(scores);
+      }
     });
 
-    getCLS((metric) => {
+    onCLS((metric) => {
       scores.cls = metric.value;
       completed++;
-      if (completed === 5) resolve(scores);
+      if (completed === 5) {
+        clearTimeout(timeout);
+        resolve(scores);
+      }
     });
 
-    getFCP((metric) => {
+    onFCP((metric) => {
       scores.fcp = metric.value;
       completed++;
-      if (completed === 5) resolve(scores);
+      if (completed === 5) {
+        clearTimeout(timeout);
+        resolve(scores);
+      }
     });
 
-    getTTFB((metric) => {
+    onTTFB((metric) => {
       scores.ttfb = metric.value;
       completed++;
-      if (completed === 5) resolve(scores);
+      if (completed === 5) {
+        clearTimeout(timeout);
+        resolve(scores);
+      }
     });
   });
 }
@@ -145,25 +168,29 @@ export function getMetricRating(metricName, value) {
 export function logWebVitalsToConsole() {
   if (process.env.NODE_ENV !== 'development') return;
 
-  getLCP((metric) => {
-    console.log(`📊 LCP: ${metric.value}ms (${metric.rating})`);
-  });
+  try {
+    onLCP((metric) => {
+      console.log(`📊 LCP: ${metric.value}ms (${metric.rating})`);
+    });
 
-  getFID((metric) => {
-    console.log(`📊 FID: ${metric.value}ms (${metric.rating})`);
-  });
+    onFID((metric) => {
+      console.log(`📊 FID: ${metric.value}ms (${metric.rating})`);
+    });
 
-  getCLS((metric) => {
-    console.log(`📊 CLS: ${metric.value} (${metric.rating})`);
-  });
+    onCLS((metric) => {
+      console.log(`📊 CLS: ${metric.value} (${metric.rating})`);
+    });
 
-  getFCP((metric) => {
-    console.log(`📊 FCP: ${metric.value}ms (${metric.rating})`);
-  });
+    onFCP((metric) => {
+      console.log(`📊 FCP: ${metric.value}ms (${metric.rating})`);
+    });
 
-  getTTFB((metric) => {
-    console.log(`📊 TTFB: ${metric.value}ms (${metric.rating})`);
-  });
+    onTTFB((metric) => {
+      console.log(`📊 TTFB: ${metric.value}ms (${metric.rating})`);
+    });
+  } catch (error) {
+    console.warn('Failed to log Web Vitals:', error);
+  }
 }
 
 export default {
