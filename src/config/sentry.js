@@ -1,5 +1,9 @@
 /**
  * Sentry configuration for frontend error tracking and performance monitoring
+ *
+ * SECURITY: DSN is loaded from environment variables only.
+ * Never hardcode DSN or sensitive credentials in source code.
+ * See: https://docs.sentry.io/security/
  */
 
 import * as Sentry from '@sentry/react';
@@ -10,6 +14,12 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 /**
  * Initialize Sentry for frontend
  * Must be called before React renders
+ *
+ * Security best practices:
+ * - Never send PII (Personally Identifiable Information) without user consent
+ * - Filter sensitive data from breadcrumbs
+ * - Use allowUrls/denyUrls to filter third-party errors
+ * - Set appropriate sample rates to minimize data collection
  */
 export function initializeSentry() {
   if (!SENTRY_DSN) {
@@ -21,6 +31,10 @@ export function initializeSentry() {
     Sentry.init({
       dsn: SENTRY_DSN,
       environment: NODE_ENV,
+
+      // Security: Never send default PII
+      sendDefaultPii: false, // SECURITY: Do NOT set to true without explicit user consent
+
       integrations: [
         // Built-in integrations are included by default
         Sentry.httpClientIntegration({
@@ -30,18 +44,104 @@ export function initializeSentry() {
           ],
         }),
       ],
+
+      // Sample rates - production sends 10%, development sends 100%
       tracesSampleRate: NODE_ENV === 'production' ? 0.1 : 1.0,
+
+      // Limit breadcrumbs to prevent excessive data collection
       maxBreadcrumbs: 50,
+
+      // Security: Ignore errors from third-party scripts
+      ignoreErrors: [
+        // Browser extensions
+        'chrome-extension://',
+        'moz-extension://',
+        // Third-party scripts
+        'top.GLOBALS',
+        'Can\'t find variable: ZiteReader',
+        'jigsaw is not defined',
+        'ComboSearch is not defined',
+      ],
+
+      // Security: Only track our application URLs
+      allowUrls: [
+        /synercore-import-schedule\.vercel\.app/,
+        /synercore-import-schedule-production\.up\.railway\.app/,
+        /localhost/,
+      ],
+
+      // Security: Don't track third-party errors
+      denyUrls: [
+        /script.google-analytics\.com/,
+        /connect.facebook.net/,
+        /graph.instagram.com/,
+      ],
+
       beforeSend(event, hint) {
-        // Filter out client-side errors that aren't worth tracking
+        // Security: Filter out sensitive data
+
+        // 1. Don't track network timeouts
         if (hint.originalException instanceof Error) {
           const message = hint.originalException.message;
-          // Ignore network timeouts and cancellations
           if (message.includes('AbortError') || message.includes('timeout')) {
             return null;
           }
         }
+
+        // 2. Filter out third-party errors (GA, FB, etc)
+        if (event.request?.url?.includes('google') ||
+            event.request?.url?.includes('facebook')) {
+          return null;
+        }
+
+        // 3. Don't track expected errors (404s, auth, etc)
+        if (event.exception?.values?.[0]?.value?.includes('404') ||
+            event.exception?.values?.[0]?.value?.includes('401')) {
+          return null;
+        }
+
+        // 4. Remove sensitive headers from requests
+        if (event.request?.headers) {
+          delete event.request.headers['Authorization'];
+          delete event.request.headers['Cookie'];
+          delete event.request.headers['X-CSRF-Token'];
+        }
+
+        // 5. Don't send request bodies (may contain sensitive data)
+        if (event.request?.body) {
+          delete event.request.body;
+        }
+
         return event;
+      },
+
+      beforeBreadcrumb(breadcrumb, hint) {
+        // Security: Filter sensitive breadcrumbs
+
+        // Don't track navigation to sensitive pages
+        if (breadcrumb.category === 'navigation' &&
+            (breadcrumb.message?.includes('password') ||
+             breadcrumb.message?.includes('token') ||
+             breadcrumb.message?.includes('secret'))) {
+          return null;
+        }
+
+        // Don't track console logs containing sensitive data
+        if (breadcrumb.category === 'console' &&
+            (breadcrumb.message?.includes('password') ||
+             breadcrumb.message?.includes('token') ||
+             breadcrumb.message?.includes('key') ||
+             breadcrumb.message?.includes('secret'))) {
+          return null;
+        }
+
+        // Don't track XHR/fetch with sensitive headers
+        if ((breadcrumb.category === 'fetch' || breadcrumb.category === 'xhr') &&
+            breadcrumb.data?.request_body) {
+          delete breadcrumb.data.request_body;
+        }
+
+        return breadcrumb;
       },
     });
 
