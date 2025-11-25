@@ -5,6 +5,9 @@ const TUNNEL_HOST = process.env.VITE_TUNNEL_HOST ?? "";
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    'import.meta.env.VITE_SENTRY_DSN': JSON.stringify(process.env.VITE_SENTRY_DSN),
+  },
   server: {
     port: 3002,
     host: '0.0.0.0',
