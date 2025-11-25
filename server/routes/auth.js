@@ -613,6 +613,11 @@ router.post('/logout', authenticateTokenLenient, async (req, res) => {
   try {
     const { refreshToken } = req.body;
 
+    // If user is not found in token (expired or invalid), still allow logout
+    if (!req.user || !req.user.id) {
+      return res.json({ message: 'Logged out successfully' });
+    }
+
     if (!refreshToken) {
       return res.json({ message: 'Logged out successfully' });
     }
