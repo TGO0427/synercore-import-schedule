@@ -165,8 +165,9 @@ export const authAPI = {
     method: 'GET'
   }).then(handleResponse),
 
-  refreshToken: () => request(`${API_BASE}/api/auth/refresh`, {
-    method: 'POST'
+  refreshToken: (refreshToken) => request(`${API_BASE}/api/auth/refresh`, {
+    method: 'POST',
+    body: JSON.stringify({ refreshToken })
   }).then(handleResponse),
 
   changePassword: (currentPassword, newPassword) => request(`${API_BASE}/api/auth/change-password`, {

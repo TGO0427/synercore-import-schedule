@@ -31,6 +31,8 @@ export async function authFetch(url, options = {}) {
 
   // Handle 401 Unauthorized or 403 Forbidden (expired access token)
   if ((response.status === 401 || response.status === 403) && authUtils.getRefreshToken()) {
+    console.log(`[authFetch] Got ${response.status}, attempting token refresh...`);
+
     if (!isRefreshing) {
       isRefreshing = true;
 
@@ -39,6 +41,7 @@ export async function authFetch(url, options = {}) {
         isRefreshing = false;
 
         if (newToken) {
+          console.log('[authFetch] Token refreshed successfully, retrying request...');
           onTokenRefreshed(newToken);
 
           // Retry the original request with new token
@@ -51,14 +54,16 @@ export async function authFetch(url, options = {}) {
           });
         } else {
           // Refresh token failed, user needs to login again
+          console.warn('[authFetch] Token refresh returned null, redirecting to login');
           window.location.href = '/login';
         }
       } catch (error) {
         isRefreshing = false;
-        console.error('Token refresh error:', error);
+        console.error('[authFetch] Token refresh error:', error);
         window.location.href = '/login';
       }
     } else {
+      console.log('[authFetch] Already refreshing, waiting for token...');
       // Wait for token refresh to complete
       await new Promise(resolve => {
         subscribeTokenRefresh(() => {
