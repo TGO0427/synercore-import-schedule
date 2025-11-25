@@ -4,6 +4,8 @@
  * SECURITY: DSN is loaded from environment variables only.
  * Never hardcode DSN or sensitive credentials in source code.
  * See: https://docs.sentry.io/security/
+ *
+ * Last updated: 2025-11-25 13:10
  */
 
 import * as Sentry from '@sentry/react';
