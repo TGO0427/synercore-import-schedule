@@ -25,7 +25,15 @@
     "test:coverage": "NODE_OPTIONS='--experimental-vm-modules' jest --coverage",
     "test:server": "NODE_OPTIONS='--experimental-vm-modules' jest server",
     "test:utils": "NODE_OPTIONS='--experimental-vm-modules' jest server/utils",
-    "test:middleware": "NODE_OPTIONS='--experimental-vm-modules' jest server/middleware"
+    "test:middleware": "NODE_OPTIONS='--experimental-vm-modules' jest server/middleware",
+    "test:e2e": "cypress run",
+    "test:e2e:open": "cypress open",
+    "test:e2e:headless": "cypress run --headless",
+    "test:e2e:auth": "cypress run --spec 'cypress/e2e/auth.cy.js'",
+    "test:e2e:shipments": "cypress run --spec 'cypress/e2e/shipments.cy.js'",
+    "test:e2e:accessibility": "cypress run --spec 'cypress/e2e/accessibility.cy.js'",
+    "test:e2e:performance": "cypress run --spec 'cypress/e2e/performance.cy.js'",
+    "test:all": "npm run test && npm run test:e2e:headless"
   },
   "keywords": [
     "shipment",
@@ -98,6 +106,7 @@
     "@vitejs/plugin-react": "^4.0.3",
     "babel-jest": "^30.2.0",
     "concurrently": "^8.2.0",
+    "cypress": "^15.7.0",
     "identity-obj-proxy": "^3.0.0",
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
