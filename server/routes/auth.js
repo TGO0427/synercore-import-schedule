@@ -630,10 +630,10 @@ router.post('/logout', authenticateTokenLenient, async (req, res) => {
         [refreshToken, req.user.id]
       );
     } catch (error) {
-      // If table doesn't exist, just proceed
-      if (error.code !== '42P01') {
-        throw error;
-      }
+      // Gracefully handle refresh token revocation errors
+      // (table might not exist or other DB issues - not critical for logout)
+      console.warn('Warning: Could not revoke refresh token:', error.message);
+      // Don't re-throw - logout should still succeed even if token revocation fails
     }
 
     res.json({ message: 'Logged out successfully' });
