@@ -7,7 +7,7 @@
  */
 
 import * as Sentry from '@sentry/react';
-import { BrowserTracing } from '@sentry/browser';
+import { BrowserTracing } from '@sentry/tracing';
 
 const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
 const MODE = import.meta.env.MODE || 'development';
