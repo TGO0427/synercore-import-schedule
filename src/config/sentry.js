@@ -23,6 +23,12 @@ const MODE = import.meta.env.MODE || 'development';
  * - Set appropriate sample rates to minimize data collection
  */
 export function initializeSentry() {
+  console.log(
+    'Sentry frontend initialized (production)',
+    MODE,
+    SENTRY_DSN ? 'DSN set' : 'DSN MISSING'
+  );
+
   if (!SENTRY_DSN) {
     console.warn('⚠️  VITE_SENTRY_DSN not set. Error tracking disabled.');
     return false;
@@ -147,11 +153,6 @@ export function initializeSentry() {
       },
     });
 
-    console.log(
-      'Sentry frontend initialized (production)',
-      MODE,
-      SENTRY_DSN ? 'DSN set' : 'DSN MISSING'
-    );
     return true;
   } catch (error) {
     console.error('Failed to initialize Sentry:', error);
