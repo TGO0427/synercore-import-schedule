@@ -7,9 +7,10 @@
  */
 
 import * as Sentry from '@sentry/react';
+import { BrowserTracing } from '@sentry/browser';
 
-const SENTRY_DSN = process.env.REACT_APP_SENTRY_DSN;
-const NODE_ENV = process.env.NODE_ENV || 'development';
+const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
+const MODE = import.meta.env.MODE || 'development';
 
 /**
  * Initialize Sentry for frontend
@@ -23,19 +24,20 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
  */
 export function initializeSentry() {
   if (!SENTRY_DSN) {
-    console.warn('⚠️  REACT_APP_SENTRY_DSN not set. Error tracking disabled.');
+    console.warn('⚠️  VITE_SENTRY_DSN not set. Error tracking disabled.');
     return false;
   }
 
   try {
     Sentry.init({
       dsn: SENTRY_DSN,
-      environment: NODE_ENV,
+      environment: MODE,
 
       // Security: Never send default PII
       sendDefaultPii: false, // SECURITY: Do NOT set to true without explicit user consent
 
       integrations: [
+        new BrowserTracing(),
         // Built-in integrations are included by default
         Sentry.httpClientIntegration({
           failedRequestTargets: [
@@ -46,7 +48,7 @@ export function initializeSentry() {
       ],
 
       // Sample rates - production sends 10%, development sends 100%
-      tracesSampleRate: NODE_ENV === 'production' ? 0.1 : 1.0,
+      tracesSampleRate: MODE === 'production' ? 0.1 : 1.0,
 
       // Limit breadcrumbs to prevent excessive data collection
       maxBreadcrumbs: 50,
@@ -145,7 +147,11 @@ export function initializeSentry() {
       },
     });
 
-    console.log(`✓ Sentry frontend initialized (${NODE_ENV})`);
+    console.log(
+      'Sentry frontend initialized (production)',
+      MODE,
+      SENTRY_DSN ? 'DSN set' : 'DSN MISSING'
+    );
     return true;
   } catch (error) {
     console.error('Failed to initialize Sentry:', error);
