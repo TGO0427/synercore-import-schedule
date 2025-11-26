@@ -69,9 +69,9 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
 
     let filtered = allStoredShipments.filter(shipment => {
       const matchesSearch = searchTerm === '' ||
-        shipment.orderRef.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        shipment.supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        shipment.finalPod.toLowerCase().includes(searchTerm.toLowerCase());
+        shipment.orderRef?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        shipment.supplier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        shipment.finalPod?.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesWeek = weekFilters.length === 0 || weekFilters.includes(shipment.weekNumber);
 

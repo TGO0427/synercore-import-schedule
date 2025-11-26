@@ -53,9 +53,9 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
   const filteredAndSortedShipments = useMemo(() => {
     let filtered = shipments.filter(shipment => {
       const matchesSearch = searchTerm === '' ||
-        shipment.orderRef.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        shipment.supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        shipment.finalPod.toLowerCase().includes(searchTerm.toLowerCase());
+        shipment.orderRef?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        shipment.supplier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        shipment.finalPod?.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesStatus = statusFilter.includes('all') ||
         statusFilter.includes(shipment.latestStatus) ||
