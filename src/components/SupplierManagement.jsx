@@ -55,8 +55,8 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
   });
 
   const filteredSuppliers = useMemo(() => {
-    return suppliers.filter(supplier => 
-      supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    return suppliers.filter(supplier =>
+      supplier.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       supplier.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       supplier.contactPerson?.toLowerCase().includes(searchTerm.toLowerCase())
     );
