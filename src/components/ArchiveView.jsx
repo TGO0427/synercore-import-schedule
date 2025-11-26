@@ -562,19 +562,19 @@ function ArchiveView() {
             <div style={{ marginBottom: '1rem' }}>
               <h3>Archived Shipments ({archiveData.data.filter(shipment =>
                 searchTerm === '' ||
-                shipment.supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                shipment.orderRef.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                shipment.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                shipment.finalPod.toLowerCase().includes(searchTerm.toLowerCase())
+                shipment.supplier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                shipment.orderRef?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                shipment.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                shipment.finalPod?.toLowerCase().includes(searchTerm.toLowerCase())
               ).length})</h3>
             </div>
 
             {archiveData.data.filter(shipment =>
               searchTerm === '' ||
-              shipment.supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              shipment.orderRef.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              shipment.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              shipment.finalPod.toLowerCase().includes(searchTerm.toLowerCase())
+              shipment.supplier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              shipment.orderRef?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              shipment.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              shipment.finalPod?.toLowerCase().includes(searchTerm.toLowerCase())
             ).map((shipment) => (
               <div key={shipment.id} style={{
                 backgroundColor: 'white',
