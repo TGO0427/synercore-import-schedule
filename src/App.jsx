@@ -147,6 +147,8 @@ function App() {
       initializedRef.current = true;
       setIsAuthenticated(true);
       setUsername(user.username);
+      // Set loading before fetching
+      setLoading(true);
       // Only fetch if authenticated
       fetchShipments();
       fetchSuppliers();
