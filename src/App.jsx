@@ -101,6 +101,7 @@ function App() {
   // prevent hammering the API during background polling
   const lastFetchRef = useRef({ shipments: 0, suppliers: 0 });
   const FETCH_COOLDOWN = 5000; // 5s
+  const initializedRef = useRef(false); // Track if we've done initial fetch
 
   // ---------- WebSocket real-time updates ----------
   // Listen for shipment updates and refresh affected shipments
@@ -136,11 +137,14 @@ function App() {
 
   // ---------- boot ----------
   useEffect(() => {
-    // Check for new JWT-based auth first
+    // Check for new JWT-based auth first (only run once)
+    if (initializedRef.current) return;
+
     const user = authUtils.getUser();
     const isAuth = user && authUtils.isAuthenticated() && !authUtils.isTokenExpired();
 
     if (isAuth) {
+      initializedRef.current = true;
       setIsAuthenticated(true);
       setUsername(user.username);
       // Only fetch if authenticated
@@ -152,7 +156,10 @@ function App() {
         authUtils.clearAuth();
       }
     }
+  }, []); // Empty dependency array - run once on mount
 
+  // ---------- polling fallback ----------
+  useEffect(() => {
     // Only poll if WebSocket is not connected (fallback to polling)
     const poll = setInterval(() => {
       // Only poll if authenticated and WebSocket not connected
