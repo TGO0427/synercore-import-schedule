@@ -120,14 +120,16 @@ function PostArrivalWorkflow() {
       actions.push({ key: 'start-unloading', label: 'Start Unloading', icon: '📦', color: '#fd7e14' });
     } else if (status === 'unloading') {
       actions.push({ key: 'complete-unloading', label: 'Complete Unloading', icon: '✅', color: '#28a745' });
-    } else if (status === 'inspection_in_progress') {
+    } else if (status === 'inspection_pending') {
+      actions.push({ key: 'start-inspection', label: 'Start Inspection', icon: '🔍', color: '#17a2b8' });
+    } else if (status === 'inspecting') {
       actions.push({ key: 'complete-inspection', label: 'Complete Inspection', icon: '✅', color: '#28a745' });
     } else if (status === 'inspection_passed') {
       actions.push({ key: 'start-receiving', label: 'Start Receiving', icon: '📋', color: '#6f42c1' });
     } else if (status === 'inspection_failed') {
       actions.push({ key: 'start-inspection', label: 'Re-inspect', icon: '🔍', color: '#17a2b8' });
       actions.push({ key: 'reject-shipment', label: 'Reject/Return to Supplier', icon: '↩️', color: '#dc3545' });
-    } else if (status === 'receiving_goods') {
+    } else if (status === 'receiving' || status === 'receiving_goods') {
       actions.push({ key: 'complete-receiving', label: 'Complete Receiving', icon: '✔️', color: '#20c997' });
     } else if (status === 'in_warehouse') {
       actions.push({ key: 'mark-stored', label: 'Mark as Stored', icon: '🏪', color: '#6c757d' });
