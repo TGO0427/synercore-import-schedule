@@ -30,6 +30,18 @@ function WorkflowWizard({
   const isLastStep = step && currentStep === steps.length - 1;
   const stepPercentage = steps && steps.length > 0 ? ((currentStep + 1) / steps.length) * 100 : 0;
 
+  // Debug logging
+  useEffect(() => {
+    console.log('WorkflowWizard Debug:', {
+      stepsCount: steps?.length,
+      currentStep,
+      stepExists: !!step,
+      stepLabel: step?.label,
+      hasComponent: !!step?.component,
+      componentType: typeof step?.component
+    });
+  }, [step, steps, currentStep]);
+
   // If no steps available, show error
   if (!step) {
     return (
@@ -53,6 +65,9 @@ function WorkflowWizard({
         }}>
           <h3 style={{ color: '#dc3545', margin: '0 0 1rem 0' }}>Error Loading Wizard</h3>
           <p style={{ color: '#666', margin: '0 0 1rem 0' }}>No steps are configured for this wizard.</p>
+          <p style={{ color: '#999', margin: '0 0 1rem 0', fontSize: '0.8rem' }}>
+            Steps received: {steps?.length ?? 'undefined'}
+          </p>
           <button
             onClick={onCancel}
             style={{
