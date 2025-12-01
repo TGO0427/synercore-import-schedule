@@ -44,6 +44,11 @@ function PostArrivalWorkflow() {
       const response = await authFetch(getApiUrl('/api/shipments/post-arrival'));
       if (response.ok) {
         const shipments = await response.json();
+        console.log('Post-Arrival Shipments:', shipments);
+        console.log('Sample shipment:', shipments[0], {
+          latestStatus: shipments[0]?.latest_status,
+          latestStatusField: shipments[0]?.latestStatus
+        });
         setPostArrivalShipments(shipments);
       } else {
         console.error('Failed to fetch post-arrival shipments');
@@ -108,24 +113,23 @@ function PostArrivalWorkflow() {
 
   const getAvailableActions = (shipment) => {
     const actions = [];
-    const status = shipment.latestStatus;
+    // Use latest_status from database (snake_case), not latestStatus
+    const status = shipment.latest_status;
 
     if (status === 'arrived_pta' || status === 'arrived_klm' || status === 'arrived_offsite') {
       actions.push({ key: 'start-unloading', label: 'Start Unloading', icon: '📦', color: '#fd7e14' });
     } else if (status === 'unloading') {
       actions.push({ key: 'complete-unloading', label: 'Complete Unloading', icon: '✅', color: '#28a745' });
-    } else if (status === 'inspection_pending') {
-      actions.push({ key: 'start-inspection', label: 'Start Inspection', icon: '🔍', color: '#17a2b8' });
-    } else if (status === 'inspecting') {
+    } else if (status === 'inspection_in_progress') {
       actions.push({ key: 'complete-inspection', label: 'Complete Inspection', icon: '✅', color: '#28a745' });
     } else if (status === 'inspection_passed') {
       actions.push({ key: 'start-receiving', label: 'Start Receiving', icon: '📋', color: '#6f42c1' });
     } else if (status === 'inspection_failed') {
       actions.push({ key: 'start-inspection', label: 'Re-inspect', icon: '🔍', color: '#17a2b8' });
       actions.push({ key: 'reject-shipment', label: 'Reject/Return to Supplier', icon: '↩️', color: '#dc3545' });
-    } else if (status === 'receiving') {
+    } else if (status === 'receiving_goods') {
       actions.push({ key: 'complete-receiving', label: 'Complete Receiving', icon: '✔️', color: '#20c997' });
-    } else if (status === 'received') {
+    } else if (status === 'in_warehouse') {
       actions.push({ key: 'mark-stored', label: 'Mark as Stored', icon: '🏪', color: '#6c757d' });
     }
 
@@ -382,11 +386,11 @@ function PostArrivalWorkflow() {
 
   const getWorkflowProgress = (shipment) => {
     const states = [
-      'arrived_pta', 'arrived_klm', 'unloading', 'inspection_pending', 'inspecting',
-      'inspection_passed', 'receiving', 'received', 'stored'
+      'arrived_pta', 'arrived_klm', 'unloading', 'inspection_in_progress',
+      'inspection_passed', 'receiving_goods', 'in_warehouse', 'stored'
     ];
 
-    const currentIndex = states.indexOf(shipment.latestStatus);
+    const currentIndex = states.indexOf(shipment.latest_status);
     const percentage = Math.round(((currentIndex + 1) / states.length) * 100);
 
     return {
@@ -458,14 +462,14 @@ function PostArrivalWorkflow() {
                     alignItems: 'center',
                     gap: '0.5rem',
                     padding: '0.5rem 1rem',
-                    backgroundColor: getStatusColor(shipment.latestStatus),
+                    backgroundColor: getStatusColor(shipment.latest_status),
                     color: 'white',
                     borderRadius: '20px',
                     fontSize: '0.85rem',
                     fontWeight: '600'
                   }}>
-                    <span>{getStatusIcon(shipment.latestStatus)}</span>
-                    {getStatusLabel(shipment.latestStatus)}
+                    <span>{getStatusIcon(shipment.latest_status)}</span>
+                    {getStatusLabel(shipment.latest_status)}
                   </div>
                 </div>
 
@@ -489,7 +493,7 @@ function PostArrivalWorkflow() {
                     <div style={{
                       width: `${progress.percentage}%`,
                       height: '100%',
-                      backgroundColor: getStatusColor(shipment.latestStatus),
+                      backgroundColor: getStatusColor(shipment.latest_status),
                       borderRadius: '4px',
                       transition: 'width 0.3s ease'
                     }} />
@@ -648,14 +652,14 @@ function PostArrivalWorkflow() {
           }}>
             <div style={{ marginBottom: '1.5rem' }}>
               <h3 style={{ margin: '0 0 0.5rem 0', color: '#333' }}>
-                {selectedShipment.latestStatus === 'inspection_pending' || selectedShipment.latestStatus === 'inspecting' ? '🔍 Inspection Details' : '📋 Receiving Details'}
+                {selectedShipment.latest_status === 'inspection_in_progress' ? '🔍 Inspection Details' : '📋 Receiving Details'}
               </h3>
               <div style={{ color: '#666', fontSize: '0.9rem' }}>
                 {selectedShipment.supplier} - {selectedShipment.orderRef}
               </div>
             </div>
 
-            {(selectedShipment.latestStatus === 'inspection_pending' || selectedShipment.latestStatus === 'inspecting') ? (
+            {(selectedShipment.latest_status === 'inspection_in_progress') ? (
               <div style={{ marginBottom: '1.5rem' }}>
                 <div style={{ marginBottom: '1rem' }}>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
@@ -677,7 +681,7 @@ function PostArrivalWorkflow() {
                   />
                 </div>
 
-                {selectedShipment.latestStatus === 'inspecting' && (
+                {selectedShipment.latest_status === 'inspection_in_progress' && (
                   <>
                     <div style={{ marginBottom: '1rem' }}>
                       <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
@@ -850,7 +854,7 @@ function PostArrivalWorkflow() {
                   />
                 </div>
 
-                {selectedShipment.latestStatus === 'receiving' && (
+                {selectedShipment.latest_status === 'receiving_goods' && (
                   <>
                     <div style={{ marginBottom: '1rem' }}>
                       <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
@@ -920,7 +924,7 @@ function PostArrivalWorkflow() {
               <button
                 onClick={() => {
                   // Validate hold types if on hold
-                  if (selectedShipment.latestStatus === 'inspecting' &&
+                  if (selectedShipment.latest_status === 'inspection_in_progress' &&
                       workflowData.inspectionOnHold &&
                       workflowData.holdTypes.length === 0) {
                     alert('Please select at least one hold type');
@@ -928,20 +932,18 @@ function PostArrivalWorkflow() {
                   }
 
                   // Validate failure reasons if failed
-                  if (selectedShipment.latestStatus === 'inspecting' &&
+                  if (selectedShipment.latest_status === 'inspection_in_progress' &&
                       workflowData.inspectionFailed &&
                       workflowData.failureReasons.length === 0) {
                     alert('Please select at least one failure reason');
                     return;
                   }
 
-                  if (selectedShipment.latestStatus === 'inspection_pending') {
-                    submitWorkflowAction('start-inspection');
-                  } else if (selectedShipment.latestStatus === 'inspecting') {
+                  if (selectedShipment.latest_status === 'inspection_in_progress') {
                     submitWorkflowAction('complete-inspection');
-                  } else if (selectedShipment.latestStatus === 'inspection_passed') {
+                  } else if (selectedShipment.latest_status === 'inspection_passed') {
                     submitWorkflowAction('start-receiving');
-                  } else if (selectedShipment.latestStatus === 'receiving') {
+                  } else if (selectedShipment.latest_status === 'receiving_goods') {
                     submitWorkflowAction('complete-receiving');
                   }
                 }}
