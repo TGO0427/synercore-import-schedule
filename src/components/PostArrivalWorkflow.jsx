@@ -286,10 +286,6 @@ function PostArrivalWorkflow() {
       } else if (action === 'complete-inspection') {
         requestBody = {
           passed: workflowData.inspectionPassed && !workflowData.inspectionOnHold && !workflowData.inspectionFailed,
-          onHold: workflowData.inspectionOnHold,
-          holdTypes: workflowData.holdTypes,
-          failed: workflowData.inspectionFailed,
-          failureReasons: workflowData.failureReasons,
           notes: workflowData.inspectionNotes,
           inspectedBy: workflowData.inspectedBy
         };
