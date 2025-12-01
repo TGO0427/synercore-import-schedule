@@ -25,10 +25,51 @@ function WorkflowWizard({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get current step config
-  const step = steps[currentStep];
+  const step = steps && steps.length > 0 ? steps[currentStep] : null;
   const isFirstStep = currentStep === 0;
-  const isLastStep = currentStep === steps.length - 1;
-  const stepPercentage = ((currentStep + 1) / steps.length) * 100;
+  const isLastStep = step && currentStep === steps.length - 1;
+  const stepPercentage = steps && steps.length > 0 ? ((currentStep + 1) / steps.length) * 100 : 0;
+
+  // If no steps available, show error
+  if (!step) {
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000
+      }}>
+        <div style={{
+          backgroundColor: 'white',
+          padding: '2rem',
+          borderRadius: '12px',
+          textAlign: 'center'
+        }}>
+          <h3 style={{ color: '#dc3545', margin: '0 0 1rem 0' }}>Error Loading Wizard</h3>
+          <p style={{ color: '#666', margin: '0 0 1rem 0' }}>No steps are configured for this wizard.</p>
+          <button
+            onClick={onCancel}
+            style={{
+              padding: '0.75rem 1.5rem',
+              backgroundColor: '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Validate current step
   const validateStep = async () => {

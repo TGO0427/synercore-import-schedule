@@ -351,6 +351,7 @@ function PostArrivalWizard({
       label: 'Receiving',
       icon: '✓',
       component: ReceivingStep,
+      validate: validateReceiving,
       helpText: 'Confirm quantities received and note any discrepancies'
     },
     {
