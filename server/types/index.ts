@@ -21,10 +21,14 @@ export type ShipmentStatus =
   | 'clearing_customs'
   | 'in_warehouse'
   | 'unloading'
+  | 'inspection_pending'
+  | 'inspecting'
   | 'inspection_in_progress'
   | 'inspection_passed'
   | 'inspection_failed'
   | 'receiving_goods'
+  | 'receiving'
+  | 'received'
   | 'stored'
   | 'archived';
 
@@ -99,6 +103,23 @@ export interface Shipment {
   created_at: Date;
   updated_at: Date;
   archived_at?: Date;
+  // Post-arrival workflow fields
+  unloading_start_date?: Date;
+  unloading_completed_date?: Date;
+  inspection_date?: Date;
+  inspection_status?: string;
+  inspection_notes?: string;
+  inspected_by?: string;
+  receiving_date?: Date;
+  receiving_status?: string;
+  receiving_notes?: string;
+  received_by?: string;
+  received_quantity?: number;
+  discrepancies?: string;
+  // Rejection/Return workflow fields
+  rejection_date?: Date;
+  rejection_reason?: string;
+  rejected_by?: string;
 }
 
 /**

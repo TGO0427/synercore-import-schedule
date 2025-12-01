@@ -289,4 +289,126 @@ router.post(
   })
 );
 
+/**
+ * POST /api/shipments/:id/start-unloading
+ * Start unloading workflow
+ */
+router.post(
+  '/:id/start-unloading',
+  asyncHandler(async (req: Request, res: Response) => {
+    const shipment = await ShipmentController.startUnloading(req.params.id!);
+
+    res.status(200).json({
+      data: shipment,
+      message: 'Unloading started successfully'
+    });
+  })
+);
+
+/**
+ * POST /api/shipments/:id/complete-unloading
+ * Complete unloading workflow
+ */
+router.post(
+  '/:id/complete-unloading',
+  asyncHandler(async (req: Request, res: Response) => {
+    const shipment = await ShipmentController.completeUnloading(req.params.id!);
+
+    res.status(200).json({
+      data: shipment,
+      message: 'Unloading completed successfully'
+    });
+  })
+);
+
+/**
+ * POST /api/shipments/:id/start-inspection
+ * Start inspection workflow
+ */
+router.post(
+  '/:id/start-inspection',
+  body('inspectedBy').optional().trim(),
+  asyncHandler(async (req: BodyRequest<{ inspectedBy?: string }>, res: Response) => {
+    const shipment = await ShipmentController.startInspection(
+      req.params.id!,
+      req.body.inspectedBy
+    );
+
+    res.status(200).json({
+      data: shipment,
+      message: 'Inspection started successfully'
+    });
+  })
+);
+
+/**
+ * POST /api/shipments/:id/complete-inspection
+ * Complete inspection workflow
+ */
+router.post(
+  '/:id/complete-inspection',
+  body('passed').isBoolean().withMessage('passed must be a boolean'),
+  body('notes').optional().trim(),
+  body('inspectedBy').optional().trim(),
+  asyncHandler(async (req: BodyRequest<{ passed: boolean; notes?: string; inspectedBy?: string }>, res: Response) => {
+    if (!handleValidationErrors(req, res)) return;
+
+    const shipment = await ShipmentController.completeInspection(
+      req.params.id!,
+      req.body.passed,
+      req.body.notes,
+      req.body.inspectedBy
+    );
+
+    res.status(200).json({
+      data: shipment,
+      message: 'Inspection completed successfully'
+    });
+  })
+);
+
+/**
+ * POST /api/shipments/:id/start-receiving
+ * Start receiving workflow
+ */
+router.post(
+  '/:id/start-receiving',
+  body('receivedBy').optional().trim(),
+  asyncHandler(async (req: BodyRequest<{ receivedBy?: string }>, res: Response) => {
+    const shipment = await ShipmentController.startReceiving(
+      req.params.id!,
+      req.body.receivedBy
+    );
+
+    res.status(200).json({
+      data: shipment,
+      message: 'Receiving started successfully'
+    });
+  })
+);
+
+/**
+ * POST /api/shipments/:id/complete-receiving
+ * Complete receiving workflow
+ */
+router.post(
+  '/:id/complete-receiving',
+  body('receivedQuantity').optional().isInt({ min: 0 }).withMessage('Received quantity must be a non-negative integer'),
+  body('receivedBy').optional().trim(),
+  asyncHandler(async (req: BodyRequest<{ receivedQuantity?: number; receivedBy?: string }>, res: Response) => {
+    if (!handleValidationErrors(req, res)) return;
+
+    const shipment = await ShipmentController.completeReceiving(
+      req.params.id!,
+      req.body.receivedQuantity,
+      req.body.receivedBy
+    );
+
+    res.status(200).json({
+      data: shipment,
+      message: 'Receiving completed successfully'
+    });
+  })
+);
+
 export default router;

@@ -282,6 +282,164 @@ export class ShipmentController {
   static async getArchives(): Promise<Shipment[]> {
     return shipmentRepository.findArchived();
   }
+
+  /**
+   * Start unloading workflow
+   */
+  static async startUnloading(id: string): Promise<Shipment> {
+    // Verify shipment exists
+    const shipment = await this.getShipment(id);
+
+    // Verify shipment is in a valid arrival state
+    const validStates = ['arrived_pta', 'arrived_klm', 'arrived_offsite'];
+    if (!validStates.includes(shipment.latest_status)) {
+      throw AppError.conflict(
+        `Shipment must be in one of these states to start unloading: ${validStates.join(', ')}`
+      );
+    }
+
+    // Update status to unloading
+    const updated = await shipmentRepository.update(id, {
+      latest_status: 'unloading' as ShipmentStatus,
+      unloading_start_date: new Date(),
+      updated_at: new Date()
+    } as Partial<Shipment>);
+
+    return updated;
+  }
+
+  /**
+   * Complete unloading workflow
+   */
+  static async completeUnloading(id: string): Promise<Shipment> {
+    // Verify shipment exists
+    const shipment = await this.getShipment(id);
+
+    // Verify shipment is in unloading state
+    if (shipment.latest_status !== 'unloading') {
+      throw AppError.conflict('Shipment must be in unloading state to complete unloading');
+    }
+
+    // Update status to inspection_pending
+    const updated = await shipmentRepository.update(id, {
+      latest_status: 'inspection_pending' as ShipmentStatus,
+      unloading_completed_date: new Date(),
+      updated_at: new Date()
+    } as Partial<Shipment>);
+
+    return updated;
+  }
+
+  /**
+   * Start inspection workflow
+   */
+  static async startInspection(
+    id: string,
+    inspectedBy?: string
+  ): Promise<Shipment> {
+    // Verify shipment exists
+    const shipment = await this.getShipment(id);
+
+    // Verify shipment is in inspection_pending state
+    if (shipment.latest_status !== 'inspection_pending') {
+      throw AppError.conflict('Shipment must be in inspection_pending state to start inspection');
+    }
+
+    // Update status to inspecting
+    const updated = await shipmentRepository.update(id, {
+      latest_status: 'inspecting' as ShipmentStatus,
+      inspection_status: 'in_progress',
+      inspected_by: inspectedBy || '',
+      inspection_date: new Date(),
+      updated_at: new Date()
+    } as Partial<Shipment>);
+
+    return updated;
+  }
+
+  /**
+   * Complete inspection workflow
+   */
+  static async completeInspection(
+    id: string,
+    passed: boolean,
+    notes?: string,
+    inspectedBy?: string
+  ): Promise<Shipment> {
+    // Verify shipment exists
+    const shipment = await this.getShipment(id);
+
+    // Verify shipment is in inspecting state
+    if (shipment.latest_status !== 'inspecting') {
+      throw AppError.conflict('Shipment must be in inspecting state to complete inspection');
+    }
+
+    // Update status based on inspection result
+    const updated = await shipmentRepository.update(id, {
+      latest_status: (passed ? 'inspection_passed' : 'inspection_failed') as ShipmentStatus,
+      inspection_status: passed ? 'passed' : 'failed',
+      inspection_notes: notes || '',
+      inspected_by: inspectedBy || shipment.inspected_by || '',
+      updated_at: new Date()
+    } as Partial<Shipment>);
+
+    return updated;
+  }
+
+  /**
+   * Start receiving workflow
+   */
+  static async startReceiving(
+    id: string,
+    receivedBy?: string
+  ): Promise<Shipment> {
+    // Verify shipment exists
+    const shipment = await this.getShipment(id);
+
+    // Verify shipment is in inspection_passed state
+    if (shipment.latest_status !== 'inspection_passed') {
+      throw AppError.conflict('Shipment must have passed inspection to start receiving');
+    }
+
+    // Update status to receiving
+    const updated = await shipmentRepository.update(id, {
+      latest_status: 'receiving' as ShipmentStatus,
+      receiving_status: 'in_progress',
+      received_by: receivedBy || '',
+      receiving_date: new Date(),
+      updated_at: new Date()
+    } as Partial<Shipment>);
+
+    return updated;
+  }
+
+  /**
+   * Complete receiving workflow
+   */
+  static async completeReceiving(
+    id: string,
+    receivedQuantity?: number,
+    receivedBy?: string
+  ): Promise<Shipment> {
+    // Verify shipment exists
+    const shipment = await this.getShipment(id);
+
+    // Verify shipment is in receiving state
+    if (shipment.latest_status !== 'receiving') {
+      throw AppError.conflict('Shipment must be in receiving state to complete receiving');
+    }
+
+    // Update status to received
+    const updated = await shipmentRepository.update(id, {
+      latest_status: 'received' as ShipmentStatus,
+      receiving_status: 'completed',
+      received_quantity: receivedQuantity,
+      received_by: receivedBy || shipment.received_by || '',
+      updated_at: new Date()
+    } as Partial<Shipment>);
+
+    return updated;
+  }
 }
 
 export default ShipmentController;
