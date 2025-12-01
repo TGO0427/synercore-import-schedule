@@ -589,30 +589,55 @@ function PostArrivalWorkflow() {
             // Handle wizard completion
             try {
               setActionLoading(true);
-              const response = await authFetch(getApiUrl(`/api/shipments/${selectedShipment.id}`), {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  ...selectedShipment,
-                  unloadingStartDate: formData.unloadingStartDate,
-                  inspectionStatus: formData.inspectionStatus,
-                  inspectionDate: formData.inspectionDate,
-                  inspectionNotes: formData.inspectionNotes,
-                  receivingStatus: formData.receivingStatus,
-                  receivingDate: formData.receivingDate,
-                  receivedQuantity: formData.receivedQuantity,
-                  discrepancies: formData.discrepancies,
-                  latestStatus: formData.receivingStatus === 'received' ? 'received' : formData.inspectionStatus
-                })
-              });
 
-              if (response.ok) {
+              // Determine which workflow endpoints to call based on current status
+              const currentStatus = selectedShipment.latest_status;
+              let apiCalls = [];
+
+              // Complete inspection if in inspecting status
+              if (currentStatus === 'inspecting') {
+                apiCalls.push(
+                  authFetch(getApiUrl(`/api/shipments/${selectedShipment.id}/complete-inspection`), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      passed: formData.inspectionStatus === 'inspection_passed',
+                      notes: formData.inspectionNotes,
+                      inspectedBy: formData.inspectedBy || ''
+                    })
+                  })
+                );
+              }
+
+              // Complete receiving if in receiving status
+              if (currentStatus === 'receiving') {
+                apiCalls.push(
+                  authFetch(getApiUrl(`/api/shipments/${selectedShipment.id}/complete-receiving`), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      receivedQuantity: parseInt(formData.receivedQuantity) || 0,
+                      receivedBy: formData.receivedBy || ''
+                    })
+                  })
+                );
+              }
+
+              // Execute all workflow calls
+              const responses = await Promise.all(apiCalls);
+
+              // Check if all responses were successful
+              const allSuccess = responses.every(res => res.ok);
+
+              if (allSuccess || responses.length === 0) {
                 alert('✓ Post-arrival workflow completed successfully!');
                 setShowWizard(false);
                 setSelectedShipment(null);
                 fetchPostArrivalShipments(); // Refresh list
               } else {
-                alert('Failed to save post-arrival workflow');
+                const failedResponse = responses.find(res => !res.ok);
+                const errorData = await failedResponse.json();
+                alert(`Failed to save post-arrival workflow: ${errorData.error || 'Unknown error'}`);
               }
             } catch (error) {
               console.error('Error saving workflow:', error);
