@@ -329,6 +329,8 @@ router.post(
   '/:id/start-inspection',
   body('inspectedBy').optional().trim(),
   asyncHandler(async (req: BodyRequest<{ inspectedBy?: string }>, res: Response) => {
+    if (!handleValidationErrors(req, res)) return;
+
     const shipment = await ShipmentController.startInspection(
       req.params.id!,
       req.body.inspectedBy
@@ -375,6 +377,8 @@ router.post(
   '/:id/start-receiving',
   body('receivedBy').optional().trim(),
   asyncHandler(async (req: BodyRequest<{ receivedBy?: string }>, res: Response) => {
+    if (!handleValidationErrors(req, res)) return;
+
     const shipment = await ShipmentController.startReceiving(
       req.params.id!,
       req.body.receivedBy
