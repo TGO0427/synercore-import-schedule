@@ -250,6 +250,38 @@ export class ShipmentController {
   static async getShipmentsByWeek(weekNumber: number): Promise<Shipment[]> {
     return shipmentRepository.findByWeek(weekNumber);
   }
+
+  /**
+   * Get post-arrival shipments (shipments that have arrived and are in workflow)
+   */
+  static async getPostArrivalShipments(): Promise<Shipment[]> {
+    const postArrivalStates = [
+      'arrived_pta',
+      'arrived_klm',
+      'arrived_offsite',
+      'unloading',
+      'inspection_pending',
+      'inspecting',
+      'inspection_failed',
+      'inspection_passed',
+      'receiving',
+      'received'
+    ] as ShipmentStatus[];
+
+    const shipments: Shipment[] = [];
+    for (const status of postArrivalStates) {
+      const statusShipments = await shipmentRepository.findByStatus(status);
+      shipments.push(...statusShipments);
+    }
+    return shipments;
+  }
+
+  /**
+   * Get archived shipments
+   */
+  static async getArchives(): Promise<Shipment[]> {
+    return shipmentRepository.findArchived();
+  }
 }
 
 export default ShipmentController;

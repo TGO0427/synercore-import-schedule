@@ -142,6 +142,30 @@ router.get(
 );
 
 /**
+ * GET /api/shipments/archives
+ * Get archived shipments
+ */
+router.get(
+  '/archives',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const shipments = await ShipmentController.getArchives();
+    res.status(200).json(shipments);
+  })
+);
+
+/**
+ * GET /api/shipments/post-arrival
+ * Get post-arrival shipments (shipments that have arrived and are in workflow)
+ */
+router.get(
+  '/post-arrival',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const shipments = await ShipmentController.getPostArrivalShipments();
+    res.status(200).json(shipments);
+  })
+);
+
+/**
  * GET /api/shipments/:id
  * Get single shipment by ID
  */
