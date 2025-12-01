@@ -588,10 +588,13 @@ function PostArrivalWorkflow() {
 
               // Determine which workflow endpoints to call based on current status
               const currentStatus = selectedShipment.latest_status;
+              console.log('Wizard completion - Current shipment status:', currentStatus);
+              console.log('Wizard completion - Form data:', formData);
               let apiCalls = [];
 
               // Complete inspection if in inspecting status
               if (currentStatus === 'inspecting') {
+                console.log('Calling complete-inspection endpoint');
                 apiCalls.push(
                   authFetch(getApiUrl(`/api/shipments/${selectedShipment.id}/complete-inspection`), {
                     method: 'POST',
@@ -603,6 +606,8 @@ function PostArrivalWorkflow() {
                     })
                   })
                 );
+              } else {
+                console.log('Not calling complete-inspection - status is', currentStatus);
               }
 
               // Complete receiving if in receiving status
@@ -629,7 +634,7 @@ function PostArrivalWorkflow() {
                 alert('✓ Post-arrival workflow completed successfully!');
                 setShowWizard(false);
                 setSelectedShipment(null);
-                fetchPostArrivalShipments(); // Refresh list
+                await fetchPostArrivalShipments(); // Refresh list
               } else {
                 const failedResponse = responses.find(res => !res.ok);
                 const errorData = await failedResponse.json();
