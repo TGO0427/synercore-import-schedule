@@ -254,14 +254,17 @@ function WorkflowWizard({
             )}
 
             {/* Render Step Component */}
-            {step.component && (
-              <step.component
-                formData={formData}
-                updateFormData={updateFormData}
-                errors={errors}
-                touched={touched}
-              />
-            )}
+            {step.component && (() => {
+              const StepComponent = step.component;
+              return (
+                <StepComponent
+                  formData={formData}
+                  updateFormData={updateFormData}
+                  errors={errors}
+                  touched={touched}
+                />
+              );
+            })()}
           </div>
         </div>
 
