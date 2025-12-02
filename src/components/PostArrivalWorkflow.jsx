@@ -3,6 +3,7 @@ import { authFetch } from '../utils/authFetch';
 import { ShipmentStatus, InspectionStatus, ReceivingStatus } from '../types/shipment';
 import { getApiUrl } from '../config/api';
 import PostArrivalWizard from './PostArrivalWizard';
+import ConfirmationModal from './ConfirmationModal';
 
 function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
   const [postArrivalShipments, setPostArrivalShipments] = useState([]);
@@ -12,6 +13,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
   const [showWizard, setShowWizard] = useState(false);
   const [useWizard, setUseWizard] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [confirmationModal, setConfirmationModal] = useState(null);
 
   const [workflowData, setWorkflowData] = useState({
     inspectedBy: '',
@@ -158,17 +160,21 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
       });
 
       // Offer choice between wizard and traditional form
-      const useWizardChoice = window.confirm(
-        '🎯 Would you like to use the new Step-by-Step Workflow Wizard?\n\n' +
-        '✓ Click OK to use the Wizard (Recommended - Guided experience)\n' +
-        '✗ Click Cancel to use the Traditional Form'
-      );
-
-      if (useWizardChoice) {
-        setShowWizard(true);
-      } else {
-        setShowWorkflowDialog(true);
-      }
+      setConfirmationModal({
+        title: '🎯 Choose Workflow Style',
+        message: 'Would you like to use the new Step-by-Step Workflow Wizard?\n\n✓ Wizard (Recommended - Guided experience)\n✗ Traditional Form (Standard form)',
+        confirmText: 'Use Wizard',
+        cancelText: 'Use Form',
+        type: 'success',
+        onConfirm: () => {
+          setShowWizard(true);
+          setConfirmationModal(null);
+        },
+        onCancel: () => {
+          setShowWorkflowDialog(true);
+          setConfirmationModal(null);
+        },
+      });
       return;
     }
 
@@ -202,35 +208,44 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
     }
 
     if (action === 'amend-status') {
-      const confirmMessage = `Are you sure you want to amend the status for shipment ${shipment.orderRef}?\n\nThis will revert it back to "In Transit" status and remove it from the Post-Arrival Workflow, making it appear in the Shipping Schedule again.`;
+      setConfirmationModal({
+        title: '🔄 Amend Shipment Status',
+        message: `Are you sure you want to amend the status for shipment ${shipment.orderRef}?\n\nThis will revert it back to "In Transit" status and remove it from the Post-Arrival Workflow, making it appear in the Shipping Schedule again.`,
+        confirmText: 'Amend Status',
+        cancelText: 'Cancel',
+        type: 'warning',
+        onConfirm: async () => {
+          try {
+            setActionLoading(true);
+            const response = await authFetch(getApiUrl(`/api/shipments/${shipment.id}`), {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                latestStatus: 'in_transit_seafreight' // Revert to shipping status
+              })
+            });
 
-      if (confirm(confirmMessage)) {
-        try {
-          setActionLoading(true);
-          const response = await authFetch(getApiUrl(`/api/shipments/${shipment.id}`), {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              latestStatus: 'in_transit_seafreight' // Revert to shipping status
-            })
-          });
-
-          if (response.ok) {
-            showSuccess(`✅ Shipment ${shipment.orderRef} has been reverted to shipping status and will now appear in the Shipping Schedule.`);
-            await fetchPostArrivalShipments();
-          } else {
-            const error = await response.json();
-            showError(`❌ Error: ${error.error}`);
+            if (response.ok) {
+              showSuccess(`✅ Shipment ${shipment.orderRef} has been reverted to shipping status and will now appear in the Shipping Schedule.`);
+              await fetchPostArrivalShipments();
+            } else {
+              const error = await response.json();
+              showError(`❌ Error: ${error.error}`);
+            }
+          } catch (error) {
+            console.error('Error amending shipment status:', error);
+            showError('❌ Error amending shipment status. Please try again.');
+          } finally {
+            setActionLoading(false);
+            setConfirmationModal(null);
           }
-        } catch (error) {
-          console.error('Error amending shipment status:', error);
-          showError('❌ Error amending shipment status. Please try again.');
-        } finally {
-          setActionLoading(false);
-        }
-      }
+        },
+        onCancel: () => {
+          setConfirmationModal(null);
+        },
+      });
       return;
     }
 
@@ -1157,6 +1172,19 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmationModal && (
+        <ConfirmationModal
+          title={confirmationModal.title}
+          message={confirmationModal.message}
+          confirmText={confirmationModal.confirmText}
+          cancelText={confirmationModal.cancelText}
+          type={confirmationModal.type}
+          onConfirm={confirmationModal.onConfirm}
+          onCancel={confirmationModal.onCancel}
+        />
       )}
     </div>
   );
