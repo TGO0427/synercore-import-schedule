@@ -43,10 +43,14 @@ const validateUpdateShipment = [
       'clearing_customs',
       'in_warehouse',
       'unloading',
+      'inspection_pending',
+      'inspecting',
       'inspection_in_progress',
       'inspection_passed',
       'inspection_failed',
       'receiving_goods',
+      'receiving',
+      'received',
       'stored',
       'archived'
     ])
@@ -217,10 +221,14 @@ router.patch(
       'clearing_customs',
       'in_warehouse',
       'unloading',
+      'inspection_pending',
+      'inspecting',
       'inspection_in_progress',
       'inspection_passed',
       'inspection_failed',
       'receiving_goods',
+      'receiving',
+      'received',
       'stored',
       'archived'
     ])
