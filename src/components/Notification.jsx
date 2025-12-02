@@ -18,6 +18,12 @@ const Notification = ({ type, message, onClose, autoClose = true, duration = 500
         case 'warning':
           await notificationSounds.playWarning();
           break;
+        case 'dark':
+          await notificationSounds.playDark();
+          break;
+        case 'light':
+          await notificationSounds.playLight();
+          break;
         case 'info':
         default:
           await notificationSounds.playInfo();

@@ -136,17 +136,17 @@ class NotificationSounds {
     try {
       const oscillator = this.audioContext.createOscillator();
       const gainNode = this.audioContext.createGain();
-      
+
       oscillator.connect(gainNode);
       gainNode.connect(this.audioContext.destination);
-      
+
       // Warning beep pattern
       oscillator.frequency.setValueAtTime(330, this.audioContext.currentTime); // E4
       oscillator.frequency.setValueAtTime(349.23, this.audioContext.currentTime + 0.1); // F4
       oscillator.frequency.setValueAtTime(330, this.audioContext.currentTime + 0.2); // E4
-      
+
       oscillator.type = 'square';
-      
+
       // Attention-getting envelope
       gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
       gainNode.gain.linearRampToValueAtTime(0.1, this.audioContext.currentTime + 0.02);
@@ -155,11 +155,73 @@ class NotificationSounds {
       gainNode.gain.linearRampToValueAtTime(0.06, this.audioContext.currentTime + 0.2);
       gainNode.gain.linearRampToValueAtTime(0.1, this.audioContext.currentTime + 0.22);
       gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 0.35);
-      
+
       oscillator.start(this.audioContext.currentTime);
       oscillator.stop(this.audioContext.currentTime + 0.35);
     } catch (error) {
       console.warn('Could not play warning sound:', error);
+    }
+  }
+
+  // Generate dark notification sound (neutral, professional)
+  async playDark() {
+    await this.ensureAudioContext();
+    if (!this.audioContext) return;
+
+    try {
+      const oscillator = this.audioContext.createOscillator();
+      const gainNode = this.audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(this.audioContext.destination);
+
+      // Neutral, professional two-tone sound
+      oscillator.frequency.setValueAtTime(392, this.audioContext.currentTime); // G4
+      oscillator.frequency.setValueAtTime(440, this.audioContext.currentTime + 0.08); // A4
+
+      oscillator.type = 'sine';
+
+      // Smooth, professional envelope
+      gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.1, this.audioContext.currentTime + 0.03);
+      gainNode.gain.linearRampToValueAtTime(0.07, this.audioContext.currentTime + 0.12);
+      gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 0.25);
+
+      oscillator.start(this.audioContext.currentTime);
+      oscillator.stop(this.audioContext.currentTime + 0.25);
+    } catch (error) {
+      console.warn('Could not play dark sound:', error);
+    }
+  }
+
+  // Generate light notification sound (subtle, gentle)
+  async playLight() {
+    await this.ensureAudioContext();
+    if (!this.audioContext) return;
+
+    try {
+      const oscillator = this.audioContext.createOscillator();
+      const gainNode = this.audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(this.audioContext.destination);
+
+      // Subtle, gentle two-tone sound
+      oscillator.frequency.setValueAtTime(523.25, this.audioContext.currentTime); // C5
+      oscillator.frequency.setValueAtTime(587.33, this.audioContext.currentTime + 0.08); // D5
+
+      oscillator.type = 'sine';
+
+      // Soft, gentle envelope
+      gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.07, this.audioContext.currentTime + 0.04);
+      gainNode.gain.linearRampToValueAtTime(0.04, this.audioContext.currentTime + 0.14);
+      gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 0.28);
+
+      oscillator.start(this.audioContext.currentTime);
+      oscillator.stop(this.audioContext.currentTime + 0.28);
+    } catch (error) {
+      console.warn('Could not play light sound:', error);
     }
   }
 }
