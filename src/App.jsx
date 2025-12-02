@@ -182,6 +182,9 @@ function App() {
   const showSuccess = (m, o = {}) => { addNotification('success', m, o); };
   const showError   = (m, o = {}) => { addNotification('error', m, o); };
   const showWarning = (m, o = {}) => { addNotification('warning', m, o); };
+  const showInfo    = (m, o = {}) => { addNotification('info', m, o); };
+  const showDark    = (m, o = {}) => { addNotification('dark', m, o); };
+  const showLight   = (m, o = {}) => { addNotification('light', m, o); };
 
   // ---------- alerts ----------
   // Whenever shipments change, recompute alerts
@@ -203,8 +206,6 @@ function App() {
     createCustomAlert(alert.severity || 'info', alert.title, alert.description, alert.meta),
     ...prev
   ]);
-
-  const showInfo    = (m, o = {}) => { addNotification('info', m, o); };
 
   // ---------- data: shipments ----------
   const fetchShipments = async (isBackgroundSync = false) => {

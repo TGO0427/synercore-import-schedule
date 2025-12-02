@@ -95,6 +95,26 @@ const Notification = ({ type, message, onClose, autoClose = true, duration = 500
           color: '#78350f',
         };
       case 'info':
+        return {
+          ...baseStyles,
+          backgroundColor: '#eff6ff',
+          borderColor: '#3b82f6',
+          color: '#1e3a8a',
+        };
+      case 'dark':
+        return {
+          ...baseStyles,
+          backgroundColor: '#1f2937',
+          borderColor: '#374151',
+          color: '#f3f4f6',
+        };
+      case 'light':
+        return {
+          ...baseStyles,
+          backgroundColor: '#f9fafb',
+          borderColor: '#e5e7eb',
+          color: '#1f2937',
+        };
       default:
         return {
           ...baseStyles,
@@ -123,45 +143,74 @@ const Notification = ({ type, message, onClose, autoClose = true, duration = 500
 
   const getIcon = () => {
     const iconStyle = getIconStyles();
-    
+
     switch (type) {
       case 'success':
         return (
-          <div style={{ 
-            ...iconStyle, 
-            backgroundColor: '#10b981', 
-            color: 'white' 
+          <div style={{
+            ...iconStyle,
+            backgroundColor: '#10b981',
+            color: 'white'
           }}>
             ✓
           </div>
         );
       case 'error':
         return (
-          <div style={{ 
-            ...iconStyle, 
-            backgroundColor: '#ef4444', 
-            color: 'white' 
+          <div style={{
+            ...iconStyle,
+            backgroundColor: '#ef4444',
+            color: 'white'
           }}>
             ✕
           </div>
         );
       case 'warning':
         return (
-          <div style={{ 
-            ...iconStyle, 
-            backgroundColor: '#f59e0b', 
-            color: 'white' 
+          <div style={{
+            ...iconStyle,
+            backgroundColor: '#f59e0b',
+            color: 'white'
           }}>
             !
           </div>
         );
       case 'info':
+        return (
+          <div style={{
+            ...iconStyle,
+            backgroundColor: '#3b82f6',
+            color: 'white'
+          }}>
+            i
+          </div>
+        );
+      case 'dark':
+        return (
+          <div style={{
+            ...iconStyle,
+            backgroundColor: '#4b5563',
+            color: '#f3f4f6'
+          }}>
+            ◆
+          </div>
+        );
+      case 'light':
+        return (
+          <div style={{
+            ...iconStyle,
+            backgroundColor: '#d1d5db',
+            color: '#1f2937'
+          }}>
+            ◆
+          </div>
+        );
       default:
         return (
-          <div style={{ 
-            ...iconStyle, 
-            backgroundColor: '#3b82f6', 
-            color: 'white' 
+          <div style={{
+            ...iconStyle,
+            backgroundColor: '#3b82f6',
+            color: 'white'
           }}>
             i
           </div>
@@ -174,7 +223,9 @@ const Notification = ({ type, message, onClose, autoClose = true, duration = 500
       case 'success': return '#10b981';
       case 'error': return '#ef4444';
       case 'warning': return '#f59e0b';
-      case 'info':
+      case 'info': return '#3b82f6';
+      case 'dark': return '#6b7280';
+      case 'light': return '#9ca3af';
       default: return '#3b82f6';
     }
   };
