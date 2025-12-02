@@ -212,20 +212,7 @@ function PostArrivalWorkflow() {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              latestStatus: 'in_transit_seaway', // Revert to shipping status
-              // Reset workflow fields
-              inspectionStatus: 'not_started',
-              receivingStatus: 'not_started',
-              inspectionNotes: '',
-              receivingNotes: '',
-              inspectedBy: '',
-              receivedBy: '',
-              inspectionDate: null,
-              receivingDate: null,
-              receivedQuantity: null,
-              discrepancies: [],
-              unloadingStartDate: null,
-              unloadingCompletedDate: null
+              latestStatus: 'in_transit_seafreight' // Revert to shipping status
             })
           });
 
