@@ -56,66 +56,69 @@ const Notification = ({ type, message, onClose, autoClose = true, duration = 500
       position: 'relative',
       padding: '16px 20px 16px 60px',
       borderRadius: '12px',
-      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+      boxShadow: '0 10px 40px rgba(0, 0, 0, 0.25)',
       backdropFilter: 'blur(10px)',
-      border: '1px solid',
+      border: '2px solid',
       marginBottom: '12px',
-      minHeight: '60px',
+      minHeight: '64px',
       display: 'flex',
       alignItems: 'center',
-      transform: isVisible ? 'translateX(0)' : 'translateX(100%)',
+      transform: isVisible ? 'translateX(0) scale(1)' : 'translateX(400px) scale(0.95)',
       opacity: isVisible ? 1 : 0,
-      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
       overflow: 'hidden',
       fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontWeight: '600',
+      fontSize: '15px',
     };
 
     switch (type) {
       case 'success':
         return {
           ...baseStyles,
-          backgroundColor: 'rgba(16, 185, 129, 0.1)',
-          borderColor: 'rgba(16, 185, 129, 0.3)',
+          backgroundColor: '#f0fdf4',
+          borderColor: '#10b981',
           color: '#065f46',
         };
       case 'error':
         return {
           ...baseStyles,
-          backgroundColor: 'rgba(239, 68, 68, 0.1)',
-          borderColor: 'rgba(239, 68, 68, 0.3)',
-          color: '#991b1b',
+          backgroundColor: '#fef2f2',
+          borderColor: '#ef4444',
+          color: '#7f1d1d',
         };
       case 'warning':
         return {
           ...baseStyles,
-          backgroundColor: 'rgba(245, 158, 11, 0.1)',
-          borderColor: 'rgba(245, 158, 11, 0.3)',
-          color: '#92400e',
+          backgroundColor: '#fffbeb',
+          borderColor: '#f59e0b',
+          color: '#78350f',
         };
       case 'info':
       default:
         return {
           ...baseStyles,
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          borderColor: 'rgba(59, 130, 246, 0.3)',
-          color: '#1e40af',
+          backgroundColor: '#eff6ff',
+          borderColor: '#3b82f6',
+          color: '#1e3a8a',
         };
     }
   };
 
   const getIconStyles = () => ({
     position: 'absolute',
-    left: '20px',
+    left: '18px',
     top: '50%',
     transform: 'translateY(-50%)',
-    width: '24px',
-    height: '24px',
+    width: '32px',
+    height: '32px',
     borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '14px',
+    fontSize: '16px',
     fontWeight: 'bold',
+    flexShrink: 0,
   });
 
   const getIcon = () => {
@@ -179,12 +182,13 @@ const Notification = ({ type, message, onClose, autoClose = true, duration = 500
   return (
     <div style={getNotificationStyles()}>
       {getIcon()}
-      
-      <div style={{ 
-        flex: 1, 
-        fontSize: '14px',
-        lineHeight: '1.5',
-        fontWeight: '500'
+
+      <div style={{
+        flex: 1,
+        fontSize: '15px',
+        lineHeight: '1.4',
+        fontWeight: '600',
+        marginLeft: '4px'
       }}>
         {message}
       </div>
@@ -228,11 +232,12 @@ const Notification = ({ type, message, onClose, autoClose = true, duration = 500
             position: 'absolute',
             bottom: 0,
             left: 0,
-            height: '3px',
+            height: '4px',
             backgroundColor: getProgressBarColor(),
             width: `${progress}%`,
             transition: 'width 0.05s linear',
-            borderRadius: '0 0 12px 12px',
+            borderRadius: '0 0 10px 0',
+            boxShadow: `0 -2px 8px rgba(0, 0, 0, 0.1)`,
           }}
         />
       )}
