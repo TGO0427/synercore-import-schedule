@@ -4,7 +4,7 @@ import { ShipmentStatus, InspectionStatus, ReceivingStatus } from '../types/ship
 import { getApiUrl } from '../config/api';
 import PostArrivalWizard from './PostArrivalWizard';
 
-function PostArrivalWorkflow() {
+function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
   const [postArrivalShipments, setPostArrivalShipments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedShipment, setSelectedShipment] = useState(null);
@@ -186,14 +186,15 @@ function PostArrivalWorkflow() {
         });
 
         if (response.ok) {
+          showSuccess(`✅ Shipment ${shipment.orderRef} marked as stored successfully!`);
           await fetchPostArrivalShipments();
         } else {
           const error = await response.json();
-          alert(`Error: ${error.error}`);
+          showError(`❌ Error: ${error.error}`);
         }
       } catch (error) {
         console.error('Error marking shipment as stored:', error);
-        alert('Error marking shipment as stored. Please try again.');
+        showError('❌ Error marking shipment as stored. Please try again.');
       } finally {
         setActionLoading(false);
       }
@@ -217,15 +218,15 @@ function PostArrivalWorkflow() {
           });
 
           if (response.ok) {
-            alert(`Shipment ${shipment.orderRef} has been reverted to shipping status and will now appear in the Shipping Schedule.`);
+            showSuccess(`✅ Shipment ${shipment.orderRef} has been reverted to shipping status and will now appear in the Shipping Schedule.`);
             await fetchPostArrivalShipments();
           } else {
             const error = await response.json();
-            alert(`Error: ${error.error}`);
+            showError(`❌ Error: ${error.error}`);
           }
         } catch (error) {
           console.error('Error amending shipment status:', error);
-          alert('Error amending shipment status. Please try again.');
+          showError('❌ Error amending shipment status. Please try again.');
         } finally {
           setActionLoading(false);
         }
@@ -246,14 +247,15 @@ function PostArrivalWorkflow() {
       });
 
       if (response.ok) {
+        showSuccess(`✅ Workflow action completed successfully!`);
         await fetchPostArrivalShipments();
       } else {
         const error = await response.json();
-        alert(`Error: ${error.error}`);
+        showError(`❌ Error: ${error.error}`);
       }
     } catch (error) {
       console.error('Error performing workflow action:', error);
-      alert('Error performing action. Please try again.');
+      showError('❌ Error performing action. Please try again.');
     } finally {
       setActionLoading(false);
     }
@@ -298,6 +300,7 @@ function PostArrivalWorkflow() {
       });
 
       if (response.ok) {
+        showSuccess(`✅ Workflow action completed successfully!`);
         setShowWorkflowDialog(false);
         setSelectedShipment(null);
         setWorkflowData({
@@ -316,11 +319,11 @@ function PostArrivalWorkflow() {
         await fetchPostArrivalShipments();
       } else {
         const error = await response.json();
-        alert(`Error: ${error.error}`);
+        showError(`❌ Error: ${error.error}`);
       }
     } catch (error) {
       console.error('Error submitting workflow action:', error);
-      alert('Error performing action. Please try again.');
+      showError('❌ Error performing action. Please try again.');
     } finally {
       setActionLoading(false);
     }
@@ -329,7 +332,7 @@ function PostArrivalWorkflow() {
   const submitRejection = async () => {
     try {
       if (!rejectionData.rejectionReason.trim()) {
-        alert('Please provide a rejection reason');
+        showWarning('⚠️ Please provide a rejection reason');
         return;
       }
 
@@ -348,7 +351,7 @@ function PostArrivalWorkflow() {
 
       if (response.ok) {
         const result = await response.json();
-        alert(result.message || 'Shipment rejected successfully');
+        showSuccess(`✅ ${result.message || 'Shipment rejected successfully'}`);
         setShowRejectionDialog(false);
         setSelectedShipment(null);
         setRejectionData({
@@ -359,11 +362,11 @@ function PostArrivalWorkflow() {
         await fetchPostArrivalShipments();
       } else {
         const error = await response.json();
-        alert(`Error: ${error.error}`);
+        showError(`❌ Error: ${error.error}`);
       }
     } catch (error) {
       console.error('Error rejecting shipment:', error);
-      alert('Error rejecting shipment. Please try again.');
+      showError('❌ Error rejecting shipment. Please try again.');
     } finally {
       setActionLoading(false);
     }
@@ -648,18 +651,18 @@ function PostArrivalWorkflow() {
               const allSuccess = responses.every(res => res.ok);
 
               if (allSuccess || responses.length === 0) {
-                alert('✓ Post-arrival workflow completed successfully!');
+                showSuccess('✅ Post-arrival workflow completed successfully!');
                 setShowWizard(false);
                 setSelectedShipment(null);
                 await fetchPostArrivalShipments(); // Refresh list
               } else {
                 const failedResponse = responses.find(res => !res.ok);
                 const errorData = await failedResponse.json();
-                alert(`Failed to save post-arrival workflow: ${errorData.error || 'Unknown error'}`);
+                showError(`❌ Failed to save post-arrival workflow: ${errorData.error || 'Unknown error'}`);
               }
             } catch (error) {
               console.error('Error saving workflow:', error);
-              alert('Error saving workflow: ' + error.message);
+              showError(`❌ Error saving workflow: ${error.message}`);
             } finally {
               setActionLoading(false);
             }
@@ -972,7 +975,7 @@ function PostArrivalWorkflow() {
                   if (selectedShipment.latest_status === 'inspection_in_progress' &&
                       workflowData.inspectionOnHold &&
                       workflowData.holdTypes.length === 0) {
-                    alert('Please select at least one hold type');
+                    showWarning('⚠️ Please select at least one hold type');
                     return;
                   }
 
@@ -980,7 +983,7 @@ function PostArrivalWorkflow() {
                   if (selectedShipment.latest_status === 'inspection_in_progress' &&
                       workflowData.inspectionFailed &&
                       workflowData.failureReasons.length === 0) {
-                    alert('Please select at least one failure reason');
+                    showWarning('⚠️ Please select at least one failure reason');
                     return;
                   }
 

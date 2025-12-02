@@ -826,7 +826,7 @@ function App() {
       case 'rates':
         return <RatesQuotes showSuccess={showSuccess} showError={showError} loading={loading} />;
       case 'workflow':
-        return <PostArrivalWorkflow />;
+        return <PostArrivalWorkflow showSuccess={showSuccess} showError={showError} showWarning={showWarning} />;
       case 'stored': {
         const storedShipments = shipments.filter(s => s.latestStatus === 'stored');
         return (
