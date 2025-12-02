@@ -153,6 +153,7 @@ function PostArrivalWorkflow() {
       setSelectedShipment(shipment);
       setWorkflowData({
         ...workflowData,
+        workflowAction: action, // Store the action being performed
         receivedQuantity: shipment.quantity || ''
       });
 
@@ -586,14 +587,30 @@ function PostArrivalWorkflow() {
             try {
               setActionLoading(true);
 
-              // Determine which workflow endpoints to call based on current status
+              // Determine which workflow endpoints to call based on the action being performed
               const currentStatus = selectedShipment.latest_status;
+              const workflowAction = workflowData.workflowAction;
               console.log('Wizard completion - Current shipment status:', currentStatus);
+              console.log('Wizard completion - Workflow action:', workflowAction);
               console.log('Wizard completion - Form data:', formData);
               let apiCalls = [];
 
-              // Complete inspection if in inspecting status
-              if (currentStatus === 'inspecting') {
+              // Handle start-inspection
+              if (workflowAction === 'start-inspection') {
+                console.log('Calling start-inspection endpoint');
+                apiCalls.push(
+                  authFetch(getApiUrl(`/api/shipments/${selectedShipment.id}/start-inspection`), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      inspectedBy: formData.inspectedBy || ''
+                    })
+                  })
+                );
+              }
+
+              // Handle complete-inspection
+              if (workflowAction === 'complete-inspection') {
                 console.log('Calling complete-inspection endpoint');
                 apiCalls.push(
                   authFetch(getApiUrl(`/api/shipments/${selectedShipment.id}/complete-inspection`), {
@@ -606,12 +623,25 @@ function PostArrivalWorkflow() {
                     })
                   })
                 );
-              } else {
-                console.log('Not calling complete-inspection - status is', currentStatus);
               }
 
-              // Complete receiving if in receiving status
-              if (currentStatus === 'receiving') {
+              // Handle start-receiving
+              if (workflowAction === 'start-receiving') {
+                console.log('Calling start-receiving endpoint');
+                apiCalls.push(
+                  authFetch(getApiUrl(`/api/shipments/${selectedShipment.id}/start-receiving`), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      receivedBy: formData.receivedBy || ''
+                    })
+                  })
+                );
+              }
+
+              // Handle complete-receiving
+              if (workflowAction === 'complete-receiving') {
+                console.log('Calling complete-receiving endpoint');
                 apiCalls.push(
                   authFetch(getApiUrl(`/api/shipments/${selectedShipment.id}/complete-receiving`), {
                     method: 'POST',
