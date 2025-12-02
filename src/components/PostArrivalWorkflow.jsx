@@ -181,8 +181,7 @@ function PostArrivalWorkflow() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            latestStatus: 'stored',
-            storedDate: new Date().toISOString()
+            latestStatus: 'stored'
           })
         });
 
