@@ -582,6 +582,7 @@ function PostArrivalWorkflow() {
       {showWizard && selectedShipment && (
         <PostArrivalWizard
           shipment={selectedShipment}
+          action={workflowData.workflowAction}
           onComplete={async (formData) => {
             // Handle wizard completion
             try {

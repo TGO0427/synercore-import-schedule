@@ -303,7 +303,8 @@ const ReviewStep = ({ formData, updateFormData, errors, touched }) => (
 function PostArrivalWizard({
   shipment,
   onComplete,
-  onCancel
+  onCancel,
+  action = null
 }) {
   // Validation for each step
   const validateArrivalInfo = async (data) => {
@@ -329,7 +330,8 @@ function PostArrivalWizard({
     return errors;
   };
 
-  const steps = [
+  // All steps available
+  const allSteps = [
     {
       id: 'arrival',
       label: 'Arrival Details',
@@ -362,6 +364,22 @@ function PostArrivalWizard({
       helpText: 'Review all information before completing'
     }
   ];
+
+  // Filter steps based on action
+  let steps = allSteps;
+  if (action === 'start-inspection') {
+    // For starting inspection, only show inspection step
+    steps = allSteps.filter(s => s.id === 'inspection' || s.id === 'review');
+  } else if (action === 'complete-inspection') {
+    // For completing inspection, only show inspection step
+    steps = allSteps.filter(s => s.id === 'inspection' || s.id === 'review');
+  } else if (action === 'start-receiving') {
+    // For starting receiving, only show receiving step
+    steps = allSteps.filter(s => s.id === 'receiving' || s.id === 'review');
+  } else if (action === 'complete-receiving') {
+    // For completing receiving, only show receiving step
+    steps = allSteps.filter(s => s.id === 'receiving' || s.id === 'review');
+  }
 
   const initialData = {
     warehouse: shipment?.receivingWarehouse || '',
