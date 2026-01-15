@@ -227,7 +227,7 @@ function App() {
 
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          response = await fetchWithTimeout(getApiUrl('/api/shipments'), {
+          response = await fetchWithTimeout(getApiUrl('/api/shipments?limit=1000'), {
             headers: {
               'Cache-Control': 'no-cache',
               'Pragma': 'no-cache',
