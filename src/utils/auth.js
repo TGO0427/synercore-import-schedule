@@ -1,4 +1,5 @@
 // Authentication utilities with token refresh support
+import { getApiUrl } from '../config/api';
 
 const ACCESS_TOKEN_KEY = 'auth_access_token';
 const REFRESH_TOKEN_KEY = 'auth_refresh_token';
@@ -72,7 +73,7 @@ export const authUtils = {
     }
 
     try {
-      const response = await fetch(import.meta.env.VITE_API_BASE_URL + '/api/auth/refresh', {
+      const response = await fetch(getApiUrl('/api/auth/refresh'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken })
@@ -123,7 +124,7 @@ export const authUtils = {
     // Revoke refresh token on server
     if (refreshToken && this.getToken()) {
       try {
-        await fetch(import.meta.env.VITE_API_BASE_URL + '/api/auth/logout', {
+        await fetch(getApiUrl('/api/auth/logout'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
