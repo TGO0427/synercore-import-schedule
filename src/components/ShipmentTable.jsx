@@ -1247,7 +1247,33 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   selectedWeekDate={newShipmentSelectedWeekDate}
                 />
               </div>
-              
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                  Expected Arrival Date <span style={{ color: '#999', fontSize: '0.85em' }}>Optional</span>
+                </label>
+                <input
+                  type="date"
+                  value={newShipment.selectedWeekDate ? new Date(newShipment.selectedWeekDate).toISOString().split('T')[0] : ''}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      const selectedDate = new Date(e.target.value);
+                      handleInputChange('selectedWeekDate', selectedDate.toISOString());
+                      // Auto-calculate week number from selected date
+                      const yearStart = new Date(selectedDate.getFullYear(), 0, 1);
+                      const weekNumber = Math.ceil((((selectedDate - yearStart) / 86400000) + yearStart.getDay() + 1) / 7);
+                      handleInputChange('weekNumber', weekNumber.toString());
+                    } else {
+                      handleInputChange('selectedWeekDate', '');
+                    }
+                  }}
+                  className="input"
+                  style={{
+                    width: '100%'
+                  }}
+                />
+              </div>
+
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
                   Product Name
@@ -1321,16 +1347,19 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
                   Receiving Warehouse
                 </label>
-                <input
-                  type="text"
+                <select
                   value={newShipment.receivingWarehouse}
                   onChange={(e) => handleInputChange('receivingWarehouse', e.target.value)}
-                  className="input"
+                  className="select"
                   style={{
                     width: '100%'
                   }}
-                  placeholder="Warehouse location"
-                />
+                >
+                  <option value="">Select Warehouse</option>
+                  <option value="PRETORIA">PRETORIA</option>
+                  <option value="KLAPMUTS">KLAPMUTS</option>
+                  <option value="Unassigned">Unassigned</option>
+                </select>
               </div>
 
               <div>
@@ -1680,16 +1709,19 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
                   Receiving Warehouse
                 </label>
-                <input
-                  type="text"
+                <select
                   value={amendingShipment.receivingWarehouse || ''}
                   onChange={(e) => handleAmendInputChange('receivingWarehouse', e.target.value)}
-                  className="input"
+                  className="select"
                   style={{
                     width: '100%'
                   }}
-                  placeholder="Warehouse location"
-                />
+                >
+                  <option value="">Select Warehouse</option>
+                  <option value="PRETORIA">PRETORIA</option>
+                  <option value="KLAPMUTS">KLAPMUTS</option>
+                  <option value="Unassigned">Unassigned</option>
+                </select>
               </div>
 
               <div>
