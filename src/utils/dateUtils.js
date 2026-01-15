@@ -53,8 +53,10 @@ export function getWeekStartDate(weekNumber, year = new Date().getFullYear()) {
   const jan4 = new Date(year, 0, 4);
 
   // Find the Monday of week 1
+  // Convert Sunday (0) to 7 for correct calculation
   const week1Monday = new Date(jan4);
-  week1Monday.setDate(jan4.getDate() - jan4.getDay() + 1);
+  const dayOfWeek = jan4.getDay() || 7; // Sunday becomes 7 instead of 0
+  week1Monday.setDate(jan4.getDate() - dayOfWeek + 1);
 
   // Calculate the Monday of the requested week
   const weekStart = new Date(week1Monday);
