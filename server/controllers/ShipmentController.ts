@@ -25,6 +25,19 @@ export interface UpdateShipmentRequest {
   latestStatus?: ShipmentStatus;
   notes?: string;
   quantity?: number;
+  supplier?: string;
+  orderRef?: string;
+  finalPod?: string;
+  cbm?: number;
+  palletQty?: number;
+  weekNumber?: number;
+  productName?: string;
+  receivingWarehouse?: string;
+  forwardingAgent?: string;
+  vesselName?: string;
+  incoterm?: string;
+  selectedWeekDate?: string;
+  updatedAt?: string;
 }
 
 /**
@@ -157,6 +170,42 @@ export class ShipmentController {
     }
     if (data.notes !== undefined) {
       dbData.notes = data.notes;
+    }
+    if (data.supplier !== undefined) {
+      dbData.supplier = data.supplier;
+    }
+    if (data.orderRef !== undefined) {
+      dbData.order_ref = data.orderRef;
+    }
+    if (data.finalPod !== undefined) {
+      dbData.final_pod = data.finalPod;
+    }
+    if (data.cbm !== undefined) {
+      dbData.cbm = data.cbm;
+    }
+    if (data.palletQty !== undefined) {
+      dbData.pallet_qty = data.palletQty;
+    }
+    if (data.weekNumber !== undefined) {
+      dbData.week_number = data.weekNumber;
+    }
+    if (data.productName !== undefined) {
+      dbData.product_name = data.productName;
+    }
+    if (data.receivingWarehouse !== undefined) {
+      dbData.receiving_warehouse = data.receivingWarehouse;
+    }
+    if (data.forwardingAgent !== undefined) {
+      dbData.forwarding_agent = data.forwardingAgent;
+    }
+    if (data.vesselName !== undefined) {
+      dbData.vessel_name = data.vesselName;
+    }
+    if (data.incoterm !== undefined) {
+      dbData.incoterm = data.incoterm;
+    }
+    if (data.selectedWeekDate !== undefined) {
+      dbData.selected_week_date = data.selectedWeekDate;
     }
 
     // Update shipment

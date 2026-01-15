@@ -34,12 +34,23 @@ const validateUpdateShipment = [
   body('latestStatus')
     .optional()
     .isIn([
+      // Shipping schedule statuses
       'planned_airfreight',
       'planned_seafreight',
       'in_transit_airfreight',
       'in_transit_seafreight',
-      'arrived_klm',
+      'air_customs_clearance',
+      'in_transit_roadway',
+      'in_transit_seaway',
+      'moored',
+      'berth_working',
+      'berth_complete',
       'arrived_pta',
+      'arrived_klm',
+      'arrived_offsite',
+      'delayed',
+      'cancelled',
+      // Post-arrival workflow statuses
       'clearing_customs',
       'in_warehouse',
       'unloading',
@@ -56,7 +67,21 @@ const validateUpdateShipment = [
     ])
     .withMessage('Invalid shipment status'),
   body('notes').optional().trim(),
-  body('quantity').optional().isInt({ min: 1 }).withMessage('Quantity must be a positive integer')
+  body('quantity').optional().isInt({ min: 1 }).withMessage('Quantity must be a positive integer'),
+  // Additional fields that frontend sends during amendment
+  body('supplier').optional().trim(),
+  body('orderRef').optional().trim(),
+  body('finalPod').optional().trim(),
+  body('cbm').optional(),
+  body('palletQty').optional(),
+  body('weekNumber').optional(),
+  body('productName').optional().trim(),
+  body('receivingWarehouse').optional().trim(),
+  body('forwardingAgent').optional().trim(),
+  body('vesselName').optional().trim(),
+  body('incoterm').optional().trim(),
+  body('selectedWeekDate').optional(),
+  body('updatedAt').optional()
 ];
 
 /**
