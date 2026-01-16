@@ -998,7 +998,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                       />
                       {shipment.vesselName && (
                         <a
-                          href={`https://www.marinetraffic.com/en/ais/home/shipid:0/shipname:${encodeURIComponent(shipment.vesselName)}`}
+                          href={`https://www.marinetraffic.com/en/ais/index/search/all?keyword=${encodeURIComponent(shipment.vesselName)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           title="Track vessel on Marine Traffic"
