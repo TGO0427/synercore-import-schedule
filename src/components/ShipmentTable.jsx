@@ -998,10 +998,10 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                       />
                       {shipment.vesselName && (
                         <a
-                          href={`https://www.marinetraffic.com/en/data/?asset_type=vessels&columns=flag,shipname,photo,recognized_next_port_name,reported_eta,reported_destination,current_port,imo,ship_type,show_on_live_map,time_of_latest_position,lat_of_latest_position,lon_of_latest_position&shipname_begins=${encodeURIComponent(shipment.vesselName)}`}
+                          href={`https://www.vesselfinder.com/vessels?name=${encodeURIComponent(shipment.vesselName)}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          title="Track vessel on Marine Traffic"
+                          title="Track vessel on VesselFinder"
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
