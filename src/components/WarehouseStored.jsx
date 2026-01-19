@@ -3,13 +3,14 @@ import { ShipmentStatus } from '../types/shipment';
 import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
 
-function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArchiveShipment, loading }) {
+function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArchiveShipment, loading, showSuccess, showError }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [weekFilters, setWeekFilters] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: 'storedDate', direction: 'desc' });
   const [archivedShipments, setArchivedShipments] = useState([]);
   const [loadingArchives, setLoadingArchives] = useState(false);
   const [showWeekDropdown, setShowWeekDropdown] = useState(false);
+  const [archivingAll, setArchivingAll] = useState(false);
 
   // Fetch archived shipments
   useEffect(() => {
@@ -155,6 +156,43 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     });
   };
 
+  // Get count of non-archived shipments (active shipments that can be archived)
+  const activeShipmentsCount = shipments.length;
+
+  const handleArchiveAll = async () => {
+    if (activeShipmentsCount === 0) return;
+
+    const confirmArchive = window.confirm(
+      `Are you sure you want to archive all ${activeShipmentsCount} stored shipment(s)?\n\nThis will move them to the archive for record-keeping.`
+    );
+
+    if (!confirmArchive) return;
+
+    setArchivingAll(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const shipment of shipments) {
+      try {
+        if (onArchiveShipment) {
+          await onArchiveShipment(shipment.id);
+          successCount++;
+        }
+      } catch (error) {
+        console.error(`Failed to archive shipment ${shipment.orderRef}:`, error);
+        failCount++;
+      }
+    }
+
+    setArchivingAll(false);
+
+    if (successCount > 0 && showSuccess) {
+      showSuccess(`✅ Successfully archived ${successCount} shipment(s)`);
+    }
+    if (failCount > 0 && showError) {
+      showError(`❌ Failed to archive ${failCount} shipment(s)`);
+    }
+  };
 
   if (loading) {
     return (
@@ -257,7 +295,40 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
           </div>
           <div style={{ color: '#666', fontSize: '14px' }}>
             {filteredAndSortedShipments.length} stored shipment(s)
+            {activeShipmentsCount > 0 && (
+              <span style={{ color: '#17a2b8', marginLeft: '8px' }}>
+                ({activeShipmentsCount} active)
+              </span>
+            )}
           </div>
+          {activeShipmentsCount > 0 && (
+            <button
+              onClick={handleArchiveAll}
+              disabled={archivingAll}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: archivingAll ? '#6c757d' : '#17a2b8',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: archivingAll ? 'not-allowed' : 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginLeft: 'auto'
+              }}
+              onMouseEnter={(e) => !archivingAll && (e.target.style.backgroundColor = '#138496')}
+              onMouseLeave={(e) => !archivingAll && (e.target.style.backgroundColor = '#17a2b8')}
+            >
+              {archivingAll ? (
+                <>⏳ Archiving...</>
+              ) : (
+                <>📦 Archive All ({activeShipmentsCount})</>
+              )}
+            </button>
+          )}
         </div>
       </div>
 

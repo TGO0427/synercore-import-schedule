@@ -840,6 +840,8 @@ function App() {
             onDeleteShipment={handleDeleteShipment}
             onArchiveShipment={handleArchiveShipment}
             loading={loading}
+            showSuccess={showSuccess}
+            showError={showError}
           />
         );
       }
