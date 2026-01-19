@@ -33,6 +33,8 @@ const extractForwardingAgent = (shipment) => {
 function ReportsView({ shipments, statusFilter, onStatusFilter }) {
   const [savedReports, setSavedReports] = useState([]);
   const [loadingReports, setLoadingReports] = useState(false);
+  const [archivedShipments, setArchivedShipments] = useState([]);
+  const [loadingArchives, setLoadingArchives] = useState(true);
   const [selectedDateRange, setSelectedDateRange] = useState('all');
   const [customDateRange, setCustomDateRange] = useState({
     start: '',
@@ -45,6 +47,51 @@ function ReportsView({ shipments, statusFilter, onStatusFilter }) {
   // Fetch saved reports on component mount
   useEffect(() => {
     fetchSavedReports();
+  }, []);
+
+  // Fetch archived shipments for historical data
+  useEffect(() => {
+    const fetchArchivedShipments = async () => {
+      try {
+        setLoadingArchives(true);
+        const response = await authFetch(getApiUrl('/api/shipments/archives'));
+        if (!response.ok) {
+          setLoadingArchives(false);
+          return;
+        }
+
+        const archives = await response.json();
+
+        // Fetch data from all archives
+        const archiveData = await Promise.all(
+          archives.map(async (archive) => {
+            try {
+              const dataResponse = await authFetch(getApiUrl(`/api/shipments/archives/${archive.fileName}`));
+              if (!dataResponse.ok) return [];
+              const data = await dataResponse.json();
+              return (data.data || []).map(shipment => ({
+                ...shipment,
+                isArchived: true,
+                archiveSource: archive.fileName
+              }));
+            } catch (error) {
+              console.error(`Error fetching archive ${archive.fileName}:`, error);
+              return [];
+            }
+          })
+        );
+
+        // Flatten all archived shipments
+        const allArchivedShipments = archiveData.flat();
+        setArchivedShipments(allArchivedShipments);
+      } catch (error) {
+        console.error('Error fetching archived shipments:', error);
+      } finally {
+        setLoadingArchives(false);
+      }
+    };
+
+    fetchArchivedShipments();
   }, []);
 
   const fetchSavedReports = async () => {
@@ -134,7 +181,15 @@ function ReportsView({ shipments, statusFilter, onStatusFilter }) {
 
   // Filter shipments based on date range
   const filteredShipments = useMemo(() => {
-    if (selectedDateRange === 'all') return shipments;
+    // Combine active shipments with archived shipments
+    const allShipments = [...shipments, ...archivedShipments];
+
+    // Deduplicate by ID (prefer active shipments over archived)
+    const uniqueShipments = allShipments.filter((shipment, index, self) =>
+      index === self.findIndex(s => s.id === shipment.id)
+    );
+
+    if (selectedDateRange === 'all') return uniqueShipments;
 
     const now = new Date();
     let startDate = new Date();
@@ -154,21 +209,21 @@ function ReportsView({ shipments, statusFilter, onStatusFilter }) {
         break;
       case 'custom':
         if (customDateRange.start && customDateRange.end) {
-          return shipments.filter(shipment => {
+          return uniqueShipments.filter(shipment => {
             const shipmentDate = new Date(shipment.weekNumber ? `2024-W${shipment.weekNumber}` : shipment.createdAt || now);
             return shipmentDate >= new Date(customDateRange.start) && shipmentDate <= new Date(customDateRange.end);
           });
         }
-        return shipments;
+        return uniqueShipments;
       default:
-        return shipments;
+        return uniqueShipments;
     }
 
-    return shipments.filter(shipment => {
+    return uniqueShipments.filter(shipment => {
       const shipmentDate = new Date(shipment.weekNumber ? `2024-W${shipment.weekNumber}` : shipment.createdAt || now);
       return shipmentDate >= startDate;
     });
-  }, [shipments, selectedDateRange, customDateRange]);
+  }, [shipments, archivedShipments, selectedDateRange, customDateRange]);
 
   const analytics = useMemo(() => {
     const currentWeek = getCurrentWeekNumber();
@@ -222,11 +277,14 @@ function ReportsView({ shipments, statusFilter, onStatusFilter }) {
     }
 
     filteredShipments.forEach(shipment => {
+      // Normalize status field (handle both camelCase and snake_case)
+      const status = shipment.latestStatus || shipment.latest_status;
+
       // Status counts
-      if (statusCounts.hasOwnProperty(shipment.latestStatus)) {
-        statusCounts[shipment.latestStatus]++;
+      if (statusCounts.hasOwnProperty(status)) {
+        statusCounts[status]++;
       }
-      
+
       // Supplier stats
       if (!supplierStats[shipment.supplier]) {
         supplierStats[shipment.supplier] = {
@@ -237,11 +295,11 @@ function ReportsView({ shipments, statusFilter, onStatusFilter }) {
         };
       }
       supplierStats[shipment.supplier].total++;
-      if (shipment.latestStatus === ShipmentStatus.DELAYED) {
+      if (status === ShipmentStatus.DELAYED) {
         supplierStats[shipment.supplier].delayed++;
-      } else if (shipment.latestStatus === ShipmentStatus.ARRIVED_PTA || shipment.latestStatus === ShipmentStatus.ARRIVED_KLM) {
+      } else if (status === ShipmentStatus.ARRIVED_PTA || status === ShipmentStatus.ARRIVED_KLM) {
         supplierStats[shipment.supplier].arrived++;
-      } else if (shipment.latestStatus === ShipmentStatus.IN_TRANSIT_ROADWAY || shipment.latestStatus === ShipmentStatus.IN_TRANSIT_SEAWAY) {
+      } else if (status === ShipmentStatus.IN_TRANSIT_ROADWAY || status === ShipmentStatus.IN_TRANSIT_SEAWAY) {
         supplierStats[shipment.supplier].inTransit++;
       }
       
@@ -291,11 +349,11 @@ function ReportsView({ shipments, statusFilter, onStatusFilter }) {
       }
       forwardingAgentStats[forwardingAgent].total++;
       forwardingAgentStats[forwardingAgent].totalPalletQty += shipment.cbm || 0;
-      if (shipment.latestStatus === ShipmentStatus.ARRIVED_PTA || shipment.latestStatus === ShipmentStatus.ARRIVED_KLM) {
+      if (status === ShipmentStatus.ARRIVED_PTA || status === ShipmentStatus.ARRIVED_KLM) {
         forwardingAgentStats[forwardingAgent].delivered++;
-      } else if (shipment.latestStatus === ShipmentStatus.DELAYED) {
+      } else if (status === ShipmentStatus.DELAYED) {
         forwardingAgentStats[forwardingAgent].delayed++;
-      } else if (shipment.latestStatus === ShipmentStatus.IN_TRANSIT_ROADWAY || shipment.latestStatus === ShipmentStatus.IN_TRANSIT_SEAWAY) {
+      } else if (status === ShipmentStatus.IN_TRANSIT_ROADWAY || status === ShipmentStatus.IN_TRANSIT_SEAWAY) {
         forwardingAgentStats[forwardingAgent].inTransit++;
       }
     });
