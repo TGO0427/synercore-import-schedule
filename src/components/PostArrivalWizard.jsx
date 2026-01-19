@@ -215,6 +215,44 @@ const ReceivingStep = ({ formData, updateFormData, errors, touched }) => (
         boxSizing: 'border-box'
       }}
     />
+
+    {/* Mark as Stored Option */}
+    <div style={{
+      marginTop: '1.5rem',
+      padding: '1rem',
+      backgroundColor: formData.markAsStored ? '#f0fdf4' : '#f9fafb',
+      border: `2px solid ${formData.markAsStored ? '#86efac' : '#e5e7eb'}`,
+      borderRadius: '8px',
+      transition: 'all 0.2s ease'
+    }}>
+      <label style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.75rem',
+        cursor: 'pointer',
+        fontWeight: '500',
+        color: formData.markAsStored ? '#15803d' : '#374151'
+      }}>
+        <input
+          type="checkbox"
+          checked={formData.markAsStored || false}
+          onChange={(e) => updateFormData('markAsStored', e.target.checked)}
+          style={{
+            width: '20px',
+            height: '20px',
+            cursor: 'pointer'
+          }}
+        />
+        <span style={{ fontSize: '1rem' }}>🏪 Mark as Stored</span>
+      </label>
+      <p style={{
+        margin: '0.5rem 0 0 2rem',
+        fontSize: '0.85rem',
+        color: '#6b7280'
+      }}>
+        Check this to complete receiving AND move shipment directly to Warehouse Storage Report
+      </p>
+    </div>
   </div>
 );
 
@@ -264,6 +302,13 @@ const ReviewStep = ({ formData, updateFormData, errors, touched }) => (
             <label style={{ fontSize: '0.85rem', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Receiving Status</label>
             <div style={{ fontWeight: '500', color: '#1f2937' }}>{formData.receivingStatus?.toUpperCase() || 'Not specified'}</div>
           </div>
+
+          {formData.markAsStored && (
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ fontSize: '0.85rem', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Final Action</label>
+              <div style={{ fontWeight: '500', color: '#15803d' }}>🏪 MARK AS STORED</div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -390,7 +435,8 @@ function PostArrivalWizard({
     receivingStatus: shipment?.receivingStatus || '',
     receivedQuantity: shipment?.receivedQuantity || 0,
     receivingDate: shipment?.receivingDate ? new Date(shipment.receivingDate).toISOString().split('T')[0] : '',
-    discrepancies: shipment?.discrepancies || ''
+    discrepancies: shipment?.discrepancies || '',
+    markAsStored: false
   };
 
   return (

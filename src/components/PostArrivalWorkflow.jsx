@@ -666,7 +666,24 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
               const allSuccess = responses.every(res => res.ok);
 
               if (allSuccess || responses.length === 0) {
-                showSuccess('✅ Post-arrival workflow completed successfully!');
+                // If mark as stored was checked, make another call to mark as stored
+                if (formData.markAsStored && (workflowAction === 'complete-receiving' || workflowAction === 'start-receiving')) {
+                  console.log('Marking shipment as stored');
+                  const storedResponse = await authFetch(getApiUrl(`/api/shipments/${selectedShipment.id}`), {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ latestStatus: 'stored' })
+                  });
+
+                  if (storedResponse.ok) {
+                    showSuccess('✅ Shipment received and marked as stored successfully!');
+                  } else {
+                    const errorData = await storedResponse.json();
+                    showError(`❌ Receiving completed but failed to mark as stored: ${errorData.error || 'Unknown error'}`);
+                  }
+                } else {
+                  showSuccess('✅ Post-arrival workflow completed successfully!');
+                }
                 setShowWizard(false);
                 setSelectedShipment(null);
                 await fetchPostArrivalShipments(); // Refresh list
