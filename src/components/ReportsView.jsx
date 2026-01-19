@@ -49,41 +49,60 @@ function ReportsView({ shipments, statusFilter, onStatusFilter }) {
     fetchSavedReports();
   }, []);
 
-  // Fetch archived shipments for historical data
+  // Fetch all shipments including archived ones for historical data
   useEffect(() => {
-    const fetchArchivedShipments = async () => {
+    const fetchAllShipments = async () => {
       try {
         setLoadingArchives(true);
-        const response = await authFetch(getApiUrl('/api/shipments/archives'));
-        if (!response.ok) {
-          setLoadingArchives(false);
-          return;
+
+        // Fetch all shipments from the database (including archived status)
+        const allShipmentsResponse = await authFetch(getApiUrl('/api/shipments?includeArchived=true&limit=5000'));
+        if (allShipmentsResponse.ok) {
+          const data = await allShipmentsResponse.json();
+          // Filter to only get archived shipments (to combine with active ones from props)
+          const archived = (data || []).filter(s =>
+            (s.latestStatus === 'archived' || s.latest_status === 'archived')
+          );
+          setArchivedShipments(archived);
         }
 
-        const archives = await response.json();
+        // Also try to fetch from JSON archives as backup
+        try {
+          const archivesResponse = await authFetch(getApiUrl('/api/shipments/archives'));
+          if (archivesResponse.ok) {
+            const archives = await archivesResponse.json();
 
-        // Fetch data from all archives
-        const archiveData = await Promise.all(
-          archives.map(async (archive) => {
-            try {
-              const dataResponse = await authFetch(getApiUrl(`/api/shipments/archives/${archive.fileName}`));
-              if (!dataResponse.ok) return [];
-              const data = await dataResponse.json();
-              return (data.data || []).map(shipment => ({
-                ...shipment,
-                isArchived: true,
-                archiveSource: archive.fileName
-              }));
-            } catch (error) {
-              console.error(`Error fetching archive ${archive.fileName}:`, error);
-              return [];
-            }
-          })
-        );
+            // Fetch data from all archives
+            const archiveData = await Promise.all(
+              archives.map(async (archive) => {
+                try {
+                  const dataResponse = await authFetch(getApiUrl(`/api/shipments/archives/${archive.fileName}`));
+                  if (!dataResponse.ok) return [];
+                  const data = await dataResponse.json();
+                  return (data.data || []).map(shipment => ({
+                    ...shipment,
+                    isArchived: true,
+                    archiveSource: archive.fileName
+                  }));
+                } catch (error) {
+                  return [];
+                }
+              })
+            );
 
-        // Flatten all archived shipments
-        const allArchivedShipments = archiveData.flat();
-        setArchivedShipments(allArchivedShipments);
+            // Add archived shipments from JSON files
+            const jsonArchivedShipments = archiveData.flat();
+            setArchivedShipments(prev => {
+              const combined = [...prev, ...jsonArchivedShipments];
+              // Deduplicate by ID
+              return combined.filter((s, i, self) =>
+                i === self.findIndex(x => x.id === s.id)
+              );
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching JSON archives:', error);
+        }
       } catch (error) {
         console.error('Error fetching archived shipments:', error);
       } finally {
@@ -91,7 +110,7 @@ function ReportsView({ shipments, statusFilter, onStatusFilter }) {
       }
     };
 
-    fetchArchivedShipments();
+    fetchAllShipments();
   }, []);
 
   const fetchSavedReports = async () => {
@@ -242,6 +261,8 @@ function ReportsView({ shipments, statusFilter, onStatusFilter }) {
       [ShipmentStatus.ARRIVED_KLM]: 0,
       [ShipmentStatus.DELAYED]: 0,
       [ShipmentStatus.CANCELLED]: 0,
+      [ShipmentStatus.STORED]: 0,
+      [ShipmentStatus.ARCHIVED]: 0,
     };
 
     // Supplier performance

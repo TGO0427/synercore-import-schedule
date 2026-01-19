@@ -21,7 +21,8 @@ export const ShipmentStatus = {
   INSPECTION_PASSED: 'inspection_passed',
   RECEIVING: 'receiving',
   RECEIVED: 'received',
-  STORED: 'stored'
+  STORED: 'stored',
+  ARCHIVED: 'archived'
 };
 
 export const InspectionStatus = {
