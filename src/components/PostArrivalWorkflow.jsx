@@ -133,7 +133,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
       actions.push({ key: 'reject-shipment', label: 'Reject/Return to Supplier', icon: '↩️', color: '#dc3545' });
     } else if (status === 'receiving' || status === 'receiving_goods') {
       actions.push({ key: 'complete-receiving', label: 'Complete Receiving', icon: '✔️', color: '#20c997' });
-    } else if (status === 'in_warehouse') {
+    } else if (status === 'received' || status === 'in_warehouse') {
       actions.push({ key: 'mark-stored', label: 'Mark as Stored', icon: '🏪', color: '#6c757d' });
     }
 
