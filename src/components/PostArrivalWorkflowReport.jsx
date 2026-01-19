@@ -45,67 +45,80 @@ const STATUS_COLORS = {
 };
 
 function PostArrivalWorkflowReport({ shipments }) {
+  const [postArrivalShipments, setPostArrivalShipments] = useState([]);
   const [archivedShipments, setArchivedShipments] = useState([]);
-  const [loadingArchives, setLoadingArchives] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  // Fetch recently archived shipments (last 30 days) to include in the report
+  // Fetch post-arrival shipments directly from the API
   useEffect(() => {
-    const fetchRecentArchives = async () => {
+    const fetchData = async () => {
       try {
-        setLoadingArchives(true);
-        const response = await authFetch(getApiUrl('/api/shipments/archives'));
-        if (!response.ok) throw new Error('Failed to fetch archives');
+        setLoading(true);
 
-        const archives = await response.json();
+        // Fetch current post-arrival shipments
+        const postArrivalResponse = await authFetch(getApiUrl('/api/shipments/post-arrival'));
+        if (postArrivalResponse.ok) {
+          const data = await postArrivalResponse.json();
+          setPostArrivalShipments(data || []);
+        }
 
-        // Get archives from last 30 days
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        // Also fetch recently archived shipments (last 30 days)
+        const archivesResponse = await authFetch(getApiUrl('/api/shipments/archives'));
+        if (archivesResponse.ok) {
+          const archives = await archivesResponse.json();
 
-        const recentArchives = archives.filter(archive =>
-          new Date(archive.archivedAt) >= thirtyDaysAgo
-        );
+          // Get archives from last 30 days
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        // Fetch data from each recent archive
-        const archiveData = await Promise.all(
-          recentArchives.map(async (archive) => {
-            try {
-              const dataResponse = await authFetch(getApiUrl(`/api/shipments/archives/${archive.fileName}`));
-              if (!dataResponse.ok) return [];
-              const data = await dataResponse.json();
-              return data.data || [];
-            } catch (error) {
-              console.error(`Error fetching archive ${archive.fileName}:`, error);
-              return [];
-            }
-          })
-        );
+          const recentArchives = archives.filter(archive =>
+            new Date(archive.archivedAt) >= thirtyDaysAgo
+          );
 
-        // Flatten all archived shipments
-        const allArchivedShipments = archiveData.flat();
+          // Fetch data from each recent archive
+          const archiveData = await Promise.all(
+            recentArchives.map(async (archive) => {
+              try {
+                const dataResponse = await authFetch(getApiUrl(`/api/shipments/archives/${archive.fileName}`));
+                if (!dataResponse.ok) return [];
+                const data = await dataResponse.json();
+                return data.data || [];
+              } catch (error) {
+                console.error(`Error fetching archive ${archive.fileName}:`, error);
+                return [];
+              }
+            })
+          );
 
-        // Filter for only post-arrival workflow statuses
-        const relevantArchived = allArchivedShipments.filter(shipment =>
-          POST_ARRIVAL_STATUSES.includes(shipment.latest_status)
-        );
+          // Flatten all archived shipments and filter for post-arrival statuses
+          const allArchivedShipments = archiveData.flat();
+          const relevantArchived = allArchivedShipments.filter(shipment =>
+            POST_ARRIVAL_STATUSES.includes(shipment.latest_status || shipment.latestStatus)
+          );
 
-        setArchivedShipments(relevantArchived);
+          setArchivedShipments(relevantArchived);
+        }
       } catch (error) {
-        console.error('Error fetching recent archives:', error);
+        console.error('Error fetching post-arrival data:', error);
       } finally {
-        setLoadingArchives(false);
+        setLoading(false);
       }
     };
 
-    fetchRecentArchives();
+    fetchData();
   }, []);
 
   const workflowAnalytics = useMemo(() => {
-    // Combine active and archived shipments for the report
-    const allShipments = [...shipments, ...archivedShipments];
+    // Combine post-arrival shipments from API, passed shipments, and archived shipments
+    const allShipments = [...postArrivalShipments, ...shipments, ...archivedShipments];
+
+    // Deduplicate by ID
+    const uniqueShipments = allShipments.filter((shipment, index, self) =>
+      index === self.findIndex(s => s.id === shipment.id)
+    );
 
     // Filter shipments that are in post-arrival workflow
-    const postArrivalShipments = allShipments.filter(shipment =>
+    const filteredPostArrivalShipments = uniqueShipments.filter(shipment =>
       POST_ARRIVAL_STATUSES.includes(shipment.latest_status)
     );
 
@@ -129,7 +142,7 @@ function PostArrivalWorkflowReport({ shipments }) {
       currentProcessingTimes: []
     };
 
-    postArrivalShipments.forEach(shipment => {
+    filteredPostArrivalShipments.forEach(shipment => {
       const status = shipment.latest_status;
 
       // Status counts
@@ -225,20 +238,20 @@ function PostArrivalWorkflowReport({ shipments }) {
       : 0;
 
     return {
-      totalInWorkflow: postArrivalShipments.length,
+      totalInWorkflow: filteredPostArrivalShipments.length,
       statusCounts,
       warehouseBreakdown,
       supplierWorkflow,
       timeAnalysis,
-      completionRate: postArrivalShipments.length > 0
-        ? ((statusCounts.stored / postArrivalShipments.length) * 100).toFixed(1)
+      completionRate: filteredPostArrivalShipments.length > 0
+        ? ((statusCounts.stored / filteredPostArrivalShipments.length) * 100).toFixed(1)
         : 0,
       bottlenecks: {
         inspection_pending: statusCounts.inspection_pending,
         arrived: (statusCounts.arrived_pta || 0) + (statusCounts.arrived_klm || 0) + (statusCounts.arrived_offsite || 0)
       }
     };
-  }, [shipments, archivedShipments]);
+  }, [postArrivalShipments, shipments, archivedShipments]);
 
   const WorkflowStatusChart = ({ data }) => {
     const total = Object.values(data).reduce((sum, count) => sum + count, 0);
@@ -615,6 +628,17 @@ function PostArrivalWorkflowReport({ shipments }) {
       </div>
     </div>
   );
+
+  if (loading) {
+    return (
+      <div className="post-arrival-workflow-report">
+        <div className="report-header">
+          <h3>🚛 Post-Arrival Workflow Management Report</h3>
+          <p>Loading post-arrival workflow data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="post-arrival-workflow-report">
