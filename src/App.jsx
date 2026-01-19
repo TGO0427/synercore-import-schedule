@@ -557,12 +557,12 @@ function App() {
     switch (activeView) {
       case 'shipping': {
         // Hide items that are fully arrived/received/stored or in PAW
-        // Post-arrival workflow statuses to exclude
+        // Post-arrival workflow statuses and archived to exclude from shipping schedule
         const postArrivalStatuses = [
           'arrived_pta', 'arrived_klm', 'arrived_offsite',
           'unloading', 'inspection_pending', 'inspecting',
           'inspection_failed', 'inspection_passed',
-          'receiving', 'received', 'stored'
+          'receiving', 'received', 'stored', 'archived'
         ];
 
         let shippingShipments = shipments.filter(s =>
