@@ -500,10 +500,9 @@ function App() {
 
   const handleArchiveShipment = async (id) => {
     try {
-      const response = await authFetch(getApiUrl('/api/shipments/manual-archive'), {
+      const response = await authFetch(getApiUrl(`/api/shipments/${id}/archive`), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shipmentIds: [id] })
+        headers: { 'Content-Type': 'application/json' }
       });
       if (!response.ok) throw new Error('Failed to archive shipment');
       await fetchShipments();
