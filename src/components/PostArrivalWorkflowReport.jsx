@@ -3,33 +3,42 @@ import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
 
 const POST_ARRIVAL_STATUSES = [
-  'arrived',
+  'arrived_pta',
+  'arrived_klm',
+  'arrived_offsite',
   'unloading',
   'inspection_pending',
   'inspecting',
   'inspection_passed',
+  'inspection_failed',
   'receiving',
   'received',
   'stored'
 ];
 
 const STATUS_DISPLAY_NAMES = {
-  'arrived': 'Arrived',
+  'arrived_pta': 'Arrived PTA',
+  'arrived_klm': 'Arrived KLM',
+  'arrived_offsite': 'Arrived Offsite',
   'unloading': 'Unloading',
   'inspection_pending': 'Inspection Pending',
   'inspecting': 'Inspecting',
   'inspection_passed': 'Inspection Passed',
+  'inspection_failed': 'Inspection Failed',
   'receiving': 'Receiving',
   'received': 'Received',
   'stored': 'Stored'
 };
 
 const STATUS_COLORS = {
-  'arrived': '#2196F3',
+  'arrived_pta': '#28a745',
+  'arrived_klm': '#28a745',
+  'arrived_offsite': '#28a745',
   'unloading': '#FF9800',
   'inspection_pending': '#9C27B0',
   'inspecting': '#673AB7',
   'inspection_passed': '#4CAF50',
+  'inspection_failed': '#dc3545',
   'receiving': '#00BCD4',
   'received': '#8BC34A',
   'stored': '#4CAF50'
@@ -138,7 +147,7 @@ function PostArrivalWorkflowReport({ shipments }) {
       // For demo purposes, simulate arrival timestamp based on updatedAt
       // In production, this would come from statusHistory
       let arrivedTime = lastUpdated;
-      if (status !== 'arrived') {
+      if (!['arrived_pta', 'arrived_klm', 'arrived_offsite'].includes(status)) {
         // Simulate that arrived was some time before current status
         arrivedTime = new Date(lastUpdated.getTime() - (timeInCurrentStatus * 1000 * 60 * 60));
       }
@@ -205,7 +214,7 @@ function PostArrivalWorkflowReport({ shipments }) {
         }
       } else if (['unloading', 'inspecting', 'receiving'].includes(status)) {
         supplierWorkflow[supplier].inProgress++;
-      } else if (status === 'arrived' || status === 'inspection_pending') {
+      } else if (['arrived_pta', 'arrived_klm', 'arrived_offsite', 'inspection_pending'].includes(status)) {
         supplierWorkflow[supplier].stuck++;
       }
     });
@@ -226,7 +235,7 @@ function PostArrivalWorkflowReport({ shipments }) {
         : 0,
       bottlenecks: {
         inspection_pending: statusCounts.inspection_pending,
-        arrived: statusCounts.arrived
+        arrived: (statusCounts.arrived_pta || 0) + (statusCounts.arrived_klm || 0) + (statusCounts.arrived_offsite || 0)
       }
     };
   }, [shipments, archivedShipments]);
@@ -301,10 +310,10 @@ function PostArrivalWorkflowReport({ shipments }) {
                 return (
                   <tr key={warehouse}>
                     <td className="warehouse-name">{warehouse}</td>
-                    <td className="status-cell arrived">{warehouseData.arrived || 0}</td>
+                    <td className="status-cell arrived">{(warehouseData.arrived_pta || 0) + (warehouseData.arrived_klm || 0) + (warehouseData.arrived_offsite || 0)}</td>
                     <td className="status-cell unloading">{warehouseData.unloading || 0}</td>
                     <td className="status-cell inspection">
-                      {(warehouseData.inspection_pending || 0) + (warehouseData.inspecting || 0) + (warehouseData.inspection_passed || 0)}
+                      {(warehouseData.inspection_pending || 0) + (warehouseData.inspecting || 0) + (warehouseData.inspection_passed || 0) + (warehouseData.inspection_failed || 0)}
                     </td>
                     <td className="status-cell receiving">
                       {(warehouseData.receiving || 0) + (warehouseData.received || 0)}
