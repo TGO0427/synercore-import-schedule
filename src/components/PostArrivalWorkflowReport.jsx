@@ -86,7 +86,7 @@ function PostArrivalWorkflowReport({ shipments }) {
 
         // Filter for only post-arrival workflow statuses
         const relevantArchived = allArchivedShipments.filter(shipment =>
-          POST_ARRIVAL_STATUSES.includes(shipment.latestStatus)
+          POST_ARRIVAL_STATUSES.includes(shipment.latest_status)
         );
 
         setArchivedShipments(relevantArchived);
@@ -106,7 +106,7 @@ function PostArrivalWorkflowReport({ shipments }) {
 
     // Filter shipments that are in post-arrival workflow
     const postArrivalShipments = allShipments.filter(shipment =>
-      POST_ARRIVAL_STATUSES.includes(shipment.latestStatus)
+      POST_ARRIVAL_STATUSES.includes(shipment.latest_status)
     );
 
     // Count by status
@@ -130,7 +130,7 @@ function PostArrivalWorkflowReport({ shipments }) {
     };
 
     postArrivalShipments.forEach(shipment => {
-      const status = shipment.latestStatus;
+      const status = shipment.latest_status;
 
       // Status counts
       if (statusCounts.hasOwnProperty(status)) {
@@ -341,7 +341,7 @@ function PostArrivalWorkflowReport({ shipments }) {
     const getSupplierExample = (supplierName) => {
       const supplierShipments = shipments.filter(s =>
         (s.supplier || 'Unknown') === supplierName &&
-        POST_ARRIVAL_STATUSES.includes(s.latestStatus)
+        POST_ARRIVAL_STATUSES.includes(s.latest_status)
       );
 
       if (supplierShipments.length > 0) {
