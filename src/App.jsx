@@ -175,14 +175,8 @@ function App() {
   }, [wsConnected]);
 
   // ---------- notifications ----------
-  const addNotification = (type, message, options = {}) => {
-    console.log('[App] addNotification called:', { type, message });
-    setNotifications(prev => {
-      const newNotifications = [...prev, { id: Date.now() + Math.random(), type, message, ...options }];
-      console.log('[App] Notifications state updated:', newNotifications.length, 'notifications');
-      return newNotifications;
-    });
-  };
+  const addNotification = (type, message, options = {}) =>
+    setNotifications(prev => [...prev, { id: Date.now() + Math.random(), type, message, ...options }]);
 
   const removeNotification = (id) => setNotifications(prev => prev.filter(n => n.id !== id));
   const showSuccess = (m, o = {}) => { addNotification('success', m, o); };
@@ -466,9 +460,7 @@ function App() {
         }
       }
 
-      console.log('[App] About to show success notification...');
       showSuccess(`Successfully imported ${payload.length} shipments and ${uniqueSuppliers.length} suppliers`);
-      console.log('[App] Success notification triggered');
       await fetchShipments();
       await fetchSuppliers();
 
