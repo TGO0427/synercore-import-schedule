@@ -872,11 +872,15 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
         </div>
       </div>
 
-      <div style={{ overflowX: 'auto' }}>
-        <table className="table">
-          <thead>
+      <div style={{
+        overflow: 'auto',
+        maxHeight: 'calc(100vh - 280px)',
+        position: 'relative'
+      }}>
+        <table className="table" style={{ minWidth: '1200px' }}>
+          <thead style={{ position: 'sticky', top: 0, backgroundColor: '#f8f9fa', zIndex: 10 }}>
             <tr>
-              <th style={{ width: '40px', textAlign: 'center' }}>
+              <th style={{ width: '40px', textAlign: 'center', backgroundColor: '#f8f9fa' }}>
                 <input
                   type="checkbox"
                   checked={selectedShipments.length > 0 && selectedShipments.length === filteredAndSortedShipments.filter(s => s.latestStatus === 'arrived_pta' || s.latestStatus === 'arrived_klm' || s.latestStatus === 'arrived_offsite').length}
