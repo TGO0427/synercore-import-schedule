@@ -12,7 +12,7 @@ import ShipmentController, {
   type UpdateShipmentRequest,
   type ShipmentFilterParams
 } from '../controllers/ShipmentController.js';
-import ShipmentsController from '../controllers/shipmentsController.js';
+import { ShipmentsController } from '../controllers/shipmentsController.js';
 import type { BodyRequest } from '../types/api.js';
 
 const router = Router();
