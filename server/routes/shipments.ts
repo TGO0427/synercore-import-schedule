@@ -12,6 +12,7 @@ import ShipmentController, {
   type UpdateShipmentRequest,
   type ShipmentFilterParams
 } from '../controllers/ShipmentController.js';
+import ShipmentsController from '../controllers/shipmentsController.js';
 import type { BodyRequest } from '../types/api.js';
 
 const router = Router();
@@ -151,6 +152,22 @@ router.post(
     res.status(201).json({
       data: shipment,
       message: 'Shipment created successfully'
+    });
+  })
+);
+
+/**
+ * POST /api/shipments/bulk-import
+ * Bulk import shipments (replaces existing data)
+ */
+router.post(
+  '/bulk-import',
+  asyncHandler(async (req: Request, res: Response) => {
+    const count = await ShipmentsController.bulkImport(req.body);
+    res.status(200).json({
+      success: true,
+      message: `Successfully imported ${count} shipments`,
+      count: count
     });
   })
 );
