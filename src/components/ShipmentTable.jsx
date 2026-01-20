@@ -3,6 +3,7 @@ import { ShipmentStatus } from '../types/shipment';
 import WeekCalendar from './WeekCalendar';
 import BulkStatusUpdate from './BulkStatusUpdate';
 import FilterPresetManager from './FilterPresetManager';
+import ResizableModal from './ResizableModal';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -1115,56 +1116,18 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
       
       {/* Add Shipment Dialog */}
       {showAddShipmentDialog && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px'
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            padding: '2rem',
-            width: '100%',
-            maxWidth: '600px',
-            maxHeight: '90vh',
-            overflow: 'auto',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '1.5rem'
-            }}>
-              <h3 style={{ margin: 0, color: '#333', fontSize: '1.5rem' }}>Add New Shipment</h3>
-              <button
-                onClick={() => {
-                  setShowCustomSupplier(false);
-                  setNewShipmentSelectedWeekDate(null);
-                  setShowAddShipmentDialog(false);
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '1.5rem',
-                  cursor: 'pointer',
-                  color: '#666',
-                  padding: '0.25rem'
-                }}
-                title="Close"
-              >
-                ✕
-              </button>
-            </div>
-            
+        <ResizableModal
+          title="Add New Shipment"
+          isOpen={showAddShipmentDialog}
+          onClose={() => {
+            setShowCustomSupplier(false);
+            setNewShipmentSelectedWeekDate(null);
+            setShowAddShipmentDialog(false);
+          }}
+          initialWidth={650}
+          minWidth={400}
+          minHeight={400}
+        >
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
@@ -1536,7 +1499,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 Add Shipment
               </button>
             </div>
-            
+
             <div style={{
               fontSize: '0.8rem',
               color: '#6c757d',
@@ -1545,62 +1508,23 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
             }}>
               * Required fields
             </div>
-          </div>
-        </div>
+        </ResizableModal>
       )}
 
       {/* Amend Shipment Dialog */}
       {showAmendShipmentDialog && amendingShipment && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px'
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            padding: '2rem',
-            width: '100%',
-            maxWidth: '600px',
-            maxHeight: '90vh',
-            overflow: 'auto',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '1.5rem'
-            }}>
-              <h3 style={{ margin: 0, color: '#333', fontSize: '1.5rem' }}>Amend Shipment</h3>
-              <button
-                onClick={() => {
-                  setShowAmendShipmentDialog(false);
-                  setAmendingShipment(null);
-                  setAmendShipmentSelectedWeekDate(null);
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '1.5rem',
-                  cursor: 'pointer',
-                  color: '#666',
-                  padding: '0.25rem'
-                }}
-                title="Close"
-              >
-                ✕
-              </button>
-            </div>
-
+        <ResizableModal
+          title="Amend Shipment"
+          isOpen={showAmendShipmentDialog}
+          onClose={() => {
+            setShowAmendShipmentDialog(false);
+            setAmendingShipment(null);
+            setAmendShipmentSelectedWeekDate(null);
+          }}
+          initialWidth={650}
+          minWidth={400}
+          minHeight={400}
+        >
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
@@ -1931,61 +1855,22 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
             }}>
               * Required fields
             </div>
-          </div>
-        </div>
+        </ResizableModal>
       )}
 
       {/* Auto-Archive Dialog */}
       {showAutoArchiveDialog && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '2rem',
-            borderRadius: '12px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-            width: '90%',
-            maxWidth: '600px',
-            maxHeight: '80vh',
-            overflow: 'auto'
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '1.5rem'
-            }}>
-              <h3 style={{ margin: 0, color: '#333', fontSize: '1.25rem' }}>
-                📁 Auto-Archive Old ARRIVED Shipments
-              </h3>
-              <button
-                onClick={() => {
-                  setShowAutoArchiveDialog(false);
-                  setAutoArchiveStats(null);
-                }}
-                style={{
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  fontSize: '1.5rem',
-                  cursor: 'pointer',
-                  color: '#999',
-                  padding: '0.25rem'
-                }}
-              >
-                ✕
-              </button>
-            </div>
-
+        <ResizableModal
+          title="Auto-Archive Old ARRIVED Shipments"
+          isOpen={showAutoArchiveDialog}
+          onClose={() => {
+            setShowAutoArchiveDialog(false);
+            setAutoArchiveStats(null);
+          }}
+          initialWidth={600}
+          minWidth={400}
+          minHeight={300}
+        >
             <div style={{ marginBottom: '1.5rem' }}>
               <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
                 Archive shipments older than (days):
@@ -2116,32 +2001,19 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 </button>
               )}
             </div>
-          </div>
-        </div>
+        </ResizableModal>
       )}
 
       {/* Manual Archive Dialog */}
       {showManualArchiveDialog && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '2rem',
-            borderRadius: '8px',
-            maxWidth: '500px',
-            width: '90%'
-          }}>
-            <h3>Manual Archive Confirmation</h3>
+        <ResizableModal
+          title="Manual Archive Confirmation"
+          isOpen={showManualArchiveDialog}
+          onClose={() => setShowManualArchiveDialog(false)}
+          initialWidth={500}
+          minWidth={350}
+          minHeight={250}
+        >
             <p>
               You are about to archive <strong>{selectedShipments.length}</strong> selected ARRIVED shipments.
               This action cannot be undone.
@@ -2177,8 +2049,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 {manualArchiveLoading ? '🔄 Archiving...' : `📁 Archive ${selectedShipments.length} Shipments`}
               </button>
             </div>
-          </div>
-        </div>
+        </ResizableModal>
       )}
 
       {/* Bulk Status Update Modal */}
