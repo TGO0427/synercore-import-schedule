@@ -23,9 +23,21 @@ const router = Router();
 const validateCreateShipment = [
   body('orderRef').trim().notEmpty().withMessage('Order reference is required'),
   body('supplier').trim().notEmpty().withMessage('Supplier is required'),
-  body('quantity').isInt({ min: 1 }).withMessage('Quantity must be a positive integer'),
-  body('weekNumber').optional().isInt({ min: 1, max: 53 }).withMessage('Week number must be 1-53'),
-  body('notes').optional().trim()
+  body('quantity').optional({ nullable: true }).isInt({ min: 0 }).withMessage('Quantity must be a non-negative integer'),
+  body('weekNumber').optional({ nullable: true }).isInt({ min: 1, max: 53 }).withMessage('Week number must be 1-53'),
+  body('notes').optional().trim(),
+  body('finalPod').optional().trim(),
+  body('latestStatus').optional().trim(),
+  body('productName').optional().trim(),
+  body('cbm').optional({ nullable: true }),
+  body('palletQty').optional({ nullable: true }),
+  body('receivingWarehouse').optional().trim(),
+  body('forwardingAgent').optional().trim(),
+  body('vesselName').optional().trim(),
+  body('incoterm').optional().trim(),
+  body('selectedWeekDate').optional({ nullable: true }),
+  body('createdAt').optional(),
+  body('updatedAt').optional()
 ];
 
 /**
@@ -139,14 +151,40 @@ router.post(
   asyncHandler(async (req: BodyRequest<CreateShipmentRequest>, res: Response) => {
     if (!handleValidationErrors(req, res)) return;
 
-    const { orderRef, supplier, quantity, weekNumber, notes } = req.body;
+    const {
+      orderRef,
+      supplier,
+      quantity,
+      weekNumber,
+      notes,
+      finalPod,
+      latestStatus,
+      productName,
+      cbm,
+      palletQty,
+      receivingWarehouse,
+      forwardingAgent,
+      vesselName,
+      incoterm,
+      selectedWeekDate
+    } = req.body;
 
     const shipment = await ShipmentController.createShipment({
       orderRef,
       supplier,
       quantity,
       weekNumber,
-      notes
+      notes,
+      finalPod,
+      latestStatus,
+      productName,
+      cbm,
+      palletQty,
+      receivingWarehouse,
+      forwardingAgent,
+      vesselName,
+      incoterm,
+      selectedWeekDate
     });
 
     res.status(201).json({

@@ -41,6 +41,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
     productName: '',
     quantity: '',
     cbm: '',
+    palletQty: '',
     receivingWarehouse: '',
     forwardingAgent: '',
     vesselName: '',
@@ -450,8 +451,11 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
         productName: '',
         quantity: '',
         cbm: '',
+        palletQty: '',
         receivingWarehouse: '',
         forwardingAgent: '',
+        vesselName: '',
+        incoterm: '',
         notes: ''
       });
       setShowCustomSupplier(false);

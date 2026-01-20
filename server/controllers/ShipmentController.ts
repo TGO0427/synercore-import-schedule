@@ -13,9 +13,19 @@ import { shipmentRepository } from '../db/repositories/index.js';
 export interface CreateShipmentRequest {
   orderRef: string;
   supplier: string;
-  quantity: number;
+  quantity?: number;
   weekNumber?: number;
   notes?: string;
+  finalPod?: string;
+  latestStatus?: string;
+  productName?: string;
+  cbm?: number;
+  palletQty?: number;
+  receivingWarehouse?: string;
+  forwardingAgent?: string;
+  vesselName?: string;
+  incoterm?: string;
+  selectedWeekDate?: string;
 }
 
 /**
@@ -134,15 +144,24 @@ export class ShipmentController {
       throw AppError.conflict(`Shipment with order reference ${data.orderRef} already exists`);
     }
 
-    // Create shipment
+    // Create shipment with all fields
     const shipment = await shipmentRepository.create({
       id: `ship_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       order_ref: data.orderRef,
       supplier: data.supplier,
-      quantity: data.quantity,
-      latest_status: 'planned_airfreight' as ShipmentStatus,
-      week_number: data.weekNumber,
-      notes: data.notes,
+      quantity: data.quantity || null,
+      latest_status: (data.latestStatus || 'planned_airfreight') as ShipmentStatus,
+      week_number: data.weekNumber || null,
+      notes: data.notes || null,
+      final_pod: data.finalPod || null,
+      product_name: data.productName || null,
+      cbm: data.cbm || null,
+      pallet_qty: data.palletQty || null,
+      receiving_warehouse: data.receivingWarehouse || null,
+      forwarding_agent: data.forwardingAgent || null,
+      vessel_name: data.vesselName || null,
+      incoterm: data.incoterm || null,
+      selected_week_date: data.selectedWeekDate ? new Date(data.selectedWeekDate) : null,
       created_at: new Date(),
       updated_at: new Date()
     } as Partial<Shipment>);
