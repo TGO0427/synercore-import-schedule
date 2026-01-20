@@ -148,8 +148,8 @@ function PostArrivalWorkflowReport({ shipments }) {
         arrivedTime = new Date(lastUpdated.getTime() - (timeInCurrentStatus * 1000 * 60 * 60));
       }
 
-      // Calculate total workflow time for completed shipments
-      if (status === 'stored') {
+      // Calculate total workflow time for completed shipments (stored or archived)
+      if (status === 'stored' || status === 'archived') {
         const totalWorkflowTime = Math.floor((lastUpdated - arrivedTime) / (1000 * 60 * 60)); // hours
         timeAnalysis.completedShipments.push({
           id: shipment.id,
@@ -198,7 +198,7 @@ function PostArrivalWorkflowReport({ shipments }) {
       }
       supplierWorkflow[supplier].total++;
 
-      if (status === 'stored') {
+      if (status === 'stored' || status === 'archived') {
         supplierWorkflow[supplier].completed++;
         supplierWorkflow[supplier].completedCount++;
 
@@ -227,7 +227,7 @@ function PostArrivalWorkflowReport({ shipments }) {
       supplierWorkflow,
       timeAnalysis,
       completionRate: filteredPostArrivalShipments.length > 0
-        ? ((statusCounts.stored / filteredPostArrivalShipments.length) * 100).toFixed(1)
+        ? ((((statusCounts.stored || 0) + (statusCounts.archived || 0)) / filteredPostArrivalShipments.length) * 100).toFixed(1)
         : 0,
       bottlenecks: {
         inspection_pending: statusCounts.inspection_pending,
@@ -577,8 +577,8 @@ function PostArrivalWorkflowReport({ shipments }) {
       <div className="summary-card success">
         <div className="card-icon">✅</div>
         <div className="card-content">
-          <h3>{analytics.statusCounts.stored}</h3>
-          <p>Completed (Stored)</p>
+          <h3>{(analytics.statusCounts.stored || 0) + (analytics.statusCounts.archived || 0)}</h3>
+          <p>Completed (Stored/Archived)</p>
         </div>
       </div>
 
