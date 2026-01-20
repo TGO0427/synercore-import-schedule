@@ -30,11 +30,11 @@ const extractForwardingAgent = (shipment) => {
   return destinations[Math.floor(Math.random() * destinations.length)];
 };
 
-function ReportsView({ shipments, statusFilter, onStatusFilter }) {
+function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter }) {
   const [savedReports, setSavedReports] = useState([]);
   const [loadingReports, setLoadingReports] = useState(false);
-  const [archivedShipments, setArchivedShipments] = useState([]);
-  const [loadingArchives, setLoadingArchives] = useState(true);
+  const [allShipments, setAllShipments] = useState([]);
+  const [loadingShipments, setLoadingShipments] = useState(true);
   const [selectedDateRange, setSelectedDateRange] = useState('all');
   const [customDateRange, setCustomDateRange] = useState({
     start: '',
@@ -49,68 +49,44 @@ function ReportsView({ shipments, statusFilter, onStatusFilter }) {
     fetchSavedReports();
   }, []);
 
-  // Fetch all shipments including archived ones for historical data
+  // Fetch all shipments directly from API for reports
   useEffect(() => {
-    const fetchAllShipments = async () => {
+    const fetchAllShipmentsData = async () => {
       try {
-        setLoadingArchives(true);
+        setLoadingShipments(true);
 
-        // Fetch all shipments from the database (including archived status)
-        const allShipmentsResponse = await authFetch(getApiUrl('/api/shipments?includeArchived=true&limit=5000'));
-        if (allShipmentsResponse.ok) {
-          const data = await allShipmentsResponse.json();
-          // Filter to only get archived shipments (to combine with active ones from props)
-          const archived = (data || []).filter(s =>
-            (s.latestStatus === 'archived' || s.latest_status === 'archived')
-          );
-          setArchivedShipments(archived);
-        }
+        // Fetch ALL shipments from the database (no filtering)
+        const response = await authFetch(getApiUrl('/api/shipments?limit=10000'));
+        if (response.ok) {
+          const result = await response.json();
+          // Handle both { data: [...] } and [...] response formats
+          const shipments = result.data || result || [];
 
-        // Also try to fetch from JSON archives as backup
-        try {
-          const archivesResponse = await authFetch(getApiUrl('/api/shipments/archives'));
-          if (archivesResponse.ok) {
-            const archives = await archivesResponse.json();
+          // Normalize field names
+          const normalized = shipments.map(s => ({
+            ...s,
+            latestStatus: s.latest_status || s.latestStatus,
+            supplier: s.supplier,
+            weekNumber: s.week_number || s.weekNumber,
+            productName: s.product_name || s.productName,
+            receivingWarehouse: s.receiving_warehouse || s.receivingWarehouse,
+            finalPod: s.final_pod || s.finalPod,
+            forwardingAgent: s.forwarding_agent || s.forwardingAgent,
+            quantity: Number(s.quantity) || 0,
+            cbm: Number(s.cbm) || 0
+          }));
 
-            // Fetch data from all archives
-            const archiveData = await Promise.all(
-              archives.map(async (archive) => {
-                try {
-                  const dataResponse = await authFetch(getApiUrl(`/api/shipments/archives/${archive.fileName}`));
-                  if (!dataResponse.ok) return [];
-                  const data = await dataResponse.json();
-                  return (data.data || []).map(shipment => ({
-                    ...shipment,
-                    isArchived: true,
-                    archiveSource: archive.fileName
-                  }));
-                } catch (error) {
-                  return [];
-                }
-              })
-            );
-
-            // Add archived shipments from JSON files
-            const jsonArchivedShipments = archiveData.flat();
-            setArchivedShipments(prev => {
-              const combined = [...prev, ...jsonArchivedShipments];
-              // Deduplicate by ID
-              return combined.filter((s, i, self) =>
-                i === self.findIndex(x => x.id === s.id)
-              );
-            });
-          }
-        } catch (error) {
-          console.error('Error fetching JSON archives:', error);
+          console.log('[ReportsView] Fetched shipments:', normalized.length, 'statuses:', [...new Set(normalized.map(s => s.latestStatus))]);
+          setAllShipments(normalized);
         }
       } catch (error) {
-        console.error('Error fetching archived shipments:', error);
+        console.error('Error fetching shipments for reports:', error);
       } finally {
-        setLoadingArchives(false);
+        setLoadingShipments(false);
       }
     };
 
-    fetchAllShipments();
+    fetchAllShipmentsData();
   }, []);
 
   const fetchSavedReports = async () => {
@@ -200,15 +176,10 @@ function ReportsView({ shipments, statusFilter, onStatusFilter }) {
 
   // Filter shipments based on date range
   const filteredShipments = useMemo(() => {
-    // Combine active shipments with archived shipments
-    const allShipments = [...shipments, ...archivedShipments];
+    // Use fetched shipments, fallback to prop shipments
+    const shipmentsToUse = allShipments.length > 0 ? allShipments : propShipments;
 
-    // Deduplicate by ID (prefer active shipments over archived)
-    const uniqueShipments = allShipments.filter((shipment, index, self) =>
-      index === self.findIndex(s => s.id === shipment.id)
-    );
-
-    if (selectedDateRange === 'all') return uniqueShipments;
+    if (selectedDateRange === 'all') return shipmentsToUse;
 
     const now = new Date();
     let startDate = new Date();
@@ -228,21 +199,21 @@ function ReportsView({ shipments, statusFilter, onStatusFilter }) {
         break;
       case 'custom':
         if (customDateRange.start && customDateRange.end) {
-          return uniqueShipments.filter(shipment => {
+          return shipmentsToUse.filter(shipment => {
             const shipmentDate = new Date(shipment.weekNumber ? `2024-W${shipment.weekNumber}` : shipment.createdAt || now);
             return shipmentDate >= new Date(customDateRange.start) && shipmentDate <= new Date(customDateRange.end);
           });
         }
-        return uniqueShipments;
+        return shipmentsToUse;
       default:
-        return uniqueShipments;
+        return shipmentsToUse;
     }
 
-    return uniqueShipments.filter(shipment => {
+    return shipmentsToUse.filter(shipment => {
       const shipmentDate = new Date(shipment.weekNumber ? `2024-W${shipment.weekNumber}` : shipment.createdAt || now);
       return shipmentDate >= startDate;
     });
-  }, [shipments, archivedShipments, selectedDateRange, customDateRange]);
+  }, [allShipments, propShipments, selectedDateRange, customDateRange]);
 
   const analytics = useMemo(() => {
     const currentWeek = getCurrentWeekNumber();
@@ -996,11 +967,22 @@ function ReportsView({ shipments, statusFilter, onStatusFilter }) {
     </div>
   );
 
+  if (loadingShipments) {
+    return (
+      <div className="reports-view">
+        <div className="reports-header">
+          <h2>📊 Reports & Analytics</h2>
+          <p>Loading shipment data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="reports-view">
       <div className="reports-header">
         <h2>📊 Reports & Analytics</h2>
-        <p>Comprehensive insights into your shipment operations</p>
+        <p>Comprehensive insights into your shipment operations ({filteredShipments.length} shipments)</p>
       </div>
 
       <ReportControls />
