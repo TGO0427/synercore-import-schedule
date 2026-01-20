@@ -227,13 +227,50 @@ router.get(
 
 /**
  * GET /api/shipments/archives
- * Get archived shipments
+ * Get archived shipments (file-based archives)
  */
 router.get(
   '/archives',
   asyncHandler(async (_req: Request, res: Response) => {
-    const shipments = await ShipmentController.getArchives();
-    res.status(200).json(shipments);
+    // Use the file-based archive system from shipmentsController
+    const { ShipmentsController } = await import('../controllers/shipmentsController.js');
+    await ShipmentsController.getArchives({ params: {}, query: {} } as any, res);
+  })
+);
+
+/**
+ * GET /api/shipments/archives/:fileName
+ * Get specific archive data
+ */
+router.get(
+  '/archives/:fileName',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { ShipmentsController } = await import('../controllers/shipmentsController.js');
+    await ShipmentsController.getArchiveData(req, res);
+  })
+);
+
+/**
+ * PUT /api/shipments/archives/:fileName
+ * Update archive data
+ */
+router.put(
+  '/archives/:fileName',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { ShipmentsController } = await import('../controllers/shipmentsController.js');
+    await ShipmentsController.updateArchive(req, res);
+  })
+);
+
+/**
+ * PUT /api/shipments/archives/:fileName/rename
+ * Rename archive
+ */
+router.put(
+  '/archives/:fileName/rename',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { ShipmentsController } = await import('../controllers/shipmentsController.js');
+    await ShipmentsController.renameArchive(req, res);
   })
 );
 
