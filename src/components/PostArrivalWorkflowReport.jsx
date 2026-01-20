@@ -13,7 +13,8 @@ const POST_ARRIVAL_STATUSES = [
   'inspection_failed',
   'receiving',
   'received',
-  'stored'
+  'stored',
+  'archived'  // Include archived for historical data
 ];
 
 const STATUS_DISPLAY_NAMES = {
@@ -27,7 +28,8 @@ const STATUS_DISPLAY_NAMES = {
   'inspection_failed': 'Inspection Failed',
   'receiving': 'Receiving',
   'received': 'Received',
-  'stored': 'Stored'
+  'stored': 'Stored',
+  'archived': 'Archived'
 };
 
 const STATUS_COLORS = {
@@ -41,7 +43,8 @@ const STATUS_COLORS = {
   'inspection_failed': '#dc3545',
   'receiving': '#00BCD4',
   'received': '#8BC34A',
-  'stored': '#4CAF50'
+  'stored': '#4CAF50',
+  'archived': '#6c757d'
 };
 
 function PostArrivalWorkflowReport({ shipments }) {
@@ -49,54 +52,34 @@ function PostArrivalWorkflowReport({ shipments }) {
   const [archivedShipments, setArchivedShipments] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch post-arrival shipments directly from the API
+  // Fetch all shipments directly from the API for historical data
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        // Fetch current post-arrival shipments
-        const postArrivalResponse = await authFetch(getApiUrl('/api/shipments/post-arrival'));
-        if (postArrivalResponse.ok) {
-          const data = await postArrivalResponse.json();
-          setPostArrivalShipments(data || []);
-        }
+        // Fetch ALL shipments from the database (including archived)
+        const response = await authFetch(getApiUrl('/api/shipments?limit=10000'));
+        if (response.ok) {
+          const result = await response.json();
+          const allShipments = result.data || result || [];
 
-        // Also fetch recently archived shipments (last 30 days)
-        const archivesResponse = await authFetch(getApiUrl('/api/shipments/archives'));
-        if (archivesResponse.ok) {
-          const archives = await archivesResponse.json();
+          // Normalize field names and filter for post-arrival statuses
+          const normalized = allShipments.map(s => ({
+            ...s,
+            latest_status: s.latest_status || s.latestStatus,
+            supplier: s.supplier,
+            product_name: s.product_name || s.productName,
+            receiving_warehouse: s.receiving_warehouse || s.receivingWarehouse
+          }));
 
-          // Get archives from last 30 days
-          const thirtyDaysAgo = new Date();
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-          const recentArchives = archives.filter(archive =>
-            new Date(archive.archivedAt) >= thirtyDaysAgo
+          // Filter for post-arrival statuses (including archived for historical data)
+          const postArrival = normalized.filter(shipment =>
+            POST_ARRIVAL_STATUSES.includes(shipment.latest_status)
           );
 
-          // Fetch data from each recent archive
-          const archiveData = await Promise.all(
-            recentArchives.map(async (archive) => {
-              try {
-                const dataResponse = await authFetch(getApiUrl(`/api/shipments/archives/${archive.fileName}`));
-                if (!dataResponse.ok) return [];
-                const data = await dataResponse.json();
-                return data.data || [];
-              } catch (error) {
-                console.error(`Error fetching archive ${archive.fileName}:`, error);
-                return [];
-              }
-            })
-          );
-
-          // Flatten all archived shipments and filter for post-arrival statuses
-          const allArchivedShipments = archiveData.flat();
-          const relevantArchived = allArchivedShipments.filter(shipment =>
-            POST_ARRIVAL_STATUSES.includes(shipment.latest_status || shipment.latestStatus)
-          );
-
-          setArchivedShipments(relevantArchived);
+          console.log('[PostArrivalWorkflowReport] Fetched shipments:', postArrival.length, 'statuses:', [...new Set(postArrival.map(s => s.latest_status))]);
+          setPostArrivalShipments(postArrival);
         }
       } catch (error) {
         console.error('Error fetching post-arrival data:', error);
