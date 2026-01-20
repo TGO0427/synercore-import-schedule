@@ -14,7 +14,7 @@ import filterPreferencesManager from '../utils/filterPreferences';
 function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreateShipment, loading }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState(['all']);
-  const [sortConfig, setSortConfig] = useState({ key: 'estimatedArrival', direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState({ key: 'weekNumber', direction: 'asc' });
   const [showAddShipmentDialog, setShowAddShipmentDialog] = useState(false);
   const [showAmendShipmentDialog, setShowAmendShipmentDialog] = useState(false);
   const [localTextValues, setLocalTextValues] = useState({});
@@ -82,6 +82,14 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
 
         if (aValue === null || aValue === undefined) return 1;
         if (bValue === null || bValue === undefined) return -1;
+
+        // Handle numeric fields
+        const numericFields = ['weekNumber', 'quantity', 'cbm', 'palletQty'];
+        if (numericFields.includes(sortConfig.key)) {
+          const aNum = Number(aValue) || 0;
+          const bNum = Number(bValue) || 0;
+          return sortConfig.direction === 'asc' ? aNum - bNum : bNum - aNum;
+        }
 
         if (aValue instanceof Date && bValue instanceof Date) {
           return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
