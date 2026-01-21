@@ -19,20 +19,17 @@ function OfflineIndicator() {
     };
   }, []);
 
-  // Only show when offline or disconnected
-  if (isOnline && isConnected) {
+  // Only show when network is offline (not for WebSocket fallback to polling)
+  if (isOnline) {
     return null;
   }
-
-  const isNetworkOffline = !isOnline;
-  const isWebSocketOffline = isOnline && !isConnected;
 
   return (
     <div style={{
       position: 'fixed',
       bottom: '20px',
       right: '20px',
-      backgroundColor: isNetworkOffline ? '#dc3545' : '#ff9800',
+      backgroundColor: '#dc3545',
       color: 'white',
       padding: '12px 16px',
       borderRadius: '4px',
@@ -45,17 +42,8 @@ function OfflineIndicator() {
     }}>
       <span style={{ fontSize: '1.2rem' }}>⚠️</span>
       <div>
-        {isNetworkOffline ? (
-          <div>
-            <div style={{ fontWeight: 'bold' }}>You are offline</div>
-            <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>Reconnecting...</div>
-          </div>
-        ) : (
-          <div>
-            <div style={{ fontWeight: 'bold' }}>Real-time sync unavailable</div>
-            <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>Using polling mode</div>
-          </div>
-        )}
+        <div style={{ fontWeight: 'bold' }}>You are offline</div>
+        <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>Reconnecting...</div>
       </div>
     </div>
   );
