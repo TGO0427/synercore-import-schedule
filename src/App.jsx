@@ -970,6 +970,20 @@ function App() {
             📰 FreightNews Customs
           </button>
 
+          <button
+            onClick={() => window.open('https://www.track-trace.com/', '_blank')}
+            style={{
+              width: '100%', padding: '0.75rem', backgroundColor: '#2563eb', color: 'white', border: 'none',
+              borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', gap: '0.5rem', transition: 'all 0.2s ease', marginTop: '0.5rem'
+            }}
+            onMouseEnter={(e) => { e.target.style.backgroundColor = '#1d4ed8'; e.target.style.transform = 'translateY(-1px)'; }}
+            onMouseLeave={(e) => { e.target.style.backgroundColor = '#2563eb'; e.target.style.transform = 'translateY(0)'; }}
+            title="Open Track-Trace container tracking in new tab"
+          >
+            📍 Track-Trace
+          </button>
+
           <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
             <h5 style={{ marginBottom: '0.75rem', fontSize: '0.85rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Freight Forwarding
