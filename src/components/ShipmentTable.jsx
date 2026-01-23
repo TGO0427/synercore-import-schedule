@@ -11,6 +11,49 @@ import { getApiUrl } from '../config/api';
 import { authFetch } from '../utils/authFetch';
 import filterPreferencesManager from '../utils/filterPreferences';
 
+// Forwarding agent options for airfreight (major passenger airlines with cargo divisions)
+const AIRFREIGHT_AGENTS = [
+  { value: 'Emirates SkyCargo', label: 'Emirates SkyCargo' },
+  { value: 'Qatar Airways Cargo', label: 'Qatar Airways Cargo' },
+  { value: 'Lufthansa Cargo', label: 'Lufthansa Cargo' },
+  { value: 'Singapore Airlines Cargo', label: 'Singapore Airlines Cargo' },
+  { value: 'Korean Air Cargo', label: 'Korean Air Cargo' },
+  { value: 'Turkish Airlines Cargo', label: 'Turkish Airlines Cargo' },
+  { value: 'Cathay Pacific Cargo', label: 'Cathay Pacific Cargo' },
+  { value: 'British Airways World Cargo', label: 'British Airways World Cargo' },
+  { value: 'Air France-KLM Cargo', label: 'Air France-KLM Cargo' },
+  { value: 'Ethiopian Airlines Cargo', label: 'Ethiopian Airlines Cargo' },
+  { value: 'SAA Cargo', label: 'SAA Cargo' },
+  { value: 'Kenya Airways Cargo', label: 'Kenya Airways Cargo' },
+];
+
+// Forwarding agent options for sea freight and other modes
+const SEAFREIGHT_AGENTS = [
+  { value: 'DHL', label: 'DHL' },
+  { value: 'DSV', label: 'DSV' },
+  { value: 'Afrigistics', label: 'Afrigistics' },
+  { value: 'MSC', label: 'MSC' },
+  { value: 'COSCO', label: 'COSCO' },
+  { value: 'ONE', label: 'ONE' },
+  { value: 'Hapag-Lloyd', label: 'Hapag-Lloyd' },
+  { value: 'Maersk', label: 'Maersk' },
+  { value: 'CMA CGM', label: 'CMA CGM' },
+  { value: 'Evergreen', label: 'Evergreen' },
+  { value: 'Yang Ming', label: 'Yang Ming' },
+  { value: 'HMM', label: 'HMM' },
+  { value: 'OOCL', label: 'OOCL' },
+];
+
+// Helper to check if status is airfreight-related
+const isAirfreightStatus = (status) => {
+  return status === 'planned_airfreight' || status === 'in_transit_airfreight' || status === 'air_customs_clearance';
+};
+
+// Get forwarding agents based on shipment status
+const getForwardingAgents = (status) => {
+  return isAirfreightStatus(status) ? AIRFREIGHT_AGENTS : SEAFREIGHT_AGENTS;
+};
+
 function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreateShipment, loading }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState(['all']);
@@ -1079,19 +1122,9 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                       }}
                     >
                       <option value="">Select Agent</option>
-                      <option value="DHL">DHL</option>
-                      <option value="DSV">DSV</option>
-                      <option value="Afrigistics">Afrigistics</option>
-                      <option value="MSC">MSC</option>
-                      <option value="COSCO">COSCO</option>
-                      <option value="ONE">ONE</option>
-                      <option value="Hapag-Lloyd">Hapag-Lloyd</option>
-                      <option value="Maersk">Maersk</option>
-                      <option value="CMA CGM">CMA CGM</option>
-                      <option value="Evergreen">Evergreen</option>
-                      <option value="Yang Ming">Yang Ming</option>
-                      <option value="HMM">HMM</option>
-                      <option value="OOCL">OOCL</option>
+                      {getForwardingAgents(edits[shipment.id]?.latestStatus ?? shipment.latestStatus).map(agent => (
+                        <option key={agent.value} value={agent.value}>{agent.label}</option>
+                      ))}
                     </select>
                   </td>
                   <td>
@@ -1384,19 +1417,9 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   }}
                 >
                   <option value="">Select Forwarding Agent</option>
-                  <option value="DHL">DHL</option>
-                  <option value="DSV">DSV</option>
-                  <option value="Afrigistics">Afrigistics</option>
-                  <option value="MSC">MSC</option>
-                  <option value="COSCO">COSCO</option>
-                  <option value="ONE">ONE</option>
-                  <option value="Hapag-Lloyd">Hapag-Lloyd</option>
-                  <option value="Maersk">Maersk</option>
-                  <option value="CMA CGM">CMA CGM</option>
-                  <option value="Evergreen">Evergreen</option>
-                  <option value="Yang Ming">Yang Ming</option>
-                  <option value="HMM">HMM</option>
-                  <option value="OOCL">OOCL</option>
+                  {getForwardingAgents(newShipment.latestStatus).map(agent => (
+                    <option key={agent.value} value={agent.value}>{agent.label}</option>
+                  ))}
                 </select>
               </div>
 
@@ -1707,19 +1730,9 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   }}
                 >
                   <option value="">Select Forwarding Agent</option>
-                  <option value="DHL">DHL</option>
-                  <option value="DSV">DSV</option>
-                  <option value="Afrigistics">Afrigistics</option>
-                  <option value="MSC">MSC</option>
-                  <option value="COSCO">COSCO</option>
-                  <option value="ONE">ONE</option>
-                  <option value="Hapag-Lloyd">Hapag-Lloyd</option>
-                  <option value="Maersk">Maersk</option>
-                  <option value="CMA CGM">CMA CGM</option>
-                  <option value="Evergreen">Evergreen</option>
-                  <option value="Yang Ming">Yang Ming</option>
-                  <option value="HMM">HMM</option>
-                  <option value="OOCL">OOCL</option>
+                  {getForwardingAgents(amendingShipment.latestStatus).map(agent => (
+                    <option key={agent.value} value={agent.value}>{agent.label}</option>
+                  ))}
                 </select>
               </div>
 
