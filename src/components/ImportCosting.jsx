@@ -404,20 +404,9 @@ function ImportCosting() {
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           {exchangeRate && (
             <div style={{ padding: '8px 12px', backgroundColor: '#f0f9ff', borderRadius: '6px', fontSize: '0.85rem' }}>
-              <span style={{ color: '#666' }}>USD/ZAR: </span>
+              <span style={{ color: '#666' }}>Market Rate: </span>
               <strong>{formatNumber(exchangeRate.rate, 4)}</strong>
-              {exchangeRate.isStale && <span style={{ color: '#f59e0b', marginLeft: '4px' }}>(stale)</span>}
-              <button
-                onClick={refreshExchangeRate}
-                disabled={rateLoading}
-                style={{
-                  marginLeft: '8px', padding: '2px 8px', fontSize: '0.75rem',
-                  backgroundColor: '#0ea5a8', color: 'white', border: 'none',
-                  borderRadius: '4px', cursor: 'pointer'
-                }}
-              >
-                {rateLoading ? '...' : 'Refresh'}
-              </button>
+              <span style={{ color: '#888', marginLeft: '4px', fontSize: '0.75rem' }}>(ref only - use Finex SA)</span>
             </div>
           )}
           <button
@@ -509,10 +498,11 @@ function ImportCosting() {
               {/* Section: Exchange Rate & Customs Value */}
               <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#ecfdf5', borderRadius: '8px' }}>
                 <h4 style={{ margin: '0 0 1rem', color: '#065f46', fontSize: '1rem' }}>Exchange Rate & Values</h4>
+                <p style={{ margin: '0 0 1rem', fontSize: '0.8rem', color: '#666' }}>Enter the Finex SA rate from your daily email</p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
                   <div style={{ marginBottom: '12px' }}>
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
-                      ROE Origin (USD/ZAR)
+                      Finex SA ROE (USD/ZAR)
                     </label>
                     <div style={{ display: 'flex', gap: '4px' }}>
                       <input
@@ -520,19 +510,20 @@ function ImportCosting() {
                         value={formData.roe_origin || ''}
                         onChange={(e) => handleInputChange('roe_origin', parseFloat(e.target.value) || '')}
                         className="input"
-                        style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid #ddd' }}
+                        style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '2px solid #10b981' }}
                         step="0.0001"
+                        placeholder="e.g. 18.50"
                       />
                       <button
                         type="button"
                         onClick={() => exchangeRate?.rate && handleInputChange('roe_origin', exchangeRate.rate)}
                         style={{
-                          padding: '8px 12px', backgroundColor: '#10b981', color: 'white',
+                          padding: '8px 12px', backgroundColor: '#6b7280', color: 'white',
                           border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem'
                         }}
-                        title="Use current rate"
+                        title="Use market rate (for reference)"
                       >
-                        Current
+                        Market
                       </button>
                     </div>
                   </div>
