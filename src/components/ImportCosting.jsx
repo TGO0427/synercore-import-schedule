@@ -204,6 +204,7 @@ function ImportCosting() {
         }
       });
       const dataToSend = { ...cleanedData, ...calculatedTotals };
+      console.log('Submitting costing data:', dataToSend);
 
       const url = editingId
         ? getApiUrl(`/api/costing/${editingId}`)
@@ -222,7 +223,9 @@ function ImportCosting() {
         fetchEstimates();
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to save cost estimate');
+        console.error('Save error details:', errorData);
+        const detailMsg = errorData.details?.map(d => `${d.path}: ${d.msg}`).join(', ');
+        setError(detailMsg || errorData.error || 'Failed to save cost estimate');
       }
     } catch (err) {
       console.error('Failed to save estimate:', err);
