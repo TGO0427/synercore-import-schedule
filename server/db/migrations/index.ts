@@ -14,7 +14,7 @@
  * 7. Data loading (JSON data import)
  */
 
-import pool from '../connection.js';
+import pool, { getPool } from '../connection.js';
 import { logInfo, logError } from '../../utils/logger.js';
 
 export enum MigrationStatus {
@@ -409,7 +409,7 @@ export const migrations: Migration[] = [
     description: 'Add foreign key constraints, soft-delete and audit columns',
     depends_on: ['schema.sql', 'add-notifications-tables', 'add-supplier-accounts'],
     execute: async () => {
-      const client = await pool.connect();
+      const client = await getPool().connect();
       try {
         await client.query('BEGIN');
 
@@ -799,7 +799,7 @@ export const migrations: Migration[] = [
     description: 'Update import cost estimates with new Local Charges and Destination Charges fields',
     depends_on: ['add-import-costing-tables'],
     execute: async () => {
-      const client = await pool.connect();
+      const client = await getPool().connect();
       try {
         await client.query('BEGIN');
 
