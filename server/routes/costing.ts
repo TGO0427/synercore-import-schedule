@@ -1,0 +1,272 @@
+/**
+ * Import Costing Routes
+ * API endpoints for cost estimates and exchange rates
+ */
+
+import { Router, Request, Response, NextFunction } from 'express';
+import { body, param, query, validationResult } from 'express-validator';
+import CostingController from '../controllers/CostingController.js';
+import { authenticateToken } from '../middleware/security.js';
+import { logInfo, logError } from '../utils/logger.js';
+
+const router = Router();
+
+// Helper: wrap async handlers
+const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) =>
+  (req: Request, res: Response, next: NextFunction) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+
+// Helper: validate request
+const validate = (req: Request, res: Response, next: NextFunction) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ error: 'Validation failed', details: errors.array() });
+  }
+  next();
+};
+
+// Validation rules
+const createCostEstimateValidation = [
+  body('supplier_name').optional().trim(),
+  body('port_of_discharge').optional().trim(),
+  body('container_type').optional().trim(),
+  body('quantity').optional().isInt({ min: 1 }),
+  body('gross_weight_kg').optional().isFloat({ min: 0 }),
+  body('total_gross_weight_kg').optional().isFloat({ min: 0 }),
+  body('roe_origin').optional().isFloat({ min: 0 }),
+  body('origin_charge_usd').optional().isFloat({ min: 0 }),
+  body('customs_value_zar').optional().isFloat({ min: 0 }),
+];
+
+const updateCostEstimateValidation = [
+  param('id').isString().notEmpty(),
+  ...createCostEstimateValidation,
+];
+
+// ==================== COST ESTIMATE ROUTES ====================
+
+/**
+ * GET /api/costing
+ * Get all cost estimates with optional filtering
+ */
+router.get(
+  '/',
+  authenticateToken,
+  [
+    query('status').optional().isIn(['draft', 'final', 'archived']),
+    query('supplierId').optional().isString(),
+    query('shipmentId').optional().isString(),
+    query('page').optional().isInt({ min: 1 }),
+    query('limit').optional().isInt({ min: 1, max: 100 }),
+  ],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const result = await CostingController.getCostEstimates({
+      status: req.query.status as string,
+      supplierId: req.query.supplierId as string,
+      shipmentId: req.query.shipmentId as string,
+      page: req.query.page ? parseInt(req.query.page as string) : 1,
+      limit: req.query.limit ? parseInt(req.query.limit as string) : 20,
+    });
+
+    res.json(result);
+  })
+);
+
+/**
+ * GET /api/costing/by-shipment/:shipmentId
+ * Get cost estimates for a specific shipment
+ */
+router.get(
+  '/by-shipment/:shipmentId',
+  authenticateToken,
+  [param('shipmentId').isString().notEmpty()],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const estimates = await CostingController.getByShipment(req.params.shipmentId);
+    res.json({ data: estimates });
+  })
+);
+
+/**
+ * GET /api/costing/:id
+ * Get a single cost estimate
+ */
+router.get(
+  '/:id',
+  authenticateToken,
+  [param('id').isString().notEmpty()],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const estimate = await CostingController.getCostEstimate(req.params.id);
+    if (!estimate) {
+      return res.status(404).json({ error: 'Cost estimate not found' });
+    }
+    res.json({ data: estimate });
+  })
+);
+
+/**
+ * POST /api/costing
+ * Create a new cost estimate
+ */
+router.post(
+  '/',
+  authenticateToken,
+  createCostEstimateValidation,
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user?.id;
+    const estimate = await CostingController.createCostEstimate({
+      ...req.body,
+      created_by: userId,
+    });
+
+    logInfo(`Cost estimate created: ${estimate.id}`);
+    res.status(201).json({ data: estimate, message: 'Cost estimate created successfully' });
+  })
+);
+
+/**
+ * PUT /api/costing/:id
+ * Update a cost estimate
+ */
+router.put(
+  '/:id',
+  authenticateToken,
+  updateCostEstimateValidation,
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const estimate = await CostingController.updateCostEstimate(req.params.id, req.body);
+    logInfo(`Cost estimate updated: ${req.params.id}`);
+    res.json({ data: estimate, message: 'Cost estimate updated successfully' });
+  })
+);
+
+/**
+ * DELETE /api/costing/:id
+ * Delete a cost estimate
+ */
+router.delete(
+  '/:id',
+  authenticateToken,
+  [param('id').isString().notEmpty()],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    await CostingController.deleteCostEstimate(req.params.id);
+    logInfo(`Cost estimate deleted: ${req.params.id}`);
+    res.json({ message: 'Cost estimate deleted successfully' });
+  })
+);
+
+/**
+ * POST /api/costing/:id/duplicate
+ * Duplicate a cost estimate
+ */
+router.post(
+  '/:id/duplicate',
+  authenticateToken,
+  [param('id').isString().notEmpty()],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const estimate = await CostingController.duplicateCostEstimate(req.params.id);
+    logInfo(`Cost estimate duplicated: ${req.params.id} -> ${estimate.id}`);
+    res.status(201).json({ data: estimate, message: 'Cost estimate duplicated successfully' });
+  })
+);
+
+/**
+ * POST /api/costing/:id/link-shipment
+ * Link cost estimate to a shipment
+ */
+router.post(
+  '/:id/link-shipment',
+  authenticateToken,
+  [
+    param('id').isString().notEmpty(),
+    body('shipmentId').isString().notEmpty(),
+  ],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const estimate = await CostingController.linkToShipment(req.params.id, req.body.shipmentId);
+    logInfo(`Cost estimate ${req.params.id} linked to shipment ${req.body.shipmentId}`);
+    res.json({ data: estimate, message: 'Cost estimate linked to shipment' });
+  })
+);
+
+/**
+ * DELETE /api/costing/:id/link-shipment
+ * Unlink cost estimate from shipment
+ */
+router.delete(
+  '/:id/link-shipment',
+  authenticateToken,
+  [param('id').isString().notEmpty()],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const estimate = await CostingController.unlinkFromShipment(req.params.id);
+    logInfo(`Cost estimate ${req.params.id} unlinked from shipment`);
+    res.json({ data: estimate, message: 'Cost estimate unlinked from shipment' });
+  })
+);
+
+// ==================== EXCHANGE RATE ROUTES ====================
+
+/**
+ * GET /api/costing/exchange-rate/current
+ * Get current USD/ZAR exchange rate
+ */
+router.get(
+  '/exchange-rate/current',
+  authenticateToken,
+  asyncHandler(async (req: Request, res: Response) => {
+    const rate = await CostingController.getExchangeRate();
+    res.json({ data: rate });
+  })
+);
+
+/**
+ * POST /api/costing/exchange-rate/refresh
+ * Force refresh exchange rate from API
+ */
+router.post(
+  '/exchange-rate/refresh',
+  authenticateToken,
+  asyncHandler(async (req: Request, res: Response) => {
+    const rate = await CostingController.refreshExchangeRate();
+    logInfo('Exchange rate refreshed');
+    res.json({ data: rate, message: 'Exchange rate refreshed' });
+  })
+);
+
+/**
+ * POST /api/costing/exchange-rate/manual
+ * Set manual exchange rate
+ */
+router.post(
+  '/exchange-rate/manual',
+  authenticateToken,
+  [body('rate').isFloat({ min: 0 })],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const rate = await CostingController.setManualExchangeRate(req.body.rate);
+    logInfo(`Manual exchange rate set: ${req.body.rate}`);
+    res.json({ data: rate, message: 'Exchange rate set manually' });
+  })
+);
+
+/**
+ * POST /api/costing/calculate
+ * Calculate totals without saving (for live preview)
+ */
+router.post(
+  '/calculate',
+  authenticateToken,
+  asyncHandler(async (req: Request, res: Response) => {
+    const totals = CostingController.calculateAllTotals(req.body);
+    res.json({ data: totals });
+  })
+);
+
+export default router;

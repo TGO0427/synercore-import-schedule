@@ -21,6 +21,7 @@ import HelpGuide from './components/HelpGuide';
 import UserManagement from './components/UserManagement';
 import NotificationPreferences from './components/NotificationPreferences';
 import OfflineIndicator from './components/OfflineIndicator';
+import ImportCosting from './components/ImportCosting';
 import SupplierLogin from './pages/SupplierLogin';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -828,6 +829,8 @@ function App() {
         );
       case 'rates':
         return <RatesQuotes showSuccess={showSuccess} showError={showError} loading={loading} />;
+      case 'costing':
+        return <ImportCosting />;
       case 'workflow':
         return <PostArrivalWorkflow showSuccess={showSuccess} showError={showError} showWarning={showWarning} />;
       case 'stored': {
@@ -899,6 +902,7 @@ function App() {
           <li><button className={activeView === 'advanced-reports' ? 'active' : ''} onClick={() => setActiveView('advanced-reports')}>📈 Advanced Reports</button></li>
           <li><button className={activeView === 'archives' ? 'active' : ''} onClick={() => setActiveView('archives')}>📦 Shipment Archives</button></li>
           <li><button className={activeView === 'rates' ? 'active' : ''} onClick={() => setActiveView('rates')}>💰 Rates & Quotes</button></li>
+          <li><button className={activeView === 'costing' ? 'active' : ''} onClick={() => setActiveView('costing')}>📊 Import Costing</button></li>
           <li><button className={activeView === 'stored' ? 'active' : ''} onClick={() => setActiveView('stored')}>🏪 Warehouse Stored</button></li>
           <li style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
             <button onClick={() => setShowSupplierPortal(true)} style={{ width: '100%', textAlign: 'left', backgroundColor: '#1e7e8c' }} title="Access the supplier portal">🏢 Supplier Portal</button>

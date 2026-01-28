@@ -677,6 +677,116 @@ export const migrations: Migration[] = [
       return true;
     },
   },
+
+  // Phase 6: Import Costing Feature
+  {
+    name: 'add-import-costing-tables',
+    version: '014',
+    description: 'Create import cost estimates and exchange rate cache tables',
+    depends_on: ['schema.sql'],
+    execute: async () => {
+      // Create import_cost_estimates table
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS import_cost_estimates (
+          id VARCHAR(255) PRIMARY KEY,
+          shipment_id VARCHAR(255) REFERENCES shipments(id) ON DELETE SET NULL,
+          supplier_id VARCHAR(255) REFERENCES suppliers(id) ON DELETE SET NULL,
+
+          -- Header Section
+          reference_number VARCHAR(100),
+          country_of_destination VARCHAR(100) DEFAULT 'South Africa',
+          port_of_discharge VARCHAR(50),
+          shipping_line VARCHAR(100),
+          routing VARCHAR(255),
+          frequency VARCHAR(50),
+          transit_time_days INTEGER,
+          inco_terms VARCHAR(20),
+          inco_term_place VARCHAR(100),
+          container_type VARCHAR(50),
+          quantity INTEGER DEFAULT 1,
+          hs_code VARCHAR(50),
+          gross_weight_kg NUMERIC(12,2),
+          total_gross_weight_kg NUMERIC(12,2),
+          origin_rate_usd NUMERIC(12,2),
+          ocean_freight_rate_usd NUMERIC(12,2),
+          commodity VARCHAR(255),
+          customs_value_zar NUMERIC(14,2),
+          supplier_name VARCHAR(255),
+          validity_date DATE,
+          costing_date DATE DEFAULT CURRENT_DATE,
+          payment_terms VARCHAR(100),
+          roe_origin NUMERIC(12,6),
+
+          -- Origin Charges (USD)
+          origin_charge_usd NUMERIC(12,2) DEFAULT 0,
+          origin_charge_zar NUMERIC(14,2) DEFAULT 0,
+          total_origin_charges_zar NUMERIC(14,2) DEFAULT 0,
+
+          -- Destination Charges (ZAR)
+          thc_zar NUMERIC(12,2) DEFAULT 0,
+          gate_door_zar NUMERIC(12,2) DEFAULT 0,
+          insurance_zar NUMERIC(12,2) DEFAULT 0,
+          shipping_line_fee_zar NUMERIC(12,2) DEFAULT 0,
+          port_inland_release_fee_zar NUMERIC(12,2) DEFAULT 0,
+          cto_zar NUMERIC(12,2) DEFAULT 0,
+          transport_port_to_warehouse_zar NUMERIC(12,2) DEFAULT 0,
+          delivery_only_trans_zar NUMERIC(12,2) DEFAULT 0,
+          unpack_reload_zar NUMERIC(12,2) DEFAULT 0,
+          destination_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0,
+
+          -- Customs Disbursements
+          customs_duty_zar NUMERIC(12,2) DEFAULT 0,
+          customs_duty_not_applicable BOOLEAN DEFAULT false,
+          customs_disbursements_subtotal_zar NUMERIC(14,2) DEFAULT 0,
+
+          -- Clearing Charges (ZAR)
+          documentation_fee_zar NUMERIC(12,2) DEFAULT 0,
+          communication_fee_zar NUMERIC(12,2) DEFAULT 0,
+          edif_fee_zar NUMERIC(12,2) DEFAULT 0,
+          plant_inspection_zar NUMERIC(12,2) DEFAULT 0,
+          portbuild_zar NUMERIC(12,2) DEFAULT 0,
+          davif_zar NUMERIC(12,2) DEFAULT 0,
+          agency_zar NUMERIC(12,2) DEFAULT 0,
+          clearing_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0,
+
+          -- Calculated Totals
+          total_shipping_cost_zar NUMERIC(14,2) DEFAULT 0,
+          total_in_warehouse_cost_zar NUMERIC(14,2) DEFAULT 0,
+          all_in_warehouse_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0,
+
+          -- Metadata
+          status VARCHAR(50) DEFAULT 'draft',
+          notes TEXT,
+          created_by VARCHAR(255),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      // Create exchange rate cache table
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS exchange_rate_cache (
+          id SERIAL PRIMARY KEY,
+          currency_pair VARCHAR(10) NOT NULL UNIQUE,
+          rate NUMERIC(12,6) NOT NULL,
+          source VARCHAR(100),
+          fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      // Create indexes
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_cost_estimates_shipment ON import_cost_estimates(shipment_id);
+        CREATE INDEX IF NOT EXISTS idx_cost_estimates_supplier ON import_cost_estimates(supplier_id);
+        CREATE INDEX IF NOT EXISTS idx_cost_estimates_date ON import_cost_estimates(costing_date);
+        CREATE INDEX IF NOT EXISTS idx_cost_estimates_status ON import_cost_estimates(status);
+        CREATE INDEX IF NOT EXISTS idx_exchange_rate_pair ON exchange_rate_cache(currency_pair);
+      `);
+
+      logInfo('Import costing tables created successfully');
+      return true;
+    },
+  },
 ];
 
 /**
