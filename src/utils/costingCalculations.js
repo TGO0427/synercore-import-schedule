@@ -59,6 +59,18 @@ export const calculateEurChargeZAR = (originChargeEur, roeEur) => {
 };
 
 /**
+ * Calculate Customs Value from invoice values
+ */
+export const calculateCustomsValue = (data) => {
+  const roeOrigin = parseFloat(data.roe_origin) || 0;
+  const roeEur = parseFloat(data.roe_eur) || 0;
+  const invoiceValueUsd = parseFloat(data.invoice_value_usd) || 0;
+  const invoiceValueEur = parseFloat(data.invoice_value_eur) || 0;
+
+  return (invoiceValueUsd * roeOrigin) + (invoiceValueEur * roeEur);
+};
+
+/**
  * Calculate all totals from form data
  */
 export const calculateAllTotals = (data) => {
@@ -66,8 +78,10 @@ export const calculateAllTotals = (data) => {
   const roeEur = parseFloat(data.roe_eur) || 0;        // EUR/ZAR
   const originChargeUsd = parseFloat(data.origin_charge_usd) || 0;
   const originChargeEur = parseFloat(data.origin_charge_eur) || 0;
-  const customsValueZar = parseFloat(data.customs_value_zar) || 0;
   const totalGrossWeightKg = parseFloat(data.total_gross_weight_kg) || 0;
+
+  // Calculate Customs Value from invoice values (auto-calculated)
+  const customsValueZar = calculateCustomsValue(data);
 
   // Origin charges conversion (both USD and EUR)
   const originChargeUsdZar = calculateOriginChargeZAR(originChargeUsd, roeOrigin);
@@ -104,6 +118,7 @@ export const calculateAllTotals = (data) => {
     : 0;
 
   return {
+    customs_value_zar: Math.round(customsValueZar * 100) / 100,
     origin_charge_usd_zar: Math.round(originChargeUsdZar * 100) / 100,
     origin_charge_eur_zar: Math.round(originChargeEurZar * 100) / 100,
     origin_charge_zar: Math.round((originChargeUsdZar + originChargeEurZar) * 100) / 100,

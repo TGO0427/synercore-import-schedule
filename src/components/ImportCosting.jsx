@@ -53,7 +53,8 @@ const INITIAL_FORM_STATE = {
   origin_rate_usd: '',
   ocean_freight_rate_usd: '',
   commodity: '',
-  customs_value_zar: '',
+  invoice_value_usd: '',  // Invoice/FOB value in USD
+  invoice_value_eur: '',  // Invoice/FOB value in EUR
   supplier_name: '',
   validity_date: '',
   costing_date: new Date().toISOString().split('T')[0],
@@ -554,7 +555,41 @@ function ImportCosting() {
                     />
                   </div>
                   {renderCurrencyInput('Origin Rate', 'origin_rate_usd', 'USD')}
-                  {renderCurrencyInput('Customs Value', 'customs_value_zar', 'ZAR')}
+                  {renderCurrencyInput('Ocean Freight', 'ocean_freight_rate_usd', 'USD')}
+                </div>
+              </div>
+
+              {/* Section: Invoice Value & Customs Value */}
+              <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fef3c7', borderRadius: '8px' }}>
+                <h4 style={{ margin: '0 0 1rem', color: '#92400e', fontSize: '1rem' }}>Invoice Value (FOB/CIF Value)</h4>
+                <p style={{ margin: '0 0 1rem', fontSize: '0.8rem', color: '#666' }}>Enter the invoice value - Customs Value will be calculated automatically</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                  {renderCurrencyInput('Invoice Value', 'invoice_value_usd', 'USD')}
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#166534' }}>
+                      USD to ZAR - Auto
+                    </label>
+                    <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', borderRadius: '6px', fontWeight: '600', color: '#166534' }}>
+                      {formatCurrency((parseFloat(formData.invoice_value_usd) || 0) * (parseFloat(formData.roe_origin) || 0))}
+                    </div>
+                  </div>
+                  {renderCurrencyInput('Invoice Value', 'invoice_value_eur', 'EUR')}
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#1d4ed8' }}>
+                      EUR to ZAR - Auto
+                    </label>
+                    <div style={{ padding: '8px 12px', backgroundColor: '#dbeafe', borderRadius: '6px', fontWeight: '600', color: '#1d4ed8' }}>
+                      {formatCurrency((parseFloat(formData.invoice_value_eur) || 0) * (parseFloat(formData.roe_eur) || 0))}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ marginTop: '1rem', padding: '12px', backgroundColor: '#fde68a', borderRadius: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: '500', color: '#92400e' }}>Customs Value (ZAR) - Auto Calculated</span>
+                    <span style={{ fontSize: '1.25rem', fontWeight: '700', color: '#92400e' }}>
+                      {formatCurrency(calculatedTotals.customs_value_zar)}
+                    </span>
+                  </div>
                 </div>
               </div>
 
