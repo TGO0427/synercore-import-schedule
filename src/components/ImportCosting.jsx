@@ -196,7 +196,14 @@ function ImportCosting() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const dataToSend = { ...formData, ...calculatedTotals };
+      // Clean data - convert empty strings to null for numeric fields
+      const cleanedData = { ...formData };
+      Object.keys(cleanedData).forEach(key => {
+        if (cleanedData[key] === '') {
+          cleanedData[key] = null;
+        }
+      });
+      const dataToSend = { ...cleanedData, ...calculatedTotals };
 
       const url = editingId
         ? getApiUrl(`/api/costing/${editingId}`)
