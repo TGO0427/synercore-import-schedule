@@ -805,8 +805,10 @@ export const migrations: Migration[] = [
 
         // Add new Local Charges columns
         const localChargeColumns = [
-          'local_cartage_zar NUMERIC(12,2) DEFAULT 0',
+          'local_cartage_cpt_klapmuts_zar NUMERIC(12,2) DEFAULT 0',
+          'transport_dbn_to_pretoria_zar NUMERIC(12,2) DEFAULT 0',
           'transport_to_warehouse_zar NUMERIC(12,2) DEFAULT 0',
+          'unpack_reload_zar NUMERIC(12,2) DEFAULT 0',
           'storage_zar NUMERIC(12,2) DEFAULT 0',
           'storage_days INTEGER DEFAULT 0',
           'outlying_depot_surcharge_zar NUMERIC(12,2) DEFAULT 0',

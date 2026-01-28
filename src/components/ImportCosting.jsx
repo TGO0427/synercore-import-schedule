@@ -65,7 +65,8 @@ const INITIAL_FORM_STATE = {
   origin_charge_usd: 0,
   origin_charge_eur: 0,
   // Local Charges (Transport/Cartage)
-  local_cartage_zar: 0,
+  local_cartage_cpt_klapmuts_zar: 0,
+  transport_dbn_to_pretoria_zar: 0,
   transport_to_warehouse_zar: 0,
   unpack_reload_zar: 0,
   storage_zar: 0,
@@ -301,11 +302,12 @@ function ImportCosting() {
       startY: doc.lastAutoTable.finalY + 10,
       head: [['Local Charges (Transport/Cartage)', 'ZAR']],
       body: [
-        ['Local Cartage', formatCurrency(estimate.local_cartage_zar)],
+        ['Local Cartage CPT to Klapmuts', formatCurrency(estimate.local_cartage_cpt_klapmuts_zar)],
+        ['Transport DBN Port to Pretoria', formatCurrency(estimate.transport_dbn_to_pretoria_zar)],
         ['Transport to Warehouse', formatCurrency(estimate.transport_to_warehouse_zar)],
         ['Unpack & Reload', formatCurrency(estimate.unpack_reload_zar)],
         ['Storage', formatCurrency(estimate.storage_zar)],
-        ['Outlying Depot Surcharge', formatCurrency(estimate.outlying_depot_surcharge_zar)],
+        ['Outlying Container Depot Surcharge', formatCurrency(estimate.outlying_depot_surcharge_zar)],
         ['Sub-Total', formatCurrency(totals.local_charges_subtotal_zar)],
       ],
       theme: 'grid',
@@ -652,12 +654,13 @@ function ImportCosting() {
               <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f0fdf4', borderRadius: '8px' }}>
                 <h4 style={{ margin: '0 0 1rem', color: '#166534', fontSize: '1rem' }}>Local Charges (Transport/Cartage) - ZAR</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-                  {renderCurrencyInput('Local Cartage', 'local_cartage_zar')}
+                  {renderCurrencyInput('Local Cartage CPT to Klapmuts', 'local_cartage_cpt_klapmuts_zar')}
+                  {renderCurrencyInput('Transport DBN Port to Pretoria', 'transport_dbn_to_pretoria_zar')}
                   {renderCurrencyInput('Transport to Warehouse', 'transport_to_warehouse_zar')}
                   {renderCurrencyInput('Unpack & Reload', 'unpack_reload_zar')}
                   {renderCurrencyInput('Storage', 'storage_zar')}
                   {renderInput('Storage Days', 'storage_days', 'number')}
-                  {renderCurrencyInput('Outlying Depot Surcharge', 'outlying_depot_surcharge_zar')}
+                  {renderCurrencyInput('Outlying Container Depot Surcharge', 'outlying_depot_surcharge_zar')}
                   <div style={{ marginBottom: '12px' }}>
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
                       Local Charges Sub-Total - Auto

@@ -184,7 +184,8 @@ export class CostingController {
 
     // Local charges subtotal (Transport/Cartage)
     const localChargesSubtotalZar =
-      (Number(data.local_cartage_zar) || 0) +
+      (Number(data.local_cartage_cpt_klapmuts_zar) || 0) +
+      (Number(data.transport_dbn_to_pretoria_zar) || 0) +
       (Number(data.transport_to_warehouse_zar) || 0) +
       (Number(data.unpack_reload_zar) || 0) +
       (Number(data.storage_zar) || 0) +

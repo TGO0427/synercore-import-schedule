@@ -42,7 +42,8 @@ export interface ImportCostEstimate {
   origin_charge_zar: number;
   total_origin_charges_zar: number;
   // Local Charges (Transport/Cartage)
-  local_cartage_zar: number;
+  local_cartage_cpt_klapmuts_zar: number;
+  transport_dbn_to_pretoria_zar: number;
   transport_to_warehouse_zar: number;
   unpack_reload_zar: number;
   storage_zar: number;
@@ -96,7 +97,7 @@ const COST_ESTIMATE_COLUMNS = [
   'payment_terms', 'roe_origin', 'roe_eur', 'origin_charge_usd', 'origin_charge_eur', 'origin_charge_zar',
   'total_origin_charges_zar',
   // Local Charges
-  'local_cartage_zar', 'transport_to_warehouse_zar', 'unpack_reload_zar', 'storage_zar',
+  'local_cartage_cpt_klapmuts_zar', 'transport_dbn_to_pretoria_zar', 'transport_to_warehouse_zar', 'unpack_reload_zar', 'storage_zar',
   'storage_days', 'outlying_depot_surcharge_zar', 'local_charges_subtotal_zar',
   // Destination Charges
   'shipping_line_charges_zar', 'cargo_dues_zar', 'cto_fee_zar', 'port_health_inspection_zar',
@@ -206,7 +207,8 @@ export class CostingRepository {
       origin_charge_zar: data.origin_charge_zar || 0,
       total_origin_charges_zar: data.total_origin_charges_zar || 0,
       // Local Charges
-      local_cartage_zar: data.local_cartage_zar || 0,
+      local_cartage_cpt_klapmuts_zar: data.local_cartage_cpt_klapmuts_zar || 0,
+      transport_dbn_to_pretoria_zar: data.transport_dbn_to_pretoria_zar || 0,
       transport_to_warehouse_zar: data.transport_to_warehouse_zar || 0,
       unpack_reload_zar: data.unpack_reload_zar || 0,
       storage_zar: data.storage_zar || 0,
