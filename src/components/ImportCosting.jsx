@@ -65,21 +65,29 @@ const INITIAL_FORM_STATE = {
   origin_charge_usd: 0,
   origin_charge_eur: 0,
   // Local Charges (Transport/Cartage)
-  local_cartage_cpt_klapmuts_zar: 0,
-  transport_dbn_to_pretoria_zar: 0,
-  transport_to_warehouse_zar: 0,
+  local_cartage_cpt_klapmuts_20ton_zar: 0,
+  local_cartage_cpt_klapmuts_28ton_zar: 0,
+  transport_dbn_to_pretoria_20ft_zar: 0,
+  transport_dbn_to_pretoria_40ft_zar: 0,
+  transport_dbn_to_whs_zar: 0,
   unpack_reload_zar: 0,
   storage_zar: 0,
   storage_days: 0,
   outlying_depot_surcharge_zar: 0,
+  local_cartage_dbn_whs_pretoria_opt_a_zar: 0,
+  local_cartage_dbn_whs_pretoria_opt_b_zar: 0,
+  local_cartage_dbn_whs_pretoria_6m_zar: 0,
+  local_cartage_dbn_whs_pretoria_12m_zar: 0,
+  transport_pe_coega_to_pretoria_zar: 0,
   // Destination Charges (Port/Shipping)
   shipping_line_charges_zar: 0,
-  cargo_dues_zar: 0,
+  cargo_dues_20ft_zar: 0,
+  cargo_dues_40ft_zar: 0,
   cto_fee_zar: 0,
   port_health_inspection_zar: 0,
-  sars_inspection_zar: 0,
-  state_vet_fee_zar: 0,
-  inb_turn_in_zar: 0,
+  daff_inspection_zar: 0,
+  state_vet_cancellation_fee_zar: 0,
+  jnb_turn_in_zar: 0,
   // Customs & Duties
   duties_zar: 0,
   customs_vat_zar: 0,
@@ -302,12 +310,19 @@ function ImportCosting() {
       startY: doc.lastAutoTable.finalY + 10,
       head: [['Local Charges (Transport/Cartage)', 'ZAR']],
       body: [
-        ['Local Cartage CPT to Klapmuts', formatCurrency(estimate.local_cartage_cpt_klapmuts_zar)],
-        ['Transport DBN Port to Pretoria', formatCurrency(estimate.transport_dbn_to_pretoria_zar)],
-        ['Transport to Warehouse', formatCurrency(estimate.transport_to_warehouse_zar)],
-        ['Unpack & Reload', formatCurrency(estimate.unpack_reload_zar)],
+        ['Local Cartage: CPT to Klapmuts (<20 Ton)', formatCurrency(estimate.local_cartage_cpt_klapmuts_20ton_zar)],
+        ['Local Cartage: CPT to Klapmuts (21-28 Ton)', formatCurrency(estimate.local_cartage_cpt_klapmuts_28ton_zar)],
+        ['Transport: DBN Port to Pretoria (20FT)', formatCurrency(estimate.transport_dbn_to_pretoria_20ft_zar)],
+        ['Transport: DBN Port to Pretoria (40FT)', formatCurrency(estimate.transport_dbn_to_pretoria_40ft_zar)],
+        ['Transport: DBN Port to WHS', formatCurrency(estimate.transport_dbn_to_whs_zar)],
+        ['Unpack / Reload', formatCurrency(estimate.unpack_reload_zar)],
         ['Storage', formatCurrency(estimate.storage_zar)],
         ['Outlying Container Depot Surcharge', formatCurrency(estimate.outlying_depot_surcharge_zar)],
+        ['Local Cartage: DBN WHS to PTA (Tautliner A)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_opt_a_zar)],
+        ['Local Cartage: DBN WHS to PTA (Tautliner B)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_opt_b_zar)],
+        ['Local Cartage: DBN WHS to PTA (6M Deck)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_6m_zar)],
+        ['Local Cartage: DBN WHS to PTA (12M Deck)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_12m_zar)],
+        ['Transport: PE/Coega Port to Pretoria', formatCurrency(estimate.transport_pe_coega_to_pretoria_zar)],
         ['Sub-Total', formatCurrency(totals.local_charges_subtotal_zar)],
       ],
       theme: 'grid',
@@ -317,15 +332,16 @@ function ImportCosting() {
     // Destination Charges
     doc.autoTable({
       startY: doc.lastAutoTable.finalY + 10,
-      head: [['Destination Charges (Port/Shipping)', 'ZAR']],
+      head: [['Destination Charges', 'ZAR']],
       body: [
-        ['Shipping Line Charges', formatCurrency(estimate.shipping_line_charges_zar)],
-        ['Cargo Dues', formatCurrency(estimate.cargo_dues_zar)],
+        ['Shipping Line Charges (At Cost)', formatCurrency(estimate.shipping_line_charges_zar)],
+        ['Cargo Dues (20FT)', formatCurrency(estimate.cargo_dues_20ft_zar)],
+        ['Cargo Dues (40FT)', formatCurrency(estimate.cargo_dues_40ft_zar)],
         ['CTO Fee', formatCurrency(estimate.cto_fee_zar)],
         ['Port Health Inspection', formatCurrency(estimate.port_health_inspection_zar)],
-        ['SARS Inspection', formatCurrency(estimate.sars_inspection_zar)],
-        ['State Vet Fee', formatCurrency(estimate.state_vet_fee_zar)],
-        ['INB Turn In', formatCurrency(estimate.inb_turn_in_zar)],
+        ['DAFF Inspection', formatCurrency(estimate.daff_inspection_zar)],
+        ['State Vet Cancellation Fee', formatCurrency(estimate.state_vet_cancellation_fee_zar)],
+        ['JNB Turn In (At Cost)', formatCurrency(estimate.jnb_turn_in_zar)],
         ['Sub-Total', formatCurrency(totals.destination_charges_subtotal_zar)],
       ],
       theme: 'grid',
@@ -653,14 +669,21 @@ function ImportCosting() {
               {/* Section: Local Charges (Transport/Cartage) */}
               <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f0fdf4', borderRadius: '8px' }}>
                 <h4 style={{ margin: '0 0 1rem', color: '#166534', fontSize: '1rem' }}>Local Charges (Transport/Cartage) - ZAR</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-                  {renderCurrencyInput('Local Cartage CPT to Klapmuts', 'local_cartage_cpt_klapmuts_zar')}
-                  {renderCurrencyInput('Transport DBN Port to Pretoria', 'transport_dbn_to_pretoria_zar')}
-                  {renderCurrencyInput('Transport to Warehouse', 'transport_to_warehouse_zar')}
-                  {renderCurrencyInput('Unpack & Reload', 'unpack_reload_zar')}
-                  {renderCurrencyInput('Storage', 'storage_zar')}
-                  {renderInput('Storage Days', 'storage_days', 'number')}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                  {renderCurrencyInput('Local Cartage: CPT to Klapmuts (<20 Ton)', 'local_cartage_cpt_klapmuts_20ton_zar')}
+                  {renderCurrencyInput('Local Cartage: CPT to Klapmuts (21-28 Ton)', 'local_cartage_cpt_klapmuts_28ton_zar')}
+                  {renderCurrencyInput('Transport: DBN Port to Pretoria (20FT)', 'transport_dbn_to_pretoria_20ft_zar')}
+                  {renderCurrencyInput('Transport: DBN Port to Pretoria (40FT)', 'transport_dbn_to_pretoria_40ft_zar')}
+                  {renderCurrencyInput('Transport: DBN Port to WHS', 'transport_dbn_to_whs_zar')}
+                  {renderCurrencyInput('Unpack / Reload', 'unpack_reload_zar')}
+                  {renderCurrencyInput('Storage (Per Pallet Per Day)', 'storage_zar')}
+                  {renderInput('Storage Days (3 Days Free)', 'storage_days', 'number')}
                   {renderCurrencyInput('Outlying Container Depot Surcharge', 'outlying_depot_surcharge_zar')}
+                  {renderCurrencyInput('Local Cartage: DBN WHS to PTA (Tautliner A)', 'local_cartage_dbn_whs_pretoria_opt_a_zar')}
+                  {renderCurrencyInput('Local Cartage: DBN WHS to PTA (Tautliner B)', 'local_cartage_dbn_whs_pretoria_opt_b_zar')}
+                  {renderCurrencyInput('Local Cartage: DBN WHS to PTA (6M Deck)', 'local_cartage_dbn_whs_pretoria_6m_zar')}
+                  {renderCurrencyInput('Local Cartage: DBN WHS to PTA (12M Deck)', 'local_cartage_dbn_whs_pretoria_12m_zar')}
+                  {renderCurrencyInput('Transport: PE/Coega Port to Pretoria', 'transport_pe_coega_to_pretoria_zar')}
                   <div style={{ marginBottom: '12px' }}>
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
                       Local Charges Sub-Total - Auto
@@ -674,15 +697,16 @@ function ImportCosting() {
 
               {/* Section: Destination Charges (Port/Shipping) */}
               <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#eff6ff', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 1rem', color: '#1e40af', fontSize: '1rem' }}>Destination Charges (Port/Shipping) - ZAR</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-                  {renderCurrencyInput('Shipping Line Charges', 'shipping_line_charges_zar')}
-                  {renderCurrencyInput('Cargo Dues', 'cargo_dues_zar')}
+                <h4 style={{ margin: '0 0 1rem', color: '#1e40af', fontSize: '1rem' }}>Destination Charges - ZAR</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                  {renderCurrencyInput('Shipping Line Charges (At Cost)', 'shipping_line_charges_zar')}
+                  {renderCurrencyInput('Cargo Dues (20FT)', 'cargo_dues_20ft_zar')}
+                  {renderCurrencyInput('Cargo Dues (40FT)', 'cargo_dues_40ft_zar')}
                   {renderCurrencyInput('CTO Fee', 'cto_fee_zar')}
                   {renderCurrencyInput('Port Health Inspection', 'port_health_inspection_zar')}
-                  {renderCurrencyInput('SARS Inspection', 'sars_inspection_zar')}
-                  {renderCurrencyInput('State Vet Fee', 'state_vet_fee_zar')}
-                  {renderCurrencyInput('INB Turn In', 'inb_turn_in_zar')}
+                  {renderCurrencyInput('DAFF Inspection', 'daff_inspection_zar')}
+                  {renderCurrencyInput('State Vet Cancellation Fee', 'state_vet_cancellation_fee_zar')}
+                  {renderCurrencyInput('JNB Turn In (At Cost)', 'jnb_turn_in_zar')}
                   <div style={{ marginBottom: '12px' }}>
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
                       Destination Sub-Total - Auto

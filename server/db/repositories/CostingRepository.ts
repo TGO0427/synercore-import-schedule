@@ -42,22 +42,30 @@ export interface ImportCostEstimate {
   origin_charge_zar: number;
   total_origin_charges_zar: number;
   // Local Charges (Transport/Cartage)
-  local_cartage_cpt_klapmuts_zar: number;
-  transport_dbn_to_pretoria_zar: number;
-  transport_to_warehouse_zar: number;
+  local_cartage_cpt_klapmuts_20ton_zar: number;
+  local_cartage_cpt_klapmuts_28ton_zar: number;
+  transport_dbn_to_pretoria_20ft_zar: number;
+  transport_dbn_to_pretoria_40ft_zar: number;
+  transport_dbn_to_whs_zar: number;
   unpack_reload_zar: number;
   storage_zar: number;
   storage_days: number;
   outlying_depot_surcharge_zar: number;
+  local_cartage_dbn_whs_pretoria_opt_a_zar: number;
+  local_cartage_dbn_whs_pretoria_opt_b_zar: number;
+  local_cartage_dbn_whs_pretoria_6m_zar: number;
+  local_cartage_dbn_whs_pretoria_12m_zar: number;
+  transport_pe_coega_to_pretoria_zar: number;
   local_charges_subtotal_zar: number;
   // Destination Charges (Port/Shipping)
   shipping_line_charges_zar: number;
-  cargo_dues_zar: number;
+  cargo_dues_20ft_zar: number;
+  cargo_dues_40ft_zar: number;
   cto_fee_zar: number;
   port_health_inspection_zar: number;
-  sars_inspection_zar: number;
-  state_vet_fee_zar: number;
-  inb_turn_in_zar: number;
+  daff_inspection_zar: number;
+  state_vet_cancellation_fee_zar: number;
+  jnb_turn_in_zar: number;
   destination_charges_subtotal_zar: number;
   // Customs & Duties
   duties_zar: number;
@@ -97,11 +105,16 @@ const COST_ESTIMATE_COLUMNS = [
   'payment_terms', 'roe_origin', 'roe_eur', 'origin_charge_usd', 'origin_charge_eur', 'origin_charge_zar',
   'total_origin_charges_zar',
   // Local Charges
-  'local_cartage_cpt_klapmuts_zar', 'transport_dbn_to_pretoria_zar', 'transport_to_warehouse_zar', 'unpack_reload_zar', 'storage_zar',
-  'storage_days', 'outlying_depot_surcharge_zar', 'local_charges_subtotal_zar',
+  'local_cartage_cpt_klapmuts_20ton_zar', 'local_cartage_cpt_klapmuts_28ton_zar',
+  'transport_dbn_to_pretoria_20ft_zar', 'transport_dbn_to_pretoria_40ft_zar', 'transport_dbn_to_whs_zar',
+  'unpack_reload_zar', 'storage_zar', 'storage_days', 'outlying_depot_surcharge_zar',
+  'local_cartage_dbn_whs_pretoria_opt_a_zar', 'local_cartage_dbn_whs_pretoria_opt_b_zar',
+  'local_cartage_dbn_whs_pretoria_6m_zar', 'local_cartage_dbn_whs_pretoria_12m_zar',
+  'transport_pe_coega_to_pretoria_zar', 'local_charges_subtotal_zar',
   // Destination Charges
-  'shipping_line_charges_zar', 'cargo_dues_zar', 'cto_fee_zar', 'port_health_inspection_zar',
-  'sars_inspection_zar', 'state_vet_fee_zar', 'inb_turn_in_zar', 'destination_charges_subtotal_zar',
+  'shipping_line_charges_zar', 'cargo_dues_20ft_zar', 'cargo_dues_40ft_zar', 'cto_fee_zar',
+  'port_health_inspection_zar', 'daff_inspection_zar', 'state_vet_cancellation_fee_zar',
+  'jnb_turn_in_zar', 'destination_charges_subtotal_zar',
   // Customs & Duties
   'duties_zar', 'customs_vat_zar', 'customs_declaration_zar', 'agency_fee_zar',
   'agency_fee_percentage', 'agency_fee_min', 'customs_duty_not_applicable', 'customs_subtotal_zar',
@@ -207,22 +220,30 @@ export class CostingRepository {
       origin_charge_zar: data.origin_charge_zar || 0,
       total_origin_charges_zar: data.total_origin_charges_zar || 0,
       // Local Charges
-      local_cartage_cpt_klapmuts_zar: data.local_cartage_cpt_klapmuts_zar || 0,
-      transport_dbn_to_pretoria_zar: data.transport_dbn_to_pretoria_zar || 0,
-      transport_to_warehouse_zar: data.transport_to_warehouse_zar || 0,
+      local_cartage_cpt_klapmuts_20ton_zar: data.local_cartage_cpt_klapmuts_20ton_zar || 0,
+      local_cartage_cpt_klapmuts_28ton_zar: data.local_cartage_cpt_klapmuts_28ton_zar || 0,
+      transport_dbn_to_pretoria_20ft_zar: data.transport_dbn_to_pretoria_20ft_zar || 0,
+      transport_dbn_to_pretoria_40ft_zar: data.transport_dbn_to_pretoria_40ft_zar || 0,
+      transport_dbn_to_whs_zar: data.transport_dbn_to_whs_zar || 0,
       unpack_reload_zar: data.unpack_reload_zar || 0,
       storage_zar: data.storage_zar || 0,
       storage_days: data.storage_days || 0,
       outlying_depot_surcharge_zar: data.outlying_depot_surcharge_zar || 0,
+      local_cartage_dbn_whs_pretoria_opt_a_zar: data.local_cartage_dbn_whs_pretoria_opt_a_zar || 0,
+      local_cartage_dbn_whs_pretoria_opt_b_zar: data.local_cartage_dbn_whs_pretoria_opt_b_zar || 0,
+      local_cartage_dbn_whs_pretoria_6m_zar: data.local_cartage_dbn_whs_pretoria_6m_zar || 0,
+      local_cartage_dbn_whs_pretoria_12m_zar: data.local_cartage_dbn_whs_pretoria_12m_zar || 0,
+      transport_pe_coega_to_pretoria_zar: data.transport_pe_coega_to_pretoria_zar || 0,
       local_charges_subtotal_zar: data.local_charges_subtotal_zar || 0,
       // Destination Charges
       shipping_line_charges_zar: data.shipping_line_charges_zar || 0,
-      cargo_dues_zar: data.cargo_dues_zar || 0,
+      cargo_dues_20ft_zar: data.cargo_dues_20ft_zar || 0,
+      cargo_dues_40ft_zar: data.cargo_dues_40ft_zar || 0,
       cto_fee_zar: data.cto_fee_zar || 0,
       port_health_inspection_zar: data.port_health_inspection_zar || 0,
-      sars_inspection_zar: data.sars_inspection_zar || 0,
-      state_vet_fee_zar: data.state_vet_fee_zar || 0,
-      inb_turn_in_zar: data.inb_turn_in_zar || 0,
+      daff_inspection_zar: data.daff_inspection_zar || 0,
+      state_vet_cancellation_fee_zar: data.state_vet_cancellation_fee_zar || 0,
+      jnb_turn_in_zar: data.jnb_turn_in_zar || 0,
       destination_charges_subtotal_zar: data.destination_charges_subtotal_zar || 0,
       // Customs & Duties
       duties_zar: data.duties_zar || 0,

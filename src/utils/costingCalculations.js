@@ -24,12 +24,19 @@ export const calculateOriginChargeZAR = (originChargeUSD, roeOrigin) => {
  */
 export const calculateLocalChargesSubtotal = (data) => {
   return (
-    (parseFloat(data.local_cartage_cpt_klapmuts_zar) || 0) +
-    (parseFloat(data.transport_dbn_to_pretoria_zar) || 0) +
-    (parseFloat(data.transport_to_warehouse_zar) || 0) +
+    (parseFloat(data.local_cartage_cpt_klapmuts_20ton_zar) || 0) +
+    (parseFloat(data.local_cartage_cpt_klapmuts_28ton_zar) || 0) +
+    (parseFloat(data.transport_dbn_to_pretoria_20ft_zar) || 0) +
+    (parseFloat(data.transport_dbn_to_pretoria_40ft_zar) || 0) +
+    (parseFloat(data.transport_dbn_to_whs_zar) || 0) +
     (parseFloat(data.unpack_reload_zar) || 0) +
     (parseFloat(data.storage_zar) || 0) +
-    (parseFloat(data.outlying_depot_surcharge_zar) || 0)
+    (parseFloat(data.outlying_depot_surcharge_zar) || 0) +
+    (parseFloat(data.local_cartage_dbn_whs_pretoria_opt_a_zar) || 0) +
+    (parseFloat(data.local_cartage_dbn_whs_pretoria_opt_b_zar) || 0) +
+    (parseFloat(data.local_cartage_dbn_whs_pretoria_6m_zar) || 0) +
+    (parseFloat(data.local_cartage_dbn_whs_pretoria_12m_zar) || 0) +
+    (parseFloat(data.transport_pe_coega_to_pretoria_zar) || 0)
   );
 };
 
@@ -39,12 +46,13 @@ export const calculateLocalChargesSubtotal = (data) => {
 export const calculateDestinationSubtotal = (data) => {
   return (
     (parseFloat(data.shipping_line_charges_zar) || 0) +
-    (parseFloat(data.cargo_dues_zar) || 0) +
+    (parseFloat(data.cargo_dues_20ft_zar) || 0) +
+    (parseFloat(data.cargo_dues_40ft_zar) || 0) +
     (parseFloat(data.cto_fee_zar) || 0) +
     (parseFloat(data.port_health_inspection_zar) || 0) +
-    (parseFloat(data.sars_inspection_zar) || 0) +
-    (parseFloat(data.state_vet_fee_zar) || 0) +
-    (parseFloat(data.inb_turn_in_zar) || 0)
+    (parseFloat(data.daff_inspection_zar) || 0) +
+    (parseFloat(data.state_vet_cancellation_fee_zar) || 0) +
+    (parseFloat(data.jnb_turn_in_zar) || 0)
   );
 };
 

@@ -184,22 +184,30 @@ export class CostingController {
 
     // Local charges subtotal (Transport/Cartage)
     const localChargesSubtotalZar =
-      (Number(data.local_cartage_cpt_klapmuts_zar) || 0) +
-      (Number(data.transport_dbn_to_pretoria_zar) || 0) +
-      (Number(data.transport_to_warehouse_zar) || 0) +
+      (Number(data.local_cartage_cpt_klapmuts_20ton_zar) || 0) +
+      (Number(data.local_cartage_cpt_klapmuts_28ton_zar) || 0) +
+      (Number(data.transport_dbn_to_pretoria_20ft_zar) || 0) +
+      (Number(data.transport_dbn_to_pretoria_40ft_zar) || 0) +
+      (Number(data.transport_dbn_to_whs_zar) || 0) +
       (Number(data.unpack_reload_zar) || 0) +
       (Number(data.storage_zar) || 0) +
-      (Number(data.outlying_depot_surcharge_zar) || 0);
+      (Number(data.outlying_depot_surcharge_zar) || 0) +
+      (Number(data.local_cartage_dbn_whs_pretoria_opt_a_zar) || 0) +
+      (Number(data.local_cartage_dbn_whs_pretoria_opt_b_zar) || 0) +
+      (Number(data.local_cartage_dbn_whs_pretoria_6m_zar) || 0) +
+      (Number(data.local_cartage_dbn_whs_pretoria_12m_zar) || 0) +
+      (Number(data.transport_pe_coega_to_pretoria_zar) || 0);
 
     // Destination charges subtotal (Port/Shipping)
     const destinationChargesSubtotalZar =
       (Number(data.shipping_line_charges_zar) || 0) +
-      (Number(data.cargo_dues_zar) || 0) +
+      (Number(data.cargo_dues_20ft_zar) || 0) +
+      (Number(data.cargo_dues_40ft_zar) || 0) +
       (Number(data.cto_fee_zar) || 0) +
       (Number(data.port_health_inspection_zar) || 0) +
-      (Number(data.sars_inspection_zar) || 0) +
-      (Number(data.state_vet_fee_zar) || 0) +
-      (Number(data.inb_turn_in_zar) || 0);
+      (Number(data.daff_inspection_zar) || 0) +
+      (Number(data.state_vet_cancellation_fee_zar) || 0) +
+      (Number(data.jnb_turn_in_zar) || 0);
 
     // Agency fee: 3.5% of customs value, min R1187
     const agencyFeeZar = this.calculateAgencyFee(customsValueZar);

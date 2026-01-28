@@ -805,13 +805,20 @@ export const migrations: Migration[] = [
 
         // Add new Local Charges columns
         const localChargeColumns = [
-          'local_cartage_cpt_klapmuts_zar NUMERIC(12,2) DEFAULT 0',
-          'transport_dbn_to_pretoria_zar NUMERIC(12,2) DEFAULT 0',
-          'transport_to_warehouse_zar NUMERIC(12,2) DEFAULT 0',
+          'local_cartage_cpt_klapmuts_20ton_zar NUMERIC(12,2) DEFAULT 0',
+          'local_cartage_cpt_klapmuts_28ton_zar NUMERIC(12,2) DEFAULT 0',
+          'transport_dbn_to_pretoria_20ft_zar NUMERIC(12,2) DEFAULT 0',
+          'transport_dbn_to_pretoria_40ft_zar NUMERIC(12,2) DEFAULT 0',
+          'transport_dbn_to_whs_zar NUMERIC(12,2) DEFAULT 0',
           'unpack_reload_zar NUMERIC(12,2) DEFAULT 0',
           'storage_zar NUMERIC(12,2) DEFAULT 0',
           'storage_days INTEGER DEFAULT 0',
           'outlying_depot_surcharge_zar NUMERIC(12,2) DEFAULT 0',
+          'local_cartage_dbn_whs_pretoria_opt_a_zar NUMERIC(12,2) DEFAULT 0',
+          'local_cartage_dbn_whs_pretoria_opt_b_zar NUMERIC(12,2) DEFAULT 0',
+          'local_cartage_dbn_whs_pretoria_6m_zar NUMERIC(12,2) DEFAULT 0',
+          'local_cartage_dbn_whs_pretoria_12m_zar NUMERIC(12,2) DEFAULT 0',
+          'transport_pe_coega_to_pretoria_zar NUMERIC(12,2) DEFAULT 0',
           'local_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0',
         ];
 
@@ -831,12 +838,13 @@ export const migrations: Migration[] = [
         // Add new Destination Charges (Port/Shipping) columns
         const destChargeColumns = [
           'shipping_line_charges_zar NUMERIC(12,2) DEFAULT 0',
-          'cargo_dues_zar NUMERIC(12,2) DEFAULT 0',
+          'cargo_dues_20ft_zar NUMERIC(12,2) DEFAULT 0',
+          'cargo_dues_40ft_zar NUMERIC(12,2) DEFAULT 0',
           'cto_fee_zar NUMERIC(12,2) DEFAULT 0',
           'port_health_inspection_zar NUMERIC(12,2) DEFAULT 0',
-          'sars_inspection_zar NUMERIC(12,2) DEFAULT 0',
-          'state_vet_fee_zar NUMERIC(12,2) DEFAULT 0',
-          'inb_turn_in_zar NUMERIC(12,2) DEFAULT 0',
+          'daff_inspection_zar NUMERIC(12,2) DEFAULT 0',
+          'state_vet_cancellation_fee_zar NUMERIC(12,2) DEFAULT 0',
+          'jnb_turn_in_zar NUMERIC(12,2) DEFAULT 0',
         ];
 
         for (const colDef of destChargeColumns) {
