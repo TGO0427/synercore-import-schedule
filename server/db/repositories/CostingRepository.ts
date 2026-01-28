@@ -41,30 +41,32 @@ export interface ImportCostEstimate {
   origin_charge_eur: number;
   origin_charge_zar: number;
   total_origin_charges_zar: number;
-  // Destination Charges
-  thc_zar: number;
-  gate_door_zar: number;
-  insurance_zar: number;
-  shipping_line_fee_zar: number;
-  port_inland_release_fee_zar: number;
-  cto_zar: number;
-  transport_port_to_warehouse_zar: number;
-  delivery_only_trans_zar: number;
+  // Local Charges (Transport/Cartage)
+  local_cartage_zar: number;
+  transport_to_warehouse_zar: number;
   unpack_reload_zar: number;
+  storage_zar: number;
+  storage_days: number;
+  outlying_depot_surcharge_zar: number;
+  local_charges_subtotal_zar: number;
+  // Destination Charges (Port/Shipping)
+  shipping_line_charges_zar: number;
+  cargo_dues_zar: number;
+  cto_fee_zar: number;
+  port_health_inspection_zar: number;
+  sars_inspection_zar: number;
+  state_vet_fee_zar: number;
+  inb_turn_in_zar: number;
   destination_charges_subtotal_zar: number;
-  // Customs
-  customs_duty_zar: number;
+  // Customs & Duties
+  duties_zar: number;
+  customs_vat_zar: number;
+  customs_declaration_zar: number;
+  agency_fee_zar: number;
+  agency_fee_percentage: number;
+  agency_fee_min: number;
   customs_duty_not_applicable: boolean;
-  customs_disbursements_subtotal_zar: number;
-  // Clearing Charges
-  documentation_fee_zar: number;
-  communication_fee_zar: number;
-  edif_fee_zar: number;
-  plant_inspection_zar: number;
-  portbuild_zar: number;
-  davif_zar: number;
-  agency_zar: number;
-  clearing_charges_subtotal_zar: number;
+  customs_subtotal_zar: number;
   // Totals
   total_shipping_cost_zar: number;
   total_in_warehouse_cost_zar: number;
@@ -92,13 +94,18 @@ const COST_ESTIMATE_COLUMNS = [
   'gross_weight_kg', 'total_gross_weight_kg', 'origin_rate_usd', 'ocean_freight_rate_usd',
   'commodity', 'invoice_value_usd', 'invoice_value_eur', 'customs_value_zar', 'supplier_name', 'validity_date', 'costing_date',
   'payment_terms', 'roe_origin', 'roe_eur', 'origin_charge_usd', 'origin_charge_eur', 'origin_charge_zar',
-  'total_origin_charges_zar', 'thc_zar', 'gate_door_zar', 'insurance_zar',
-  'shipping_line_fee_zar', 'port_inland_release_fee_zar', 'cto_zar',
-  'transport_port_to_warehouse_zar', 'delivery_only_trans_zar', 'unpack_reload_zar',
-  'destination_charges_subtotal_zar', 'customs_duty_zar', 'customs_duty_not_applicable',
-  'customs_disbursements_subtotal_zar', 'documentation_fee_zar', 'communication_fee_zar',
-  'edif_fee_zar', 'plant_inspection_zar', 'portbuild_zar', 'davif_zar', 'agency_zar',
-  'clearing_charges_subtotal_zar', 'total_shipping_cost_zar', 'total_in_warehouse_cost_zar',
+  'total_origin_charges_zar',
+  // Local Charges
+  'local_cartage_zar', 'transport_to_warehouse_zar', 'unpack_reload_zar', 'storage_zar',
+  'storage_days', 'outlying_depot_surcharge_zar', 'local_charges_subtotal_zar',
+  // Destination Charges
+  'shipping_line_charges_zar', 'cargo_dues_zar', 'cto_fee_zar', 'port_health_inspection_zar',
+  'sars_inspection_zar', 'state_vet_fee_zar', 'inb_turn_in_zar', 'destination_charges_subtotal_zar',
+  // Customs & Duties
+  'duties_zar', 'customs_vat_zar', 'customs_declaration_zar', 'agency_fee_zar',
+  'agency_fee_percentage', 'agency_fee_min', 'customs_duty_not_applicable', 'customs_subtotal_zar',
+  // Totals
+  'total_shipping_cost_zar', 'total_in_warehouse_cost_zar',
   'all_in_warehouse_cost_per_kg_zar', 'status', 'notes', 'created_by', 'created_at', 'updated_at'
 ];
 
@@ -198,27 +205,33 @@ export class CostingRepository {
       origin_charge_eur: data.origin_charge_eur || 0,
       origin_charge_zar: data.origin_charge_zar || 0,
       total_origin_charges_zar: data.total_origin_charges_zar || 0,
-      thc_zar: data.thc_zar || 0,
-      gate_door_zar: data.gate_door_zar || 0,
-      insurance_zar: data.insurance_zar || 0,
-      shipping_line_fee_zar: data.shipping_line_fee_zar || 0,
-      port_inland_release_fee_zar: data.port_inland_release_fee_zar || 0,
-      cto_zar: data.cto_zar || 0,
-      transport_port_to_warehouse_zar: data.transport_port_to_warehouse_zar || 0,
-      delivery_only_trans_zar: data.delivery_only_trans_zar || 0,
+      // Local Charges
+      local_cartage_zar: data.local_cartage_zar || 0,
+      transport_to_warehouse_zar: data.transport_to_warehouse_zar || 0,
       unpack_reload_zar: data.unpack_reload_zar || 0,
+      storage_zar: data.storage_zar || 0,
+      storage_days: data.storage_days || 0,
+      outlying_depot_surcharge_zar: data.outlying_depot_surcharge_zar || 0,
+      local_charges_subtotal_zar: data.local_charges_subtotal_zar || 0,
+      // Destination Charges
+      shipping_line_charges_zar: data.shipping_line_charges_zar || 0,
+      cargo_dues_zar: data.cargo_dues_zar || 0,
+      cto_fee_zar: data.cto_fee_zar || 0,
+      port_health_inspection_zar: data.port_health_inspection_zar || 0,
+      sars_inspection_zar: data.sars_inspection_zar || 0,
+      state_vet_fee_zar: data.state_vet_fee_zar || 0,
+      inb_turn_in_zar: data.inb_turn_in_zar || 0,
       destination_charges_subtotal_zar: data.destination_charges_subtotal_zar || 0,
-      customs_duty_zar: data.customs_duty_zar || 0,
+      // Customs & Duties
+      duties_zar: data.duties_zar || 0,
+      customs_vat_zar: data.customs_vat_zar || 0,
+      customs_declaration_zar: data.customs_declaration_zar || 0,
+      agency_fee_zar: data.agency_fee_zar || 0,
+      agency_fee_percentage: data.agency_fee_percentage || 3.5,
+      agency_fee_min: data.agency_fee_min || 1187,
       customs_duty_not_applicable: data.customs_duty_not_applicable || false,
-      customs_disbursements_subtotal_zar: data.customs_disbursements_subtotal_zar || 0,
-      documentation_fee_zar: data.documentation_fee_zar || 0,
-      communication_fee_zar: data.communication_fee_zar || 0,
-      edif_fee_zar: data.edif_fee_zar || 0,
-      plant_inspection_zar: data.plant_inspection_zar || 0,
-      portbuild_zar: data.portbuild_zar || 0,
-      davif_zar: data.davif_zar || 0,
-      agency_zar: data.agency_zar || 0,
-      clearing_charges_subtotal_zar: data.clearing_charges_subtotal_zar || 0,
+      customs_subtotal_zar: data.customs_subtotal_zar || 0,
+      // Totals
       total_shipping_cost_zar: data.total_shipping_cost_zar || 0,
       total_in_warehouse_cost_zar: data.total_in_warehouse_cost_zar || 0,
       all_in_warehouse_cost_per_kg_zar: data.all_in_warehouse_cost_per_kg_zar || 0,

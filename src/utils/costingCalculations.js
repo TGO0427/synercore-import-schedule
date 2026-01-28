@@ -20,34 +20,52 @@ export const calculateOriginChargeZAR = (originChargeUSD, roeOrigin) => {
 };
 
 /**
- * Calculate destination charges subtotal
+ * Calculate local charges (transport/cartage) subtotal
  */
-export const calculateDestinationSubtotal = (data) => {
+export const calculateLocalChargesSubtotal = (data) => {
   return (
-    (parseFloat(data.thc_zar) || 0) +
-    (parseFloat(data.gate_door_zar) || 0) +
-    (parseFloat(data.insurance_zar) || 0) +
-    (parseFloat(data.shipping_line_fee_zar) || 0) +
-    (parseFloat(data.port_inland_release_fee_zar) || 0) +
-    (parseFloat(data.cto_zar) || 0) +
-    (parseFloat(data.transport_port_to_warehouse_zar) || 0) +
-    (parseFloat(data.delivery_only_trans_zar) || 0) +
-    (parseFloat(data.unpack_reload_zar) || 0)
+    (parseFloat(data.local_cartage_zar) || 0) +
+    (parseFloat(data.transport_to_warehouse_zar) || 0) +
+    (parseFloat(data.unpack_reload_zar) || 0) +
+    (parseFloat(data.storage_zar) || 0) +
+    (parseFloat(data.outlying_depot_surcharge_zar) || 0)
   );
 };
 
 /**
- * Calculate clearing charges subtotal
+ * Calculate destination charges (port/shipping) subtotal
  */
-export const calculateClearingSubtotal = (data, davif) => {
+export const calculateDestinationSubtotal = (data) => {
   return (
-    (parseFloat(data.documentation_fee_zar) || 0) +
-    (parseFloat(data.communication_fee_zar) || 0) +
-    (parseFloat(data.edif_fee_zar) || 0) +
-    (parseFloat(data.plant_inspection_zar) || 0) +
-    (parseFloat(data.portbuild_zar) || 0) +
-    (davif || 0) +
-    (parseFloat(data.agency_zar) || 0)
+    (parseFloat(data.shipping_line_charges_zar) || 0) +
+    (parseFloat(data.cargo_dues_zar) || 0) +
+    (parseFloat(data.cto_fee_zar) || 0) +
+    (parseFloat(data.port_health_inspection_zar) || 0) +
+    (parseFloat(data.sars_inspection_zar) || 0) +
+    (parseFloat(data.state_vet_fee_zar) || 0) +
+    (parseFloat(data.inb_turn_in_zar) || 0)
+  );
+};
+
+/**
+ * Calculate agency fee: 3.5% of customs value, minimum R1187
+ */
+export const calculateAgencyFee = (customsValue) => {
+  if (!customsValue || customsValue <= 0) return 0;
+  const percentage = customsValue * 0.035;
+  return Math.max(percentage, 1187);
+};
+
+/**
+ * Calculate customs subtotal (duties + VAT + declaration + agency fee)
+ */
+export const calculateCustomsSubtotal = (data, agencyFee, customsDutyNotApplicable) => {
+  const duties = customsDutyNotApplicable ? 0 : (parseFloat(data.duties_zar) || 0);
+  return (
+    duties +
+    (parseFloat(data.customs_vat_zar) || 0) +
+    (parseFloat(data.customs_declaration_zar) || 0) +
+    (agencyFee || 0)
   );
 };
 
@@ -88,29 +106,24 @@ export const calculateAllTotals = (data) => {
   const originChargeEurZar = calculateEurChargeZAR(originChargeEur, roeEur);
   const totalOriginChargesZar = originChargeUsdZar + originChargeEurZar;
 
-  // Destination charges subtotal
+  // Local charges subtotal (transport/cartage)
+  const localChargesSubtotalZar = calculateLocalChargesSubtotal(data);
+
+  // Destination charges subtotal (port/shipping)
   const destinationChargesSubtotalZar = calculateDestinationSubtotal(data);
 
-  // Customs disbursements subtotal
+  // Agency fee: 3.5% of customs value, min R1187
+  const agencyFeeZar = calculateAgencyFee(customsValueZar);
+
+  // Customs subtotal (duties + VAT + declaration + agency)
   const customsDutyNotApplicable = data.customs_duty_not_applicable || false;
-  const customsDisbursementsSubtotalZar = customsDutyNotApplicable
-    ? 0
-    : (parseFloat(data.customs_duty_zar) || 0);
+  const customsSubtotalZar = calculateCustomsSubtotal(data, agencyFeeZar, customsDutyNotApplicable);
 
-  // Calculate DAVIF
-  const davifZar = calculateDAVIF(customsValueZar);
+  // Total shipping cost (origin + local + destination charges)
+  const totalShippingCostZar = totalOriginChargesZar + localChargesSubtotalZar + destinationChargesSubtotalZar;
 
-  // Clearing charges subtotal
-  const clearingChargesSubtotalZar = calculateClearingSubtotal(data, davifZar);
-
-  // Total shipping cost (origin + destination charges)
-  const totalShippingCostZar = totalOriginChargesZar + destinationChargesSubtotalZar;
-
-  // Total in warehouse cost (shipping + customs + clearing)
-  const totalInWarehouseCostZar =
-    totalShippingCostZar +
-    customsDisbursementsSubtotalZar +
-    clearingChargesSubtotalZar;
+  // Total in warehouse cost (shipping + customs)
+  const totalInWarehouseCostZar = totalShippingCostZar + customsSubtotalZar;
 
   // Cost per KG
   const allInWarehouseCostPerKgZar = totalGrossWeightKg > 0
@@ -123,13 +136,13 @@ export const calculateAllTotals = (data) => {
     origin_charge_eur_zar: Math.round(originChargeEurZar * 100) / 100,
     origin_charge_zar: Math.round((originChargeUsdZar + originChargeEurZar) * 100) / 100,
     total_origin_charges_zar: Math.round(totalOriginChargesZar * 100) / 100,
+    local_charges_subtotal_zar: Math.round(localChargesSubtotalZar * 100) / 100,
     destination_charges_subtotal_zar: Math.round(destinationChargesSubtotalZar * 100) / 100,
-    customs_disbursements_subtotal_zar: Math.round(customsDisbursementsSubtotalZar * 100) / 100,
-    clearing_charges_subtotal_zar: Math.round(clearingChargesSubtotalZar * 100) / 100,
+    agency_fee_zar: Math.round(agencyFeeZar * 100) / 100,
+    customs_subtotal_zar: Math.round(customsSubtotalZar * 100) / 100,
     total_shipping_cost_zar: Math.round(totalShippingCostZar * 100) / 100,
     total_in_warehouse_cost_zar: Math.round(totalInWarehouseCostZar * 100) / 100,
     all_in_warehouse_cost_per_kg_zar: Math.round(allInWarehouseCostPerKgZar * 100) / 100,
-    davif_zar: Math.round(davifZar * 100) / 100,
   };
 };
 
@@ -203,8 +216,10 @@ export const SA_PORTS = [
 export default {
   calculateDAVIF,
   calculateOriginChargeZAR,
+  calculateLocalChargesSubtotal,
   calculateDestinationSubtotal,
-  calculateClearingSubtotal,
+  calculateAgencyFee,
+  calculateCustomsSubtotal,
   calculateAllTotals,
   formatCurrency,
   formatNumber,

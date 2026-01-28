@@ -64,26 +64,28 @@ const INITIAL_FORM_STATE = {
   // Origin Charges
   origin_charge_usd: 0,
   origin_charge_eur: 0,
-  // Destination Charges
-  thc_zar: 0,
-  gate_door_zar: 0,
-  insurance_zar: 0,
-  shipping_line_fee_zar: 0,
-  port_inland_release_fee_zar: 0,
-  cto_zar: 0,
-  transport_port_to_warehouse_zar: 0,
-  delivery_only_trans_zar: 0,
+  // Local Charges (Transport/Cartage)
+  local_cartage_zar: 0,
+  transport_to_warehouse_zar: 0,
   unpack_reload_zar: 0,
-  // Customs
-  customs_duty_zar: 0,
-  customs_duty_not_applicable: false,
-  // Clearing Charges
-  documentation_fee_zar: 0,
-  communication_fee_zar: 0,
-  edif_fee_zar: 0,
-  plant_inspection_zar: 0,
-  portbuild_zar: 0,
-  agency_zar: 0,
+  storage_zar: 0,
+  storage_days: 0,
+  outlying_depot_surcharge_zar: 0,
+  // Destination Charges (Port/Shipping)
+  shipping_line_charges_zar: 0,
+  cargo_dues_zar: 0,
+  cto_fee_zar: 0,
+  port_health_inspection_zar: 0,
+  sars_inspection_zar: 0,
+  state_vet_fee_zar: 0,
+  inb_turn_in_zar: 0,
+  // Customs & Duties
+  duties_zar: 0,
+  customs_vat_zar: 0,
+  customs_declaration_zar: 0,
+  agency_fee_zar: 0,
+  agency_fee_percentage: 3.5,
+  agency_fee_min: 1187,
   // Metadata
   notes: '',
   status: 'draft',
@@ -274,7 +276,8 @@ function ImportCosting() {
         ['INCO Terms', estimate.inco_terms || '-'],
         ['Transit Time', `${estimate.transit_time_days || '-'} days`],
         ['Gross Weight', `${formatNumber(estimate.total_gross_weight_kg)} kg`],
-        ['Exchange Rate (ROE)', formatNumber(estimate.roe_origin, 4)],
+        ['USD/ZAR Rate', formatNumber(estimate.roe_origin, 4)],
+        ['EUR/ZAR Rate', formatNumber(estimate.roe_eur, 4)],
       ],
       theme: 'grid',
       headStyles: { fillColor: [11, 31, 58] },
@@ -283,44 +286,64 @@ function ImportCosting() {
     // Origin Charges
     doc.autoTable({
       startY: doc.lastAutoTable.finalY + 10,
-      head: [['Origin Charges', 'USD', 'ZAR']],
+      head: [['Origin Charges', 'Amount', 'ZAR']],
       body: [
-        ['Origin Charge', formatCurrency(estimate.origin_charge_usd, 'USD'), formatCurrency(totals.origin_charge_zar)],
-        ['Total Origin', '', formatCurrency(totals.total_origin_charges_zar)],
+        ['Origin Charge (USD)', formatCurrency(estimate.origin_charge_usd, 'USD'), formatCurrency(totals.origin_charge_usd_zar)],
+        ['Origin Charge (EUR)', formatCurrency(estimate.origin_charge_eur, 'EUR'), formatCurrency(totals.origin_charge_eur_zar)],
+        ['Total Origin Charges', '', formatCurrency(totals.total_origin_charges_zar)],
       ],
       theme: 'grid',
       headStyles: { fillColor: [46, 139, 87] },
     });
 
+    // Local Charges
+    doc.autoTable({
+      startY: doc.lastAutoTable.finalY + 10,
+      head: [['Local Charges (Transport/Cartage)', 'ZAR']],
+      body: [
+        ['Local Cartage', formatCurrency(estimate.local_cartage_zar)],
+        ['Transport to Warehouse', formatCurrency(estimate.transport_to_warehouse_zar)],
+        ['Unpack & Reload', formatCurrency(estimate.unpack_reload_zar)],
+        ['Storage', formatCurrency(estimate.storage_zar)],
+        ['Outlying Depot Surcharge', formatCurrency(estimate.outlying_depot_surcharge_zar)],
+        ['Sub-Total', formatCurrency(totals.local_charges_subtotal_zar)],
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [22, 101, 52] },
+    });
+
     // Destination Charges
     doc.autoTable({
       startY: doc.lastAutoTable.finalY + 10,
-      head: [['Destination Charges (ZAR)', 'Amount']],
+      head: [['Destination Charges (Port/Shipping)', 'ZAR']],
       body: [
-        ['THC', formatCurrency(estimate.thc_zar)],
-        ['Gate/Door', formatCurrency(estimate.gate_door_zar)],
-        ['Insurance', formatCurrency(estimate.insurance_zar)],
-        ['Shipping Line Fee', formatCurrency(estimate.shipping_line_fee_zar)],
-        ['CTO', formatCurrency(estimate.cto_zar)],
-        ['Transport to Warehouse', formatCurrency(estimate.transport_port_to_warehouse_zar)],
+        ['Shipping Line Charges', formatCurrency(estimate.shipping_line_charges_zar)],
+        ['Cargo Dues', formatCurrency(estimate.cargo_dues_zar)],
+        ['CTO Fee', formatCurrency(estimate.cto_fee_zar)],
+        ['Port Health Inspection', formatCurrency(estimate.port_health_inspection_zar)],
+        ['SARS Inspection', formatCurrency(estimate.sars_inspection_zar)],
+        ['State Vet Fee', formatCurrency(estimate.state_vet_fee_zar)],
+        ['INB Turn In', formatCurrency(estimate.inb_turn_in_zar)],
         ['Sub-Total', formatCurrency(totals.destination_charges_subtotal_zar)],
       ],
       theme: 'grid',
       headStyles: { fillColor: [0, 123, 167] },
     });
 
-    // Clearing Charges
+    // Customs & Duties
     doc.autoTable({
       startY: doc.lastAutoTable.finalY + 10,
-      head: [['Clearing Charges (ZAR)', 'Amount']],
+      head: [['Customs & Duties', 'ZAR']],
       body: [
-        ['Documentation Fee', formatCurrency(estimate.documentation_fee_zar)],
-        ['EDIF Fee', formatCurrency(estimate.edif_fee_zar)],
-        ['DAVIF (3.25% min R125)', formatCurrency(totals.davif_zar)],
-        ['Sub-Total', formatCurrency(totals.clearing_charges_subtotal_zar)],
+        ['Customs Value', formatCurrency(totals.customs_value_zar)],
+        ['Duties', formatCurrency(estimate.duties_zar)],
+        ['Customs VAT', formatCurrency(estimate.customs_vat_zar)],
+        ['Customs Declaration', formatCurrency(estimate.customs_declaration_zar)],
+        ['Agency Fee (3.5% min R1187)', formatCurrency(totals.agency_fee_zar)],
+        ['Sub-Total', formatCurrency(totals.customs_subtotal_zar)],
       ],
       theme: 'grid',
-      headStyles: { fillColor: [232, 93, 4] },
+      headStyles: { fillColor: [146, 64, 14] },
     });
 
     // Totals
@@ -329,7 +352,6 @@ function ImportCosting() {
       head: [['Summary', 'Amount']],
       body: [
         ['Total Shipping Cost', formatCurrency(totals.total_shipping_cost_zar)],
-        ['Customs Duty', formatCurrency(totals.customs_disbursements_subtotal_zar)],
         ['Total in Warehouse Cost', formatCurrency(totals.total_in_warehouse_cost_zar)],
         ['Cost per KG', formatCurrency(totals.all_in_warehouse_cost_per_kg_zar)],
       ],
@@ -626,22 +648,41 @@ function ImportCosting() {
                 </div>
               </div>
 
-              {/* Section: Destination Charges */}
-              <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#eff6ff', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 1rem', color: '#1e40af', fontSize: '1rem' }}>Destination Charges (ZAR)</h4>
+              {/* Section: Local Charges (Transport/Cartage) */}
+              <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f0fdf4', borderRadius: '8px' }}>
+                <h4 style={{ margin: '0 0 1rem', color: '#166534', fontSize: '1rem' }}>Local Charges (Transport/Cartage) - ZAR</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-                  {renderCurrencyInput('THC', 'thc_zar')}
-                  {renderCurrencyInput('Gate/Door', 'gate_door_zar')}
-                  {renderCurrencyInput('Insurance', 'insurance_zar')}
-                  {renderCurrencyInput('Shipping Line Fee', 'shipping_line_fee_zar')}
-                  {renderCurrencyInput('Port/Inland Release', 'port_inland_release_fee_zar')}
-                  {renderCurrencyInput('CTO', 'cto_zar')}
-                  {renderCurrencyInput('Transport to Warehouse', 'transport_port_to_warehouse_zar')}
-                  {renderCurrencyInput('Delivery Only', 'delivery_only_trans_zar')}
+                  {renderCurrencyInput('Local Cartage', 'local_cartage_zar')}
+                  {renderCurrencyInput('Transport to Warehouse', 'transport_to_warehouse_zar')}
                   {renderCurrencyInput('Unpack & Reload', 'unpack_reload_zar')}
+                  {renderCurrencyInput('Storage', 'storage_zar')}
+                  {renderInput('Storage Days', 'storage_days', 'number')}
+                  {renderCurrencyInput('Outlying Depot Surcharge', 'outlying_depot_surcharge_zar')}
                   <div style={{ marginBottom: '12px' }}>
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
-                      Sub-Total - Auto
+                      Local Charges Sub-Total - Auto
+                    </label>
+                    <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', borderRadius: '6px', fontWeight: '600', color: '#166534' }}>
+                      {formatCurrency(calculatedTotals.local_charges_subtotal_zar)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section: Destination Charges (Port/Shipping) */}
+              <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#eff6ff', borderRadius: '8px' }}>
+                <h4 style={{ margin: '0 0 1rem', color: '#1e40af', fontSize: '1rem' }}>Destination Charges (Port/Shipping) - ZAR</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                  {renderCurrencyInput('Shipping Line Charges', 'shipping_line_charges_zar')}
+                  {renderCurrencyInput('Cargo Dues', 'cargo_dues_zar')}
+                  {renderCurrencyInput('CTO Fee', 'cto_fee_zar')}
+                  {renderCurrencyInput('Port Health Inspection', 'port_health_inspection_zar')}
+                  {renderCurrencyInput('SARS Inspection', 'sars_inspection_zar')}
+                  {renderCurrencyInput('State Vet Fee', 'state_vet_fee_zar')}
+                  {renderCurrencyInput('INB Turn In', 'inb_turn_in_zar')}
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
+                      Destination Sub-Total - Auto
                     </label>
                     <div style={{ padding: '8px 12px', backgroundColor: '#dbeafe', borderRadius: '6px', fontWeight: '600', color: '#1e40af' }}>
                       {formatCurrency(calculatedTotals.destination_charges_subtotal_zar)}
@@ -650,11 +691,22 @@ function ImportCosting() {
                 </div>
               </div>
 
-              {/* Section: Customs Disbursements */}
+              {/* Section: Customs & Duties */}
               <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fef3c7', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 1rem', color: '#92400e', fontSize: '1rem' }}>Customs Disbursements</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                  {renderCurrencyInput('Customs Duty', 'customs_duty_zar')}
+                <h4 style={{ margin: '0 0 1rem', color: '#92400e', fontSize: '1rem' }}>Customs & Duties - ZAR</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                  {renderCurrencyInput('Duties', 'duties_zar')}
+                  {renderCurrencyInput('Customs VAT', 'customs_vat_zar')}
+                  {renderCurrencyInput('Customs Declaration', 'customs_declaration_zar')}
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
+                      Agency Fee (3.5% min R1187) - Auto
+                    </label>
+                    <div style={{ padding: '8px 12px', backgroundColor: '#fde68a', borderRadius: '6px', fontWeight: '600', color: '#92400e' }}>
+                      {formatCurrency(calculatedTotals.agency_fee_zar)}
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: '#666' }}>Based on Customs Value x 3.5%, min R1,187</span>
+                  </div>
                   <div style={{ marginBottom: '12px' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
                       <input
@@ -662,44 +714,15 @@ function ImportCosting() {
                         checked={formData.customs_duty_not_applicable || false}
                         onChange={(e) => handleInputChange('customs_duty_not_applicable', e.target.checked)}
                       />
-                      Not Applicable (Essentials)
+                      Duties N/A (Essentials)
                     </label>
                   </div>
                   <div style={{ marginBottom: '12px' }}>
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
-                      Sub-Total - Auto
+                      Customs Sub-Total - Auto
                     </label>
                     <div style={{ padding: '8px 12px', backgroundColor: '#fde68a', borderRadius: '6px', fontWeight: '600', color: '#92400e' }}>
-                      {formatCurrency(calculatedTotals.customs_disbursements_subtotal_zar)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Section: Clearing Charges */}
-              <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fff7ed', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 1rem', color: '#c2410c', fontSize: '1rem' }}>Clearing Charges (ZAR)</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-                  {renderCurrencyInput('Documentation Fee', 'documentation_fee_zar')}
-                  {renderCurrencyInput('Communication Fee', 'communication_fee_zar')}
-                  {renderCurrencyInput('EDIF Fee', 'edif_fee_zar')}
-                  {renderCurrencyInput('Plant Inspection', 'plant_inspection_zar')}
-                  {renderCurrencyInput('Portbuild', 'portbuild_zar')}
-                  <div style={{ marginBottom: '12px' }}>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
-                      DAVIF (3.25% min R125) - Auto
-                    </label>
-                    <div style={{ padding: '8px 12px', backgroundColor: '#fed7aa', borderRadius: '6px', fontWeight: '600', color: '#c2410c' }}>
-                      {formatCurrency(calculatedTotals.davif_zar)}
-                    </div>
-                  </div>
-                  {renderCurrencyInput('Agency', 'agency_zar')}
-                  <div style={{ marginBottom: '12px' }}>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
-                      Sub-Total - Auto
-                    </label>
-                    <div style={{ padding: '8px 12px', backgroundColor: '#ffedd5', borderRadius: '6px', fontWeight: '600', color: '#c2410c' }}>
-                      {formatCurrency(calculatedTotals.clearing_charges_subtotal_zar)}
+                      {formatCurrency(calculatedTotals.customs_subtotal_zar)}
                     </div>
                   </div>
                 </div>

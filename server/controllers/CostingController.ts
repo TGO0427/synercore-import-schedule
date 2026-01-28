@@ -5,7 +5,6 @@
 
 import { costingRepository, ImportCostEstimate } from '../db/repositories/CostingRepository.js';
 import ExchangeRateService from '../services/ExchangeRateService.js';
-import { logInfo, logError } from '../utils/logger.js';
 
 export interface CostingFilterParams {
   status?: string;
@@ -16,15 +15,16 @@ export interface CostingFilterParams {
 }
 
 export interface CalculatedTotals {
+  customs_value_zar: number;
   origin_charge_zar: number;
   total_origin_charges_zar: number;
+  local_charges_subtotal_zar: number;
   destination_charges_subtotal_zar: number;
-  customs_disbursements_subtotal_zar: number;
-  clearing_charges_subtotal_zar: number;
+  agency_fee_zar: number;
+  customs_subtotal_zar: number;
   total_shipping_cost_zar: number;
   total_in_warehouse_cost_zar: number;
   all_in_warehouse_cost_per_kg_zar: number;
-  davif_zar: number;
 }
 
 export class CostingController {
@@ -144,12 +144,23 @@ export class CostingController {
   }
 
   /**
-   * Calculate DAVIF: 3.25% of customs value, minimum R125
+   * Calculate Agency Fee: 3.5% of customs value, minimum R1187
    */
-  static calculateDAVIF(customsValue: number): number {
+  static calculateAgencyFee(customsValue: number): number {
     if (!customsValue || customsValue <= 0) return 0;
-    const percentage = customsValue * 0.0325;
-    return Math.max(percentage, 125);
+    const percentage = customsValue * 0.035;
+    return Math.max(percentage, 1187);
+  }
+
+  /**
+   * Calculate Customs Value from invoice values
+   */
+  static calculateCustomsValue(data: Partial<ImportCostEstimate>): number {
+    const roeOrigin = Number(data.roe_origin) || 0;
+    const roeEur = Number(data.roe_eur) || 0;
+    const invoiceValueUsd = Number(data.invoice_value_usd) || 0;
+    const invoiceValueEur = Number(data.invoice_value_eur) || 0;
+    return (invoiceValueUsd * roeOrigin) + (invoiceValueEur * roeEur);
   }
 
   /**
@@ -157,53 +168,55 @@ export class CostingController {
    */
   static calculateAllTotals(data: Partial<ImportCostEstimate>): CalculatedTotals {
     const roeOrigin = Number(data.roe_origin) || 0;
+    const roeEur = Number(data.roe_eur) || 0;
     const originChargeUsd = Number(data.origin_charge_usd) || 0;
-    const customsValueZar = Number(data.customs_value_zar) || 0;
+    const originChargeEur = Number(data.origin_charge_eur) || 0;
     const totalGrossWeightKg = Number(data.total_gross_weight_kg) || 0;
 
-    // Origin charges conversion
-    const originChargeZar = originChargeUsd * roeOrigin;
+    // Calculate customs value from invoice values
+    const customsValueZar = this.calculateCustomsValue(data);
+
+    // Origin charges conversion (USD and EUR)
+    const originChargeUsdZar = originChargeUsd * roeOrigin;
+    const originChargeEurZar = originChargeEur * roeEur;
+    const originChargeZar = originChargeUsdZar + originChargeEurZar;
     const totalOriginChargesZar = originChargeZar;
 
-    // Destination charges subtotal
+    // Local charges subtotal (Transport/Cartage)
+    const localChargesSubtotalZar =
+      (Number(data.local_cartage_zar) || 0) +
+      (Number(data.transport_to_warehouse_zar) || 0) +
+      (Number(data.unpack_reload_zar) || 0) +
+      (Number(data.storage_zar) || 0) +
+      (Number(data.outlying_depot_surcharge_zar) || 0);
+
+    // Destination charges subtotal (Port/Shipping)
     const destinationChargesSubtotalZar =
-      (Number(data.thc_zar) || 0) +
-      (Number(data.gate_door_zar) || 0) +
-      (Number(data.insurance_zar) || 0) +
-      (Number(data.shipping_line_fee_zar) || 0) +
-      (Number(data.port_inland_release_fee_zar) || 0) +
-      (Number(data.cto_zar) || 0) +
-      (Number(data.transport_port_to_warehouse_zar) || 0) +
-      (Number(data.delivery_only_trans_zar) || 0) +
-      (Number(data.unpack_reload_zar) || 0);
+      (Number(data.shipping_line_charges_zar) || 0) +
+      (Number(data.cargo_dues_zar) || 0) +
+      (Number(data.cto_fee_zar) || 0) +
+      (Number(data.port_health_inspection_zar) || 0) +
+      (Number(data.sars_inspection_zar) || 0) +
+      (Number(data.state_vet_fee_zar) || 0) +
+      (Number(data.inb_turn_in_zar) || 0);
 
-    // Customs disbursements subtotal
+    // Agency fee: 3.5% of customs value, min R1187
+    const agencyFeeZar = this.calculateAgencyFee(customsValueZar);
+
+    // Customs subtotal (duties + VAT + declaration + agency)
     const customsDutyNotApplicable = data.customs_duty_not_applicable || false;
-    const customsDisbursementsSubtotalZar = customsDutyNotApplicable
-      ? 0
-      : (Number(data.customs_duty_zar) || 0);
+    const dutiesZar = customsDutyNotApplicable ? 0 : (Number(data.duties_zar) || 0);
+    const customsSubtotalZar =
+      dutiesZar +
+      (Number(data.customs_vat_zar) || 0) +
+      (Number(data.customs_declaration_zar) || 0) +
+      agencyFeeZar;
 
-    // Calculate DAVIF
-    const davifZar = this.calculateDAVIF(customsValueZar);
+    // Total shipping cost (origin + local + destination charges)
+    const totalShippingCostZar = totalOriginChargesZar + localChargesSubtotalZar + destinationChargesSubtotalZar;
 
-    // Clearing charges subtotal
-    const clearingChargesSubtotalZar =
-      (Number(data.documentation_fee_zar) || 0) +
-      (Number(data.communication_fee_zar) || 0) +
-      (Number(data.edif_fee_zar) || 0) +
-      (Number(data.plant_inspection_zar) || 0) +
-      (Number(data.portbuild_zar) || 0) +
-      davifZar +
-      (Number(data.agency_zar) || 0);
-
-    // Total shipping cost (origin + destination charges)
-    const totalShippingCostZar = totalOriginChargesZar + destinationChargesSubtotalZar;
-
-    // Total in warehouse cost (shipping + customs + clearing)
-    const totalInWarehouseCostZar =
-      totalShippingCostZar +
-      customsDisbursementsSubtotalZar +
-      clearingChargesSubtotalZar;
+    // Total in warehouse cost (shipping + customs)
+    const totalInWarehouseCostZar = totalShippingCostZar + customsSubtotalZar;
 
     // Cost per KG
     const allInWarehouseCostPerKgZar = totalGrossWeightKg > 0
@@ -211,15 +224,16 @@ export class CostingController {
       : 0;
 
     return {
+      customs_value_zar: Math.round(customsValueZar * 100) / 100,
       origin_charge_zar: Math.round(originChargeZar * 100) / 100,
       total_origin_charges_zar: Math.round(totalOriginChargesZar * 100) / 100,
+      local_charges_subtotal_zar: Math.round(localChargesSubtotalZar * 100) / 100,
       destination_charges_subtotal_zar: Math.round(destinationChargesSubtotalZar * 100) / 100,
-      customs_disbursements_subtotal_zar: Math.round(customsDisbursementsSubtotalZar * 100) / 100,
-      clearing_charges_subtotal_zar: Math.round(clearingChargesSubtotalZar * 100) / 100,
+      agency_fee_zar: Math.round(agencyFeeZar * 100) / 100,
+      customs_subtotal_zar: Math.round(customsSubtotalZar * 100) / 100,
       total_shipping_cost_zar: Math.round(totalShippingCostZar * 100) / 100,
       total_in_warehouse_cost_zar: Math.round(totalInWarehouseCostZar * 100) / 100,
       all_in_warehouse_cost_per_kg_zar: Math.round(allInWarehouseCostPerKgZar * 100) / 100,
-      davif_zar: Math.round(davifZar * 100) / 100,
     };
   }
 }

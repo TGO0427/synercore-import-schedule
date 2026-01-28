@@ -791,6 +791,100 @@ export const migrations: Migration[] = [
       return true;
     },
   },
+
+  // Phase 7: Import Costing Schema Update - Local Charges and Destination Charges restructure
+  {
+    name: 'update-import-costing-schema',
+    version: '015',
+    description: 'Update import cost estimates with new Local Charges and Destination Charges fields',
+    depends_on: ['add-import-costing-tables'],
+    execute: async () => {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        // Add new Local Charges columns
+        const localChargeColumns = [
+          'local_cartage_zar NUMERIC(12,2) DEFAULT 0',
+          'transport_to_warehouse_zar NUMERIC(12,2) DEFAULT 0',
+          'storage_zar NUMERIC(12,2) DEFAULT 0',
+          'storage_days INTEGER DEFAULT 0',
+          'outlying_depot_surcharge_zar NUMERIC(12,2) DEFAULT 0',
+          'local_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0',
+        ];
+
+        for (const colDef of localChargeColumns) {
+          const colName = colDef.split(' ')[0];
+          const checkResult = await client.query(
+            `SELECT column_name FROM information_schema.columns
+             WHERE table_name='import_cost_estimates' AND column_name=$1`,
+            [colName]
+          );
+          if (checkResult.rows.length === 0) {
+            await client.query(`ALTER TABLE import_cost_estimates ADD COLUMN ${colDef}`);
+            logInfo(`Added column ${colName} to import_cost_estimates`);
+          }
+        }
+
+        // Add new Destination Charges (Port/Shipping) columns
+        const destChargeColumns = [
+          'shipping_line_charges_zar NUMERIC(12,2) DEFAULT 0',
+          'cargo_dues_zar NUMERIC(12,2) DEFAULT 0',
+          'cto_fee_zar NUMERIC(12,2) DEFAULT 0',
+          'port_health_inspection_zar NUMERIC(12,2) DEFAULT 0',
+          'sars_inspection_zar NUMERIC(12,2) DEFAULT 0',
+          'state_vet_fee_zar NUMERIC(12,2) DEFAULT 0',
+          'inb_turn_in_zar NUMERIC(12,2) DEFAULT 0',
+        ];
+
+        for (const colDef of destChargeColumns) {
+          const colName = colDef.split(' ')[0];
+          const checkResult = await client.query(
+            `SELECT column_name FROM information_schema.columns
+             WHERE table_name='import_cost_estimates' AND column_name=$1`,
+            [colName]
+          );
+          if (checkResult.rows.length === 0) {
+            await client.query(`ALTER TABLE import_cost_estimates ADD COLUMN ${colDef}`);
+            logInfo(`Added column ${colName} to import_cost_estimates`);
+          }
+        }
+
+        // Add new Customs & Duties columns
+        const customsColumns = [
+          'duties_zar NUMERIC(12,2) DEFAULT 0',
+          'customs_vat_zar NUMERIC(12,2) DEFAULT 0',
+          'customs_declaration_zar NUMERIC(12,2) DEFAULT 0',
+          'agency_fee_zar NUMERIC(12,2) DEFAULT 0',
+          'agency_fee_percentage NUMERIC(5,2) DEFAULT 3.5',
+          'agency_fee_min NUMERIC(12,2) DEFAULT 1187',
+          'customs_subtotal_zar NUMERIC(14,2) DEFAULT 0',
+        ];
+
+        for (const colDef of customsColumns) {
+          const colName = colDef.split(' ')[0];
+          const checkResult = await client.query(
+            `SELECT column_name FROM information_schema.columns
+             WHERE table_name='import_cost_estimates' AND column_name=$1`,
+            [colName]
+          );
+          if (checkResult.rows.length === 0) {
+            await client.query(`ALTER TABLE import_cost_estimates ADD COLUMN ${colDef}`);
+            logInfo(`Added column ${colName} to import_cost_estimates`);
+          }
+        }
+
+        await client.query('COMMIT');
+        logInfo('Import costing schema updated with new Local Charges and Destination Charges fields');
+        return true;
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+  },
 ];
 
 /**
