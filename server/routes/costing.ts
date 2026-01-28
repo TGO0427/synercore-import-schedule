@@ -26,17 +26,21 @@ const validate = (req: Request, res: Response, next: NextFunction) => {
   next();
 };
 
-// Validation rules
+// Validation rules - use nullable: true to accept null values from frontend
 const createCostEstimateValidation = [
-  body('supplier_name').optional().trim(),
-  body('port_of_discharge').optional().trim(),
-  body('container_type').optional().trim(),
-  body('quantity').optional().isInt({ min: 1 }),
-  body('gross_weight_kg').optional().isFloat({ min: 0 }),
-  body('total_gross_weight_kg').optional().isFloat({ min: 0 }),
-  body('roe_origin').optional().isFloat({ min: 0 }),
-  body('origin_charge_usd').optional().isFloat({ min: 0 }),
-  body('customs_value_zar').optional().isFloat({ min: 0 }),
+  body('supplier_name').optional({ nullable: true }).trim(),
+  body('port_of_discharge').optional({ nullable: true }).trim(),
+  body('container_type').optional({ nullable: true }).trim(),
+  body('quantity').optional({ nullable: true }).isInt({ min: 1 }),
+  body('gross_weight_kg').optional({ nullable: true }).isFloat({ min: 0 }),
+  body('total_gross_weight_kg').optional({ nullable: true }).isFloat({ min: 0 }),
+  body('roe_origin').optional({ nullable: true }).isFloat({ min: 0 }),
+  body('roe_eur').optional({ nullable: true }).isFloat({ min: 0 }),
+  body('origin_charge_usd').optional({ nullable: true }).isFloat({ min: 0 }),
+  body('origin_charge_eur').optional({ nullable: true }).isFloat({ min: 0 }),
+  body('customs_value_zar').optional({ nullable: true }).isFloat({ min: 0 }),
+  body('invoice_value_usd').optional({ nullable: true }).isFloat({ min: 0 }),
+  body('invoice_value_eur').optional({ nullable: true }).isFloat({ min: 0 }),
 ];
 
 const updateCostEstimateValidation = [
