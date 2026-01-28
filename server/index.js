@@ -323,6 +323,14 @@ async function start() {
       // Don't fail startup if migration has issues, but log them
     }
 
+    try {
+      const addCostingColumns = await import('./db/add-costing-columns.js');
+      await addCostingColumns.default();
+    } catch (error) {
+      console.warn('⚠️  Costing migration warning:', error.message);
+      // Don't fail startup if migration has issues, but log them
+    }
+
     // Initialize notification scheduler
     try {
       const { default: NotificationScheduler } = await import('./jobs/notificationScheduler.js');
