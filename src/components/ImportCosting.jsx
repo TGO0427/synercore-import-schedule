@@ -9,8 +9,8 @@ import {
   INCO_TERMS,
   SA_PORTS,
 } from '../utils/costingCalculations';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 // Payment terms options
 const PAYMENT_TERMS = [
@@ -293,7 +293,7 @@ function ImportCosting() {
     doc.text(`Supplier: ${estimate.supplier_name || 'N/A'}`, 14, 40);
 
     // Shipment Details
-    doc.autoTable({
+    autoTable(doc, {
       startY: 48,
       head: [['Shipment Details', '']],
       body: [
@@ -310,7 +310,7 @@ function ImportCosting() {
     });
 
     // Origin Charges
-    doc.autoTable({
+    autoTable(doc, {
       startY: doc.lastAutoTable.finalY + 10,
       head: [['Origin Charges', 'Amount', 'ZAR']],
       body: [
@@ -323,7 +323,7 @@ function ImportCosting() {
     });
 
     // Local Charges
-    doc.autoTable({
+    autoTable(doc, {
       startY: doc.lastAutoTable.finalY + 10,
       head: [['Local Charges (Transport/Cartage)', 'ZAR']],
       body: [
@@ -347,7 +347,7 @@ function ImportCosting() {
     });
 
     // Destination Charges
-    doc.autoTable({
+    autoTable(doc, {
       startY: doc.lastAutoTable.finalY + 10,
       head: [['Destination Charges', 'ZAR']],
       body: [
@@ -366,7 +366,7 @@ function ImportCosting() {
     });
 
     // Customs & Duties
-    doc.autoTable({
+    autoTable(doc, {
       startY: doc.lastAutoTable.finalY + 10,
       head: [['Customs & Duties', 'ZAR']],
       body: [
@@ -382,7 +382,7 @@ function ImportCosting() {
     });
 
     // Totals
-    doc.autoTable({
+    autoTable(doc, {
       startY: doc.lastAutoTable.finalY + 10,
       head: [['Summary', 'Amount']],
       body: [
