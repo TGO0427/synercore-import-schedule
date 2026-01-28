@@ -1,6 +1,7 @@
 /**
- * Migration: Add new costing columns for Local Charges and Destination Charges
- * This adds all the new columns needed for the AFI rate sheet structure
+ * Migration: Create costing tables and add all columns
+ * This creates the import_cost_estimates and exchange_rate_cache tables
+ * and adds all columns needed for the AFI rate sheet structure
  */
 
 import { query } from './connection.js';
@@ -22,26 +23,93 @@ const addColumn = async (columnDef) => {
     }
     return false;
   } catch (error) {
-    // Table might not exist yet, that's OK
-    if (error.message?.includes('does not exist')) {
-      console.log(`  - Table import_cost_estimates does not exist yet`);
-      return false;
-    }
     throw error;
   }
 };
 
 export default async function addCostingColumns() {
-  console.log('Running costing columns migration...');
+  console.log('Running costing tables migration...');
 
-  // Check if table exists first
+  // Create import_cost_estimates table if it doesn't exist
   const tableCheck = await query(
     `SELECT table_name FROM information_schema.tables WHERE table_name='import_cost_estimates'`
   );
 
   if (tableCheck.rows.length === 0) {
-    console.log('  - import_cost_estimates table does not exist, skipping column migration');
-    return;
+    console.log('  Creating import_cost_estimates table...');
+    await query(`
+      CREATE TABLE import_cost_estimates (
+        id VARCHAR(255) PRIMARY KEY,
+        shipment_id VARCHAR(255),
+        supplier_id VARCHAR(255),
+        reference_number VARCHAR(100),
+        country_of_destination VARCHAR(100) DEFAULT 'South Africa',
+        port_of_discharge VARCHAR(50),
+        shipping_line VARCHAR(100),
+        routing VARCHAR(255),
+        frequency VARCHAR(50),
+        transit_time_days INTEGER,
+        inco_terms VARCHAR(20),
+        inco_term_place VARCHAR(100),
+        container_type VARCHAR(50),
+        quantity INTEGER DEFAULT 1,
+        hs_code VARCHAR(50),
+        gross_weight_kg NUMERIC(12,2),
+        total_gross_weight_kg NUMERIC(12,2),
+        origin_rate_usd NUMERIC(12,2),
+        ocean_freight_rate_usd NUMERIC(12,2),
+        commodity VARCHAR(255),
+        invoice_value_usd NUMERIC(14,2) DEFAULT 0,
+        invoice_value_eur NUMERIC(14,2) DEFAULT 0,
+        customs_value_zar NUMERIC(14,2) DEFAULT 0,
+        supplier_name VARCHAR(255),
+        validity_date DATE,
+        costing_date DATE DEFAULT CURRENT_DATE,
+        payment_terms VARCHAR(100),
+        roe_origin NUMERIC(12,6),
+        roe_eur NUMERIC(12,6),
+        origin_charge_usd NUMERIC(12,2) DEFAULT 0,
+        origin_charge_eur NUMERIC(12,2) DEFAULT 0,
+        origin_charge_zar NUMERIC(14,2) DEFAULT 0,
+        total_origin_charges_zar NUMERIC(14,2) DEFAULT 0,
+        customs_duty_not_applicable BOOLEAN DEFAULT false,
+        total_shipping_cost_zar NUMERIC(14,2) DEFAULT 0,
+        total_in_warehouse_cost_zar NUMERIC(14,2) DEFAULT 0,
+        all_in_warehouse_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0,
+        status VARCHAR(50) DEFAULT 'draft',
+        notes TEXT,
+        created_by VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('  ✓ Created import_cost_estimates table');
+
+    // Create indexes
+    await query(`CREATE INDEX IF NOT EXISTS idx_cost_estimates_shipment ON import_cost_estimates(shipment_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_cost_estimates_supplier ON import_cost_estimates(supplier_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_cost_estimates_date ON import_cost_estimates(costing_date)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_cost_estimates_status ON import_cost_estimates(status)`);
+    console.log('  ✓ Created indexes');
+  }
+
+  // Create exchange_rate_cache table if it doesn't exist
+  const rateTableCheck = await query(
+    `SELECT table_name FROM information_schema.tables WHERE table_name='exchange_rate_cache'`
+  );
+
+  if (rateTableCheck.rows.length === 0) {
+    console.log('  Creating exchange_rate_cache table...');
+    await query(`
+      CREATE TABLE exchange_rate_cache (
+        id SERIAL PRIMARY KEY,
+        currency_pair VARCHAR(10) NOT NULL UNIQUE,
+        rate NUMERIC(12,6) NOT NULL,
+        source VARCHAR(100),
+        fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('  ✓ Created exchange_rate_cache table');
   }
 
   let added = 0;
