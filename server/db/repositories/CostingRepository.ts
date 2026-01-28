@@ -32,9 +32,11 @@ export interface ImportCostEstimate {
   validity_date?: string;
   costing_date: string;
   payment_terms?: string;
-  roe_origin?: number;
+  roe_origin?: number;   // USD/ZAR
+  roe_eur?: number;      // EUR/ZAR
   // Origin Charges
   origin_charge_usd: number;
+  origin_charge_eur: number;
   origin_charge_zar: number;
   total_origin_charges_zar: number;
   // Destination Charges
@@ -87,7 +89,7 @@ const COST_ESTIMATE_COLUMNS = [
   'inco_terms', 'inco_term_place', 'container_type', 'quantity', 'hs_code',
   'gross_weight_kg', 'total_gross_weight_kg', 'origin_rate_usd', 'ocean_freight_rate_usd',
   'commodity', 'customs_value_zar', 'supplier_name', 'validity_date', 'costing_date',
-  'payment_terms', 'roe_origin', 'origin_charge_usd', 'origin_charge_zar',
+  'payment_terms', 'roe_origin', 'roe_eur', 'origin_charge_usd', 'origin_charge_eur', 'origin_charge_zar',
   'total_origin_charges_zar', 'thc_zar', 'gate_door_zar', 'insurance_zar',
   'shipping_line_fee_zar', 'port_inland_release_fee_zar', 'cto_zar',
   'transport_port_to_warehouse_zar', 'delivery_only_trans_zar', 'unpack_reload_zar',
@@ -191,6 +193,7 @@ export class CostingRepository {
       updated_at: now,
       // Default numeric values to 0
       origin_charge_usd: data.origin_charge_usd || 0,
+      origin_charge_eur: data.origin_charge_eur || 0,
       origin_charge_zar: data.origin_charge_zar || 0,
       total_origin_charges_zar: data.total_origin_charges_zar || 0,
       thc_zar: data.thc_zar || 0,

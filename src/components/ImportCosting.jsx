@@ -12,6 +12,29 @@ import {
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
+// Payment terms options
+const PAYMENT_TERMS = [
+  { value: 'CIA', label: 'CIA - Cash in Advance' },
+  { value: 'COD', label: 'COD - Cash on Delivery' },
+  { value: 'Net 7', label: 'Net 7 Days' },
+  { value: 'Net 14', label: 'Net 14 Days' },
+  { value: 'Net 30', label: 'Net 30 Days' },
+  { value: 'Net 45', label: 'Net 45 Days' },
+  { value: 'Net 60', label: 'Net 60 Days' },
+  { value: 'Net 90', label: 'Net 90 Days' },
+  { value: '2/10 Net 30', label: '2/10 Net 30 - 2% discount if paid in 10 days' },
+  { value: 'LC at Sight', label: 'LC at Sight - Letter of Credit' },
+  { value: 'LC 30 Days', label: 'LC 30 Days - Letter of Credit' },
+  { value: 'LC 60 Days', label: 'LC 60 Days - Letter of Credit' },
+  { value: 'LC 90 Days', label: 'LC 90 Days - Letter of Credit' },
+  { value: 'DA 30', label: 'DA 30 - Documents Against Acceptance' },
+  { value: 'DA 60', label: 'DA 60 - Documents Against Acceptance' },
+  { value: 'DA 90', label: 'DA 90 - Documents Against Acceptance' },
+  { value: 'DP', label: 'DP - Documents Against Payment' },
+  { value: 'TT in Advance', label: 'TT in Advance - Telegraphic Transfer' },
+  { value: 'TT after Delivery', label: 'TT after Delivery' },
+];
+
 const INITIAL_FORM_STATE = {
   reference_number: '',
   country_of_destination: 'South Africa',
@@ -35,9 +58,11 @@ const INITIAL_FORM_STATE = {
   validity_date: '',
   costing_date: new Date().toISOString().split('T')[0],
   payment_terms: '',
-  roe_origin: '',
+  roe_origin: '',  // USD/ZAR
+  roe_eur: '',     // EUR/ZAR
   // Origin Charges
   origin_charge_usd: 0,
+  origin_charge_eur: 0,
   // Destination Charges
   thc_zar: 0,
   gate_door_zar: 0,
@@ -491,68 +516,77 @@ function ImportCosting() {
                   {renderInput('Total Gross Weight (kg)', 'total_gross_weight_kg', 'number')}
                   {renderInput('Costing Date', 'costing_date', 'date')}
                   {renderInput('Validity Date', 'validity_date', 'date')}
-                  {renderInput('Payment Terms', 'payment_terms')}
+                  {renderSelect('Payment Terms', 'payment_terms', PAYMENT_TERMS)}
                 </div>
               </div>
 
               {/* Section: Exchange Rate & Customs Value */}
               <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#ecfdf5', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 1rem', color: '#065f46', fontSize: '1rem' }}>Exchange Rate & Values</h4>
-                <p style={{ margin: '0 0 1rem', fontSize: '0.8rem', color: '#666' }}>Enter the Finex SA rate from your daily email</p>
+                <h4 style={{ margin: '0 0 1rem', color: '#065f46', fontSize: '1rem' }}>Finex SA Exchange Rates</h4>
+                <p style={{ margin: '0 0 1rem', fontSize: '0.8rem', color: '#666' }}>Enter the Finex SA rates from your daily email</p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
                   <div style={{ marginBottom: '12px' }}>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
-                      Finex SA ROE (USD/ZAR)
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#166534' }}>
+                      USD/ZAR Rate
                     </label>
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <input
-                        type="number"
-                        value={formData.roe_origin || ''}
-                        onChange={(e) => handleInputChange('roe_origin', parseFloat(e.target.value) || '')}
-                        className="input"
-                        style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '2px solid #10b981' }}
-                        step="0.0001"
-                        placeholder="e.g. 18.50"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => exchangeRate?.rate && handleInputChange('roe_origin', exchangeRate.rate)}
-                        style={{
-                          padding: '8px 12px', backgroundColor: '#6b7280', color: 'white',
-                          border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem'
-                        }}
-                        title="Use market rate (for reference)"
-                      >
-                        Market
-                      </button>
-                    </div>
+                    <input
+                      type="number"
+                      value={formData.roe_origin || ''}
+                      onChange={(e) => handleInputChange('roe_origin', parseFloat(e.target.value) || '')}
+                      className="input"
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '2px solid #10b981', backgroundColor: '#f0fdf4' }}
+                      step="0.0001"
+                      placeholder="e.g. 18.50"
+                    />
+                  </div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#1d4ed8' }}>
+                      EUR/ZAR Rate
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.roe_eur || ''}
+                      onChange={(e) => handleInputChange('roe_eur', parseFloat(e.target.value) || '')}
+                      className="input"
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '2px solid #3b82f6', backgroundColor: '#eff6ff' }}
+                      step="0.0001"
+                      placeholder="e.g. 20.50"
+                    />
                   </div>
                   {renderCurrencyInput('Origin Rate', 'origin_rate_usd', 'USD')}
-                  {renderCurrencyInput('Ocean Freight Rate', 'ocean_freight_rate_usd', 'USD')}
                   {renderCurrencyInput('Customs Value', 'customs_value_zar', 'ZAR')}
                 </div>
               </div>
 
               {/* Section: Origin Charges */}
               <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f0fdf4', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 1rem', color: '#166534', fontSize: '1rem' }}>Origin Charges (USD)</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                <h4 style={{ margin: '0 0 1rem', color: '#166534', fontSize: '1rem' }}>Origin Charges</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
                   {renderCurrencyInput('Origin Charge', 'origin_charge_usd', 'USD')}
                   <div style={{ marginBottom: '12px' }}>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
-                      Origin Charge (ZAR) - Auto
-                    </label>
-                    <div style={{ padding: '8px 12px', backgroundColor: '#e5e7eb', borderRadius: '6px', fontWeight: '600', color: '#166534' }}>
-                      {formatCurrency(calculatedTotals.origin_charge_zar)}
-                    </div>
-                  </div>
-                  <div style={{ marginBottom: '12px' }}>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
-                      Total Origin Charges - Auto
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#166534' }}>
+                      USD to ZAR - Auto
                     </label>
                     <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', borderRadius: '6px', fontWeight: '600', color: '#166534' }}>
-                      {formatCurrency(calculatedTotals.total_origin_charges_zar)}
+                      {formatCurrency((parseFloat(formData.origin_charge_usd) || 0) * (parseFloat(formData.roe_origin) || 0))}
                     </div>
+                  </div>
+                  {renderCurrencyInput('Origin Charge', 'origin_charge_eur', 'EUR')}
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#1d4ed8' }}>
+                      EUR to ZAR - Auto
+                    </label>
+                    <div style={{ padding: '8px 12px', backgroundColor: '#dbeafe', borderRadius: '6px', fontWeight: '600', color: '#1d4ed8' }}>
+                      {formatCurrency((parseFloat(formData.origin_charge_eur) || 0) * (parseFloat(formData.roe_eur) || 0))}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ marginTop: '1rem', padding: '12px', backgroundColor: '#dcfce7', borderRadius: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: '500', color: '#166534' }}>Total Origin Charges (ZAR)</span>
+                    <span style={{ fontSize: '1.25rem', fontWeight: '700', color: '#166534' }}>
+                      {formatCurrency(calculatedTotals.total_origin_charges_zar)}
+                    </span>
                   </div>
                 </div>
               </div>

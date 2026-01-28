@@ -52,17 +52,27 @@ export const calculateClearingSubtotal = (data, davif) => {
 };
 
 /**
+ * Calculate EUR to ZAR conversion
+ */
+export const calculateEurChargeZAR = (originChargeEur, roeEur) => {
+  return (originChargeEur || 0) * (roeEur || 0);
+};
+
+/**
  * Calculate all totals from form data
  */
 export const calculateAllTotals = (data) => {
-  const roeOrigin = parseFloat(data.roe_origin) || 0;
+  const roeOrigin = parseFloat(data.roe_origin) || 0;  // USD/ZAR
+  const roeEur = parseFloat(data.roe_eur) || 0;        // EUR/ZAR
   const originChargeUsd = parseFloat(data.origin_charge_usd) || 0;
+  const originChargeEur = parseFloat(data.origin_charge_eur) || 0;
   const customsValueZar = parseFloat(data.customs_value_zar) || 0;
   const totalGrossWeightKg = parseFloat(data.total_gross_weight_kg) || 0;
 
-  // Origin charges conversion
-  const originChargeZar = calculateOriginChargeZAR(originChargeUsd, roeOrigin);
-  const totalOriginChargesZar = originChargeZar;
+  // Origin charges conversion (both USD and EUR)
+  const originChargeUsdZar = calculateOriginChargeZAR(originChargeUsd, roeOrigin);
+  const originChargeEurZar = calculateEurChargeZAR(originChargeEur, roeEur);
+  const totalOriginChargesZar = originChargeUsdZar + originChargeEurZar;
 
   // Destination charges subtotal
   const destinationChargesSubtotalZar = calculateDestinationSubtotal(data);
@@ -94,7 +104,9 @@ export const calculateAllTotals = (data) => {
     : 0;
 
   return {
-    origin_charge_zar: Math.round(originChargeZar * 100) / 100,
+    origin_charge_usd_zar: Math.round(originChargeUsdZar * 100) / 100,
+    origin_charge_eur_zar: Math.round(originChargeEurZar * 100) / 100,
+    origin_charge_zar: Math.round((originChargeUsdZar + originChargeEurZar) * 100) / 100,
     total_origin_charges_zar: Math.round(totalOriginChargesZar * 100) / 100,
     destination_charges_subtotal_zar: Math.round(destinationChargesSubtotalZar * 100) / 100,
     customs_disbursements_subtotal_zar: Math.round(customsDisbursementsSubtotalZar * 100) / 100,

@@ -717,8 +717,10 @@ export const migrations: Migration[] = [
           payment_terms VARCHAR(100),
           roe_origin NUMERIC(12,6),
 
-          -- Origin Charges (USD)
+          -- Origin Charges (USD and EUR)
           origin_charge_usd NUMERIC(12,2) DEFAULT 0,
+          origin_charge_eur NUMERIC(12,2) DEFAULT 0,
+          roe_eur NUMERIC(12,6),
           origin_charge_zar NUMERIC(14,2) DEFAULT 0,
           total_origin_charges_zar NUMERIC(14,2) DEFAULT 0,
 
