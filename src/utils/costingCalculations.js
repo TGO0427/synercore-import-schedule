@@ -140,9 +140,8 @@ export const calculateAllTotals = (data) => {
     : 0;
 
   return {
+    // Database columns (will be saved)
     customs_value_zar: Math.round(customsValueZar * 100) / 100,
-    origin_charge_usd_zar: Math.round(originChargeUsdZar * 100) / 100,
-    origin_charge_eur_zar: Math.round(originChargeEurZar * 100) / 100,
     origin_charge_zar: Math.round((originChargeUsdZar + originChargeEurZar) * 100) / 100,
     total_origin_charges_zar: Math.round(totalOriginChargesZar * 100) / 100,
     local_charges_subtotal_zar: Math.round(localChargesSubtotalZar * 100) / 100,
@@ -152,6 +151,9 @@ export const calculateAllTotals = (data) => {
     total_shipping_cost_zar: Math.round(totalShippingCostZar * 100) / 100,
     total_in_warehouse_cost_zar: Math.round(totalInWarehouseCostZar * 100) / 100,
     all_in_warehouse_cost_per_kg_zar: Math.round(allInWarehouseCostPerKgZar * 100) / 100,
+    // Display-only fields (not saved to database, used for form display)
+    _origin_charge_usd_zar: Math.round(originChargeUsdZar * 100) / 100,
+    _origin_charge_eur_zar: Math.round(originChargeEurZar * 100) / 100,
   };
 };
 

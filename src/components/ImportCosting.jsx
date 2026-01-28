@@ -203,7 +203,14 @@ function ImportCosting() {
           cleanedData[key] = null;
         }
       });
-      const dataToSend = { ...cleanedData, ...calculatedTotals };
+      // Filter out display-only fields (prefixed with underscore)
+      const dbTotals = {};
+      Object.keys(calculatedTotals).forEach(key => {
+        if (!key.startsWith('_')) {
+          dbTotals[key] = calculatedTotals[key];
+        }
+      });
+      const dataToSend = { ...cleanedData, ...dbTotals };
       console.log('Submitting costing data:', dataToSend);
 
       const url = editingId
@@ -307,8 +314,8 @@ function ImportCosting() {
       startY: doc.lastAutoTable.finalY + 10,
       head: [['Origin Charges', 'Amount', 'ZAR']],
       body: [
-        ['Origin Charge (USD)', formatCurrency(estimate.origin_charge_usd, 'USD'), formatCurrency(totals.origin_charge_usd_zar)],
-        ['Origin Charge (EUR)', formatCurrency(estimate.origin_charge_eur, 'EUR'), formatCurrency(totals.origin_charge_eur_zar)],
+        ['Origin Charge (USD)', formatCurrency(estimate.origin_charge_usd, 'USD'), formatCurrency(totals._origin_charge_usd_zar)],
+        ['Origin Charge (EUR)', formatCurrency(estimate.origin_charge_eur, 'EUR'), formatCurrency(totals._origin_charge_eur_zar)],
         ['Total Origin Charges', '', formatCurrency(totals.total_origin_charges_zar)],
       ],
       theme: 'grid',
