@@ -59,20 +59,60 @@ export const calculateDestinationSubtotal = (data) => {
 /**
  * Calculate agency fee: 3.5% of customs value, minimum R1187
  */
-export const calculateAgencyFee = (customsValue) => {
-  if (!customsValue || customsValue <= 0) return 0;
-  const percentage = customsValue * 0.035;
-  return Math.max(percentage, 1187);
+export const calculateAgencyFee = (customsValue, percentage = 3.5, min = 1187) => {
+  if (!customsValue || customsValue <= 0) return min; // Always charge minimum
+  const calculated = customsValue * (percentage / 100);
+  return Math.max(calculated, min);
+};
+
+/**
+ * Calculate customs items totals from line items
+ */
+export const calculateCustomsItemsTotals = (data) => {
+  const items = data.customs_items || [];
+  const roeCustoms = parseFloat(data.roe_customs) || parseFloat(data.roe_origin) || 0;
+  const roeEur = parseFloat(data.roe_eur) || roeCustoms;
+
+  let totalCustomsValue = 0;
+  let totalDuties = 0;
+  let totalSchedule1Duty = 0;
+  let totalVat = 0;
+
+  items.forEach(item => {
+    const invoiceValue = parseFloat(item.invoice_value) || 0;
+    const dutyPercent = parseFloat(item.duty_percent) || 0;
+    const dutySchedule1Percent = parseFloat(item.duty_schedule1_percent) || 0;
+    const currency = item.currency || 'USD';
+
+    // Convert to ZAR based on currency
+    let roe = roeCustoms;
+    if (currency === 'EUR') roe = roeEur;
+    if (currency === 'ZAR') roe = 1;
+
+    const customsValue = invoiceValue * roe;
+    const duties = customsValue * (dutyPercent / 100);
+    const schedule1Duty = customsValue * (dutySchedule1Percent / 100);
+    const vat = (customsValue + duties + schedule1Duty) * 0.15;
+
+    totalCustomsValue += customsValue;
+    totalDuties += duties;
+    totalSchedule1Duty += schedule1Duty;
+    totalVat += vat;
+  });
+
+  return { totalCustomsValue, totalDuties, totalSchedule1Duty, totalVat };
 };
 
 /**
  * Calculate customs subtotal (duties + VAT + declaration + agency fee)
  */
-export const calculateCustomsSubtotal = (data, agencyFee, customsDutyNotApplicable) => {
-  const duties = customsDutyNotApplicable ? 0 : (parseFloat(data.duties_zar) || 0);
+export const calculateCustomsSubtotal = (data, agencyFee) => {
+  const customsTotals = calculateCustomsItemsTotals(data);
   return (
-    duties +
-    (parseFloat(data.customs_vat_zar) || 0) +
+    customsTotals.totalCustomsValue +
+    customsTotals.totalDuties +
+    customsTotals.totalSchedule1Duty +
+    customsTotals.totalVat +
     (parseFloat(data.customs_declaration_zar) || 0) +
     (agencyFee || 0)
   );
@@ -107,8 +147,11 @@ export const calculateAllTotals = (data) => {
   const originChargeEur = parseFloat(data.origin_charge_eur) || 0;
   const totalGrossWeightKg = parseFloat(data.total_gross_weight_kg) || 0;
 
-  // Calculate Customs Value from invoice values (auto-calculated)
-  const customsValueZar = calculateCustomsValue(data);
+  // Calculate Customs Value from customs items (new structure) or legacy invoice values
+  const customsItemsTotals = calculateCustomsItemsTotals(data);
+  const customsValueZar = customsItemsTotals.totalCustomsValue > 0
+    ? customsItemsTotals.totalCustomsValue
+    : calculateCustomsValue(data);
 
   // Origin charges conversion (both USD and EUR)
   const originChargeUsdZar = calculateOriginChargeZAR(originChargeUsd, roeOrigin);
@@ -122,11 +165,15 @@ export const calculateAllTotals = (data) => {
   const destinationChargesSubtotalZar = calculateDestinationSubtotal(data);
 
   // Agency fee: 3.5% of customs value, min R1187
-  const agencyFeeZar = calculateAgencyFee(customsValueZar);
+  const agencyFeePercent = parseFloat(data.agency_fee_percentage) || 3.5;
+  const agencyFeeMin = parseFloat(data.agency_fee_min) || 1187;
+  const agencyFeeZar = calculateAgencyFee(customsValueZar, agencyFeePercent, agencyFeeMin);
 
-  // Customs subtotal (duties + VAT + declaration + agency)
-  const customsDutyNotApplicable = data.customs_duty_not_applicable || false;
-  const customsSubtotalZar = calculateCustomsSubtotal(data, agencyFeeZar, customsDutyNotApplicable);
+  // Customs subtotal from items + declaration + agency
+  const customsSubtotalZar = customsItemsTotals.totalCustomsValue > 0
+    ? (customsItemsTotals.totalDuties + customsItemsTotals.totalSchedule1Duty + customsItemsTotals.totalVat +
+       (parseFloat(data.customs_declaration_zar) || 0) + agencyFeeZar)
+    : calculateCustomsSubtotal(data, agencyFeeZar);
 
   // Total shipping cost (origin + local + destination charges)
   const totalShippingCostZar = totalOriginChargesZar + localChargesSubtotalZar + destinationChargesSubtotalZar;
