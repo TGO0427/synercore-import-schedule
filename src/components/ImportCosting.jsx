@@ -37,6 +37,10 @@ const PAYMENT_TERMS = [
 
 const INITIAL_FORM_STATE = {
   reference_number: '',
+  // Origin details
+  country_of_origin: '',
+  port_of_loading: '',
+  // Destination details
   country_of_destination: 'South Africa',
   port_of_discharge: 'CPT',
   shipping_line: '',
@@ -47,14 +51,6 @@ const INITIAL_FORM_STATE = {
   inco_term_place: 'CPT',
   container_type: "20' Dry Container",
   quantity: 1,
-  hs_code: '',
-  gross_weight_kg: '',
-  total_gross_weight_kg: '',
-  origin_rate_usd: '',
-  ocean_freight_rate_usd: '',
-  commodity: '',
-  invoice_value_usd: '',  // Invoice/FOB value in USD
-  invoice_value_eur: '',  // Invoice/FOB value in EUR
   supplier_name: '',
   validity_date: '',
   costing_date: new Date().toISOString().split('T')[0],
@@ -88,11 +84,12 @@ const INITIAL_FORM_STATE = {
   daff_inspection_zar: 620,
   state_vet_cancellation_fee_zar: 290,
   jnb_turn_in_zar: 0,
-  // Customs & Duties - New structure with line items
-  roe_customs: '',  // ROE for customs calculation
-  customs_items: [
-    { commodity: '', hs_code: '', duty_percent: 0, duty_schedule1_percent: 0, currency: 'USD', invoice_value: 0 }
+  // Products - each product in the container
+  products: [
+    { name: '', hs_code: '', weight_kg: 0, duty_percent: 0, duty_schedule1_percent: 0, currency: 'USD', invoice_value: 0 }
   ],
+  // Customs & Duties
+  roe_customs: '',  // ROE for customs calculation
   customs_declaration_zar: 590,
   agency_fee_percentage: 3.5,
   agency_fee_min: 1187,
@@ -222,57 +219,90 @@ function ImportCosting() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Customs items helpers
-  const addCustomsItem = () => {
+  // Product helpers
+  const addProduct = () => {
     setFormData(prev => ({
       ...prev,
-      customs_items: [
-        ...prev.customs_items,
-        { commodity: '', hs_code: '', duty_percent: 0, duty_schedule1_percent: 0, currency: 'USD', invoice_value: 0 }
+      products: [
+        ...prev.products,
+        { name: '', hs_code: '', weight_kg: 0, duty_percent: 0, duty_schedule1_percent: 0, currency: 'USD', invoice_value: 0 }
       ]
     }));
   };
 
-  const removeCustomsItem = (index) => {
+  const removeProduct = (index) => {
     setFormData(prev => ({
       ...prev,
-      customs_items: prev.customs_items.filter((_, i) => i !== index)
+      products: prev.products.filter((_, i) => i !== index)
     }));
   };
 
-  const updateCustomsItem = (index, field, value) => {
+  const updateProduct = (index, field, value) => {
     setFormData(prev => ({
       ...prev,
-      customs_items: prev.customs_items.map((item, i) =>
+      products: prev.products.map((item, i) =>
         i === index ? { ...item, [field]: value } : item
       )
     }));
   };
 
-  // Calculate customs item values
-  const calculateCustomsItemValues = (item) => {
-    const roeCustoms = parseFloat(formData.roe_customs) || parseFloat(formData.roe_origin) || 0;
-    const invoiceValue = parseFloat(item.invoice_value) || 0;
-    const dutyPercent = parseFloat(item.duty_percent) || 0;
-    const dutySchedule1Percent = parseFloat(item.duty_schedule1_percent) || 0;
+  // Calculate total weight from all products
+  const getTotalWeight = () => {
+    return (formData.products || []).reduce((sum, p) => sum + (parseFloat(p.weight_kg) || 0), 0);
+  };
 
-    const customsValue = invoiceValue * roeCustoms;
+  // Calculate product customs values
+  const calculateProductCustomsValues = (product) => {
+    const roeCustoms = parseFloat(formData.roe_customs) || parseFloat(formData.roe_origin) || 0;
+    const roeEur = parseFloat(formData.roe_eur) || roeCustoms;
+    const invoiceValue = parseFloat(product.invoice_value) || 0;
+    const dutyPercent = parseFloat(product.duty_percent) || 0;
+    const dutySchedule1Percent = parseFloat(product.duty_schedule1_percent) || 0;
+    const currency = product.currency || 'USD';
+
+    // Convert to ZAR based on currency
+    let roe = roeCustoms;
+    if (currency === 'EUR') roe = roeEur;
+    if (currency === 'ZAR') roe = 1;
+
+    const customsValue = invoiceValue * roe;
     const totalDuties = customsValue * (dutyPercent / 100);
     const schedule1Duty = customsValue * (dutySchedule1Percent / 100);
     const totalVat = (customsValue + totalDuties + schedule1Duty) * 0.15;
 
-    return { customsValue, totalDuties, schedule1Duty, totalVat, roeCustoms };
+    return { customsValue, totalDuties, schedule1Duty, totalVat, roe };
   };
 
-  // Calculate customs totals
+  // Calculate product cost allocation (shipping costs allocated by weight)
+  const calculateProductAllocation = (product) => {
+    const totalWeight = getTotalWeight();
+    const productWeight = parseFloat(product.weight_kg) || 0;
+    const weightRatio = totalWeight > 0 ? productWeight / totalWeight : 0;
+
+    // Get shipping costs from calculated totals
+    const totalShippingCost = calculatedTotals.total_shipping_cost_zar || 0;
+    const allocatedShippingCost = totalShippingCost * weightRatio;
+
+    // Get customs values for this product
+    const customs = calculateProductCustomsValues(product);
+    const productCustomsCost = customs.totalDuties + customs.schedule1Duty + customs.totalVat;
+
+    // Total cost for this product
+    const totalProductCost = allocatedShippingCost + productCustomsCost;
+    const costPerKg = productWeight > 0 ? totalProductCost / productWeight : 0;
+
+    return { weightRatio, allocatedShippingCost, productCustomsCost, totalProductCost, costPerKg };
+  };
+
+  // Calculate customs totals from all products
   const getCustomsTotals = () => {
     let totalCustomsValue = 0;
     let totalDuties = 0;
     let totalSchedule1Duty = 0;
     let totalVat = 0;
 
-    (formData.customs_items || []).forEach(item => {
-      const values = calculateCustomsItemValues(item);
+    (formData.products || []).forEach(product => {
+      const values = calculateProductCustomsValues(product);
       totalCustomsValue += values.customsValue;
       totalDuties += values.totalDuties;
       totalSchedule1Duty += values.schedule1Duty;
@@ -691,20 +721,26 @@ function ImportCosting() {
                       </div>
                     )}
                   </div>
+                  {renderInput('Country of Origin', 'country_of_origin')}
+                  {renderInput('Port of Loading', 'port_of_loading')}
                   {renderSelect('Port of Discharge', 'port_of_discharge', SA_PORTS)}
                   {renderSelect('Container Type', 'container_type', CONTAINER_TYPES)}
                   {renderSelect('INCO Terms', 'inco_terms', INCO_TERMS)}
                   {renderInput('INCO Term Place', 'inco_term_place')}
                   {renderInput('Transit Time (days)', 'transit_time_days', 'number')}
                   {renderInput('Shipping Line', 'shipping_line')}
-                  {renderInput('Quantity', 'quantity', 'number')}
-                  {renderInput('HS Code', 'hs_code')}
-                  {renderInput('Commodity', 'commodity')}
-                  {renderInput('Gross Weight (kg)', 'gross_weight_kg', 'number')}
-                  {renderInput('Total Gross Weight (kg)', 'total_gross_weight_kg', 'number')}
+                  {renderInput('No. of Containers', 'quantity', 'number')}
                   {renderInput('Costing Date', 'costing_date', 'date')}
                   {renderInput('Validity Date', 'validity_date', 'date')}
                   {renderSelect('Payment Terms', 'payment_terms', PAYMENT_TERMS)}
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
+                      Total Weight (from products)
+                    </label>
+                    <div style={{ padding: '8px 12px', backgroundColor: '#e0f2fe', borderRadius: '6px', fontWeight: '600', color: '#0369a1' }}>
+                      {formatNumber(getTotalWeight())} kg
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -743,40 +779,6 @@ function ImportCosting() {
                   </div>
                   {renderCurrencyInput('Origin Rate', 'origin_rate_usd', 'USD')}
                   {renderCurrencyInput('Ocean Freight', 'ocean_freight_rate_usd', 'USD')}
-                </div>
-              </div>
-
-              {/* Section: Invoice Value & Customs Value */}
-              <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fef3c7', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 1rem', color: '#92400e', fontSize: '1rem' }}>Invoice Value (FOB/CIF Value)</h4>
-                <p style={{ margin: '0 0 1rem', fontSize: '0.8rem', color: '#666' }}>Enter the invoice value - Customs Value will be calculated automatically</p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-                  {renderCurrencyInput('Invoice Value', 'invoice_value_usd', 'USD')}
-                  <div style={{ marginBottom: '12px' }}>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#166534' }}>
-                      USD to ZAR - Auto
-                    </label>
-                    <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', borderRadius: '6px', fontWeight: '600', color: '#166534' }}>
-                      {formatCurrency((parseFloat(formData.invoice_value_usd) || 0) * (parseFloat(formData.roe_origin) || 0))}
-                    </div>
-                  </div>
-                  {renderCurrencyInput('Invoice Value', 'invoice_value_eur', 'EUR')}
-                  <div style={{ marginBottom: '12px' }}>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#1d4ed8' }}>
-                      EUR to ZAR - Auto
-                    </label>
-                    <div style={{ padding: '8px 12px', backgroundColor: '#dbeafe', borderRadius: '6px', fontWeight: '600', color: '#1d4ed8' }}>
-                      {formatCurrency((parseFloat(formData.invoice_value_eur) || 0) * (parseFloat(formData.roe_eur) || 0))}
-                    </div>
-                  </div>
-                </div>
-                <div style={{ marginTop: '1rem', padding: '12px', backgroundColor: '#fde68a', borderRadius: '6px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: '500', color: '#92400e' }}>Customs Value (ZAR) - Auto Calculated</span>
-                    <span style={{ fontSize: '1.25rem', fontWeight: '700', color: '#92400e' }}>
-                      {formatCurrency(calculatedTotals.customs_value_zar)}
-                    </span>
-                  </div>
                 </div>
               </div>
 
@@ -884,35 +886,34 @@ function ImportCosting() {
                   </div>
                 </div>
 
-                {/* Customs Items Table */}
+                {/* Products Table */}
                 <div style={{ overflowX: 'auto', marginBottom: '1rem' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                     <thead>
                       <tr style={{ backgroundColor: '#fef3c7', color: '#92400e', borderBottom: '2px solid #d97706' }}>
-                        <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600' }}>Commodity</th>
+                        <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600' }}>Product</th>
                         <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600' }}>HS Code</th>
+                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600' }}>Weight (kg)</th>
                         <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600' }}>% Duty</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600' }}>% Sch 1 Part 2B</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600' }}>Currency</th>
+                        <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600' }}>% Sch 1</th>
+                        <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600' }}>Curr</th>
                         <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600' }}>Invoice Value</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600' }}>ROE</th>
                         <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', backgroundColor: '#b45309', color: 'white' }}>Customs Value</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', backgroundColor: '#b45309', color: 'white' }}>Total Duties</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', backgroundColor: '#b45309', color: 'white' }}>Sch 1 Duty</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', backgroundColor: '#b45309', color: 'white' }}>Total VAT</th>
+                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', backgroundColor: '#b45309', color: 'white' }}>Duties</th>
+                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', backgroundColor: '#b45309', color: 'white' }}>VAT</th>
                         <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600' }}></th>
                       </tr>
                     </thead>
                     <tbody>
-                      {(formData.customs_items || []).map((item, index) => {
-                        const values = calculateCustomsItemValues(item);
+                      {(formData.products || []).map((product, index) => {
+                        const customs = calculateProductCustomsValues(product);
                         return (
                           <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#fffbeb' : '#fef3c7' }}>
                             <td style={{ padding: '4px' }}>
                               <input
                                 type="text"
-                                value={item.commodity || ''}
-                                onChange={(e) => updateCustomsItem(index, 'commodity', e.target.value)}
+                                value={product.name || ''}
+                                onChange={(e) => updateProduct(index, 'name', e.target.value)}
                                 style={{ width: '100%', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '3px', fontSize: '0.8rem' }}
                                 placeholder="e.g. SHMP"
                               />
@@ -920,34 +921,43 @@ function ImportCosting() {
                             <td style={{ padding: '4px' }}>
                               <input
                                 type="text"
-                                value={item.hs_code || ''}
-                                onChange={(e) => updateCustomsItem(index, 'hs_code', e.target.value)}
+                                value={product.hs_code || ''}
+                                onChange={(e) => updateProduct(index, 'hs_code', e.target.value)}
                                 style={{ width: '80px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '3px', fontSize: '0.8rem' }}
                               />
                             </td>
                             <td style={{ padding: '4px' }}>
                               <input
                                 type="number"
-                                value={item.duty_percent || ''}
-                                onChange={(e) => updateCustomsItem(index, 'duty_percent', parseFloat(e.target.value) || 0)}
-                                style={{ width: '60px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '3px', fontSize: '0.8rem', textAlign: 'center' }}
+                                value={product.weight_kg || ''}
+                                onChange={(e) => updateProduct(index, 'weight_kg', parseFloat(e.target.value) || 0)}
+                                style={{ width: '80px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '3px', fontSize: '0.8rem', textAlign: 'right' }}
+                                step="0.01"
+                              />
+                            </td>
+                            <td style={{ padding: '4px' }}>
+                              <input
+                                type="number"
+                                value={product.duty_percent || ''}
+                                onChange={(e) => updateProduct(index, 'duty_percent', parseFloat(e.target.value) || 0)}
+                                style={{ width: '50px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '3px', fontSize: '0.8rem', textAlign: 'center' }}
                                 step="0.1"
                               />
                             </td>
                             <td style={{ padding: '4px' }}>
                               <input
                                 type="number"
-                                value={item.duty_schedule1_percent || ''}
-                                onChange={(e) => updateCustomsItem(index, 'duty_schedule1_percent', parseFloat(e.target.value) || 0)}
-                                style={{ width: '60px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '3px', fontSize: '0.8rem', textAlign: 'center' }}
+                                value={product.duty_schedule1_percent || ''}
+                                onChange={(e) => updateProduct(index, 'duty_schedule1_percent', parseFloat(e.target.value) || 0)}
+                                style={{ width: '50px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '3px', fontSize: '0.8rem', textAlign: 'center' }}
                                 step="0.1"
                               />
                             </td>
                             <td style={{ padding: '4px' }}>
                               <select
-                                value={item.currency || 'USD'}
-                                onChange={(e) => updateCustomsItem(index, 'currency', e.target.value)}
-                                style={{ padding: '4px 6px', border: '1px solid #ddd', borderRadius: '3px', fontSize: '0.8rem' }}
+                                value={product.currency || 'USD'}
+                                onChange={(e) => updateProduct(index, 'currency', e.target.value)}
+                                style={{ padding: '4px', border: '1px solid #ddd', borderRadius: '3px', fontSize: '0.75rem' }}
                               >
                                 <option value="USD">USD</option>
                                 <option value="EUR">EUR</option>
@@ -957,32 +967,26 @@ function ImportCosting() {
                             <td style={{ padding: '4px' }}>
                               <input
                                 type="number"
-                                value={item.invoice_value || ''}
-                                onChange={(e) => updateCustomsItem(index, 'invoice_value', parseFloat(e.target.value) || 0)}
-                                style={{ width: '100px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '3px', fontSize: '0.8rem', textAlign: 'right' }}
+                                value={product.invoice_value || ''}
+                                onChange={(e) => updateProduct(index, 'invoice_value', parseFloat(e.target.value) || 0)}
+                                style={{ width: '90px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '3px', fontSize: '0.8rem', textAlign: 'right' }}
                                 step="0.01"
                               />
                             </td>
-                            <td style={{ padding: '4px', textAlign: 'right', fontWeight: '500', color: '#92400e' }}>
-                              {formatNumber(values.roeCustoms, 2)}
-                            </td>
                             <td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: '600', backgroundColor: '#fde68a', color: '#78350f' }}>
-                              {formatCurrency(values.customsValue)}
+                              {formatCurrency(customs.customsValue)}
                             </td>
                             <td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: '500', backgroundColor: '#fde68a' }}>
-                              {formatCurrency(values.totalDuties)}
-                            </td>
-                            <td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: '500', backgroundColor: '#fde68a' }}>
-                              {formatCurrency(values.schedule1Duty)}
+                              {formatCurrency(customs.totalDuties + customs.schedule1Duty)}
                             </td>
                             <td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: '600', backgroundColor: '#fde68a', color: '#78350f' }}>
-                              {formatCurrency(values.totalVat)}
+                              {formatCurrency(customs.totalVat)}
                             </td>
                             <td style={{ padding: '4px', textAlign: 'center' }}>
-                              {formData.customs_items.length > 1 && (
+                              {formData.products.length > 1 && (
                                 <button
                                   type="button"
-                                  onClick={() => removeCustomsItem(index)}
+                                  onClick={() => removeProduct(index)}
                                   style={{ padding: '2px 6px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '0.75rem' }}
                                 >
                                   x
@@ -994,10 +998,11 @@ function ImportCosting() {
                       })}
                       {/* Totals Row */}
                       <tr style={{ backgroundColor: '#b45309', color: 'white', fontWeight: '600' }}>
-                        <td colSpan={7} style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '700' }}>TOTALS:</td>
+                        <td colSpan={2} style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '700' }}>TOTALS:</td>
+                        <td style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '700' }}>{formatNumber(getTotalWeight())} kg</td>
+                        <td colSpan={4} style={{ padding: '8px 6px' }}></td>
                         <td style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '700' }}>{formatCurrency(getCustomsTotals().totalCustomsValue)}</td>
-                        <td style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '700' }}>{formatCurrency(getCustomsTotals().totalDuties)}</td>
-                        <td style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '700' }}>{formatCurrency(getCustomsTotals().totalSchedule1Duty)}</td>
+                        <td style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '700' }}>{formatCurrency(getCustomsTotals().totalDuties + getCustomsTotals().totalSchedule1Duty)}</td>
                         <td style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '700' }}>{formatCurrency(getCustomsTotals().totalVat)}</td>
                         <td></td>
                       </tr>
@@ -1008,10 +1013,10 @@ function ImportCosting() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <button
                     type="button"
-                    onClick={addCustomsItem}
+                    onClick={addProduct}
                     style={{ padding: '6px 12px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
                   >
-                    + Add Commodity
+                    + Add Product
                   </button>
 
                   <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>

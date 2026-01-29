@@ -66,10 +66,10 @@ export const calculateAgencyFee = (customsValue, percentage = 3.5, min = 1187) =
 };
 
 /**
- * Calculate customs items totals from line items
+ * Calculate customs totals from products
  */
 export const calculateCustomsItemsTotals = (data) => {
-  const items = data.customs_items || [];
+  const items = data.products || data.customs_items || [];
   const roeCustoms = parseFloat(data.roe_customs) || parseFloat(data.roe_origin) || 0;
   const roeEur = parseFloat(data.roe_eur) || roeCustoms;
 
@@ -145,7 +145,10 @@ export const calculateAllTotals = (data) => {
   const roeEur = parseFloat(data.roe_eur) || 0;        // EUR/ZAR
   const originChargeUsd = parseFloat(data.origin_charge_usd) || 0;
   const originChargeEur = parseFloat(data.origin_charge_eur) || 0;
-  const totalGrossWeightKg = parseFloat(data.total_gross_weight_kg) || 0;
+
+  // Calculate total weight from products or use legacy field
+  const productsWeight = (data.products || []).reduce((sum, p) => sum + (parseFloat(p.weight_kg) || 0), 0);
+  const totalGrossWeightKg = productsWeight > 0 ? productsWeight : (parseFloat(data.total_gross_weight_kg) || 0);
 
   // Calculate Customs Value from customs items (new structure) or legacy invoice values
   const customsItemsTotals = calculateCustomsItemsTotals(data);
