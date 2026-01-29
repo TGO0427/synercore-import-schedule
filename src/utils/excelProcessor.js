@@ -323,16 +323,35 @@ export class ExcelProcessor {
   static downloadTemplate() {
     const ws = XLSX.utils.json_to_sheet([{
       'SUPPLIER': 'Example Supplier Ltd',
-      'ORDER/REF': 'Disodium Phosphate Anhydrous / APO0016424',
-      'FINAL POD': 'PRETORIA',
-      'LATEST STATUS': 'planned_airfreight',
-      'WEEK NUMBER': 36,
+      'ORDER/REF': 'APO0016424',
       'PRODUCT NAME': 'Disodium Phosphate Anhydrous',
+      'FINAL POD': 'PRETORIA',
+      'LATEST STATUS': 'planned_seafreight',
+      'WEEK NUMBER': 36,
       'QUANTITY': 1000,
       'PALLET QTY': 4,
       'RECEIVING WAREHOUSE': 'PRETORIA',
       'FORWARDING AGENT': 'DHL Express',
+      'VESSEL NAME': 'MSC MARINA',
+      'INCOTERM': 'CIF',
+      'NOTES': 'Example notes',
     }]);
+    // Set column widths for better readability
+    ws['!cols'] = [
+      { wch: 22 },  // SUPPLIER
+      { wch: 15 },  // ORDER/REF
+      { wch: 30 },  // PRODUCT NAME
+      { wch: 12 },  // FINAL POD
+      { wch: 18 },  // LATEST STATUS
+      { wch: 12 },  // WEEK NUMBER
+      { wch: 10 },  // QUANTITY
+      { wch: 10 },  // PALLET QTY
+      { wch: 20 },  // RECEIVING WAREHOUSE
+      { wch: 18 },  // FORWARDING AGENT
+      { wch: 15 },  // VESSEL NAME
+      { wch: 10 },  // INCOTERM
+      { wch: 25 },  // NOTES
+    ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'TRACKING');
     XLSX.writeFile(wb, 'shipment_template.xlsx');

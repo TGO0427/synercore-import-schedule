@@ -72,5 +72,8 @@ data/
 # Allow Synercore logo files
 !src/assets/synercore-*.png
 
+# Allow shipment template
+!shipment_template.xlsx
+
 # Claude settings (keep local)
 .claude/
