@@ -169,6 +169,21 @@ export default async function addCostingColumns() {
     if (await addColumn(col)) added++;
   }
 
+  // Origin details columns
+  const originColumns = [
+    'country_of_origin VARCHAR(100)',
+    'port_of_loading VARCHAR(100)',
+    'roe_customs NUMERIC(12,6)',
+  ];
+
+  for (const col of originColumns) {
+    if (await addColumn(col)) added++;
+  }
+
+  // Products array (JSON) - for multi-product costing
+  const productsColumn = "products JSONB DEFAULT '[]'::jsonb";
+  if (await addColumn(productsColumn)) added++;
+
   if (added > 0) {
     console.log(`✓ Added ${added} new costing columns`);
   } else {

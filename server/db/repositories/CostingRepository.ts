@@ -6,12 +6,24 @@
 import { query, queryOne, queryAll } from '../connection.js';
 import { v4 as uuidv4 } from 'uuid';
 
+export interface Product {
+  name?: string;
+  hs_code?: string;
+  weight_kg?: number;
+  duty_percent?: number;
+  duty_schedule1_percent?: number;
+  currency?: string;
+  invoice_value?: number;
+}
+
 export interface ImportCostEstimate {
   id: string;
   shipment_id?: string;
   supplier_id?: string;
   reference_number?: string;
   country_of_destination: string;
+  country_of_origin?: string;
+  port_of_loading?: string;
   port_of_discharge?: string;
   shipping_line?: string;
   routing?: string;
@@ -36,6 +48,9 @@ export interface ImportCostEstimate {
   payment_terms?: string;
   roe_origin?: number;   // USD/ZAR
   roe_eur?: number;      // EUR/ZAR
+  roe_customs?: number;  // ROE for customs calculation
+  // Products for multi-product costing
+  products?: Product[];
   // Origin Charges
   origin_charge_usd: number;
   origin_charge_eur: number;
@@ -98,11 +113,11 @@ export interface ExchangeRate {
 
 const COST_ESTIMATE_COLUMNS = [
   'id', 'shipment_id', 'supplier_id', 'reference_number', 'country_of_destination',
-  'port_of_discharge', 'shipping_line', 'routing', 'frequency', 'transit_time_days',
+  'country_of_origin', 'port_of_loading', 'port_of_discharge', 'shipping_line', 'routing', 'frequency', 'transit_time_days',
   'inco_terms', 'inco_term_place', 'container_type', 'quantity', 'hs_code',
   'gross_weight_kg', 'total_gross_weight_kg', 'origin_rate_usd', 'ocean_freight_rate_usd',
   'commodity', 'invoice_value_usd', 'invoice_value_eur', 'customs_value_zar', 'supplier_name', 'validity_date', 'costing_date',
-  'payment_terms', 'roe_origin', 'roe_eur', 'origin_charge_usd', 'origin_charge_eur', 'origin_charge_zar',
+  'payment_terms', 'roe_origin', 'roe_eur', 'roe_customs', 'products', 'origin_charge_usd', 'origin_charge_eur', 'origin_charge_zar',
   'total_origin_charges_zar',
   // Local Charges
   'local_cartage_cpt_klapmuts_20ton_zar', 'local_cartage_cpt_klapmuts_28ton_zar',
@@ -205,7 +220,10 @@ export class CostingRepository {
     const id = data.id || uuidv4();
     const now = new Date().toISOString();
 
-    const insertData = {
+    // Handle products JSON serialization
+    const products = data.products ? JSON.stringify(data.products) : '[]';
+
+    const insertData: Record<string, any> = {
       ...data,
       id,
       country_of_destination: data.country_of_destination || 'South Africa',
@@ -214,6 +232,7 @@ export class CostingRepository {
       status: data.status || 'draft',
       created_at: now,
       updated_at: now,
+      products,
       // Default numeric values to 0
       origin_charge_usd: data.origin_charge_usd || 0,
       origin_charge_eur: data.origin_charge_eur || 0,
@@ -281,9 +300,14 @@ export class CostingRepository {
    * Update a cost estimate
    */
   async update(id: string, data: Partial<ImportCostEstimate>): Promise<ImportCostEstimate> {
-    const updateData = { ...data, updated_at: new Date().toISOString() };
+    const updateData: Record<string, any> = { ...data, updated_at: new Date().toISOString() };
     delete updateData.id;
     delete updateData.created_at;
+
+    // Handle products JSON serialization
+    if (updateData.products !== undefined) {
+      updateData.products = JSON.stringify(updateData.products);
+    }
 
     const keys = Object.keys(updateData);
     const values = [...Object.values(updateData), id];

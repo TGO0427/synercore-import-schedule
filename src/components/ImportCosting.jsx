@@ -733,14 +733,146 @@ function ImportCosting() {
                   {renderInput('Costing Date', 'costing_date', 'date')}
                   {renderInput('Validity Date', 'validity_date', 'date')}
                   {renderSelect('Payment Terms', 'payment_terms', PAYMENT_TERMS)}
-                  <div style={{ marginBottom: '12px' }}>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
-                      Total Weight (from products)
-                    </label>
-                    <div style={{ padding: '8px 12px', backgroundColor: '#e0f2fe', borderRadius: '6px', fontWeight: '600', color: '#0369a1' }}>
-                      {formatNumber(getTotalWeight())} kg
+                </div>
+              </div>
+
+              {/* Section: Products in Container */}
+              <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fef3c7', borderRadius: '8px', border: '2px solid #f59e0b' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <div>
+                    <h4 style={{ margin: 0, color: '#92400e', fontSize: '1rem' }}>Products in Container</h4>
+                    <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#b45309' }}>
+                      Add all products in this container. Costs will be allocated by weight proportion.
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.75rem', color: '#92400e' }}>Total Weight</div>
+                      <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#78350f' }}>{formatNumber(getTotalWeight())} kg</div>
                     </div>
                   </div>
+                </div>
+
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#fbbf24', color: '#78350f' }}>
+                        <th style={{ padding: '10px 8px', textAlign: 'left', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Product Name</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'left', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>HS Code</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Weight (kg)</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Weight %</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Currency</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Invoice Value</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Duty %</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Sch 1 %</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(formData.products || []).map((product, index) => {
+                        const totalWeight = getTotalWeight();
+                        const productWeight = parseFloat(product.weight_kg) || 0;
+                        const weightPercent = totalWeight > 0 ? (productWeight / totalWeight * 100) : 0;
+                        return (
+                          <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#fffbeb' : '#fef3c7' }}>
+                            <td style={{ padding: '6px 8px' }}>
+                              <input
+                                type="text"
+                                value={product.name || ''}
+                                onChange={(e) => updateProduct(index, 'name', e.target.value)}
+                                style={{ width: '100%', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem' }}
+                                placeholder="e.g. SHMP 26/30"
+                              />
+                            </td>
+                            <td style={{ padding: '6px 8px' }}>
+                              <input
+                                type="text"
+                                value={product.hs_code || ''}
+                                onChange={(e) => updateProduct(index, 'hs_code', e.target.value)}
+                                style={{ width: '100px', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem' }}
+                                placeholder="0306.17"
+                              />
+                            </td>
+                            <td style={{ padding: '6px 8px' }}>
+                              <input
+                                type="number"
+                                value={product.weight_kg || ''}
+                                onChange={(e) => updateProduct(index, 'weight_kg', parseFloat(e.target.value) || 0)}
+                                style={{ width: '90px', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'right' }}
+                                step="0.01"
+                                placeholder="0.00"
+                              />
+                            </td>
+                            <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '600', color: '#92400e' }}>
+                              {formatNumber(weightPercent, 1)}%
+                            </td>
+                            <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                              <select
+                                value={product.currency || 'USD'}
+                                onChange={(e) => updateProduct(index, 'currency', e.target.value)}
+                                style={{ padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem' }}
+                              >
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                                <option value="ZAR">ZAR</option>
+                              </select>
+                            </td>
+                            <td style={{ padding: '6px 8px' }}>
+                              <input
+                                type="number"
+                                value={product.invoice_value || ''}
+                                onChange={(e) => updateProduct(index, 'invoice_value', parseFloat(e.target.value) || 0)}
+                                style={{ width: '110px', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'right' }}
+                                step="0.01"
+                                placeholder="0.00"
+                              />
+                            </td>
+                            <td style={{ padding: '6px 8px' }}>
+                              <input
+                                type="number"
+                                value={product.duty_percent || ''}
+                                onChange={(e) => updateProduct(index, 'duty_percent', parseFloat(e.target.value) || 0)}
+                                style={{ width: '60px', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'center' }}
+                                step="0.1"
+                                placeholder="0"
+                              />
+                            </td>
+                            <td style={{ padding: '6px 8px' }}>
+                              <input
+                                type="number"
+                                value={product.duty_schedule1_percent || ''}
+                                onChange={(e) => updateProduct(index, 'duty_schedule1_percent', parseFloat(e.target.value) || 0)}
+                                style={{ width: '60px', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'center' }}
+                                step="0.1"
+                                placeholder="0"
+                              />
+                            </td>
+                            <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                              {formData.products.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeProduct(index)}
+                                  style={{ padding: '4px 8px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div style={{ marginTop: '12px' }}>
+                  <button
+                    type="button"
+                    onClick={addProduct}
+                    style={{ padding: '8px 16px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '500' }}
+                  >
+                    + Add Product
+                  </button>
                 </div>
               </div>
 
@@ -867,179 +999,143 @@ function ImportCosting() {
                 </div>
               </div>
 
-              {/* Section: Customs VAT & Duty */}
+              {/* Section: Customs VAT & Duty Summary */}
               <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fef3c7', borderRadius: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <h4 style={{ margin: 0, color: '#92400e', fontSize: '1rem' }}>Customs VAT & Duty</h4>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
-                      ROE for Customs:
+                <h4 style={{ margin: '0 0 1rem', color: '#92400e', fontSize: '1rem' }}>Customs & Duties Summary</h4>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
+                      ROE for Customs
                     </label>
                     <input
                       type="number"
                       value={formData.roe_customs || ''}
                       onChange={(e) => handleInputChange('roe_customs', parseFloat(e.target.value) || '')}
-                      placeholder={formData.roe_origin || 'Enter rate'}
-                      style={{ width: '100px', padding: '6px 10px', borderRadius: '4px', border: '2px solid #f59e0b', fontSize: '0.9rem', fontWeight: '600' }}
+                      placeholder={formData.roe_origin || 'Uses USD rate'}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '2px solid #f59e0b', fontSize: '0.9rem', fontWeight: '600' }}
                       step="0.01"
                     />
                   </div>
-                </div>
-
-                {/* Products Table */}
-                <div style={{ overflowX: 'auto', marginBottom: '1rem' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                    <thead>
-                      <tr style={{ backgroundColor: '#fef3c7', color: '#92400e', borderBottom: '2px solid #d97706' }}>
-                        <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600' }}>Product</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600' }}>HS Code</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600' }}>Weight (kg)</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600' }}>% Duty</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600' }}>% Sch 1</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600' }}>Curr</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600' }}>Invoice Value</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', backgroundColor: '#b45309', color: 'white' }}>Customs Value</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', backgroundColor: '#b45309', color: 'white' }}>Duties</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', backgroundColor: '#b45309', color: 'white' }}>VAT</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600' }}></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(formData.products || []).map((product, index) => {
-                        const customs = calculateProductCustomsValues(product);
-                        return (
-                          <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#fffbeb' : '#fef3c7' }}>
-                            <td style={{ padding: '4px' }}>
-                              <input
-                                type="text"
-                                value={product.name || ''}
-                                onChange={(e) => updateProduct(index, 'name', e.target.value)}
-                                style={{ width: '100%', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '3px', fontSize: '0.8rem' }}
-                                placeholder="e.g. SHMP"
-                              />
-                            </td>
-                            <td style={{ padding: '4px' }}>
-                              <input
-                                type="text"
-                                value={product.hs_code || ''}
-                                onChange={(e) => updateProduct(index, 'hs_code', e.target.value)}
-                                style={{ width: '80px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '3px', fontSize: '0.8rem' }}
-                              />
-                            </td>
-                            <td style={{ padding: '4px' }}>
-                              <input
-                                type="number"
-                                value={product.weight_kg || ''}
-                                onChange={(e) => updateProduct(index, 'weight_kg', parseFloat(e.target.value) || 0)}
-                                style={{ width: '80px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '3px', fontSize: '0.8rem', textAlign: 'right' }}
-                                step="0.01"
-                              />
-                            </td>
-                            <td style={{ padding: '4px' }}>
-                              <input
-                                type="number"
-                                value={product.duty_percent || ''}
-                                onChange={(e) => updateProduct(index, 'duty_percent', parseFloat(e.target.value) || 0)}
-                                style={{ width: '50px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '3px', fontSize: '0.8rem', textAlign: 'center' }}
-                                step="0.1"
-                              />
-                            </td>
-                            <td style={{ padding: '4px' }}>
-                              <input
-                                type="number"
-                                value={product.duty_schedule1_percent || ''}
-                                onChange={(e) => updateProduct(index, 'duty_schedule1_percent', parseFloat(e.target.value) || 0)}
-                                style={{ width: '50px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '3px', fontSize: '0.8rem', textAlign: 'center' }}
-                                step="0.1"
-                              />
-                            </td>
-                            <td style={{ padding: '4px' }}>
-                              <select
-                                value={product.currency || 'USD'}
-                                onChange={(e) => updateProduct(index, 'currency', e.target.value)}
-                                style={{ padding: '4px', border: '1px solid #ddd', borderRadius: '3px', fontSize: '0.75rem' }}
-                              >
-                                <option value="USD">USD</option>
-                                <option value="EUR">EUR</option>
-                                <option value="ZAR">ZAR</option>
-                              </select>
-                            </td>
-                            <td style={{ padding: '4px' }}>
-                              <input
-                                type="number"
-                                value={product.invoice_value || ''}
-                                onChange={(e) => updateProduct(index, 'invoice_value', parseFloat(e.target.value) || 0)}
-                                style={{ width: '90px', padding: '4px 6px', border: '1px solid #ddd', borderRadius: '3px', fontSize: '0.8rem', textAlign: 'right' }}
-                                step="0.01"
-                              />
-                            </td>
-                            <td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: '600', backgroundColor: '#fde68a', color: '#78350f' }}>
-                              {formatCurrency(customs.customsValue)}
-                            </td>
-                            <td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: '500', backgroundColor: '#fde68a' }}>
-                              {formatCurrency(customs.totalDuties + customs.schedule1Duty)}
-                            </td>
-                            <td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: '600', backgroundColor: '#fde68a', color: '#78350f' }}>
-                              {formatCurrency(customs.totalVat)}
-                            </td>
-                            <td style={{ padding: '4px', textAlign: 'center' }}>
-                              {formData.products.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => removeProduct(index)}
-                                  style={{ padding: '2px 6px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '0.75rem' }}
-                                >
-                                  x
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                      {/* Totals Row */}
-                      <tr style={{ backgroundColor: '#b45309', color: 'white', fontWeight: '600' }}>
-                        <td colSpan={2} style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '700' }}>TOTALS:</td>
-                        <td style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '700' }}>{formatNumber(getTotalWeight())} kg</td>
-                        <td colSpan={4} style={{ padding: '8px 6px' }}></td>
-                        <td style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '700' }}>{formatCurrency(getCustomsTotals().totalCustomsValue)}</td>
-                        <td style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '700' }}>{formatCurrency(getCustomsTotals().totalDuties + getCustomsTotals().totalSchedule1Duty)}</td>
-                        <td style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '700' }}>{formatCurrency(getCustomsTotals().totalVat)}</td>
-                        <td></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <button
-                    type="button"
-                    onClick={addProduct}
-                    style={{ padding: '6px 12px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
-                  >
-                    + Add Product
-                  </button>
-
-                  <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-                    {renderCurrencyInput('Customs Declaration', 'customs_declaration_zar')}
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
-                        Agency Fee ({formData.agency_fee_percentage}% min R{formData.agency_fee_min})
-                      </label>
-                      <div style={{ padding: '8px 12px', backgroundColor: '#fde68a', borderRadius: '6px', fontWeight: '600', color: '#92400e' }}>
-                        {formatCurrency(calculatedTotals.agency_fee_zar)}
-                      </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
+                      Total Customs Value
+                    </label>
+                    <div style={{ padding: '8px 12px', backgroundColor: '#fde68a', borderRadius: '6px', fontWeight: '600', color: '#78350f' }}>
+                      {formatCurrency(getCustomsTotals().totalCustomsValue)}
                     </div>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
-                        Customs Sub-Total
-                      </label>
-                      <div style={{ padding: '8px 12px', backgroundColor: '#b45309', borderRadius: '6px', fontWeight: '700', color: 'white', fontSize: '1.1rem' }}>
-                        {formatCurrency(getCustomsTotals().totalCustomsValue + getCustomsTotals().totalDuties + getCustomsTotals().totalSchedule1Duty + getCustomsTotals().totalVat + (parseFloat(formData.customs_declaration_zar) || 0) + (calculatedTotals.agency_fee_zar || 0))}
-                      </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
+                      Total Duties
+                    </label>
+                    <div style={{ padding: '8px 12px', backgroundColor: '#fde68a', borderRadius: '6px', fontWeight: '600', color: '#78350f' }}>
+                      {formatCurrency(getCustomsTotals().totalDuties + getCustomsTotals().totalSchedule1Duty)}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
+                      Total VAT (15%)
+                    </label>
+                    <div style={{ padding: '8px 12px', backgroundColor: '#fde68a', borderRadius: '6px', fontWeight: '600', color: '#78350f' }}>
+                      {formatCurrency(getCustomsTotals().totalVat)}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                  {renderCurrencyInput('Customs Declaration', 'customs_declaration_zar')}
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
+                      Agency Fee ({formData.agency_fee_percentage}% min R{formData.agency_fee_min})
+                    </label>
+                    <div style={{ padding: '8px 12px', backgroundColor: '#fde68a', borderRadius: '6px', fontWeight: '600', color: '#92400e' }}>
+                      {formatCurrency(calculatedTotals.agency_fee_zar)}
+                    </div>
+                  </div>
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
+                      Customs Sub-Total
+                    </label>
+                    <div style={{ padding: '8px 12px', backgroundColor: '#b45309', borderRadius: '6px', fontWeight: '700', color: 'white', fontSize: '1.1rem' }}>
+                      {formatCurrency(getCustomsTotals().totalCustomsValue + getCustomsTotals().totalDuties + getCustomsTotals().totalSchedule1Duty + getCustomsTotals().totalVat + (parseFloat(formData.customs_declaration_zar) || 0) + (calculatedTotals.agency_fee_zar || 0))}
                     </div>
                   </div>
                 </div>
               </div>
+
+              {/* Section: Product Cost Allocation */}
+              {formData.products && formData.products.length > 0 && getTotalWeight() > 0 && (
+                <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#ecfdf5', borderRadius: '8px', border: '2px solid #10b981' }}>
+                  <h4 style={{ margin: '0 0 1rem', color: '#065f46', fontSize: '1rem' }}>Product Cost Allocation</h4>
+                  <p style={{ margin: '0 0 1rem', fontSize: '0.8rem', color: '#047857' }}>
+                    Shipping costs allocated by weight. Each product shows its share of total costs.
+                  </p>
+
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: '#10b981', color: 'white' }}>
+                          <th style={{ padding: '10px 8px', textAlign: 'left', fontWeight: '600' }}>Product</th>
+                          <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600' }}>Weight</th>
+                          <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600' }}>Share %</th>
+                          <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600' }}>Customs Value</th>
+                          <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600' }}>Duties + VAT</th>
+                          <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600' }}>Shipping Alloc.</th>
+                          <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', backgroundColor: '#059669' }}>Total Landed</th>
+                          <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', backgroundColor: '#059669' }}>Cost/kg</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(formData.products || []).map((product, index) => {
+                          const allocation = calculateProductAllocation(product);
+                          const customs = calculateProductCustomsValues(product);
+                          const productWeight = parseFloat(product.weight_kg) || 0;
+                          return (
+                            <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#ecfdf5' : '#d1fae5' }}>
+                              <td style={{ padding: '8px', fontWeight: '500', color: '#065f46' }}>
+                                {product.name || `Product ${index + 1}`}
+                              </td>
+                              <td style={{ padding: '8px', textAlign: 'right' }}>
+                                {formatNumber(productWeight)} kg
+                              </td>
+                              <td style={{ padding: '8px', textAlign: 'center', fontWeight: '600', color: '#047857' }}>
+                                {formatNumber(allocation.weightRatio * 100, 1)}%
+                              </td>
+                              <td style={{ padding: '8px', textAlign: 'right' }}>
+                                {formatCurrency(customs.customsValue)}
+                              </td>
+                              <td style={{ padding: '8px', textAlign: 'right' }}>
+                                {formatCurrency(customs.totalDuties + customs.schedule1Duty + customs.totalVat)}
+                              </td>
+                              <td style={{ padding: '8px', textAlign: 'right' }}>
+                                {formatCurrency(allocation.allocatedShippingCost)}
+                              </td>
+                              <td style={{ padding: '8px', textAlign: 'right', fontWeight: '700', color: '#065f46', backgroundColor: '#a7f3d0' }}>
+                                {formatCurrency(allocation.totalProductCost)}
+                              </td>
+                              <td style={{ padding: '8px', textAlign: 'right', fontWeight: '700', color: '#065f46', backgroundColor: '#a7f3d0' }}>
+                                {formatCurrency(allocation.costPerKg)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {/* Totals Row */}
+                        <tr style={{ backgroundColor: '#059669', color: 'white', fontWeight: '700' }}>
+                          <td style={{ padding: '10px 8px' }}>TOTALS</td>
+                          <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatNumber(getTotalWeight())} kg</td>
+                          <td style={{ padding: '10px 8px', textAlign: 'center' }}>100%</td>
+                          <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(getCustomsTotals().totalCustomsValue)}</td>
+                          <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(getCustomsTotals().totalDuties + getCustomsTotals().totalSchedule1Duty + getCustomsTotals().totalVat)}</td>
+                          <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(calculatedTotals.total_shipping_cost_zar)}</td>
+                          <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(calculatedTotals.total_in_warehouse_cost_zar)}</td>
+                          <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(calculatedTotals.all_in_warehouse_cost_per_kg_zar)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               {/* Section: Totals Summary */}
               <div style={{ marginBottom: '1.5rem', padding: '1.5rem', backgroundColor: '#0b1f3a', borderRadius: '8px', color: 'white' }}>
