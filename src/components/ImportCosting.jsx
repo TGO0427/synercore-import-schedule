@@ -111,6 +111,8 @@ function ImportCosting() {
   const [rateLoading, setRateLoading] = useState(false);
   const [suppliers, setSuppliers] = useState([]);
   const [error, setError] = useState(null);
+  const [showAddSupplier, setShowAddSupplier] = useState(false);
+  const [newSupplierName, setNewSupplierName] = useState('');
 
   // Fetch estimates on mount
   useEffect(() => {
@@ -168,6 +170,32 @@ function ImportCosting() {
       }
     } catch (err) {
       console.error('Failed to fetch suppliers:', err);
+    }
+  };
+
+  const createSupplier = async () => {
+    if (!newSupplierName.trim()) return;
+    try {
+      const response = await authFetch(getApiUrl('/api/suppliers'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newSupplierName.trim() }),
+      });
+      if (response.ok) {
+        const result = await response.json();
+        const newSupplier = result.data || result;
+        // Add to suppliers list and select it
+        setSuppliers(prev => [...prev, newSupplier]);
+        setFormData(prev => ({ ...prev, supplier_name: newSupplier.name }));
+        setShowAddSupplier(false);
+        setNewSupplierName('');
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Failed to create supplier');
+      }
+    } catch (err) {
+      console.error('Failed to create supplier:', err);
+      setError('Failed to create supplier');
     }
   };
 
@@ -549,17 +577,58 @@ function ImportCosting() {
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
                       Supplier
                     </label>
-                    <select
-                      value={formData.supplier_name || ''}
-                      onChange={(e) => handleInputChange('supplier_name', e.target.value)}
-                      className="select"
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #ddd' }}
-                    >
-                      <option value="">Select Supplier...</option>
-                      {suppliers.map(s => (
-                        <option key={s.id} value={s.name}>{s.name}</option>
-                      ))}
-                    </select>
+                    {showAddSupplier ? (
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="text"
+                          value={newSupplierName}
+                          onChange={(e) => setNewSupplierName(e.target.value)}
+                          placeholder="Enter supplier name..."
+                          className="input"
+                          style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid #0ea5a8' }}
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') { e.preventDefault(); createSupplier(); }
+                            if (e.key === 'Escape') { setShowAddSupplier(false); setNewSupplierName(''); }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={createSupplier}
+                          style={{ padding: '8px 12px', backgroundColor: '#0ea5a8', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}
+                        >
+                          Add
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setShowAddSupplier(false); setNewSupplierName(''); }}
+                          style={{ padding: '8px 12px', backgroundColor: '#f3f4f6', color: '#666', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <select
+                          value={formData.supplier_name || ''}
+                          onChange={(e) => handleInputChange('supplier_name', e.target.value)}
+                          className="select"
+                          style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid #ddd' }}
+                        >
+                          <option value="">Select Supplier...</option>
+                          {suppliers.map(s => (
+                            <option key={s.id} value={s.name}>{s.name}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddSupplier(true)}
+                          style={{ padding: '8px 12px', backgroundColor: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                        >
+                          + New
+                        </button>
+                      </div>
+                    )}
                   </div>
                   {renderSelect('Port of Discharge', 'port_of_discharge', SA_PORTS)}
                   {renderSelect('Container Type', 'container_type', CONTAINER_TYPES)}
