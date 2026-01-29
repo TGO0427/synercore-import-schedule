@@ -888,19 +888,19 @@ function ImportCosting() {
                 <div style={{ overflowX: 'auto', marginBottom: '1rem' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                     <thead>
-                      <tr style={{ backgroundColor: '#92400e', color: 'white' }}>
-                        <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '500' }}>Commodity</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '500' }}>HS Code</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '500' }}>% Duty</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '500' }}>% Sch 1 Part 2B</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '500' }}>Currency</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '500' }}>Invoice Value</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '500' }}>ROE</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '500', backgroundColor: '#78350f' }}>Customs Value</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '500', backgroundColor: '#78350f' }}>Total Duties</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '500', backgroundColor: '#78350f' }}>Sch 1 Duty</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '500', backgroundColor: '#78350f' }}>Total VAT</th>
-                        <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '500' }}></th>
+                      <tr style={{ backgroundColor: '#fef3c7', color: '#92400e', borderBottom: '2px solid #d97706' }}>
+                        <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600' }}>Commodity</th>
+                        <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600' }}>HS Code</th>
+                        <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600' }}>% Duty</th>
+                        <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600' }}>% Sch 1 Part 2B</th>
+                        <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600' }}>Currency</th>
+                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600' }}>Invoice Value</th>
+                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600' }}>ROE</th>
+                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', backgroundColor: '#b45309', color: 'white' }}>Customs Value</th>
+                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', backgroundColor: '#b45309', color: 'white' }}>Total Duties</th>
+                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', backgroundColor: '#b45309', color: 'white' }}>Sch 1 Duty</th>
+                        <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', backgroundColor: '#b45309', color: 'white' }}>Total VAT</th>
+                        <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600' }}></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -993,12 +993,12 @@ function ImportCosting() {
                         );
                       })}
                       {/* Totals Row */}
-                      <tr style={{ backgroundColor: '#92400e', color: 'white', fontWeight: '600' }}>
-                        <td colSpan={7} style={{ padding: '8px 6px', textAlign: 'right' }}>TOTALS:</td>
-                        <td style={{ padding: '8px 6px', textAlign: 'right' }}>{formatCurrency(getCustomsTotals().totalCustomsValue)}</td>
-                        <td style={{ padding: '8px 6px', textAlign: 'right' }}>{formatCurrency(getCustomsTotals().totalDuties)}</td>
-                        <td style={{ padding: '8px 6px', textAlign: 'right' }}>{formatCurrency(getCustomsTotals().totalSchedule1Duty)}</td>
-                        <td style={{ padding: '8px 6px', textAlign: 'right' }}>{formatCurrency(getCustomsTotals().totalVat)}</td>
+                      <tr style={{ backgroundColor: '#b45309', color: 'white', fontWeight: '600' }}>
+                        <td colSpan={7} style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '700' }}>TOTALS:</td>
+                        <td style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '700' }}>{formatCurrency(getCustomsTotals().totalCustomsValue)}</td>
+                        <td style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '700' }}>{formatCurrency(getCustomsTotals().totalDuties)}</td>
+                        <td style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '700' }}>{formatCurrency(getCustomsTotals().totalSchedule1Duty)}</td>
+                        <td style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '700' }}>{formatCurrency(getCustomsTotals().totalVat)}</td>
                         <td></td>
                       </tr>
                     </tbody>
@@ -1028,7 +1028,7 @@ function ImportCosting() {
                       <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
                         Customs Sub-Total
                       </label>
-                      <div style={{ padding: '8px 12px', backgroundColor: '#92400e', borderRadius: '6px', fontWeight: '700', color: 'white', fontSize: '1.1rem' }}>
+                      <div style={{ padding: '8px 12px', backgroundColor: '#b45309', borderRadius: '6px', fontWeight: '700', color: 'white', fontSize: '1.1rem' }}>
                         {formatCurrency(getCustomsTotals().totalCustomsValue + getCustomsTotals().totalDuties + getCustomsTotals().totalSchedule1Duty + getCustomsTotals().totalVat + (parseFloat(formData.customs_declaration_zar) || 0) + (calculatedTotals.agency_fee_zar || 0))}
                       </div>
                     </div>
