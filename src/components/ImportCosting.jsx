@@ -636,11 +636,15 @@ function ImportCosting() {
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center',
-          alignItems: 'flex-start', padding: '2rem', zIndex: 1000, overflowY: 'auto'
+          alignItems: 'flex-start', padding: '1rem', zIndex: 1000, overflowY: 'auto'
         }}>
           <div style={{
-            backgroundColor: 'white', borderRadius: '12px', width: '100%', maxWidth: '1000px',
-            maxHeight: '90vh', overflow: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
+            backgroundColor: 'white', borderRadius: '12px',
+            width: '95%', maxWidth: '1400px', minWidth: '600px',
+            height: '90vh', minHeight: '400px',
+            overflow: 'auto',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+            resize: 'both',
           }}>
             {/* Form Header */}
             <div style={{
