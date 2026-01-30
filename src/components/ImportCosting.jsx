@@ -86,7 +86,7 @@ const INITIAL_FORM_STATE = {
   jnb_turn_in_zar: 0,
   // Products - each product in the container
   products: [
-    { name: '', hs_code: '', weight_kg: 0, duty_percent: 0, duty_schedule1_percent: 0, currency: 'USD', invoice_value: 0 }
+    { name: '', hs_code: '', weight_kg: 0, rate_per_kg: 0, duty_percent: 0, duty_schedule1_percent: 0, currency: 'USD', invoice_value: 0 }
   ],
   // Customs & Duties
   roe_customs: '',  // ROE for customs calculation
@@ -225,25 +225,68 @@ function ImportCosting() {
       ...prev,
       products: [
         ...prev.products,
-        { name: '', hs_code: '', weight_kg: 0, duty_percent: 0, duty_schedule1_percent: 0, currency: 'USD', invoice_value: 0 }
+        { name: '', hs_code: '', weight_kg: 0, rate_per_kg: 0, duty_percent: 0, duty_schedule1_percent: 0, currency: 'USD', invoice_value: 0 }
       ]
     }));
   };
 
   const removeProduct = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      products: prev.products.filter((_, i) => i !== index)
-    }));
+    setFormData(prev => {
+      const newProducts = prev.products.filter((_, i) => i !== index);
+      const totals = calculateProductTotals(newProducts);
+      return {
+        ...prev,
+        products: newProducts,
+        origin_charge_usd: totals.totalUSD,
+        origin_charge_eur: totals.totalEUR,
+      };
+    });
+  };
+
+  // Calculate totals by currency from products
+  const calculateProductTotals = (products) => {
+    let totalUSD = 0;
+    let totalEUR = 0;
+    let totalZAR = 0;
+
+    (products || []).forEach(p => {
+      const invoiceValue = parseFloat(p.invoice_value) || 0;
+      const currency = p.currency || 'USD';
+      if (currency === 'USD') totalUSD += invoiceValue;
+      else if (currency === 'EUR') totalEUR += invoiceValue;
+      else if (currency === 'ZAR') totalZAR += invoiceValue;
+    });
+
+    return { totalUSD, totalEUR, totalZAR };
   };
 
   const updateProduct = (index, field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      products: prev.products.map((item, i) =>
-        i === index ? { ...item, [field]: value } : item
-      )
-    }));
+    setFormData(prev => {
+      const newProducts = prev.products.map((item, i) => {
+        if (i !== index) return item;
+
+        const updatedItem = { ...item, [field]: value };
+
+        // Auto-calculate invoice_value when weight or rate_per_kg changes
+        if (field === 'weight_kg' || field === 'rate_per_kg') {
+          const weight = field === 'weight_kg' ? (parseFloat(value) || 0) : (parseFloat(item.weight_kg) || 0);
+          const rate = field === 'rate_per_kg' ? (parseFloat(value) || 0) : (parseFloat(item.rate_per_kg) || 0);
+          updatedItem.invoice_value = Math.round(weight * rate * 100) / 100;
+        }
+
+        return updatedItem;
+      });
+
+      // Calculate totals and update origin charges
+      const totals = calculateProductTotals(newProducts);
+
+      return {
+        ...prev,
+        products: newProducts,
+        origin_charge_usd: totals.totalUSD,
+        origin_charge_eur: totals.totalEUR,
+      };
+    });
   };
 
   // Calculate total weight from all products
@@ -483,6 +526,7 @@ function ImportCosting() {
 
       const productRows = products.map(p => {
         const weight = parseFloat(p.weight_kg) || 0;
+        const ratePerKg = parseFloat(p.rate_per_kg) || 0;
         const invoiceValue = parseFloat(p.invoice_value) || 0;
         const dutyPercent = parseFloat(p.duty_percent) || 0;
         const dutySchedule1Percent = parseFloat(p.duty_schedule1_percent) || 0;
@@ -500,8 +544,10 @@ function ImportCosting() {
           p.name || '-',
           p.hs_code || '-',
           `${formatNumber(weight)} kg`,
+          `${formatNumber(ratePerKg, 2)}`,
+          currency,
+          formatNumber(invoiceValue, 2),
           `${formatNumber(weightPercent, 1)}%`,
-          formatCurrency(customsValue),
           formatCurrency(duties),
         ];
       });
@@ -511,14 +557,16 @@ function ImportCosting() {
         'TOTAL',
         '',
         `${formatNumber(productTotals.totalWeight)} kg`,
+        '',
+        '',
+        '',
         '100%',
-        formatCurrency(productTotals.totalCustomsValue),
         formatCurrency(productTotals.totalDuties),
       ]);
 
       autoTable(doc, {
         startY: doc.lastAutoTable.finalY + 10,
-        head: [['Product', 'HS Code', 'Weight', 'Share', 'Customs Value', 'Duties']],
+        head: [['Product', 'HS Code', 'Weight', 'Rate/kg', 'Curr', 'Invoice Val', 'Share', 'Duties']],
         body: productRows,
         theme: 'grid',
         headStyles: { fillColor: [245, 158, 11] },
@@ -871,13 +919,21 @@ function ImportCosting() {
                   <div>
                     <h4 style={{ margin: 0, color: '#92400e', fontSize: '1rem' }}>Products in Container</h4>
                     <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#b45309' }}>
-                      Add all products in this container. Costs will be allocated by weight proportion.
+                      Enter weight and rate/kg to auto-calculate invoice value. Totals populate Origin Charges.
                     </p>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: '0.75rem', color: '#92400e' }}>Total Weight</div>
-                      <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#78350f' }}>{formatNumber(getTotalWeight())} kg</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: '700', color: '#78350f' }}>{formatNumber(getTotalWeight())} kg</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.75rem', color: '#92400e' }}>Total USD</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: '700', color: '#78350f' }}>{formatCurrency(formData.origin_charge_usd || 0, 'USD')}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.75rem', color: '#92400e' }}>Total EUR</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: '700', color: '#78350f' }}>{formatCurrency(formData.origin_charge_eur || 0, 'EUR')}</div>
                     </div>
                   </div>
                 </div>
@@ -889,9 +945,10 @@ function ImportCosting() {
                         <th style={{ padding: '10px 8px', textAlign: 'left', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Product Name</th>
                         <th style={{ padding: '10px 8px', textAlign: 'left', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>HS Code</th>
                         <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Weight (kg)</th>
-                        <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Weight %</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Rate/kg</th>
                         <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Currency</th>
-                        <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Invoice Value</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #f59e0b', backgroundColor: '#f59e0b', color: 'white' }}>Invoice Value</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Weight %</th>
                         <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Duty %</th>
                         <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Sch 1 %</th>
                         <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}></th>
@@ -932,8 +989,15 @@ function ImportCosting() {
                                 placeholder="0.00"
                               />
                             </td>
-                            <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '600', color: '#92400e' }}>
-                              {formatNumber(weightPercent, 1)}%
+                            <td style={{ padding: '6px 8px' }}>
+                              <input
+                                type="number"
+                                value={product.rate_per_kg || ''}
+                                onChange={(e) => updateProduct(index, 'rate_per_kg', parseFloat(e.target.value) || 0)}
+                                style={{ width: '80px', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'right' }}
+                                step="0.01"
+                                placeholder="0.00"
+                              />
                             </td>
                             <td style={{ padding: '6px 8px', textAlign: 'center' }}>
                               <select
@@ -946,15 +1010,13 @@ function ImportCosting() {
                                 <option value="ZAR">ZAR</option>
                               </select>
                             </td>
-                            <td style={{ padding: '6px 8px' }}>
-                              <input
-                                type="number"
-                                value={product.invoice_value || ''}
-                                onChange={(e) => updateProduct(index, 'invoice_value', parseFloat(e.target.value) || 0)}
-                                style={{ width: '110px', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'right' }}
-                                step="0.01"
-                                placeholder="0.00"
-                              />
+                            <td style={{ padding: '6px 8px', backgroundColor: '#fde68a' }}>
+                              <div style={{ padding: '6px 8px', fontWeight: '600', color: '#92400e', textAlign: 'right' }}>
+                                {formatNumber(product.invoice_value || 0, 2)}
+                              </div>
+                            </td>
+                            <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '600', color: '#92400e' }}>
+                              {formatNumber(weightPercent, 1)}%
                             </td>
                             <td style={{ padding: '6px 8px' }}>
                               <input
