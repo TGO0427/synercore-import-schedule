@@ -861,7 +861,7 @@ function ImportCosting() {
     try {
       const pdfBase64 = generatePDFBase64(emailEstimate);
 
-      const response = await fetch(`/api/costing/${emailEstimate.id}/send-email`, {
+      const response = await fetch(getApiUrl(`/api/costing/${emailEstimate.id}/send-email`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
