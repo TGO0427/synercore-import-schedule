@@ -523,4 +523,86 @@ This is an automated email from Synercore Import Schedule. Please do not reply t
   }
 }
 
+  /**
+   * Send cost estimate email with PDF attachment
+   */
+  static async sendCostEstimateEmail(
+    toEmail: string,
+    estimate: any,
+    pdfBase64: string,
+    senderName: string = 'Synercore Team'
+  ): Promise<EmailResult> {
+    try {
+      if (!toEmail) {
+        throw new Error('Email address is required');
+      }
+
+      const reference = estimate.reference_number || estimate.id;
+      const supplier = estimate.supplier_name || 'N/A';
+      const subject = `Import Cost Estimate - ${reference} (${supplier})`;
+
+      const htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #0b1f3a;">Import Cost Estimate</h2>
+          <p>Please find attached the cost estimate for your review.</p>
+
+          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <tr style="background-color: #f8fafc;">
+              <td style="padding: 10px; border: 1px solid #e5e7eb;"><strong>Reference:</strong></td>
+              <td style="padding: 10px; border: 1px solid #e5e7eb;">${reference}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; border: 1px solid #e5e7eb;"><strong>Supplier:</strong></td>
+              <td style="padding: 10px; border: 1px solid #e5e7eb;">${supplier}</td>
+            </tr>
+            <tr style="background-color: #f8fafc;">
+              <td style="padding: 10px; border: 1px solid #e5e7eb;"><strong>Container:</strong></td>
+              <td style="padding: 10px; border: 1px solid #e5e7eb;">${estimate.container_type || 'N/A'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; border: 1px solid #e5e7eb;"><strong>Port of Discharge:</strong></td>
+              <td style="padding: 10px; border: 1px solid #e5e7eb;">${estimate.port_of_discharge || 'N/A'}</td>
+            </tr>
+            <tr style="background-color: #f8fafc;">
+              <td style="padding: 10px; border: 1px solid #e5e7eb;"><strong>Costing Date:</strong></td>
+              <td style="padding: 10px; border: 1px solid #e5e7eb;">${estimate.costing_date || 'N/A'}</td>
+            </tr>
+          </table>
+
+          <p>The full cost breakdown is in the attached PDF.</p>
+
+          <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+          <p style="color: #666; font-size: 12px;">
+            Sent by ${senderName}<br>
+            Synercore Import Schedule
+          </p>
+        </div>
+      `;
+
+      const mailOptions = {
+        from: process.env.NOTIFICATION_EMAIL_FROM || 'noreply@synercore.com',
+        to: toEmail,
+        subject: subject,
+        html: htmlContent,
+        attachments: [
+          {
+            filename: `cost-estimate-${reference}.pdf`,
+            content: pdfBase64,
+            encoding: 'base64',
+            contentType: 'application/pdf'
+          }
+        ]
+      };
+
+      const info = await transporter.sendMail(mailOptions);
+      console.log('✅ Cost estimate email sent:', info.messageId);
+      return { success: true, messageId: info.messageId };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Error sending cost estimate email:', error);
+      return { success: false, error: errorMsg };
+    }
+  }
+}
+
 export default EmailService;

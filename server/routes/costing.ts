@@ -8,6 +8,7 @@ import { body, param, query, validationResult } from 'express-validator';
 import CostingController from '../controllers/CostingController.js';
 import { authenticateToken } from '../middleware/security.js';
 import { logInfo, logError } from '../utils/logger.js';
+import EmailService from '../services/emailService.js';
 
 const router = Router();
 
@@ -270,6 +271,43 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const totals = CostingController.calculateAllTotals(req.body);
     res.json({ data: totals });
+  })
+);
+
+/**
+ * POST /api/costing/:id/send-email
+ * Send cost estimate via email with PDF attachment
+ */
+router.post(
+  '/:id/send-email',
+  authenticateToken,
+  [
+    param('id').isString().notEmpty(),
+    body('toEmail').isEmail().withMessage('Valid email address required'),
+    body('pdfBase64').isString().notEmpty().withMessage('PDF data required'),
+  ],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const { toEmail, pdfBase64 } = req.body;
+    const user = (req as any).user;
+
+    // Get the estimate details
+    const estimate = await CostingController.getCostEstimate(req.params.id);
+    if (!estimate) {
+      return res.status(404).json({ error: 'Cost estimate not found' });
+    }
+
+    // Send the email
+    const senderName = user?.username || user?.name || 'Synercore Team';
+    const result = await EmailService.sendCostEstimateEmail(toEmail, estimate, pdfBase64, senderName);
+
+    if (result.success) {
+      logInfo(`Cost estimate ${req.params.id} emailed to ${toEmail}`);
+      res.json({ message: 'Email sent successfully', messageId: result.messageId });
+    } else {
+      logError(`Failed to email cost estimate ${req.params.id}: ${result.error}`);
+      res.status(500).json({ error: 'Failed to send email', details: result.error });
+    }
   })
 );
 
