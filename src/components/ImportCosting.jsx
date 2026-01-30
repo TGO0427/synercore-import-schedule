@@ -400,6 +400,49 @@ function ImportCosting() {
   const generatePDF = (estimate) => {
     const doc = new jsPDF();
     const totals = calculateAllTotals(estimate);
+    const products = estimate.products || [];
+
+    // Helper to filter out zero values
+    const filterZeroRows = (rows) => rows.filter(row => {
+      const value = row[row.length - 1];
+      if (typeof value === 'string') {
+        const numericValue = parseFloat(value.replace(/[^0-9.-]/g, ''));
+        return !isNaN(numericValue) && numericValue !== 0;
+      }
+      return value !== 0 && value !== '-';
+    });
+
+    // Calculate product totals for PDF
+    const getProductTotals = () => {
+      const roeCustoms = parseFloat(estimate.roe_customs) || parseFloat(estimate.roe_origin) || 0;
+      const roeEur = parseFloat(estimate.roe_eur) || roeCustoms;
+      let totalWeight = 0;
+      let totalCustomsValue = 0;
+      let totalDuties = 0;
+
+      products.forEach(p => {
+        const weight = parseFloat(p.weight_kg) || 0;
+        const invoiceValue = parseFloat(p.invoice_value) || 0;
+        const dutyPercent = parseFloat(p.duty_percent) || 0;
+        const dutySchedule1Percent = parseFloat(p.duty_schedule1_percent) || 0;
+        const currency = p.currency || 'USD';
+
+        let roe = roeCustoms;
+        if (currency === 'EUR') roe = roeEur;
+        if (currency === 'ZAR') roe = 1;
+
+        const customsValue = invoiceValue * roe;
+        const duties = customsValue * ((dutyPercent + dutySchedule1Percent) / 100);
+
+        totalWeight += weight;
+        totalCustomsValue += customsValue;
+        totalDuties += duties;
+      });
+
+      return { totalWeight, totalCustomsValue, totalDuties };
+    };
+
+    const productTotals = getProductTotals();
 
     // Header
     doc.setFontSize(18);
@@ -413,107 +456,188 @@ function ImportCosting() {
     doc.text(`Supplier: ${estimate.supplier_name || 'N/A'}`, 14, 40);
 
     // Shipment Details
+    const shipmentRows = filterZeroRows([
+      ['Country of Origin', estimate.country_of_origin || '-'],
+      ['Port of Loading', estimate.port_of_loading || '-'],
+      ['Port of Discharge', estimate.port_of_discharge || '-'],
+      ['Container Type', estimate.container_type || '-'],
+      ['INCO Terms', estimate.inco_terms || '-'],
+      ['Transit Time', estimate.transit_time_days ? `${estimate.transit_time_days} days` : '-'],
+      ['Total Weight', `${formatNumber(productTotals.totalWeight || estimate.total_gross_weight_kg)} kg`],
+      ['USD/ZAR Rate', formatNumber(estimate.roe_origin, 4)],
+      ['EUR/ZAR Rate', formatNumber(estimate.roe_eur, 4)],
+    ]);
+
     autoTable(doc, {
       startY: 48,
       head: [['Shipment Details', '']],
-      body: [
-        ['Port of Discharge', estimate.port_of_discharge || '-'],
-        ['Container Type', estimate.container_type || '-'],
-        ['INCO Terms', estimate.inco_terms || '-'],
-        ['Transit Time', `${estimate.transit_time_days || '-'} days`],
-        ['Gross Weight', `${formatNumber(estimate.total_gross_weight_kg)} kg`],
-        ['USD/ZAR Rate', formatNumber(estimate.roe_origin, 4)],
-        ['EUR/ZAR Rate', formatNumber(estimate.roe_eur, 4)],
-      ],
+      body: shipmentRows,
       theme: 'grid',
       headStyles: { fillColor: [11, 31, 58] },
     });
 
-    // Origin Charges
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 10,
-      head: [['Origin Charges', 'Amount', 'ZAR']],
-      body: [
-        ['Origin Charge (USD)', formatCurrency(estimate.origin_charge_usd, 'USD'), formatCurrency(totals._origin_charge_usd_zar)],
-        ['Origin Charge (EUR)', formatCurrency(estimate.origin_charge_eur, 'EUR'), formatCurrency(totals._origin_charge_eur_zar)],
-        ['Total Origin Charges', '', formatCurrency(totals.total_origin_charges_zar)],
-      ],
-      theme: 'grid',
-      headStyles: { fillColor: [46, 139, 87] },
-    });
+    // Products in Container (if any)
+    if (products.length > 0) {
+      const roeCustoms = parseFloat(estimate.roe_customs) || parseFloat(estimate.roe_origin) || 0;
+      const roeEur = parseFloat(estimate.roe_eur) || roeCustoms;
 
-    // Local Charges
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 10,
-      head: [['Local Charges (Transport/Cartage)', 'ZAR']],
-      body: [
-        ['Local Cartage: CPT to Klapmuts (<20 Ton)', formatCurrency(estimate.local_cartage_cpt_klapmuts_20ton_zar)],
-        ['Local Cartage: CPT to Klapmuts (21-28 Ton)', formatCurrency(estimate.local_cartage_cpt_klapmuts_28ton_zar)],
-        ['Transport: DBN Port to Pretoria (20FT)', formatCurrency(estimate.transport_dbn_to_pretoria_20ft_zar)],
-        ['Transport: DBN Port to Pretoria (40FT)', formatCurrency(estimate.transport_dbn_to_pretoria_40ft_zar)],
-        ['Transport: DBN Port to WHS', formatCurrency(estimate.transport_dbn_to_whs_zar)],
-        ['Unpack / Reload', formatCurrency(estimate.unpack_reload_zar)],
-        ['Storage', formatCurrency(estimate.storage_zar)],
-        ['Outlying Container Depot Surcharge', formatCurrency(estimate.outlying_depot_surcharge_zar)],
-        ['Local Cartage: DBN WHS to PTA (Tautliner A)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_opt_a_zar)],
-        ['Local Cartage: DBN WHS to PTA (Tautliner B)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_opt_b_zar)],
-        ['Local Cartage: DBN WHS to PTA (6M Deck)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_6m_zar)],
-        ['Local Cartage: DBN WHS to PTA (12M Deck)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_12m_zar)],
-        ['Transport: PE/Coega Port to Pretoria', formatCurrency(estimate.transport_pe_coega_to_pretoria_zar)],
-        ['Sub-Total', formatCurrency(totals.local_charges_subtotal_zar)],
-      ],
-      theme: 'grid',
-      headStyles: { fillColor: [22, 101, 52] },
-    });
+      const productRows = products.map(p => {
+        const weight = parseFloat(p.weight_kg) || 0;
+        const invoiceValue = parseFloat(p.invoice_value) || 0;
+        const dutyPercent = parseFloat(p.duty_percent) || 0;
+        const dutySchedule1Percent = parseFloat(p.duty_schedule1_percent) || 0;
+        const currency = p.currency || 'USD';
 
-    // Destination Charges
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 10,
-      head: [['Destination Charges', 'ZAR']],
-      body: [
-        ['Shipping Line Charges (At Cost)', formatCurrency(estimate.shipping_line_charges_zar)],
-        ['Cargo Dues (20FT)', formatCurrency(estimate.cargo_dues_20ft_zar)],
-        ['Cargo Dues (40FT)', formatCurrency(estimate.cargo_dues_40ft_zar)],
-        ['CTO Fee', formatCurrency(estimate.cto_fee_zar)],
-        ['Port Health Inspection', formatCurrency(estimate.port_health_inspection_zar)],
-        ['DAFF Inspection', formatCurrency(estimate.daff_inspection_zar)],
-        ['State Vet Cancellation Fee', formatCurrency(estimate.state_vet_cancellation_fee_zar)],
-        ['JNB Turn In (At Cost)', formatCurrency(estimate.jnb_turn_in_zar)],
-        ['Sub-Total', formatCurrency(totals.destination_charges_subtotal_zar)],
-      ],
-      theme: 'grid',
-      headStyles: { fillColor: [0, 123, 167] },
-    });
+        let roe = roeCustoms;
+        if (currency === 'EUR') roe = roeEur;
+        if (currency === 'ZAR') roe = 1;
 
-    // Customs & Duties
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 10,
-      head: [['Customs & Duties', 'ZAR']],
-      body: [
-        ['Customs Value', formatCurrency(totals.customs_value_zar)],
-        ['Duties', formatCurrency(estimate.duties_zar)],
-        ['Customs VAT', formatCurrency(estimate.customs_vat_zar)],
-        ['Customs Declaration', formatCurrency(estimate.customs_declaration_zar)],
-        ['Agency Fee (3.5% min R1187)', formatCurrency(totals.agency_fee_zar)],
-        ['Sub-Total', formatCurrency(totals.customs_subtotal_zar)],
-      ],
-      theme: 'grid',
-      headStyles: { fillColor: [146, 64, 14] },
-    });
+        const customsValue = invoiceValue * roe;
+        const duties = customsValue * ((dutyPercent + dutySchedule1Percent) / 100);
+        const weightPercent = productTotals.totalWeight > 0 ? (weight / productTotals.totalWeight * 100) : 0;
 
-    // Totals
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 10,
-      head: [['Summary', 'Amount']],
-      body: [
-        ['Total Shipping Cost', formatCurrency(totals.total_shipping_cost_zar)],
-        ['Total in Warehouse Cost', formatCurrency(totals.total_in_warehouse_cost_zar)],
-        ['Cost per KG', formatCurrency(totals.all_in_warehouse_cost_per_kg_zar)],
-      ],
-      theme: 'grid',
-      headStyles: { fillColor: [11, 31, 58] },
-      bodyStyles: { fontStyle: 'bold' },
-    });
+        return [
+          p.name || '-',
+          p.hs_code || '-',
+          `${formatNumber(weight)} kg`,
+          `${formatNumber(weightPercent, 1)}%`,
+          formatCurrency(customsValue),
+          formatCurrency(duties),
+        ];
+      });
+
+      // Add totals row
+      productRows.push([
+        'TOTAL',
+        '',
+        `${formatNumber(productTotals.totalWeight)} kg`,
+        '100%',
+        formatCurrency(productTotals.totalCustomsValue),
+        formatCurrency(productTotals.totalDuties),
+      ]);
+
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Product', 'HS Code', 'Weight', 'Share', 'Customs Value', 'Duties']],
+        body: productRows,
+        theme: 'grid',
+        headStyles: { fillColor: [245, 158, 11] },
+        styles: { fontSize: 8 },
+      });
+    }
+
+    // Origin Charges - filter zero values
+    const originRows = filterZeroRows([
+      ['Origin Charge (USD)', formatCurrency(estimate.origin_charge_usd, 'USD'), formatCurrency(totals._origin_charge_usd_zar)],
+      ['Origin Charge (EUR)', formatCurrency(estimate.origin_charge_eur, 'EUR'), formatCurrency(totals._origin_charge_eur_zar)],
+    ]);
+    if (totals.total_origin_charges_zar > 0) {
+      originRows.push(['Total Origin Charges', '', formatCurrency(totals.total_origin_charges_zar)]);
+    }
+
+    if (originRows.length > 0) {
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Origin Charges', 'Amount', 'ZAR']],
+        body: originRows,
+        theme: 'grid',
+        headStyles: { fillColor: [46, 139, 87] },
+      });
+    }
+
+    // Local Charges - filter zero values
+    const localChargeRows = filterZeroRows([
+      ['Local Cartage: CPT to Klapmuts (<20 Ton)', formatCurrency(estimate.local_cartage_cpt_klapmuts_20ton_zar)],
+      ['Local Cartage: CPT to Klapmuts (21-28 Ton)', formatCurrency(estimate.local_cartage_cpt_klapmuts_28ton_zar)],
+      ['Transport: DBN Port to Pretoria (20FT)', formatCurrency(estimate.transport_dbn_to_pretoria_20ft_zar)],
+      ['Transport: DBN Port to Pretoria (40FT)', formatCurrency(estimate.transport_dbn_to_pretoria_40ft_zar)],
+      ['Transport: DBN Port to WHS', formatCurrency(estimate.transport_dbn_to_whs_zar)],
+      ['Unpack / Reload', formatCurrency(estimate.unpack_reload_zar)],
+      ['Storage', formatCurrency(estimate.storage_zar)],
+      ['Outlying Container Depot Surcharge', formatCurrency(estimate.outlying_depot_surcharge_zar)],
+      ['Local Cartage: DBN WHS to PTA (Tautliner A)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_opt_a_zar)],
+      ['Local Cartage: DBN WHS to PTA (Tautliner B)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_opt_b_zar)],
+      ['Local Cartage: DBN WHS to PTA (6M Deck)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_6m_zar)],
+      ['Local Cartage: DBN WHS to PTA (12M Deck)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_12m_zar)],
+      ['Transport: PE/Coega Port to Pretoria', formatCurrency(estimate.transport_pe_coega_to_pretoria_zar)],
+    ]);
+    if (totals.local_charges_subtotal_zar > 0) {
+      localChargeRows.push(['Sub-Total', formatCurrency(totals.local_charges_subtotal_zar)]);
+    }
+
+    if (localChargeRows.length > 0) {
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Local Charges (Transport/Cartage)', 'ZAR']],
+        body: localChargeRows,
+        theme: 'grid',
+        headStyles: { fillColor: [22, 101, 52] },
+      });
+    }
+
+    // Destination Charges - filter zero values
+    const destChargeRows = filterZeroRows([
+      ['Shipping Line Charges (At Cost)', formatCurrency(estimate.shipping_line_charges_zar)],
+      ['Cargo Dues (20FT)', formatCurrency(estimate.cargo_dues_20ft_zar)],
+      ['Cargo Dues (40FT)', formatCurrency(estimate.cargo_dues_40ft_zar)],
+      ['CTO Fee', formatCurrency(estimate.cto_fee_zar)],
+      ['Port Health Inspection', formatCurrency(estimate.port_health_inspection_zar)],
+      ['DAFF Inspection', formatCurrency(estimate.daff_inspection_zar)],
+      ['State Vet Cancellation Fee', formatCurrency(estimate.state_vet_cancellation_fee_zar)],
+      ['JNB Turn In (At Cost)', formatCurrency(estimate.jnb_turn_in_zar)],
+    ]);
+    if (totals.destination_charges_subtotal_zar > 0) {
+      destChargeRows.push(['Sub-Total', formatCurrency(totals.destination_charges_subtotal_zar)]);
+    }
+
+    if (destChargeRows.length > 0) {
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Destination Charges', 'ZAR']],
+        body: destChargeRows,
+        theme: 'grid',
+        headStyles: { fillColor: [0, 123, 167] },
+      });
+    }
+
+    // Customs & Duties - filter zero values, exclude VAT
+    const customsRows = filterZeroRows([
+      ['Customs Value (for reference)', formatCurrency(totals.customs_value_zar)],
+      ['Duties', formatCurrency(productTotals.totalDuties || estimate.duties_zar)],
+      ['Customs Declaration', formatCurrency(estimate.customs_declaration_zar)],
+      ['Agency Fee (3.5% min R1187)', formatCurrency(totals.agency_fee_zar)],
+    ]);
+    if (totals.customs_subtotal_zar > 0) {
+      customsRows.push(['Sub-Total (excl. VAT)', formatCurrency(totals.customs_subtotal_zar)]);
+    }
+
+    if (customsRows.length > 0) {
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Customs & Duties', 'ZAR']],
+        body: customsRows,
+        theme: 'grid',
+        headStyles: { fillColor: [146, 64, 14] },
+      });
+    }
+
+    // Summary Totals - filter zero values
+    const summaryRows = filterZeroRows([
+      ['Total Shipping Cost', formatCurrency(totals.total_shipping_cost_zar)],
+      ['Total in Warehouse Cost', formatCurrency(totals.total_in_warehouse_cost_zar)],
+      ['Cost per KG', formatCurrency(totals.all_in_warehouse_cost_per_kg_zar)],
+    ]);
+
+    if (summaryRows.length > 0) {
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Summary', 'Amount']],
+        body: summaryRows,
+        theme: 'grid',
+        headStyles: { fillColor: [11, 31, 58] },
+        bodyStyles: { fontStyle: 'bold' },
+      });
+    }
 
     // Footer
     doc.setFontSize(8);
