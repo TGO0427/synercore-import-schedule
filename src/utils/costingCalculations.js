@@ -104,15 +104,14 @@ export const calculateCustomsItemsTotals = (data) => {
 };
 
 /**
- * Calculate customs subtotal (duties + VAT + declaration + agency fee)
+ * Calculate customs subtotal (duties + declaration + agency fee)
+ * Note: VAT is excluded as it's not charged to clients
  */
 export const calculateCustomsSubtotal = (data, agencyFee) => {
   const customsTotals = calculateCustomsItemsTotals(data);
   return (
-    customsTotals.totalCustomsValue +
     customsTotals.totalDuties +
     customsTotals.totalSchedule1Duty +
-    customsTotals.totalVat +
     (parseFloat(data.customs_declaration_zar) || 0) +
     (agencyFee || 0)
   );
@@ -172,16 +171,16 @@ export const calculateAllTotals = (data) => {
   const agencyFeeMin = parseFloat(data.agency_fee_min) || 1187;
   const agencyFeeZar = calculateAgencyFee(customsValueZar, agencyFeePercent, agencyFeeMin);
 
-  // Customs subtotal from items + declaration + agency
+  // Customs subtotal from items + declaration + agency (EXCLUDING VAT - not charged to clients)
   const customsSubtotalZar = customsItemsTotals.totalCustomsValue > 0
-    ? (customsItemsTotals.totalDuties + customsItemsTotals.totalSchedule1Duty + customsItemsTotals.totalVat +
+    ? (customsItemsTotals.totalDuties + customsItemsTotals.totalSchedule1Duty +
        (parseFloat(data.customs_declaration_zar) || 0) + agencyFeeZar)
     : calculateCustomsSubtotal(data, agencyFeeZar);
 
   // Total shipping cost (origin + local + destination charges)
   const totalShippingCostZar = totalOriginChargesZar + localChargesSubtotalZar + destinationChargesSubtotalZar;
 
-  // Total in warehouse cost (shipping + customs)
+  // Total in warehouse cost (shipping + customs) - VAT excluded
   const totalInWarehouseCostZar = totalShippingCostZar + customsSubtotalZar;
 
   // Cost per KG

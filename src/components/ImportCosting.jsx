@@ -285,7 +285,8 @@ function ImportCosting() {
 
     // Get customs values for this product
     const customs = calculateProductCustomsValues(product);
-    const productCustomsCost = customs.totalDuties + customs.schedule1Duty + customs.totalVat;
+    // VAT excluded - not charged to clients
+    const productCustomsCost = customs.totalDuties + customs.schedule1Duty;
 
     // Total cost for this product
     const totalProductCost = allocatedShippingCost + productCustomsCost;
@@ -1055,10 +1056,10 @@ function ImportCosting() {
                   </div>
                   <div style={{ gridColumn: 'span 2' }}>
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
-                      Customs Sub-Total
+                      Customs Sub-Total (excl. VAT)
                     </label>
                     <div style={{ padding: '8px 12px', backgroundColor: '#b45309', borderRadius: '6px', fontWeight: '700', color: 'white', fontSize: '1.1rem' }}>
-                      {formatCurrency(getCustomsTotals().totalCustomsValue + getCustomsTotals().totalDuties + getCustomsTotals().totalSchedule1Duty + getCustomsTotals().totalVat + (parseFloat(formData.customs_declaration_zar) || 0) + (calculatedTotals.agency_fee_zar || 0))}
+                      {formatCurrency(getCustomsTotals().totalDuties + getCustomsTotals().totalSchedule1Duty + (parseFloat(formData.customs_declaration_zar) || 0) + (calculatedTotals.agency_fee_zar || 0))}
                     </div>
                   </div>
                 </div>
@@ -1080,7 +1081,7 @@ function ImportCosting() {
                           <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600' }}>Weight</th>
                           <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600' }}>Share %</th>
                           <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600' }}>Customs Value</th>
-                          <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600' }}>Duties + VAT</th>
+                          <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600' }}>Duties</th>
                           <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600' }}>Shipping Alloc.</th>
                           <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', backgroundColor: '#059669' }}>Total Landed</th>
                           <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', backgroundColor: '#059669' }}>Cost/kg</th>
@@ -1106,7 +1107,7 @@ function ImportCosting() {
                                 {formatCurrency(customs.customsValue)}
                               </td>
                               <td style={{ padding: '8px', textAlign: 'right' }}>
-                                {formatCurrency(customs.totalDuties + customs.schedule1Duty + customs.totalVat)}
+                                {formatCurrency(customs.totalDuties + customs.schedule1Duty)}
                               </td>
                               <td style={{ padding: '8px', textAlign: 'right' }}>
                                 {formatCurrency(allocation.allocatedShippingCost)}
@@ -1126,7 +1127,7 @@ function ImportCosting() {
                           <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatNumber(getTotalWeight())} kg</td>
                           <td style={{ padding: '10px 8px', textAlign: 'center' }}>100%</td>
                           <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(getCustomsTotals().totalCustomsValue)}</td>
-                          <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(getCustomsTotals().totalDuties + getCustomsTotals().totalSchedule1Duty + getCustomsTotals().totalVat)}</td>
+                          <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(getCustomsTotals().totalDuties + getCustomsTotals().totalSchedule1Duty)}</td>
                           <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(calculatedTotals.total_shipping_cost_zar)}</td>
                           <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(calculatedTotals.total_in_warehouse_cost_zar)}</td>
                           <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(calculatedTotals.all_in_warehouse_cost_per_kg_zar)}</td>
