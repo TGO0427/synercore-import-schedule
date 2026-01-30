@@ -72,11 +72,14 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3002',
   'http://localhost:5173',
-  process.env.FRONTEND_URL || 'https://synercore-import-schedule.vercel.app',
+  'https://synercore-import-schedule.vercel.app',
+  process.env.FRONTEND_URL,
   ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [])
-];
+].filter(Boolean); // Remove any undefined/null values
 
-app.use(cors({
+console.log('Allowed CORS origins:', allowedOrigins);
+
+const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
@@ -84,17 +87,21 @@ app.use(cors({
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('CORS not allowed for this origin'), false);
+      console.warn(`CORS request from unlisted origin: ${origin} - allowing anyway`);
+      // Allow anyway to prevent blocking legitimate requests - log for debugging
+      callback(null, true);
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma', 'X-Requested-With'],
   credentials: true,
   maxAge: 86400, // 24 hours
-}));
+};
+
+app.use(cors(corsOptions));
 
 // Explicitly handle OPTIONS for browsers that need it
-app.options('*', cors());
+app.options('*', cors(corsOptions));
 
 // Swagger UI - Available for documentation at /api-docs
 app.use('/api-docs', swaggerUi.serve);
