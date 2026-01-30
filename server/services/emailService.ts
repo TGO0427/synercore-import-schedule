@@ -521,7 +521,6 @@ This is an automated email from Synercore Import Schedule. Please do not reply t
       return { success: false, error: errorMsg };
     }
   }
-}
 
   /**
    * Send cost estimate email with PDF attachment
