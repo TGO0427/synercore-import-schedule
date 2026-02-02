@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getApiUrl } from '../config/api';
 import { authFetch } from '../utils/authFetch';
 import {
@@ -139,6 +139,7 @@ function ImportCosting() {
   const [sortDirection, setSortDirection] = useState('desc'); // 'asc' or 'desc'
   const [showReports, setShowReports] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState('all');
+  const chartRef = useRef(null);
 
   // Get unique products from all estimates
   const allProducts = useMemo(() => {
@@ -989,6 +990,185 @@ function ImportCosting() {
     return doc.output('datauristring').split(',')[1];
   };
 
+  // Generate Report PDF with chart and overview
+  const generateReportPDF = async () => {
+    const doc = new jsPDF();
+    const chartData = getSupplierChartData;
+    const productLabel = selectedProduct === 'all' ? 'All Products' : selectedProduct;
+
+    // Header
+    doc.setFillColor(91, 33, 182);
+    doc.rect(0, 0, 220, 35, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.text('Cost Analysis Report', 14, 18);
+    doc.setFontSize(10);
+    doc.text(`Product Filter: ${productLabel}`, 14, 28);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 140, 28);
+
+    // Try to capture chart as image
+    if (chartRef.current) {
+      try {
+        const chartCanvas = chartRef.current.canvas;
+        const chartImage = chartCanvas.toDataURL('image/png', 1.0);
+        doc.addImage(chartImage, 'PNG', 14, 42, 180, 80);
+      } catch (err) {
+        console.error('Error capturing chart:', err);
+        doc.setTextColor(100);
+        doc.setFontSize(10);
+        doc.text('Chart could not be rendered in PDF', 14, 60);
+      }
+    }
+
+    // Summary Statistics
+    const totalEstimates = chartData.supplierDetails.reduce((sum, s) => sum + s.estimateCount, 0);
+    const totalWeight = chartData.supplierDetails.reduce((sum, s) => sum + s.totalWeight, 0);
+    const totalCost = chartData.supplierDetails.reduce((sum, s) => sum + s.totalCost, 0);
+    const avgCostPerKg = totalWeight > 0 ? totalCost / totalWeight : 0;
+
+    doc.setTextColor(0);
+    doc.setFontSize(12);
+    doc.text('Summary Statistics', 14, 132);
+
+    autoTable(doc, {
+      startY: 138,
+      head: [['Metric', 'Value']],
+      body: [
+        ['Total Suppliers', chartData.labels.length.toString()],
+        ['Total Estimates', totalEstimates.toString()],
+        ['Total Weight', `${formatNumber(totalWeight)} kg`],
+        ['Total Cost', formatCurrency(totalCost)],
+        ['Average Cost/KG', formatCurrency(avgCostPerKg)],
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [91, 33, 182] },
+      columnStyles: {
+        0: { fontStyle: 'bold' },
+        1: { halign: 'right' },
+      },
+    });
+
+    // Supplier Details Table
+    doc.setFontSize(12);
+    doc.text('Supplier Cost Breakdown', 14, doc.lastAutoTable.finalY + 15);
+
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 20,
+      head: [['Supplier', 'Estimates', 'Weight (kg)', 'Total Cost (ZAR)', 'Cost/KG (ZAR)']],
+      body: chartData.supplierDetails.map(s => [
+        s.name,
+        s.estimateCount.toString(),
+        formatNumber(s.totalWeight),
+        formatCurrency(s.totalCost),
+        formatCurrency(s.costPerKg),
+      ]),
+      theme: 'striped',
+      headStyles: { fillColor: [91, 33, 182] },
+      columnStyles: {
+        1: { halign: 'center' },
+        2: { halign: 'right' },
+        3: { halign: 'right' },
+        4: { halign: 'right' },
+      },
+    });
+
+    // Complete Estimates Overview (new page)
+    doc.addPage();
+    doc.setFillColor(91, 33, 182);
+    doc.rect(0, 0, 220, 25, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.text('Complete Estimates Overview', 14, 16);
+
+    // Filter estimates by selected product
+    const relevantEstimates = selectedProduct === 'all'
+      ? filteredEstimates
+      : filteredEstimates.filter(est =>
+          (est.products || []).some(p => p.name === selectedProduct)
+        );
+
+    autoTable(doc, {
+      startY: 32,
+      head: [['Reference', 'Supplier', 'Port', 'Container', 'Products', 'Total Cost', 'Cost/KG']],
+      body: relevantEstimates.map(est => {
+        const totals = calculateAllTotals(est);
+        const products = (est.products || [])
+          .filter(p => selectedProduct === 'all' || p.name === selectedProduct)
+          .map(p => `${p.name || 'N/A'} (${formatNumber(p.weight_kg)}kg)`)
+          .join(', ') || '-';
+        return [
+          est.reference_number || est.id.slice(0, 8),
+          est.supplier_name || '-',
+          est.port_of_discharge || '-',
+          est.container_type || '-',
+          products,
+          formatCurrency(totals.total_in_warehouse_cost_zar),
+          formatCurrency(totals.all_in_warehouse_cost_per_kg_zar),
+        ];
+      }),
+      theme: 'striped',
+      headStyles: { fillColor: [91, 33, 182], fontSize: 8 },
+      styles: { fontSize: 7 },
+      columnStyles: {
+        4: { cellWidth: 45 },
+        5: { halign: 'right' },
+        6: { halign: 'right' },
+      },
+    });
+
+    // Product Details Page (if filtering by specific product)
+    if (selectedProduct !== 'all') {
+      doc.addPage();
+      doc.setFillColor(245, 158, 11);
+      doc.rect(0, 0, 220, 25, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.text(`Product Details: ${selectedProduct}`, 14, 16);
+
+      const productDetails = [];
+      relevantEstimates.forEach(est => {
+        (est.products || [])
+          .filter(p => p.name === selectedProduct)
+          .forEach(p => {
+            productDetails.push([
+              est.reference_number || est.id.slice(0, 8),
+              est.supplier_name || '-',
+              p.hs_code || '-',
+              p.pack_size || '-',
+              p.pack_type || '-',
+              `${formatNumber(p.weight_kg)} kg`,
+              `${formatNumber(p.rate_per_kg)} ${p.currency || 'USD'}`,
+              `${formatNumber(p.invoice_value)} ${p.currency || 'USD'}`,
+            ]);
+          });
+      });
+
+      autoTable(doc, {
+        startY: 32,
+        head: [['Reference', 'Supplier', 'HS Code', 'Pack Size', 'Pack Type', 'Weight', 'Rate/kg', 'Invoice Value']],
+        body: productDetails,
+        theme: 'striped',
+        headStyles: { fillColor: [245, 158, 11], fontSize: 8 },
+        styles: { fontSize: 7 },
+      });
+    }
+
+    // Footer on all pages
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(
+        `Page ${i} of ${pageCount} | Generated by Synercore Import Schedule`,
+        14,
+        doc.internal.pageSize.height - 10
+      );
+    }
+
+    doc.save(`cost-report-${productLabel.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   // Send email with PDF attachment
   const sendEstimateEmail = async () => {
     if (!emailTo || !emailEstimate) return;
@@ -1166,6 +1346,24 @@ function ImportCosting() {
                     <option key={product} value={product}>{product}</option>
                   ))}
                 </select>
+                <button
+                  onClick={generateReportPDF}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#dc2626',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: '500',
+                    fontSize: '0.9rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  📄 Print PDF
+                </button>
               </div>
             </div>
           </div>
@@ -1178,6 +1376,7 @@ function ImportCosting() {
               <>
                 <div style={{ height: '350px', marginBottom: '1.5rem' }}>
                   <Bar
+                    ref={chartRef}
                     data={{
                       labels: getSupplierChartData.labels,
                       datasets: getSupplierChartData.datasets,
