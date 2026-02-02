@@ -41,6 +41,7 @@ export interface ImportCostEstimate {
   ocean_freight_usd?: number;
   ocean_freight_eur?: number;
   ocean_freight_zar?: number;
+  total_ocean_freight_zar?: number;
   commodity?: string;
   invoice_value_usd?: number;
   invoice_value_eur?: number;
@@ -119,7 +120,7 @@ const COST_ESTIMATE_COLUMNS = [
   'country_of_origin', 'port_of_loading', 'port_of_discharge', 'shipping_line', 'routing', 'frequency', 'transit_time_days',
   'inco_terms', 'inco_term_place', 'container_type', 'quantity', 'hs_code',
   'gross_weight_kg', 'total_gross_weight_kg', 'origin_rate_usd', 'ocean_freight_rate_usd',
-  'ocean_freight_usd', 'ocean_freight_eur', 'ocean_freight_zar',
+  'ocean_freight_usd', 'ocean_freight_eur', 'ocean_freight_zar', 'total_ocean_freight_zar',
   'commodity', 'invoice_value_usd', 'invoice_value_eur', 'customs_value_zar', 'supplier_name', 'validity_date', 'costing_date',
   'payment_terms', 'roe_origin', 'roe_eur', 'roe_customs', 'products', 'origin_charge_usd', 'origin_charge_eur', 'origin_charge_zar',
   'total_origin_charges_zar',
@@ -246,6 +247,7 @@ export class CostingRepository {
       ocean_freight_usd: data.ocean_freight_usd || 0,
       ocean_freight_eur: data.ocean_freight_eur || 0,
       ocean_freight_zar: data.ocean_freight_zar || 0,
+      total_ocean_freight_zar: data.total_ocean_freight_zar || 0,
       // Local Charges
       local_cartage_cpt_klapmuts_20ton_zar: data.local_cartage_cpt_klapmuts_20ton_zar || 0,
       local_cartage_cpt_klapmuts_28ton_zar: data.local_cartage_cpt_klapmuts_28ton_zar || 0,

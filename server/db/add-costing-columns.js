@@ -185,6 +185,7 @@ export default async function addCostingColumns() {
     'ocean_freight_usd NUMERIC(12,2) DEFAULT 0',
     'ocean_freight_eur NUMERIC(12,2) DEFAULT 0',
     'ocean_freight_zar NUMERIC(14,2) DEFAULT 0',
+    'total_ocean_freight_zar NUMERIC(14,2) DEFAULT 0',
   ];
 
   for (const col of oceanFreightColumns) {
