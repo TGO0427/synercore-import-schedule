@@ -115,6 +115,26 @@ function ImportCosting() {
   const [emailEstimate, setEmailEstimate] = useState(null);
   const [emailTo, setEmailTo] = useState('');
   const [emailSending, setEmailSending] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortDirection, setSortDirection] = useState('desc'); // 'asc' or 'desc'
+
+  // Filter and sort estimates
+  const filteredEstimates = estimates
+    .filter(est => {
+      if (!searchTerm) return true;
+      const ref = (est.reference_number || '').toLowerCase();
+      const supplier = (est.supplier_name || '').toLowerCase();
+      const search = searchTerm.toLowerCase();
+      return ref.includes(search) || supplier.includes(search);
+    })
+    .sort((a, b) => {
+      const refA = (a.reference_number || '').toLowerCase();
+      const refB = (b.reference_number || '').toLowerCase();
+      if (sortDirection === 'asc') {
+        return refA.localeCompare(refB);
+      }
+      return refB.localeCompare(refA);
+    });
 
   // Fetch estimates on mount
   useEffect(() => {
@@ -1622,6 +1642,43 @@ function ImportCosting() {
 
       {/* Estimates Table */}
       <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+        {/* Search and Sort Controls */}
+        <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ flex: '1', minWidth: '200px', maxWidth: '300px' }}>
+            <input
+              type="text"
+              placeholder="Search by reference or supplier..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+              }}
+            />
+          </div>
+          <button
+            onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+            style={{
+              padding: '8px 12px',
+              backgroundColor: '#f3f4f6',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            Reference {sortDirection === 'asc' ? '↑ A-Z' : '↓ Z-A'}
+          </button>
+          <span style={{ color: '#6b7280', fontSize: '0.85rem' }}>
+            {filteredEstimates.length} of {estimates.length} estimates
+          </span>
+        </div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
@@ -1637,14 +1694,14 @@ function ImportCosting() {
               </tr>
             </thead>
             <tbody>
-              {estimates.length === 0 ? (
+              {filteredEstimates.length === 0 ? (
                 <tr>
                   <td colSpan={8} style={{ padding: '48px', textAlign: 'center', color: '#9ca3af' }}>
-                    No cost estimates yet. Create your first estimate to get started.
+                    {searchTerm ? 'No estimates match your search.' : 'No cost estimates yet. Create your first estimate to get started.'}
                   </td>
                 </tr>
               ) : (
-                estimates.map((est) => {
+                filteredEstimates.map((est) => {
                   const totals = calculateAllTotals(est);
                   return (
                     <tr key={est.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
