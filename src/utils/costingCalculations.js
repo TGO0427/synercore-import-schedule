@@ -57,11 +57,11 @@ export const calculateDestinationSubtotal = (data) => {
 };
 
 /**
- * Calculate agency fee: 3.5% of customs value, minimum R1187
+ * Calculate agency fee: 3.5% of (duties + import VAT), minimum R1187
  */
-export const calculateAgencyFee = (customsValue, percentage = 3.5, min = 1187) => {
-  if (!customsValue || customsValue <= 0) return min; // Always charge minimum
-  const calculated = customsValue * (percentage / 100);
+export const calculateAgencyFee = (dutiesAndVat, percentage = 3.5, min = 1187) => {
+  if (!dutiesAndVat || dutiesAndVat <= 0) return min; // Always charge minimum
+  const calculated = dutiesAndVat * (percentage / 100);
   return Math.max(calculated, min);
 };
 
@@ -173,12 +173,18 @@ export const calculateAllTotals = (data) => {
   // Destination charges subtotal (port/shipping)
   const destinationChargesSubtotalZar = calculateDestinationSubtotal(data);
 
-  // Agency fee: 3.5% of customs value, min R1187
+  // Import VAT (15% of customs value + duties)
+  const importVatZar = customsItemsTotals.totalVat;
+
+  // Total duties and Import VAT (base for agency fee calculation)
+  const totalDutiesAndVat = customsItemsTotals.totalDuties + customsItemsTotals.totalSchedule1Duty + importVatZar;
+
+  // Agency fee: 3.5% of (duties + Import VAT), min R1187
   const agencyFeePercent = parseFloat(data.agency_fee_percentage) || 3.5;
   const agencyFeeMin = parseFloat(data.agency_fee_min) || 1187;
-  const agencyFeeZar = calculateAgencyFee(customsValueZar, agencyFeePercent, agencyFeeMin);
+  const agencyFeeZar = calculateAgencyFee(totalDutiesAndVat, agencyFeePercent, agencyFeeMin);
 
-  // Customs subtotal from items + declaration + agency (EXCLUDING VAT - not charged to clients)
+  // Customs subtotal from items + declaration + agency (EXCLUDING Import VAT - not charged to clients)
   const customsSubtotalZar = customsItemsTotals.totalCustomsValue > 0
     ? (customsItemsTotals.totalDuties + customsItemsTotals.totalSchedule1Duty +
        (parseFloat(data.customs_declaration_zar) || 0) + agencyFeeZar)
@@ -204,6 +210,8 @@ export const calculateAllTotals = (data) => {
     total_origin_charges_zar: Math.round(totalOriginChargesZar * 100) / 100,
     local_charges_subtotal_zar: Math.round(localChargesSubtotalZar * 100) / 100,
     destination_charges_subtotal_zar: Math.round(destinationChargesSubtotalZar * 100) / 100,
+    import_vat_zar: Math.round(importVatZar * 100) / 100,
+    total_duties_zar: Math.round((customsItemsTotals.totalDuties + customsItemsTotals.totalSchedule1Duty) * 100) / 100,
     agency_fee_zar: Math.round(agencyFeeZar * 100) / 100,
     customs_subtotal_zar: Math.round(customsSubtotalZar * 100) / 100,
     total_shipping_cost_zar: Math.round(totalShippingCostZar * 100) / 100,

@@ -830,7 +830,7 @@ function ImportCosting() {
       ['Agency Fee (3.5% min R1187)', formatCurrency(totals.agency_fee_zar)],
     ]);
     if (totals.customs_subtotal_zar > 0) {
-      customsRows.push(['Sub-Total (excl. VAT)', formatCurrency(totals.customs_subtotal_zar)]);
+      customsRows.push(['Sub-Total (excl. Import VAT)', formatCurrency(totals.customs_subtotal_zar)]);
     }
 
     if (customsRows.length > 0) {
@@ -2074,7 +2074,7 @@ function ImportCosting() {
                   </div>
                   <div>
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
-                      Total VAT (15%)
+                      IMPORT VAT (15%)
                     </label>
                     <div style={{ padding: '8px 12px', backgroundColor: '#fde68a', borderRadius: '6px', fontWeight: '600', color: '#78350f' }}>
                       {formatCurrency(getCustomsTotals().totalVat)}
@@ -2091,10 +2091,13 @@ function ImportCosting() {
                     <div style={{ padding: '8px 12px', backgroundColor: '#fde68a', borderRadius: '6px', fontWeight: '600', color: '#92400e' }}>
                       {formatCurrency(calculatedTotals.agency_fee_zar)}
                     </div>
+                    <div style={{ fontSize: '0.7rem', color: '#78350f', marginTop: '2px' }}>
+                      Based on Duties + Import VAT
+                    </div>
                   </div>
                   <div style={{ gridColumn: 'span 2' }}>
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
-                      Customs Sub-Total (excl. VAT)
+                      Customs Sub-Total (excl. Import VAT)
                     </label>
                     <div style={{ padding: '8px 12px', backgroundColor: '#b45309', borderRadius: '6px', fontWeight: '700', color: 'white', fontSize: '1.1rem' }}>
                       {formatCurrency(getCustomsTotals().totalDuties + getCustomsTotals().totalSchedule1Duty + (parseFloat(formData.customs_declaration_zar) || 0) + (calculatedTotals.agency_fee_zar || 0))}
