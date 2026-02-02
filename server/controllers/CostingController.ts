@@ -16,6 +16,7 @@ export interface CostingFilterParams {
 
 export interface CalculatedTotals {
   customs_value_zar: number;
+  ocean_freight_zar: number;
   origin_charge_zar: number;
   total_origin_charges_zar: number;
   local_charges_subtotal_zar: number;
@@ -171,10 +172,17 @@ export class CostingController {
     const roeEur = Number(data.roe_eur) || 0;
     const originChargeUsd = Number(data.origin_charge_usd) || 0;
     const originChargeEur = Number(data.origin_charge_eur) || 0;
+    const oceanFreightUsd = Number(data.ocean_freight_usd) || 0;
+    const oceanFreightEur = Number(data.ocean_freight_eur) || 0;
     const totalGrossWeightKg = Number(data.total_gross_weight_kg) || 0;
 
     // Calculate customs value from invoice values
     const customsValueZar = this.calculateCustomsValue(data);
+
+    // Ocean freight conversion (USD and EUR)
+    const oceanFreightUsdZar = oceanFreightUsd * roeOrigin;
+    const oceanFreightEurZar = oceanFreightEur * roeEur;
+    const oceanFreightZar = oceanFreightUsdZar + oceanFreightEurZar;
 
     // Origin charges conversion (USD and EUR)
     const originChargeUsdZar = originChargeUsd * roeOrigin;
@@ -221,8 +229,8 @@ export class CostingController {
       (Number(data.customs_declaration_zar) || 0) +
       agencyFeeZar;
 
-    // Total shipping cost (origin + local + destination charges)
-    const totalShippingCostZar = totalOriginChargesZar + localChargesSubtotalZar + destinationChargesSubtotalZar;
+    // Total shipping cost (ocean freight + origin + local + destination charges)
+    const totalShippingCostZar = oceanFreightZar + totalOriginChargesZar + localChargesSubtotalZar + destinationChargesSubtotalZar;
 
     // Total in warehouse cost (shipping + customs)
     const totalInWarehouseCostZar = totalShippingCostZar + customsSubtotalZar;
@@ -234,6 +242,7 @@ export class CostingController {
 
     return {
       customs_value_zar: Math.round(customsValueZar * 100) / 100,
+      ocean_freight_zar: Math.round(oceanFreightZar * 100) / 100,
       origin_charge_zar: Math.round(originChargeZar * 100) / 100,
       total_origin_charges_zar: Math.round(totalOriginChargesZar * 100) / 100,
       local_charges_subtotal_zar: Math.round(localChargesSubtotalZar * 100) / 100,
