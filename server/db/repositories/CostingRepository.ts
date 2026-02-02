@@ -242,6 +242,10 @@ export class CostingRepository {
       origin_charge_eur: data.origin_charge_eur || 0,
       origin_charge_zar: data.origin_charge_zar || 0,
       total_origin_charges_zar: data.total_origin_charges_zar || 0,
+      // Ocean Freight
+      ocean_freight_usd: data.ocean_freight_usd || 0,
+      ocean_freight_eur: data.ocean_freight_eur || 0,
+      ocean_freight_zar: data.ocean_freight_zar || 0,
       // Local Charges
       local_cartage_cpt_klapmuts_20ton_zar: data.local_cartage_cpt_klapmuts_20ton_zar || 0,
       local_cartage_cpt_klapmuts_28ton_zar: data.local_cartage_cpt_klapmuts_28ton_zar || 0,
