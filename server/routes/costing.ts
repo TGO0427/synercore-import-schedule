@@ -27,42 +27,17 @@ const validate = (req: Request, res: Response, next: NextFunction) => {
   next();
 };
 
-// Custom sanitizer for numeric fields - converts empty strings to null
-const toFloatOrNull = (value: any) => {
-  if (value === '' || value === null || value === undefined) return null;
-  const parsed = parseFloat(value);
-  return isNaN(parsed) ? null : parsed;
-};
-
-// Validation rules - use nullable: true to accept null values from frontend
+// Minimal validation - just sanitize strings, let database handle type conversions
 const createCostEstimateValidation = [
   body('supplier_name').optional({ nullable: true }).trim(),
   body('port_of_discharge').optional({ nullable: true }).trim(),
   body('container_type').optional({ nullable: true }).trim(),
-  body('quantity').optional({ nullable: true }).customSanitizer(v => v === '' ? null : v).isInt({ min: 1 }).optional({ nullable: true }),
-  body('gross_weight_kg').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('total_gross_weight_kg').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('roe_origin').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('roe_eur').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('roe_customs').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('ocean_freight_usd').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('ocean_freight_eur').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('ocean_freight_zar').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('origin_charge_usd').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('origin_charge_eur').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('origin_charge_zar').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('total_origin_charges_zar').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('customs_value_zar').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('invoice_value_usd').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('invoice_value_eur').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('local_charges_subtotal_zar').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('destination_charges_subtotal_zar').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('customs_subtotal_zar').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('total_shipping_cost_zar').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('total_in_warehouse_cost_zar').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('all_in_warehouse_cost_per_kg_zar').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('agency_fee_zar').optional({ nullable: true }).customSanitizer(toFloatOrNull),
-  body('products').optional({ nullable: true }).isArray().optional({ nullable: true }),
+  body('reference_number').optional({ nullable: true }).trim(),
+  body('shipping_line').optional({ nullable: true }).trim(),
+  body('commodity').optional({ nullable: true }).trim(),
+  body('notes').optional({ nullable: true }).trim(),
+  // All other fields pass through without strict validation
+  // The database schema and server-side calculations handle type conversion
 ];
 
 const updateCostEstimateValidation = [
