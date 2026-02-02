@@ -86,7 +86,7 @@ const INITIAL_FORM_STATE = {
   jnb_turn_in_zar: 0,
   // Products - each product in the container
   products: [
-    { name: '', hs_code: '', weight_kg: 0, rate_per_kg: 0, duty_percent: 0, duty_schedule1_percent: 0, currency: 'USD', invoice_value: 0 }
+    { name: '', hs_code: '', pack_size: '', pack_type: '', weight_kg: 0, rate_per_kg: 0, duty_percent: 0, duty_schedule1_percent: 0, currency: 'USD', invoice_value: 0 }
   ],
   // Customs & Duties
   roe_customs: '',  // ROE for customs calculation
@@ -229,7 +229,7 @@ function ImportCosting() {
       ...prev,
       products: [
         ...prev.products,
-        { name: '', hs_code: '', weight_kg: 0, rate_per_kg: 0, duty_percent: 0, duty_schedule1_percent: 0, currency: 'USD', invoice_value: 0 }
+        { name: '', hs_code: '', pack_size: '', pack_type: '', weight_kg: 0, rate_per_kg: 0, duty_percent: 0, duty_schedule1_percent: 0, currency: 'USD', invoice_value: 0 }
       ]
     }));
   };
@@ -547,6 +547,8 @@ function ImportCosting() {
         return [
           p.name || '-',
           p.hs_code || '-',
+          p.pack_size || '-',
+          p.pack_type || '-',
           `${formatNumber(weight)} kg`,
           `${formatNumber(ratePerKg, 2)}`,
           currency,
@@ -560,6 +562,8 @@ function ImportCosting() {
       productRows.push([
         'TOTAL',
         '',
+        '',
+        '',
         `${formatNumber(productTotals.totalWeight)} kg`,
         '',
         '',
@@ -570,7 +574,7 @@ function ImportCosting() {
 
       autoTable(doc, {
         startY: doc.lastAutoTable.finalY + 10,
-        head: [['Product', 'HS Code', 'Weight', 'Rate/kg', 'Curr', 'Invoice Val', 'Share', 'Duties']],
+        head: [['Product', 'HS Code', 'Pack Size', 'Pack Type', 'Weight', 'Rate/kg', 'Curr', 'Invoice Val', 'Share', 'Duties']],
         body: productRows,
         theme: 'grid',
         headStyles: { fillColor: [245, 158, 11] },
@@ -803,6 +807,8 @@ function ImportCosting() {
         return [
           p.name || '-',
           p.hs_code || '-',
+          p.pack_size || '-',
+          p.pack_type || '-',
           `${formatNumber(weight)} kg`,
           `${formatNumber(ratePerKg, 2)}`,
           currency,
@@ -813,12 +819,12 @@ function ImportCosting() {
       });
 
       productRows.push([
-        'TOTAL', '', `${formatNumber(productTotals.totalWeight)} kg`, '', '', '', '100%', formatCurrency(productTotals.totalDuties),
+        'TOTAL', '', '', '', `${formatNumber(productTotals.totalWeight)} kg`, '', '', '', '100%', formatCurrency(productTotals.totalDuties),
       ]);
 
       autoTable(doc, {
         startY: doc.lastAutoTable.finalY + 10,
-        head: [['Product', 'HS Code', 'Weight', 'Rate/kg', 'Curr', 'Invoice Val', 'Share', 'Duties']],
+        head: [['Product', 'HS Code', 'Pack Size', 'Pack Type', 'Weight', 'Rate/kg', 'Curr', 'Invoice Val', 'Share', 'Duties']],
         body: productRows,
         theme: 'grid',
         headStyles: { fillColor: [245, 158, 11] },
@@ -1138,6 +1144,8 @@ function ImportCosting() {
                       <tr style={{ backgroundColor: '#fbbf24', color: '#78350f' }}>
                         <th style={{ padding: '10px 8px', textAlign: 'left', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Product Name</th>
                         <th style={{ padding: '10px 8px', textAlign: 'left', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>HS Code</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Pack Size</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Pack Type</th>
                         <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Weight (kg)</th>
                         <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Rate/kg</th>
                         <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Currency</th>
@@ -1171,6 +1179,24 @@ function ImportCosting() {
                                 onChange={(e) => updateProduct(index, 'hs_code', e.target.value)}
                                 style={{ width: '100px', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem' }}
                                 placeholder="0306.17"
+                              />
+                            </td>
+                            <td style={{ padding: '6px 8px' }}>
+                              <input
+                                type="text"
+                                value={product.pack_size || ''}
+                                onChange={(e) => updateProduct(index, 'pack_size', e.target.value)}
+                                style={{ width: '70px', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'center' }}
+                                placeholder="10x1kg"
+                              />
+                            </td>
+                            <td style={{ padding: '6px 8px' }}>
+                              <input
+                                type="text"
+                                value={product.pack_type || ''}
+                                onChange={(e) => updateProduct(index, 'pack_type', e.target.value)}
+                                style={{ width: '80px', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'center' }}
+                                placeholder="Carton"
                               />
                             </td>
                             <td style={{ padding: '6px 8px' }}>
