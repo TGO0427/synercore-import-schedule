@@ -2,8 +2,6 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Supplier, ImportFormat, DocumentType } from '../types/supplier';
 import * as XLSX from 'xlsx';
 import SupplierCharts from './SupplierCharts';
-import SupplierKPICard from './SupplierKPICard';
-import MetricsDebugPanel from './MetricsDebugPanel';
 import { getApiUrl } from '../config/api';
 import { authFetch } from '../utils/authFetch';
 import { formatCurrency } from '../utils/costingCalculations';
@@ -589,30 +587,6 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
             Add Supplier
           </button>
         </div>
-      </div>
-
-      {/* Debug Panel (Development Only) */}
-      {process.env.NODE_ENV === 'development' && (
-        <MetricsDebugPanel suppliers={filteredSuppliers} shipments={shipments} />
-      )}
-
-      {/* KPI Dashboard Section */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h3 style={{ marginBottom: '1rem', color: '#2c3e50', borderBottom: '2px solid #0066cc', paddingBottom: '0.5rem' }}>
-          📊 Supplier Performance Metrics
-        </h3>
-        {filteredSuppliers.map(supplier => (
-          <SupplierKPICard
-            key={`kpi-${supplier.id}`}
-            supplier={supplier}
-            shipments={shipments}
-          />
-        ))}
-        {filteredSuppliers.length === 0 && (
-          <div style={{ color: '#999', fontSize: '0.9rem', padding: '1rem' }}>
-            No suppliers to display metrics for.
-          </div>
-        )}
       </div>
 
       {/* Suppliers Grid */}
