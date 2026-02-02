@@ -38,6 +38,9 @@ export interface ImportCostEstimate {
   total_gross_weight_kg?: number;
   origin_rate_usd?: number;
   ocean_freight_rate_usd?: number;
+  ocean_freight_usd?: number;
+  ocean_freight_eur?: number;
+  ocean_freight_zar?: number;
   commodity?: string;
   invoice_value_usd?: number;
   invoice_value_eur?: number;
@@ -116,6 +119,7 @@ const COST_ESTIMATE_COLUMNS = [
   'country_of_origin', 'port_of_loading', 'port_of_discharge', 'shipping_line', 'routing', 'frequency', 'transit_time_days',
   'inco_terms', 'inco_term_place', 'container_type', 'quantity', 'hs_code',
   'gross_weight_kg', 'total_gross_weight_kg', 'origin_rate_usd', 'ocean_freight_rate_usd',
+  'ocean_freight_usd', 'ocean_freight_eur', 'ocean_freight_zar',
   'commodity', 'invoice_value_usd', 'invoice_value_eur', 'customs_value_zar', 'supplier_name', 'validity_date', 'costing_date',
   'payment_terms', 'roe_origin', 'roe_eur', 'roe_customs', 'products', 'origin_charge_usd', 'origin_charge_eur', 'origin_charge_zar',
   'total_origin_charges_zar',

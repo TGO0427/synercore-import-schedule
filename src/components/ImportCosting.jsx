@@ -545,8 +545,13 @@ function ImportCosting() {
       } else {
         const errorData = await response.json();
         console.error('Save error details:', errorData);
-        const detailMsg = errorData.details?.map(d => `${d.path}: ${d.msg}`).join(', ');
-        setError(detailMsg || errorData.error || 'Failed to save cost estimate');
+        let detailMsg = '';
+        if (Array.isArray(errorData.details)) {
+          detailMsg = errorData.details.map(d => `${d.path || d.param}: ${d.msg || d.message}`).join(', ');
+        } else if (typeof errorData.details === 'string') {
+          detailMsg = errorData.details;
+        }
+        setError(detailMsg || errorData.error || errorData.message || 'Failed to save cost estimate');
       }
     } catch (err) {
       console.error('Failed to save estimate:', err);

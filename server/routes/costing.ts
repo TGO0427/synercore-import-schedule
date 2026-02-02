@@ -37,6 +37,8 @@ const createCostEstimateValidation = [
   body('total_gross_weight_kg').optional({ nullable: true }).isFloat({ min: 0 }),
   body('roe_origin').optional({ nullable: true }).isFloat({ min: 0 }),
   body('roe_eur').optional({ nullable: true }).isFloat({ min: 0 }),
+  body('ocean_freight_usd').optional({ nullable: true }).isFloat({ min: 0 }),
+  body('ocean_freight_eur').optional({ nullable: true }).isFloat({ min: 0 }),
   body('origin_charge_usd').optional({ nullable: true }).isFloat({ min: 0 }),
   body('origin_charge_eur').optional({ nullable: true }).isFloat({ min: 0 }),
   body('customs_value_zar').optional({ nullable: true }).isFloat({ min: 0 }),

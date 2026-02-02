@@ -180,6 +180,17 @@ export default async function addCostingColumns() {
     if (await addColumn(col)) added++;
   }
 
+  // Ocean freight columns (USD and EUR)
+  const oceanFreightColumns = [
+    'ocean_freight_usd NUMERIC(12,2) DEFAULT 0',
+    'ocean_freight_eur NUMERIC(12,2) DEFAULT 0',
+    'ocean_freight_zar NUMERIC(14,2) DEFAULT 0',
+  ];
+
+  for (const col of oceanFreightColumns) {
+    if (await addColumn(col)) added++;
+  }
+
   // Products array (JSON) - for multi-product costing
   const productsColumn = "products JSONB DEFAULT '[]'::jsonb";
   if (await addColumn(productsColumn)) added++;
