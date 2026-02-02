@@ -139,6 +139,7 @@ function ImportCosting() {
   const [sortDirection, setSortDirection] = useState('desc'); // 'asc' or 'desc'
   const [showReports, setShowReports] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState('all');
+  const [selectedSupplier, setSelectedSupplier] = useState('all');
   const chartRef = useRef(null);
 
   // Get unique products from all estimates
@@ -152,13 +153,25 @@ function ImportCosting() {
     return Array.from(productSet).sort();
   }, [estimates]);
 
-  // Get chart data - costs per supplier filtered by product
+  // Get unique suppliers from all estimates
+  const allSuppliers = useMemo(() => {
+    const supplierSet = new Set();
+    estimates.forEach(est => {
+      if (est.supplier_name) supplierSet.add(est.supplier_name);
+    });
+    return Array.from(supplierSet).sort();
+  }, [estimates]);
+
+  // Get chart data - costs per supplier filtered by product and supplier
   const getSupplierChartData = useMemo(() => {
     const supplierData = {};
 
     estimates.forEach(est => {
       const supplier = est.supplier_name || 'Unknown';
       const products = est.products || [];
+
+      // Filter by selected supplier if not 'all'
+      if (selectedSupplier !== 'all' && supplier !== selectedSupplier) return;
 
       // Filter by selected product if not 'all'
       const relevantProducts = selectedProduct === 'all'
@@ -995,28 +1008,30 @@ function ImportCosting() {
     const doc = new jsPDF();
     const chartData = getSupplierChartData;
     const productLabel = selectedProduct === 'all' ? 'All Products' : selectedProduct;
+    const supplierLabel = selectedSupplier === 'all' ? 'All Suppliers' : selectedSupplier;
 
     // Header
     doc.setFillColor(91, 33, 182);
-    doc.rect(0, 0, 220, 35, 'F');
+    doc.rect(0, 0, 220, 40, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(20);
-    doc.text('Cost Analysis Report', 14, 18);
+    doc.text('Cost Analysis Report', 14, 15);
     doc.setFontSize(10);
-    doc.text(`Product Filter: ${productLabel}`, 14, 28);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 140, 28);
+    doc.text(`Supplier: ${supplierLabel}`, 14, 25);
+    doc.text(`Product: ${productLabel}`, 14, 33);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 140, 33);
 
     // Try to capture chart as image
     if (chartRef.current) {
       try {
         const chartCanvas = chartRef.current.canvas;
         const chartImage = chartCanvas.toDataURL('image/png', 1.0);
-        doc.addImage(chartImage, 'PNG', 14, 42, 180, 80);
+        doc.addImage(chartImage, 'PNG', 14, 47, 180, 80);
       } catch (err) {
         console.error('Error capturing chart:', err);
         doc.setTextColor(100);
         doc.setFontSize(10);
-        doc.text('Chart could not be rendered in PDF', 14, 60);
+        doc.text('Chart could not be rendered in PDF', 14, 65);
       }
     }
 
@@ -1073,11 +1088,17 @@ function ImportCosting() {
     });
 
     // Filter estimates by selected product
-    const relevantEstimates = selectedProduct === 'all'
-      ? filteredEstimates
-      : filteredEstimates.filter(est =>
-          (est.products || []).some(p => p.name === selectedProduct)
-        );
+    // Filter estimates by selected supplier and product
+    const relevantEstimates = filteredEstimates.filter(est => {
+      // Filter by supplier
+      if (selectedSupplier !== 'all' && est.supplier_name !== selectedSupplier) return false;
+      // Filter by product
+      if (selectedProduct !== 'all') {
+        const hasProduct = (est.products || []).some(p => p.name === selectedProduct);
+        if (!hasProduct) return false;
+      }
+      return true;
+    });
 
     // Detailed Estimates with Products (new page for each estimate or grouped)
     doc.addPage();
@@ -1223,7 +1244,9 @@ function ImportCosting() {
       );
     }
 
-    doc.save(`cost-report-${productLabel.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`);
+    const fileSupplier = supplierLabel.replace(/\s+/g, '-').toLowerCase();
+    const fileProduct = productLabel.replace(/\s+/g, '-').toLowerCase();
+    doc.save(`cost-report-${fileSupplier}-${fileProduct}-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   // Send email with PDF attachment
@@ -1385,24 +1408,45 @@ function ImportCosting() {
           <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f5f3ff' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
               <h3 style={{ margin: 0, color: '#5b21b6', fontSize: '1.1rem' }}>📊 Cost Analysis by Supplier</h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <label style={{ fontSize: '0.9rem', color: '#666' }}>Filter by Product:</label>
-                <select
-                  value={selectedProduct}
-                  onChange={(e) => setSelectedProduct(e.target.value)}
-                  style={{
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '0.9rem',
-                    minWidth: '200px',
-                  }}
-                >
-                  <option value="all">All Products</option>
-                  {allProducts.map(product => (
-                    <option key={product} value={product}>{product}</option>
-                  ))}
-                </select>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <label style={{ fontSize: '0.85rem', color: '#666' }}>Supplier:</label>
+                  <select
+                    value={selectedSupplier}
+                    onChange={(e) => setSelectedSupplier(e.target.value)}
+                    style={{
+                      padding: '8px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '0.85rem',
+                      minWidth: '150px',
+                    }}
+                  >
+                    <option value="all">All Suppliers</option>
+                    {allSuppliers.map(supplier => (
+                      <option key={supplier} value={supplier}>{supplier}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <label style={{ fontSize: '0.85rem', color: '#666' }}>Product:</label>
+                  <select
+                    value={selectedProduct}
+                    onChange={(e) => setSelectedProduct(e.target.value)}
+                    style={{
+                      padding: '8px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '0.85rem',
+                      minWidth: '150px',
+                    }}
+                  >
+                    <option value="all">All Products</option>
+                    {allProducts.map(product => (
+                      <option key={product} value={product}>{product}</option>
+                    ))}
+                  </select>
+                </div>
                 <button
                   onClick={generateReportPDF}
                   style={{
@@ -1413,7 +1457,7 @@ function ImportCosting() {
                     borderRadius: '6px',
                     cursor: 'pointer',
                     fontWeight: '500',
-                    fontSize: '0.9rem',
+                    fontSize: '0.85rem',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
@@ -1427,7 +1471,7 @@ function ImportCosting() {
           <div style={{ padding: '1.5rem' }}>
             {getSupplierChartData.labels.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
-                No data available for the selected product.
+                No data available for the selected filters.
               </div>
             ) : (
               <>
@@ -1451,7 +1495,7 @@ function ImportCosting() {
                         },
                         title: {
                           display: true,
-                          text: selectedProduct === 'all' ? 'All Products - Cost by Supplier' : `${selectedProduct} - Cost by Supplier`,
+                          text: `${selectedSupplier === 'all' ? 'All Suppliers' : selectedSupplier} | ${selectedProduct === 'all' ? 'All Products' : selectedProduct}`,
                           font: { size: 14 }
                         },
                         tooltip: {
