@@ -1072,14 +1072,6 @@ function ImportCosting() {
       },
     });
 
-    // Complete Estimates Overview (new page)
-    doc.addPage();
-    doc.setFillColor(91, 33, 182);
-    doc.rect(0, 0, 220, 25, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
-    doc.text('Complete Estimates Overview', 14, 16);
-
     // Filter estimates by selected product
     const relevantEstimates = selectedProduct === 'all'
       ? filteredEstimates
@@ -1087,50 +1079,111 @@ function ImportCosting() {
           (est.products || []).some(p => p.name === selectedProduct)
         );
 
-    autoTable(doc, {
-      startY: 32,
-      head: [['Reference', 'Supplier', 'Port', 'Container', 'Products', 'Total Cost', 'Cost/KG']],
-      body: relevantEstimates.map(est => {
-        const totals = calculateAllTotals(est);
-        const products = (est.products || [])
-          .filter(p => selectedProduct === 'all' || p.name === selectedProduct)
-          .map(p => `${p.name || 'N/A'} (${formatNumber(p.weight_kg)}kg)`)
-          .join(', ') || '-';
-        return [
-          est.reference_number || est.id.slice(0, 8),
-          est.supplier_name || '-',
-          est.port_of_discharge || '-',
-          est.container_type || '-',
-          products,
-          formatCurrency(totals.total_in_warehouse_cost_zar),
-          formatCurrency(totals.all_in_warehouse_cost_per_kg_zar),
-        ];
-      }),
-      theme: 'striped',
-      headStyles: { fillColor: [91, 33, 182], fontSize: 8 },
-      styles: { fontSize: 7 },
-      columnStyles: {
-        4: { cellWidth: 45 },
-        5: { halign: 'right' },
-        6: { halign: 'right' },
-      },
+    // Detailed Estimates with Products (new page for each estimate or grouped)
+    doc.addPage();
+    doc.setFillColor(91, 33, 182);
+    doc.rect(0, 0, 220, 25, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.text('Complete Estimates with Product Details', 14, 16);
+
+    let currentY = 35;
+
+    relevantEstimates.forEach((est, estIndex) => {
+      const totals = calculateAllTotals(est);
+      const products = (est.products || []).filter(p =>
+        selectedProduct === 'all' || p.name === selectedProduct
+      );
+
+      // Check if we need a new page
+      if (currentY > 240) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      // Estimate Header
+      doc.setFillColor(240, 240, 250);
+      doc.rect(10, currentY - 5, 190, 28, 'F');
+      doc.setDrawColor(91, 33, 182);
+      doc.setLineWidth(0.5);
+      doc.rect(10, currentY - 5, 190, 28, 'S');
+
+      doc.setTextColor(91, 33, 182);
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text(`${estIndex + 1}. ${est.reference_number || est.id.slice(0, 8)}`, 14, currentY + 3);
+
+      doc.setTextColor(60);
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Supplier: ${est.supplier_name || '-'}`, 14, currentY + 11);
+      doc.text(`Port: ${est.port_of_discharge || '-'}`, 80, currentY + 11);
+      doc.text(`Container: ${est.container_type || '-'}`, 130, currentY + 11);
+
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(5, 150, 105);
+      doc.text(`Total Cost: ${formatCurrency(totals.total_in_warehouse_cost_zar)}`, 14, currentY + 19);
+      doc.setTextColor(217, 119, 6);
+      doc.text(`Cost/KG: ${formatCurrency(totals.all_in_warehouse_cost_per_kg_zar)}`, 80, currentY + 19);
+
+      currentY += 32;
+
+      // Products Table for this estimate
+      if (products.length > 0) {
+        autoTable(doc, {
+          startY: currentY,
+          head: [['Product Name', 'HS Code', 'Pack Size', 'Pack Type', 'Weight (kg)', 'Rate/kg', 'Currency', 'Invoice Value', 'Duty %', 'Sch1 %']],
+          body: products.map(p => [
+            p.name || '-',
+            p.hs_code || '-',
+            p.pack_size || '-',
+            p.pack_type || '-',
+            formatNumber(p.weight_kg),
+            formatNumber(p.rate_per_kg),
+            p.currency || 'USD',
+            formatNumber(p.invoice_value),
+            `${p.duty_percent || 0}%`,
+            `${p.duty_schedule1_percent || 0}%`,
+          ]),
+          theme: 'grid',
+          headStyles: { fillColor: [245, 158, 11], fontSize: 7, textColor: [255, 255, 255] },
+          styles: { fontSize: 7 },
+          columnStyles: {
+            0: { cellWidth: 30 },
+            4: { halign: 'right' },
+            5: { halign: 'right' },
+            7: { halign: 'right' },
+            8: { halign: 'center' },
+            9: { halign: 'center' },
+          },
+          margin: { left: 14, right: 14 },
+        });
+
+        currentY = doc.lastAutoTable.finalY + 15;
+      } else {
+        doc.setTextColor(150);
+        doc.setFontSize(8);
+        doc.text('No products in this estimate', 14, currentY + 5);
+        currentY += 15;
+      }
     });
 
-    // Product Details Page (if filtering by specific product)
+    // Product Comparison Table (if filtering by specific product)
     if (selectedProduct !== 'all') {
       doc.addPage();
       doc.setFillColor(245, 158, 11);
       doc.rect(0, 0, 220, 25, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(16);
-      doc.text(`Product Details: ${selectedProduct}`, 14, 16);
+      doc.text(`Product Comparison: ${selectedProduct}`, 14, 16);
 
-      const productDetails = [];
+      const productComparison = [];
       relevantEstimates.forEach(est => {
+        const totals = calculateAllTotals(est);
         (est.products || [])
           .filter(p => p.name === selectedProduct)
           .forEach(p => {
-            productDetails.push([
+            productComparison.push([
               est.reference_number || est.id.slice(0, 8),
               est.supplier_name || '-',
               p.hs_code || '-',
@@ -1139,17 +1192,21 @@ function ImportCosting() {
               `${formatNumber(p.weight_kg)} kg`,
               `${formatNumber(p.rate_per_kg)} ${p.currency || 'USD'}`,
               `${formatNumber(p.invoice_value)} ${p.currency || 'USD'}`,
+              formatCurrency(totals.all_in_warehouse_cost_per_kg_zar),
             ]);
           });
       });
 
       autoTable(doc, {
         startY: 32,
-        head: [['Reference', 'Supplier', 'HS Code', 'Pack Size', 'Pack Type', 'Weight', 'Rate/kg', 'Invoice Value']],
-        body: productDetails,
+        head: [['Reference', 'Supplier', 'HS Code', 'Pack Size', 'Pack Type', 'Weight', 'Rate/kg', 'Invoice Value', 'All-in Cost/kg']],
+        body: productComparison,
         theme: 'striped',
         headStyles: { fillColor: [245, 158, 11], fontSize: 8 },
         styles: { fontSize: 7 },
+        columnStyles: {
+          8: { halign: 'right', fontStyle: 'bold' },
+        },
       });
     }
 
