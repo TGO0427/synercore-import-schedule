@@ -245,9 +245,11 @@ function ImportCosting() {
     };
   }, [estimates, selectedProduct]);
 
-  // Filter and sort estimates
+  // Filter and sort estimates (exclude archived - those show under Suppliers)
   const filteredEstimates = estimates
     .filter(est => {
+      // Exclude archived estimates from main view
+      if (est.status === 'archived') return false;
       if (!searchTerm) return true;
       const ref = (est.reference_number || '').toLowerCase();
       const supplier = (est.supplier_name || '').toLowerCase();

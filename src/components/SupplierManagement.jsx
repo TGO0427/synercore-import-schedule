@@ -1,10 +1,12 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Supplier, ImportFormat, DocumentType } from '../types/supplier';
 import * as XLSX from 'xlsx';
 import SupplierCharts from './SupplierCharts';
 import SupplierKPICard from './SupplierKPICard';
 import MetricsDebugPanel from './MetricsDebugPanel';
 import { getApiUrl } from '../config/api';
+import { authFetch } from '../utils/authFetch';
+import { formatCurrency } from '../utils/costingCalculations';
 
 function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onUpdateSupplier, onDeleteSupplier, onImportSchedule, showSuccess, showError, loading }) {
   // Log received data
@@ -36,6 +38,8 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [documentToRename, setDocumentToRename] = useState(null);
   const [newDocumentName, setNewDocumentName] = useState('');
+  const [archivedEstimates, setArchivedEstimates] = useState([]);
+  const [loadingArchived, setLoadingArchived] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -100,11 +104,42 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
     });
   }, [shipments]);
 
+  // Fetch archived estimates when viewing supplier detail
+  useEffect(() => {
+    const fetchArchivedEstimates = async () => {
+      if (!detailSupplier) {
+        setArchivedEstimates([]);
+        return;
+      }
+
+      try {
+        setLoadingArchived(true);
+        const response = await authFetch(getApiUrl('/api/costing?status=archived'));
+        if (response.ok) {
+          const result = await response.json();
+          // Filter by supplier name
+          const supplierEstimates = (result.data || []).filter(est => {
+            const estSupplier = (est.supplier_name || '').toLowerCase();
+            const detailName = (detailSupplier.name || '').toLowerCase();
+            return estSupplier === detailName || estSupplier.includes(detailName);
+          });
+          setArchivedEstimates(supplierEstimates);
+        }
+      } catch (err) {
+        console.error('Failed to fetch archived estimates:', err);
+      } finally {
+        setLoadingArchived(false);
+      }
+    };
+
+    fetchArchivedEstimates();
+  }, [detailSupplier]);
+
   // Handle supplier card click
   const handleSupplierCardClick = useCallback((supplier, e) => {
     // Don't trigger if clicking on action buttons
     if (e.target.closest('button')) return;
-    
+
     setDetailSupplier(supplier);
     setShowSupplierDetail(true);
   }, []);
@@ -1767,12 +1802,72 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
             {(() => {
               const supplierShipments = getSupplierShipments(detailSupplier);
               return (
-                <SupplierCharts 
+                <SupplierCharts
                   shipments={supplierShipments}
                   supplierName={detailSupplier.name}
                 />
               );
             })()}
+
+            {/* Archived Cost Estimates Section */}
+            <div style={{ marginTop: '2rem' }}>
+              <h3 style={{ marginBottom: '1rem', color: '#2d3748', borderBottom: '2px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+                📁 Archived Cost Estimates ({archivedEstimates.length})
+              </h3>
+
+              {loadingArchived ? (
+                <div style={{ textAlign: 'center', padding: '2rem', color: '#718096' }}>
+                  Loading archived estimates...
+                </div>
+              ) : archivedEstimates.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2rem', color: '#718096', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📋</div>
+                  <p>No archived cost estimates for this supplier.</p>
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#718096', color: 'white' }}>
+                        <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600' }}>Reference</th>
+                        <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600' }}>Products</th>
+                        <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600' }}>Container</th>
+                        <th style={{ padding: '0.75rem', textAlign: 'right', fontWeight: '600' }}>Total Cost</th>
+                        <th style={{ padding: '0.75rem', textAlign: 'right', fontWeight: '600' }}>Cost/KG</th>
+                        <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600' }}>Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {archivedEstimates.map((est, index) => (
+                        <tr key={est.id} style={{
+                          borderBottom: '1px solid #e2e8f0',
+                          backgroundColor: index % 2 === 0 ? 'white' : '#f8f9fa'
+                        }}>
+                          <td style={{ padding: '0.75rem', fontWeight: '500' }}>
+                            {est.reference_number || '-'}
+                          </td>
+                          <td style={{ padding: '0.75rem' }}>
+                            {(est.products || []).map(p => p.name).filter(Boolean).join(', ') || '-'}
+                          </td>
+                          <td style={{ padding: '0.75rem' }}>
+                            {est.container_type || '-'}
+                          </td>
+                          <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: '500', color: '#2d3748' }}>
+                            {formatCurrency(est.total_in_warehouse_cost_zar)}
+                          </td>
+                          <td style={{ padding: '0.75rem', textAlign: 'right', color: '#718096' }}>
+                            {formatCurrency(est.all_in_warehouse_cost_per_kg_zar)}/kg
+                          </td>
+                          <td style={{ padding: '0.75rem', color: '#718096' }}>
+                            {est.costing_date ? new Date(est.costing_date).toLocaleDateString() : '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
 
             {/* Close Button */}
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>
