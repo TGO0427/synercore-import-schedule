@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getApiUrl } from '../config/api';
 import { authFetch } from '../utils/authFetch';
 import {
@@ -11,6 +11,26 @@ import {
 } from '../utils/costingCalculations';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 // Payment terms options
 const PAYMENT_TERMS = [
@@ -117,6 +137,96 @@ function ImportCosting() {
   const [emailSending, setEmailSending] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortDirection, setSortDirection] = useState('desc'); // 'asc' or 'desc'
+  const [showReports, setShowReports] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState('all');
+
+  // Get unique products from all estimates
+  const allProducts = useMemo(() => {
+    const productSet = new Set();
+    estimates.forEach(est => {
+      (est.products || []).forEach(p => {
+        if (p.name) productSet.add(p.name);
+      });
+    });
+    return Array.from(productSet).sort();
+  }, [estimates]);
+
+  // Get chart data - costs per supplier filtered by product
+  const getSupplierChartData = useMemo(() => {
+    const supplierData = {};
+
+    estimates.forEach(est => {
+      const supplier = est.supplier_name || 'Unknown';
+      const products = est.products || [];
+
+      // Filter by selected product if not 'all'
+      const relevantProducts = selectedProduct === 'all'
+        ? products
+        : products.filter(p => p.name === selectedProduct);
+
+      if (relevantProducts.length === 0 && selectedProduct !== 'all') return;
+
+      if (!supplierData[supplier]) {
+        supplierData[supplier] = {
+          totalCost: 0,
+          totalWeight: 0,
+          costPerKg: 0,
+          estimateCount: 0,
+          totalInvoiceValue: 0,
+        };
+      }
+
+      const totals = calculateAllTotals(est);
+      const productWeight = relevantProducts.reduce((sum, p) => sum + (parseFloat(p.weight_kg) || 0), 0);
+      const productValue = relevantProducts.reduce((sum, p) => sum + (parseFloat(p.invoice_value) || 0), 0);
+      const totalWeight = (est.products || []).reduce((sum, p) => sum + (parseFloat(p.weight_kg) || 0), 0);
+
+      // If filtering by product, calculate proportional cost
+      const weightRatio = totalWeight > 0 && selectedProduct !== 'all'
+        ? productWeight / totalWeight
+        : 1;
+
+      supplierData[supplier].totalCost += (totals.total_in_warehouse_cost_zar || 0) * weightRatio;
+      supplierData[supplier].totalWeight += productWeight || totalWeight;
+      supplierData[supplier].totalInvoiceValue += productValue;
+      supplierData[supplier].estimateCount += 1;
+    });
+
+    // Calculate cost per kg
+    Object.keys(supplierData).forEach(supplier => {
+      const data = supplierData[supplier];
+      data.costPerKg = data.totalWeight > 0 ? data.totalCost / data.totalWeight : 0;
+    });
+
+    // Sort by total cost descending
+    const sortedSuppliers = Object.entries(supplierData)
+      .sort(([,a], [,b]) => b.totalCost - a.totalCost);
+
+    return {
+      labels: sortedSuppliers.map(([name]) => name),
+      datasets: [
+        {
+          label: 'Total Cost (ZAR)',
+          data: sortedSuppliers.map(([,data]) => data.totalCost),
+          backgroundColor: 'rgba(59, 130, 246, 0.8)',
+          borderColor: 'rgb(59, 130, 246)',
+          borderWidth: 2,
+          borderRadius: 4,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Cost per KG (ZAR)',
+          data: sortedSuppliers.map(([,data]) => data.costPerKg),
+          backgroundColor: 'rgba(245, 158, 11, 0.8)',
+          borderColor: 'rgb(245, 158, 11)',
+          borderWidth: 2,
+          borderRadius: 4,
+          yAxisID: 'y1',
+        }
+      ],
+      supplierDetails: sortedSuppliers.map(([name, data]) => ({ name, ...data })),
+    };
+  }, [estimates, selectedProduct]);
 
   // Filter and sort estimates
   const filteredEstimates = estimates
@@ -1005,6 +1115,15 @@ function ImportCosting() {
             </div>
           )}
           <button
+            onClick={() => setShowReports(!showReports)}
+            style={{
+              padding: '10px 20px', backgroundColor: showReports ? '#7c3aed' : '#8b5cf6', color: 'white',
+              border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500'
+            }}
+          >
+            {showReports ? '✕ Close Reports' : '📊 Reports'}
+          </button>
+          <button
             onClick={() => { resetForm(); setShowForm(true); }}
             style={{
               padding: '10px 20px', backgroundColor: '#0ea5a8', color: 'white',
@@ -1020,6 +1139,139 @@ function ImportCosting() {
         <div style={{ padding: '12px', backgroundColor: '#fef2f2', color: '#dc2626', borderRadius: '6px', marginBottom: '1rem' }}>
           {error}
           <button onClick={() => setError(null)} style={{ marginLeft: '12px', background: 'none', border: 'none', cursor: 'pointer' }}>x</button>
+        </div>
+      )}
+
+      {/* Reports Section */}
+      {showReports && (
+        <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '1.5rem', overflow: 'hidden' }}>
+          <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f5f3ff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <h3 style={{ margin: 0, color: '#5b21b6', fontSize: '1.1rem' }}>📊 Cost Analysis by Supplier</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <label style={{ fontSize: '0.9rem', color: '#666' }}>Filter by Product:</label>
+                <select
+                  value={selectedProduct}
+                  onChange={(e) => setSelectedProduct(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '0.9rem',
+                    minWidth: '200px',
+                  }}
+                >
+                  <option value="all">All Products</option>
+                  {allProducts.map(product => (
+                    <option key={product} value={product}>{product}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div style={{ padding: '1.5rem' }}>
+            {getSupplierChartData.labels.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
+                No data available for the selected product.
+              </div>
+            ) : (
+              <>
+                <div style={{ height: '350px', marginBottom: '1.5rem' }}>
+                  <Bar
+                    data={{
+                      labels: getSupplierChartData.labels,
+                      datasets: getSupplierChartData.datasets,
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      interaction: {
+                        mode: 'index',
+                        intersect: false,
+                      },
+                      plugins: {
+                        legend: {
+                          position: 'top',
+                        },
+                        title: {
+                          display: true,
+                          text: selectedProduct === 'all' ? 'All Products - Cost by Supplier' : `${selectedProduct} - Cost by Supplier`,
+                          font: { size: 14 }
+                        },
+                        tooltip: {
+                          callbacks: {
+                            label: function(context) {
+                              const value = context.raw;
+                              return `${context.dataset.label}: R ${formatNumber(value, 2)}`;
+                            }
+                          }
+                        }
+                      },
+                      scales: {
+                        y: {
+                          type: 'linear',
+                          display: true,
+                          position: 'left',
+                          title: {
+                            display: true,
+                            text: 'Total Cost (ZAR)'
+                          },
+                          ticks: {
+                            callback: function(value) {
+                              return 'R ' + formatNumber(value, 0);
+                            }
+                          }
+                        },
+                        y1: {
+                          type: 'linear',
+                          display: true,
+                          position: 'right',
+                          title: {
+                            display: true,
+                            text: 'Cost per KG (ZAR)'
+                          },
+                          grid: {
+                            drawOnChartArea: false,
+                          },
+                          ticks: {
+                            callback: function(value) {
+                              return 'R ' + formatNumber(value, 2);
+                            }
+                          }
+                        },
+                      },
+                    }}
+                  />
+                </div>
+
+                {/* Summary Table */}
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f3f4f6' }}>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', borderBottom: '2px solid #e5e7eb' }}>Supplier</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #e5e7eb' }}>Estimates</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #e5e7eb' }}>Total Weight</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #e5e7eb' }}>Total Cost</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #e5e7eb' }}>Cost/KG</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getSupplierChartData.supplierDetails.map((supplier, idx) => (
+                        <tr key={supplier.name} style={{ backgroundColor: idx % 2 === 0 ? 'white' : '#f9fafb' }}>
+                          <td style={{ padding: '10px 12px', fontWeight: '500' }}>{supplier.name}</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'right' }}>{supplier.estimateCount}</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'right' }}>{formatNumber(supplier.totalWeight)} kg</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '600', color: '#059669' }}>{formatCurrency(supplier.totalCost)}</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '600', color: '#d97706' }}>{formatCurrency(supplier.costPerKg)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
 
