@@ -77,6 +77,9 @@ const INITIAL_FORM_STATE = {
   payment_terms: '',
   roe_origin: '',  // USD/ZAR
   roe_eur: '',     // EUR/ZAR
+  // Ocean Freight
+  ocean_freight_usd: 0,
+  ocean_freight_eur: 0,
   // Origin Charges
   origin_charge_usd: 0,
   origin_charge_eur: 0,
@@ -723,6 +726,25 @@ function ImportCosting() {
         theme: 'grid',
         headStyles: { fillColor: [245, 158, 11] },
         styles: { fontSize: 8 },
+      });
+    }
+
+    // Ocean Freight - filter zero values
+    const oceanFreightRows = filterZeroRows([
+      ['Ocean Freight (USD)', formatCurrency(estimate.ocean_freight_usd, 'USD'), formatCurrency(totals._ocean_freight_usd_zar)],
+      ['Ocean Freight (EUR)', formatCurrency(estimate.ocean_freight_eur, 'EUR'), formatCurrency(totals._ocean_freight_eur_zar)],
+    ]);
+    if (totals.total_ocean_freight_zar > 0) {
+      oceanFreightRows.push(['Total Ocean Freight', '', formatCurrency(totals.total_ocean_freight_zar)]);
+    }
+
+    if (oceanFreightRows.length > 0) {
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Ocean Freight', 'Amount', 'ZAR']],
+        body: oceanFreightRows,
+        theme: 'grid',
+        headStyles: { fillColor: [59, 130, 246] },
       });
     }
 
@@ -1892,8 +1914,42 @@ function ImportCosting() {
                       placeholder="e.g. 20.50"
                     />
                   </div>
-                  {renderCurrencyInput('Origin Rate', 'origin_rate_usd', 'USD')}
-                  {renderCurrencyInput('Ocean Freight', 'ocean_freight_rate_usd', 'USD')}
+                </div>
+              </div>
+
+              {/* Section: Ocean Freight */}
+              <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#eff6ff', borderRadius: '8px', border: '2px solid #3b82f6' }}>
+                <h4 style={{ margin: '0 0 1rem', color: '#1d4ed8', fontSize: '1rem' }}>Ocean Freight</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                  {renderCurrencyInput('Ocean Freight', 'ocean_freight_usd', 'USD')}
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#166534' }}>
+                      USD to ZAR - Auto
+                    </label>
+                    <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', borderRadius: '6px', fontWeight: '600', color: '#166534' }}>
+                      {formatCurrency((parseFloat(formData.ocean_freight_usd) || 0) * (parseFloat(formData.roe_origin) || 0))}
+                    </div>
+                  </div>
+                  {renderCurrencyInput('Ocean Freight', 'ocean_freight_eur', 'EUR')}
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#1d4ed8' }}>
+                      EUR to ZAR - Auto
+                    </label>
+                    <div style={{ padding: '8px 12px', backgroundColor: '#dbeafe', borderRadius: '6px', fontWeight: '600', color: '#1d4ed8' }}>
+                      {formatCurrency((parseFloat(formData.ocean_freight_eur) || 0) * (parseFloat(formData.roe_eur) || 0))}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ marginTop: '1rem', padding: '12px', backgroundColor: '#dbeafe', borderRadius: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: '500', color: '#1d4ed8' }}>Total Ocean Freight (ZAR)</span>
+                    <span style={{ fontSize: '1.25rem', fontWeight: '700', color: '#1d4ed8' }}>
+                      {formatCurrency(
+                        ((parseFloat(formData.ocean_freight_usd) || 0) * (parseFloat(formData.roe_origin) || 0)) +
+                        ((parseFloat(formData.ocean_freight_eur) || 0) * (parseFloat(formData.roe_eur) || 0))
+                      )}
+                    </span>
+                  </div>
                 </div>
               </div>
 

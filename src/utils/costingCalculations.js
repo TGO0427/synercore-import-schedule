@@ -144,6 +144,8 @@ export const calculateAllTotals = (data) => {
   const roeEur = parseFloat(data.roe_eur) || 0;        // EUR/ZAR
   const originChargeUsd = parseFloat(data.origin_charge_usd) || 0;
   const originChargeEur = parseFloat(data.origin_charge_eur) || 0;
+  const oceanFreightUsd = parseFloat(data.ocean_freight_usd) || 0;
+  const oceanFreightEur = parseFloat(data.ocean_freight_eur) || 0;
 
   // Calculate total weight from products or use legacy field
   const productsWeight = (data.products || []).reduce((sum, p) => sum + (parseFloat(p.weight_kg) || 0), 0);
@@ -154,6 +156,11 @@ export const calculateAllTotals = (data) => {
   const customsValueZar = customsItemsTotals.totalCustomsValue > 0
     ? customsItemsTotals.totalCustomsValue
     : calculateCustomsValue(data);
+
+  // Ocean freight conversion (both USD and EUR)
+  const oceanFreightUsdZar = oceanFreightUsd * roeOrigin;
+  const oceanFreightEurZar = oceanFreightEur * roeEur;
+  const totalOceanFreightZar = oceanFreightUsdZar + oceanFreightEurZar;
 
   // Origin charges conversion (both USD and EUR)
   const originChargeUsdZar = calculateOriginChargeZAR(originChargeUsd, roeOrigin);
@@ -177,8 +184,8 @@ export const calculateAllTotals = (data) => {
        (parseFloat(data.customs_declaration_zar) || 0) + agencyFeeZar)
     : calculateCustomsSubtotal(data, agencyFeeZar);
 
-  // Total shipping cost (origin + local + destination charges)
-  const totalShippingCostZar = totalOriginChargesZar + localChargesSubtotalZar + destinationChargesSubtotalZar;
+  // Total shipping cost (ocean freight + origin + local + destination charges)
+  const totalShippingCostZar = totalOceanFreightZar + totalOriginChargesZar + localChargesSubtotalZar + destinationChargesSubtotalZar;
 
   // Total in warehouse cost (shipping + customs) - VAT excluded
   const totalInWarehouseCostZar = totalShippingCostZar + customsSubtotalZar;
@@ -191,6 +198,8 @@ export const calculateAllTotals = (data) => {
   return {
     // Database columns (will be saved)
     customs_value_zar: Math.round(customsValueZar * 100) / 100,
+    ocean_freight_zar: Math.round(totalOceanFreightZar * 100) / 100,
+    total_ocean_freight_zar: Math.round(totalOceanFreightZar * 100) / 100,
     origin_charge_zar: Math.round((originChargeUsdZar + originChargeEurZar) * 100) / 100,
     total_origin_charges_zar: Math.round(totalOriginChargesZar * 100) / 100,
     local_charges_subtotal_zar: Math.round(localChargesSubtotalZar * 100) / 100,
@@ -201,6 +210,8 @@ export const calculateAllTotals = (data) => {
     total_in_warehouse_cost_zar: Math.round(totalInWarehouseCostZar * 100) / 100,
     all_in_warehouse_cost_per_kg_zar: Math.round(allInWarehouseCostPerKgZar * 100) / 100,
     // Display-only fields (not saved to database, used for form display)
+    _ocean_freight_usd_zar: Math.round(oceanFreightUsdZar * 100) / 100,
+    _ocean_freight_eur_zar: Math.round(oceanFreightEurZar * 100) / 100,
     _origin_charge_usd_zar: Math.round(originChargeUsdZar * 100) / 100,
     _origin_charge_eur_zar: Math.round(originChargeEurZar * 100) / 100,
   };
