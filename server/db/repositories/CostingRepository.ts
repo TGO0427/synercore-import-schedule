@@ -88,7 +88,9 @@ export interface ImportCostEstimate {
   destination_charges_subtotal_zar: number;
   // Customs & Duties
   duties_zar: number;
+  total_duties_zar: number;
   customs_vat_zar: number;
+  import_vat_zar: number;
   customs_declaration_zar: number;
   agency_fee_zar: number;
   agency_fee_percentage: number;
@@ -136,7 +138,7 @@ const COST_ESTIMATE_COLUMNS = [
   'port_health_inspection_zar', 'daff_inspection_zar', 'state_vet_cancellation_fee_zar',
   'jnb_turn_in_zar', 'destination_charges_subtotal_zar',
   // Customs & Duties
-  'duties_zar', 'customs_vat_zar', 'customs_declaration_zar', 'agency_fee_zar',
+  'duties_zar', 'total_duties_zar', 'customs_vat_zar', 'import_vat_zar', 'customs_declaration_zar', 'agency_fee_zar',
   'agency_fee_percentage', 'agency_fee_min', 'customs_duty_not_applicable', 'customs_subtotal_zar',
   // Totals
   'total_shipping_cost_zar', 'total_in_warehouse_cost_zar',
@@ -276,7 +278,9 @@ export class CostingRepository {
       destination_charges_subtotal_zar: data.destination_charges_subtotal_zar || 0,
       // Customs & Duties
       duties_zar: data.duties_zar || 0,
+      total_duties_zar: data.total_duties_zar || 0,
       customs_vat_zar: data.customs_vat_zar || 0,
+      import_vat_zar: data.import_vat_zar || 0,
       customs_declaration_zar: data.customs_declaration_zar || 0,
       agency_fee_zar: data.agency_fee_zar || 0,
       agency_fee_percentage: data.agency_fee_percentage || 3.5,

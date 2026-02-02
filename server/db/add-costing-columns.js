@@ -157,7 +157,9 @@ export default async function addCostingColumns() {
   // Customs & Duties columns
   const customsColumns = [
     'duties_zar NUMERIC(12,2) DEFAULT 0',
+    'total_duties_zar NUMERIC(12,2) DEFAULT 0',
     'customs_vat_zar NUMERIC(12,2) DEFAULT 0',
+    'import_vat_zar NUMERIC(12,2) DEFAULT 0',
     'customs_declaration_zar NUMERIC(12,2) DEFAULT 0',
     'agency_fee_zar NUMERIC(12,2) DEFAULT 0',
     'agency_fee_percentage NUMERIC(5,2) DEFAULT 3.5',
