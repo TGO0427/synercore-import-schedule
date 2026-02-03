@@ -236,11 +236,11 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
       [ShipmentStatus.ARCHIVED]: 0,
     };
 
-    // Supplier performance
-    const supplierStats = {};
-    
-    // Weekly arrivals
-    const weeklyArrivals = {};
+    // Supplier performance - track unique orderRefs
+    const supplierOrderRefs = {};
+
+    // Weekly arrivals - track unique orderRefs
+    const weeklyOrderRefs = {};
     
     // Product categories
     const productStats = {};
@@ -277,31 +277,34 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
         statusCounts[status]++;
       }
 
-      // Supplier stats
-      if (!supplierStats[shipment.supplier]) {
-        supplierStats[shipment.supplier] = {
-          total: 0,
-          delayed: 0,
-          arrived: 0,
-          inTransit: 0
-        };
-      }
-      supplierStats[shipment.supplier].total++;
-      if (status === ShipmentStatus.DELAYED) {
-        supplierStats[shipment.supplier].delayed++;
-      } else if (status === ShipmentStatus.ARRIVED_PTA || status === ShipmentStatus.ARRIVED_KLM) {
-        supplierStats[shipment.supplier].arrived++;
-      } else if (status === ShipmentStatus.IN_TRANSIT_ROADWAY || status === ShipmentStatus.IN_TRANSIT_SEAWAY) {
-        supplierStats[shipment.supplier].inTransit++;
-      }
-      
-      // Weekly arrivals
-      if (shipment.weekNumber) {
-        const week = parseInt(shipment.weekNumber);
-        if (!weeklyArrivals[week]) {
-          weeklyArrivals[week] = 0;
+      // Supplier stats - count unique orderRefs
+      const orderRef = shipment.orderRef;
+      if (shipment.supplier && orderRef) {
+        if (!supplierOrderRefs[shipment.supplier]) {
+          supplierOrderRefs[shipment.supplier] = {
+            total: new Set(),
+            delayed: new Set(),
+            arrived: new Set(),
+            inTransit: new Set()
+          };
         }
-        weeklyArrivals[week]++;
+        supplierOrderRefs[shipment.supplier].total.add(orderRef);
+        if (status === ShipmentStatus.DELAYED) {
+          supplierOrderRefs[shipment.supplier].delayed.add(orderRef);
+        } else if (status === ShipmentStatus.ARRIVED_PTA || status === ShipmentStatus.ARRIVED_KLM) {
+          supplierOrderRefs[shipment.supplier].arrived.add(orderRef);
+        } else if (status === ShipmentStatus.IN_TRANSIT_ROADWAY || status === ShipmentStatus.IN_TRANSIT_SEAWAY) {
+          supplierOrderRefs[shipment.supplier].inTransit.add(orderRef);
+        }
+      }
+
+      // Weekly arrivals - count unique orderRefs
+      if (shipment.weekNumber && orderRef) {
+        const week = parseInt(shipment.weekNumber);
+        if (!weeklyOrderRefs[week]) {
+          weeklyOrderRefs[week] = new Set();
+        }
+        weeklyOrderRefs[week].add(orderRef);
       }
       
       // Product stats
@@ -350,6 +353,26 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
       }
     });
 
+    // Convert supplier Sets to counts
+    const supplierStats = {};
+    Object.keys(supplierOrderRefs).forEach(supplier => {
+      supplierStats[supplier] = {
+        total: supplierOrderRefs[supplier].total.size,
+        delayed: supplierOrderRefs[supplier].delayed.size,
+        arrived: supplierOrderRefs[supplier].arrived.size,
+        inTransit: supplierOrderRefs[supplier].inTransit.size
+      };
+    });
+
+    // Convert weekly Sets to counts
+    const weeklyArrivals = {};
+    Object.keys(weeklyOrderRefs).forEach(week => {
+      weeklyArrivals[week] = weeklyOrderRefs[week].size;
+    });
+
+    // Count unique orderRefs for total
+    const uniqueOrderRefs = new Set(filteredShipments.map(s => s.orderRef).filter(Boolean));
+
     return {
       statusCounts,
       supplierStats,
@@ -357,7 +380,7 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
       productStats,
       warehouseStats,
       forwardingAgentStats,
-      totalShipments: filteredShipments.length,
+      totalShipments: uniqueOrderRefs.size,
       currentWeek
     };
   }, [filteredShipments, viewMode, selectedReport]);
