@@ -218,22 +218,22 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
   const analytics = useMemo(() => {
     const currentWeek = getCurrentWeekNumber();
     
-    // Status distribution
-    const statusCounts = {
-      [ShipmentStatus.PLANNED_AIRFREIGHT]: 0,
-      [ShipmentStatus.PLANNED_SEAFREIGHT]: 0,
-      [ShipmentStatus.IN_TRANSIT_AIRFREIGHT]: 0,
-      [ShipmentStatus.IN_TRANSIT_ROADWAY]: 0,
-      [ShipmentStatus.IN_TRANSIT_SEAWAY]: 0,
-      [ShipmentStatus.MOORED]: 0,
-      [ShipmentStatus.BERTH_WORKING]: 0,
-      [ShipmentStatus.BERTH_COMPLETE]: 0,
-      [ShipmentStatus.ARRIVED_PTA]: 0,
-      [ShipmentStatus.ARRIVED_KLM]: 0,
-      [ShipmentStatus.DELAYED]: 0,
-      [ShipmentStatus.CANCELLED]: 0,
-      [ShipmentStatus.STORED]: 0,
-      [ShipmentStatus.ARCHIVED]: 0,
+    // Status distribution - track unique orderRefs per status
+    const statusOrderRefs = {
+      [ShipmentStatus.PLANNED_AIRFREIGHT]: new Set(),
+      [ShipmentStatus.PLANNED_SEAFREIGHT]: new Set(),
+      [ShipmentStatus.IN_TRANSIT_AIRFREIGHT]: new Set(),
+      [ShipmentStatus.IN_TRANSIT_ROADWAY]: new Set(),
+      [ShipmentStatus.IN_TRANSIT_SEAWAY]: new Set(),
+      [ShipmentStatus.MOORED]: new Set(),
+      [ShipmentStatus.BERTH_WORKING]: new Set(),
+      [ShipmentStatus.BERTH_COMPLETE]: new Set(),
+      [ShipmentStatus.ARRIVED_PTA]: new Set(),
+      [ShipmentStatus.ARRIVED_KLM]: new Set(),
+      [ShipmentStatus.DELAYED]: new Set(),
+      [ShipmentStatus.CANCELLED]: new Set(),
+      [ShipmentStatus.STORED]: new Set(),
+      [ShipmentStatus.ARCHIVED]: new Set(),
     };
 
     // Supplier performance - track unique orderRefs
@@ -271,14 +271,14 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
     filteredShipments.forEach(shipment => {
       // Normalize status field (handle both camelCase and snake_case)
       const status = shipment.latestStatus || shipment.latest_status;
+      const orderRef = shipment.orderRef || shipment.order_ref || shipment.id;
 
-      // Status counts
-      if (statusCounts.hasOwnProperty(status)) {
-        statusCounts[status]++;
+      // Status counts - count unique orderRefs per status
+      if (statusOrderRefs.hasOwnProperty(status) && orderRef) {
+        statusOrderRefs[status].add(orderRef);
       }
 
       // Supplier stats - count unique orderRefs
-      const orderRef = shipment.orderRef || shipment.order_ref || shipment.id;
       const supplier = shipment.supplier || 'Unknown';
       if (orderRef) {
         if (!supplierOrderRefs[supplier]) {
@@ -354,6 +354,12 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
       }
     });
 
+    // Convert status Sets to counts
+    const statusCounts = {};
+    Object.keys(statusOrderRefs).forEach(status => {
+      statusCounts[status] = statusOrderRefs[status].size;
+    });
+
     // Convert supplier Sets to counts
     const supplierStats = {};
     Object.keys(supplierOrderRefs).forEach(supplier => {
@@ -372,7 +378,7 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
     });
 
     // Count unique orderRefs for total
-    const uniqueOrderRefs = new Set(filteredShipments.map(s => s.orderRef).filter(Boolean));
+    const uniqueOrderRefs = new Set(filteredShipments.map(s => s.orderRef || s.order_ref).filter(Boolean));
 
     return {
       statusCounts,
