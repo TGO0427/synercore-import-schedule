@@ -245,7 +245,7 @@ function ImportCosting() {
       ],
       supplierDetails: sortedSuppliers.map(([name, data]) => ({ name, ...data })),
     };
-  }, [estimates, selectedProduct]);
+  }, [estimates, selectedProduct, selectedSupplier]);
 
   // Filter and sort estimates (exclude archived - those show under Suppliers)
   const filteredEstimates = estimates
@@ -1057,45 +1057,28 @@ function ImportCosting() {
     const productLabel = selectedProduct === 'all' ? 'All Products' : selectedProduct;
     const supplierLabel = selectedSupplier === 'all' ? 'All Suppliers' : selectedSupplier;
 
-    // Get average ROE from filtered estimates
-    const relevantEstimatesForROE = estimates.filter(est => {
-      if (selectedSupplier !== 'all' && est.supplier_name !== selectedSupplier) return false;
-      return true;
-    });
-    const avgRoeOrigin = relevantEstimatesForROE.length > 0
-      ? relevantEstimatesForROE.reduce((sum, e) => sum + (parseFloat(e.roe_origin) || 0), 0) / relevantEstimatesForROE.length
-      : 0;
-    const avgRoeEur = relevantEstimatesForROE.length > 0
-      ? relevantEstimatesForROE.reduce((sum, e) => sum + (parseFloat(e.roe_eur) || 0), 0) / relevantEstimatesForROE.length
-      : 0;
-
     // Header
     doc.setFillColor(91, 33, 182);
-    doc.rect(0, 0, 220, 50, 'F');
+    doc.rect(0, 0, 220, 40, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(20);
     doc.text('Cost Analysis Report', 14, 15);
     doc.setFontSize(10);
     doc.text(`Supplier: ${supplierLabel}`, 14, 25);
     doc.text(`Product: ${productLabel}`, 14, 33);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 41);
-    // ROE Information
-    doc.setFontSize(9);
-    doc.text(`ROE Date: ${new Date().toLocaleDateString()}`, 120, 25);
-    doc.text(`USD/ZAR: ${formatNumber(avgRoeOrigin, 4)}`, 120, 33);
-    doc.text(`EUR/ZAR: ${formatNumber(avgRoeEur, 4)}`, 120, 41);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 140, 33);
 
     // Try to capture chart as image
     if (chartRef.current) {
       try {
         const chartCanvas = chartRef.current.canvas;
         const chartImage = chartCanvas.toDataURL('image/png', 1.0);
-        doc.addImage(chartImage, 'PNG', 14, 57, 180, 80);
+        doc.addImage(chartImage, 'PNG', 14, 47, 180, 80);
       } catch (err) {
         console.error('Error capturing chart:', err);
         doc.setTextColor(100);
         doc.setFontSize(10);
-        doc.text('Chart could not be rendered in PDF', 14, 75);
+        doc.text('Chart could not be rendered in PDF', 14, 65);
       }
     }
 
@@ -1107,10 +1090,10 @@ function ImportCosting() {
 
     doc.setTextColor(0);
     doc.setFontSize(12);
-    doc.text('Summary Statistics', 14, 145);
+    doc.text('Summary Statistics', 14, 132);
 
     autoTable(doc, {
-      startY: 151,
+      startY: 138,
       head: [['Metric', 'Value']],
       body: [
         ['Total Suppliers', chartData.labels.length.toString()],
@@ -1188,10 +1171,10 @@ function ImportCosting() {
 
       // Estimate Header
       doc.setFillColor(240, 240, 250);
-      doc.rect(10, currentY - 5, 190, 28, 'F');
+      doc.rect(10, currentY - 5, 190, 36, 'F');
       doc.setDrawColor(91, 33, 182);
       doc.setLineWidth(0.5);
-      doc.rect(10, currentY - 5, 190, 28, 'S');
+      doc.rect(10, currentY - 5, 190, 36, 'S');
 
       doc.setTextColor(91, 33, 182);
       doc.setFontSize(11);
@@ -1205,13 +1188,19 @@ function ImportCosting() {
       doc.text(`Port: ${est.port_of_discharge || '-'}`, 80, currentY + 11);
       doc.text(`Container: ${est.container_type || '-'}`, 130, currentY + 11);
 
+      // ROE info per estimate
+      doc.setTextColor(0, 102, 204);
+      doc.text(`ROE Date: ${est.costing_date || '-'}`, 14, currentY + 19);
+      doc.text(`USD/ZAR: ${formatNumber(est.roe_origin || 0, 4)}`, 80, currentY + 19);
+      doc.text(`EUR/ZAR: ${formatNumber(est.roe_eur || 0, 4)}`, 130, currentY + 19);
+
       doc.setFont(undefined, 'bold');
       doc.setTextColor(5, 150, 105);
-      doc.text(`Total Cost: ${formatCurrency(totals.total_in_warehouse_cost_zar)}`, 14, currentY + 19);
+      doc.text(`Total Cost: ${formatCurrency(totals.total_in_warehouse_cost_zar)}`, 14, currentY + 27);
       doc.setTextColor(217, 119, 6);
-      doc.text(`Cost/KG: ${formatCurrency(totals.all_in_warehouse_cost_per_kg_zar)}`, 80, currentY + 19);
+      doc.text(`Cost/KG: ${formatCurrency(totals.all_in_warehouse_cost_per_kg_zar)}`, 80, currentY + 27);
 
-      currentY += 32;
+      currentY += 40;
 
       // Products Table for this estimate
       if (products.length > 0) {
