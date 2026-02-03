@@ -145,16 +145,18 @@ function ImportCosting() {
   const [selectedSupplier, setSelectedSupplier] = useState('all');
   const chartRef = useRef(null);
 
-  // Get unique products from all estimates
+  // Get unique products from estimates - filtered by selected supplier
   const allProducts = useMemo(() => {
     const productSet = new Set();
     estimates.forEach(est => {
+      // Only include products from the selected supplier (or all if 'all' is selected)
+      if (selectedSupplier !== 'all' && est.supplier_name !== selectedSupplier) return;
       (est.products || []).forEach(p => {
         if (p.name) productSet.add(p.name);
       });
     });
     return Array.from(productSet).sort();
-  }, [estimates]);
+  }, [estimates, selectedSupplier]);
 
   // Get unique suppliers from all estimates
   const allSuppliers = useMemo(() => {
@@ -1055,28 +1057,45 @@ function ImportCosting() {
     const productLabel = selectedProduct === 'all' ? 'All Products' : selectedProduct;
     const supplierLabel = selectedSupplier === 'all' ? 'All Suppliers' : selectedSupplier;
 
+    // Get average ROE from filtered estimates
+    const relevantEstimatesForROE = estimates.filter(est => {
+      if (selectedSupplier !== 'all' && est.supplier_name !== selectedSupplier) return false;
+      return true;
+    });
+    const avgRoeOrigin = relevantEstimatesForROE.length > 0
+      ? relevantEstimatesForROE.reduce((sum, e) => sum + (parseFloat(e.roe_origin) || 0), 0) / relevantEstimatesForROE.length
+      : 0;
+    const avgRoeEur = relevantEstimatesForROE.length > 0
+      ? relevantEstimatesForROE.reduce((sum, e) => sum + (parseFloat(e.roe_eur) || 0), 0) / relevantEstimatesForROE.length
+      : 0;
+
     // Header
     doc.setFillColor(91, 33, 182);
-    doc.rect(0, 0, 220, 40, 'F');
+    doc.rect(0, 0, 220, 50, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(20);
     doc.text('Cost Analysis Report', 14, 15);
     doc.setFontSize(10);
     doc.text(`Supplier: ${supplierLabel}`, 14, 25);
     doc.text(`Product: ${productLabel}`, 14, 33);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 140, 33);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 41);
+    // ROE Information
+    doc.setFontSize(9);
+    doc.text(`ROE Date: ${new Date().toLocaleDateString()}`, 120, 25);
+    doc.text(`USD/ZAR: ${formatNumber(avgRoeOrigin, 4)}`, 120, 33);
+    doc.text(`EUR/ZAR: ${formatNumber(avgRoeEur, 4)}`, 120, 41);
 
     // Try to capture chart as image
     if (chartRef.current) {
       try {
         const chartCanvas = chartRef.current.canvas;
         const chartImage = chartCanvas.toDataURL('image/png', 1.0);
-        doc.addImage(chartImage, 'PNG', 14, 47, 180, 80);
+        doc.addImage(chartImage, 'PNG', 14, 57, 180, 80);
       } catch (err) {
         console.error('Error capturing chart:', err);
         doc.setTextColor(100);
         doc.setFontSize(10);
-        doc.text('Chart could not be rendered in PDF', 14, 65);
+        doc.text('Chart could not be rendered in PDF', 14, 75);
       }
     }
 
@@ -1088,10 +1107,10 @@ function ImportCosting() {
 
     doc.setTextColor(0);
     doc.setFontSize(12);
-    doc.text('Summary Statistics', 14, 132);
+    doc.text('Summary Statistics', 14, 145);
 
     autoTable(doc, {
-      startY: 138,
+      startY: 151,
       head: [['Metric', 'Value']],
       body: [
         ['Total Suppliers', chartData.labels.length.toString()],
@@ -1458,7 +1477,10 @@ function ImportCosting() {
                   <label style={{ fontSize: '0.85rem', color: '#666' }}>Supplier:</label>
                   <select
                     value={selectedSupplier}
-                    onChange={(e) => setSelectedSupplier(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedSupplier(e.target.value);
+                      setSelectedProduct('all'); // Reset product when supplier changes
+                    }}
                     style={{
                       padding: '8px 12px',
                       border: '1px solid #d1d5db',
