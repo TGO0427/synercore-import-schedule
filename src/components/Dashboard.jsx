@@ -3,56 +3,91 @@ import { ShipmentStatus } from '../types/shipment';
 
 function Dashboard({ shipments }) {
   const getShipmentStats = () => {
-    const stats = {
-      total: shipments.length,
-      planned: 0,
-      inTransit: 0,
-      arrived: 0,
-      delayed: 0,
-      cancelled: 0,
-      byWarehouse: {},
-      bySupplier: {},
-      byWeek: {}
+    // Track unique ORDER/REF per supplier
+    const supplierOrderRefs = {};
+    const warehouseOrderRefs = {};
+    const weekOrderRefs = {};
+    const statusOrderRefs = {
+      planned: new Set(),
+      inTransit: new Set(),
+      arrived: new Set(),
+      delayed: new Set(),
+      cancelled: new Set()
     };
 
-    const now = new Date();
-
     shipments.forEach(shipment => {
+      const orderRef = shipment.orderRef;
+      if (!orderRef) return;
+
+      // Track status by unique orderRef
       switch (shipment.latestStatus) {
         case ShipmentStatus.PLANNED_AIRFREIGHT:
         case ShipmentStatus.PLANNED_SEAFREIGHT:
-          stats.planned++;
+          statusOrderRefs.planned.add(orderRef);
           break;
         case ShipmentStatus.IN_TRANSIT_AIRFREIGHT:
         case ShipmentStatus.IN_TRANSIT_ROADWAY:
         case ShipmentStatus.IN_TRANSIT_SEAWAY:
-          stats.inTransit++;
+          statusOrderRefs.inTransit.add(orderRef);
           break;
         case ShipmentStatus.ARRIVED_PTA:
         case ShipmentStatus.ARRIVED_KLM:
-          stats.arrived++;
+          statusOrderRefs.arrived.add(orderRef);
           break;
         case ShipmentStatus.DELAYED:
-          stats.delayed++;
+          statusOrderRefs.delayed.add(orderRef);
           break;
         case ShipmentStatus.CANCELLED:
-          stats.cancelled++;
+          statusOrderRefs.cancelled.add(orderRef);
           break;
         default:
           break;
       }
 
-      // Track by warehouse
+      // Track unique orderRefs by warehouse
       const warehouse = shipment.receivingWarehouse || shipment.finalPod || 'Unassigned';
-      stats.byWarehouse[warehouse] = (stats.byWarehouse[warehouse] || 0) + 1;
+      if (!warehouseOrderRefs[warehouse]) warehouseOrderRefs[warehouse] = new Set();
+      warehouseOrderRefs[warehouse].add(orderRef);
 
-      // Track by supplier
+      // Track unique orderRefs by supplier
       const supplier = shipment.supplier || 'Unknown';
-      stats.bySupplier[supplier] = (stats.bySupplier[supplier] || 0) + 1;
+      if (!supplierOrderRefs[supplier]) supplierOrderRefs[supplier] = new Set();
+      supplierOrderRefs[supplier].add(orderRef);
 
-      // Track by week
+      // Track unique orderRefs by week
       const week = shipment.weekNumber || 'N/A';
-      stats.byWeek[week] = (stats.byWeek[week] || 0) + 1;
+      if (!weekOrderRefs[week]) weekOrderRefs[week] = new Set();
+      weekOrderRefs[week].add(orderRef);
+    });
+
+    // Convert Sets to counts
+    const uniqueOrderRefs = new Set(shipments.map(s => s.orderRef).filter(Boolean));
+
+    const stats = {
+      total: uniqueOrderRefs.size,
+      planned: statusOrderRefs.planned.size,
+      inTransit: statusOrderRefs.inTransit.size,
+      arrived: statusOrderRefs.arrived.size,
+      delayed: statusOrderRefs.delayed.size,
+      cancelled: statusOrderRefs.cancelled.size,
+      byWarehouse: {},
+      bySupplier: {},
+      byWeek: {}
+    };
+
+    // Convert warehouse Sets to counts
+    Object.keys(warehouseOrderRefs).forEach(warehouse => {
+      stats.byWarehouse[warehouse] = warehouseOrderRefs[warehouse].size;
+    });
+
+    // Convert supplier Sets to counts
+    Object.keys(supplierOrderRefs).forEach(supplier => {
+      stats.bySupplier[supplier] = supplierOrderRefs[supplier].size;
+    });
+
+    // Convert week Sets to counts
+    Object.keys(weekOrderRefs).forEach(week => {
+      stats.byWeek[week] = weekOrderRefs[week].size;
     });
 
     return stats;
