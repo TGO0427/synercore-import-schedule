@@ -574,8 +574,22 @@ function App() {
           shippingShipments = shippingShipments.filter(s => s.latestStatus === statusFilter);
         }
 
+        // Count unique ORDER/REF - duplicates count as 1 shipment
+        const uniqueOrderRefs = new Set(shippingShipments.map(s => s.orderRef).filter(Boolean));
+
+        // Group shipments by status with unique orderRef counting
+        const statusOrderRefs = {};
+        shippingShipments.forEach(s => {
+          if (s.latestStatus && s.orderRef) {
+            if (!statusOrderRefs[s.latestStatus]) {
+              statusOrderRefs[s.latestStatus] = new Set();
+            }
+            statusOrderRefs[s.latestStatus].add(s.orderRef);
+          }
+        });
+
         const stats = {
-          total: shippingShipments.length,
+          total: uniqueOrderRefs.size,
           planned_airfreight: 0, planned_seafreight: 0,
           in_transit_airfreight: 0, in_transit_roadway: 0, in_transit_seaway: 0,
           moored: 0, berth_working: 0, berth_complete: 0,
@@ -585,7 +599,13 @@ function App() {
           receiving: 0, received: 0, stored: 0,
           delayed: 0, cancelled: 0
         };
-        shippingShipments.forEach(s => { if (stats.hasOwnProperty(s.latestStatus)) stats[s.latestStatus]++; });
+
+        // Set counts from unique orderRef sets
+        Object.keys(statusOrderRefs).forEach(status => {
+          if (stats.hasOwnProperty(status)) {
+            stats[status] = statusOrderRefs[status].size;
+          }
+        });
 
         return (
           <div className="window-content">
