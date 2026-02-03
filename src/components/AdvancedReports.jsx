@@ -603,6 +603,26 @@ function AdvancedReports() {
             </div>
           </div>
 
+          {/* Product Filter */}
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 'bold' }}>
+              Product ({filters.products.length} selected):
+            </label>
+            <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #ddd', borderRadius: '4px', padding: '5px' }}>
+              {filterOptions.products.map(product => (
+                <label key={product} style={{ display: 'block', padding: '3px', fontSize: '0.85rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={filters.products.includes(product)}
+                    onChange={() => toggleFilterOption('products', product)}
+                    style={{ marginRight: '5px' }}
+                  />
+                  {product}
+                </label>
+              ))}
+            </div>
+          </div>
+
           {/* Week Number Filter */}
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 'bold' }}>
