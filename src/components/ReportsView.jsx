@@ -278,23 +278,24 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
       }
 
       // Supplier stats - count unique orderRefs
-      const orderRef = shipment.orderRef;
-      if (shipment.supplier && orderRef) {
-        if (!supplierOrderRefs[shipment.supplier]) {
-          supplierOrderRefs[shipment.supplier] = {
+      const orderRef = shipment.orderRef || shipment.order_ref || shipment.id;
+      const supplier = shipment.supplier || 'Unknown';
+      if (orderRef) {
+        if (!supplierOrderRefs[supplier]) {
+          supplierOrderRefs[supplier] = {
             total: new Set(),
             delayed: new Set(),
             arrived: new Set(),
             inTransit: new Set()
           };
         }
-        supplierOrderRefs[shipment.supplier].total.add(orderRef);
+        supplierOrderRefs[supplier].total.add(orderRef);
         if (status === ShipmentStatus.DELAYED) {
-          supplierOrderRefs[shipment.supplier].delayed.add(orderRef);
+          supplierOrderRefs[supplier].delayed.add(orderRef);
         } else if (status === ShipmentStatus.ARRIVED_PTA || status === ShipmentStatus.ARRIVED_KLM) {
-          supplierOrderRefs[shipment.supplier].arrived.add(orderRef);
+          supplierOrderRefs[supplier].arrived.add(orderRef);
         } else if (status === ShipmentStatus.IN_TRANSIT_ROADWAY || status === ShipmentStatus.IN_TRANSIT_SEAWAY) {
-          supplierOrderRefs[shipment.supplier].inTransit.add(orderRef);
+          supplierOrderRefs[supplier].inTransit.add(orderRef);
         }
       }
 
