@@ -656,6 +656,16 @@ function ImportCosting() {
     doc.text(`Date: ${estimate.costing_date || 'N/A'}`, 14, 34);
     doc.text(`Supplier: ${estimate.supplier_name || 'N/A'}`, 14, 40);
 
+    // ROE Information - always shown prominently
+    doc.setFontSize(9);
+    doc.setTextColor(0, 102, 204);
+    doc.setFont(undefined, 'bold');
+    const roeDate = estimate.costing_date || new Date().toISOString().split('T')[0];
+    doc.text(`ROE Date: ${roeDate}`, 130, 28);
+    doc.text(`USD/ZAR: ${formatNumber(estimate.roe_origin || 0, 4)}`, 130, 34);
+    doc.text(`EUR/ZAR: ${formatNumber(estimate.roe_eur || 0, 4)}`, 130, 40);
+    doc.setFont(undefined, 'normal');
+
     // Shipment Details
     const shipmentRows = filterZeroRows([
       ['Country of Origin', estimate.country_of_origin || '-'],
@@ -665,8 +675,6 @@ function ImportCosting() {
       ['INCO Terms', estimate.inco_terms || '-'],
       ['Transit Time', estimate.transit_time_days ? `${estimate.transit_time_days} days` : '-'],
       ['Total Weight', `${formatNumber(productTotals.totalWeight || estimate.total_gross_weight_kg)} kg`],
-      ['USD/ZAR Rate', formatNumber(estimate.roe_origin, 4)],
-      ['EUR/ZAR Rate', formatNumber(estimate.roe_eur, 4)],
     ]);
 
     autoTable(doc, {
@@ -935,6 +943,16 @@ function ImportCosting() {
     doc.text(`Date: ${estimate.costing_date || 'N/A'}`, 14, 34);
     doc.text(`Supplier: ${estimate.supplier_name || 'N/A'}`, 14, 40);
 
+    // ROE Information - always shown prominently
+    doc.setFontSize(9);
+    doc.setTextColor(0, 102, 204);
+    doc.setFont(undefined, 'bold');
+    const roeDate = estimate.costing_date || new Date().toISOString().split('T')[0];
+    doc.text(`ROE Date: ${roeDate}`, 130, 28);
+    doc.text(`USD/ZAR: ${formatNumber(estimate.roe_origin || 0, 4)}`, 130, 34);
+    doc.text(`EUR/ZAR: ${formatNumber(estimate.roe_eur || 0, 4)}`, 130, 40);
+    doc.setFont(undefined, 'normal');
+
     // Shipment Details
     const shipmentRows = filterZeroRows([
       ['Country of Origin', estimate.country_of_origin || '-'],
@@ -944,8 +962,6 @@ function ImportCosting() {
       ['INCO Terms', estimate.inco_terms || '-'],
       ['Transit Time', estimate.transit_time_days ? `${estimate.transit_time_days} days` : '-'],
       ['Total Weight', `${formatNumber(productTotals.totalWeight || estimate.total_gross_weight_kg)} kg`],
-      ['USD/ZAR Rate', formatNumber(estimate.roe_origin, 4)],
-      ['EUR/ZAR Rate', formatNumber(estimate.roe_eur, 4)],
     ]);
 
     autoTable(doc, {
