@@ -520,7 +520,7 @@ function App() {
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData?.details?.map((d) => d.msg).join(', ') ||
+        const errorMessage = (Array.isArray(errorData?.details) ? errorData.details.map((d) => d.msg).join(', ') : null) ||
                             errorData?.error ||
                             'Failed to create shipment';
         throw new Error(errorMessage);
