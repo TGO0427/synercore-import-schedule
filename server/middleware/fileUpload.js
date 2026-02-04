@@ -208,15 +208,8 @@ export const handleUploadError = (err, req, res, next) => {
     });
   }
 
-  // Handle other errors
-  if (err) {
-    return res.status(400).json({
-      error: 'File upload failed',
-      details: err.message
-    });
-  }
-
-  next();
+  // Pass non-upload errors to the next error handler
+  next(err);
 };
 
 /**
