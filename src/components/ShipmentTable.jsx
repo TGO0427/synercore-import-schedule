@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { ShipmentStatus } from '../types/shipment';
+import { getCurrentWeekNumber } from '../utils/dateUtils';
 import WeekCalendar from './WeekCalendar';
 import BulkStatusUpdate from './BulkStatusUpdate';
 import FilterPresetManager from './FilterPresetManager';
@@ -58,6 +59,9 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState(['all']);
   const [sortConfig, setSortConfig] = useState({ key: 'weekNumber', direction: 'asc' });
+  const currentWeek = getCurrentWeekNumber();
+  const [weekFrom, setWeekFrom] = useState(currentWeek);
+  const [weekTo, setWeekTo] = useState(currentWeek + 2);
   const [showAddShipmentDialog, setShowAddShipmentDialog] = useState(false);
   const [showAmendShipmentDialog, setShowAmendShipmentDialog] = useState(false);
   const [localTextValues, setLocalTextValues] = useState({});
@@ -108,7 +112,10 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
         statusFilter.includes(shipment.latestStatus) ||
         (statusFilter.includes('arrived') && (shipment.latestStatus === ShipmentStatus.ARRIVED_PTA || shipment.latestStatus === ShipmentStatus.ARRIVED_KLM || shipment.latestStatus === ShipmentStatus.ARRIVED_OFFSITE));
 
-      return matchesSearch && matchesStatus;
+      const shipWeek = shipment.weekNumber ? parseInt(shipment.weekNumber) : null;
+      const matchesWeek = shipWeek === null || (shipWeek >= weekFrom && shipWeek <= weekTo);
+
+      return matchesSearch && matchesStatus && matchesWeek;
     });
 
     // Sort with planned shipments at the bottom
@@ -148,7 +155,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
     });
 
     return filtered;
-  }, [shipments, searchTerm, statusFilter, sortConfig]);
+  }, [shipments, searchTerm, statusFilter, sortConfig, weekFrom, weekTo]);
 
   // Extract unique suppliers for dropdown
   const uniqueSuppliers = useMemo(() => {
@@ -824,6 +831,46 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 Hold Ctrl/Cmd to select multiple
               </div>
             </div>
+          </div>
+
+          {/* Week Range Filter */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <label style={{ fontWeight: '500', fontSize: '0.85rem', color: '#555', whiteSpace: 'nowrap' }}>Weeks:</label>
+            <input
+              type="number"
+              value={weekFrom}
+              onChange={(e) => setWeekFrom(parseInt(e.target.value) || 1)}
+              className="input"
+              style={{ width: '65px', textAlign: 'center' }}
+              min="1"
+              max="53"
+            />
+            <span style={{ color: '#999' }}>–</span>
+            <input
+              type="number"
+              value={weekTo}
+              onChange={(e) => setWeekTo(parseInt(e.target.value) || 53)}
+              className="input"
+              style={{ width: '65px', textAlign: 'center' }}
+              min="1"
+              max="53"
+            />
+            <button
+              className="btn"
+              onClick={() => { setWeekFrom(currentWeek); setWeekTo(currentWeek + 2); }}
+              style={{ fontSize: '0.8rem', padding: '0.35rem 0.6rem', whiteSpace: 'nowrap' }}
+              title="Reset to current week + 2 weeks"
+            >
+              Reset
+            </button>
+            <button
+              className="btn"
+              onClick={() => { setWeekFrom(1); setWeekTo(53); }}
+              style={{ fontSize: '0.8rem', padding: '0.35rem 0.6rem', whiteSpace: 'nowrap' }}
+              title="Show all weeks"
+            >
+              All Weeks
+            </button>
           </div>
 
           {/* Quick Filter Buttons */}
