@@ -74,6 +74,8 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
   const [manualArchiveLoading, setManualArchiveLoading] = useState(false);
   const [showBulkStatusUpdate, setShowBulkStatusUpdate] = useState(false);
   const [bulkUpdateLoading, setBulkUpdateLoading] = useState(false);
+  const [showOrderDetailsModal, setShowOrderDetailsModal] = useState(false);
+  const [orderDetailsShipment, setOrderDetailsShipment] = useState(null);
   const [edits, setEdits] = useState({}); // Track unsaved changes per shipment
   const [newShipment, setNewShipment] = useState({
     supplier: '',
@@ -985,7 +987,16 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                     <strong>{shipment.supplier}</strong>
                   </td>
                   <td>
-                    {shipment.orderRef}
+                    <span
+                      onClick={() => {
+                        setOrderDetailsShipment(shipment);
+                        setShowOrderDetailsModal(true);
+                      }}
+                      style={{ color: '#1976d2', cursor: 'pointer', textDecoration: 'underline' }}
+                      title="Click to view order details"
+                    >
+                      {shipment.orderRef}
+                    </span>
                     {isDelayed(shipment) && <span style={{ color: '#d32f2f', marginLeft: '0.5rem' }}>⚠️</span>}
                   </td>
                   <td>{shipment.finalPod}</td>
@@ -2088,6 +2099,115 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
           onBulkUpdate={handleBulkStatusUpdate}
           onClose={() => setShowBulkStatusUpdate(false)}
         />
+      )}
+
+      {/* Order Details Modal */}
+      {showOrderDetailsModal && orderDetailsShipment && (
+        <ResizableModal
+          title={`Order Details — ${orderDetailsShipment.orderRef}`}
+          isOpen={showOrderDetailsModal}
+          onClose={() => {
+            setShowOrderDetailsModal(false);
+            setOrderDetailsShipment(null);
+          }}
+          initialWidth={600}
+          minWidth={400}
+          minHeight={350}
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Supplier</label>
+              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.supplier || '—'}</span>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Order/Ref</label>
+              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.orderRef || '—'}</span>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Product Name</label>
+              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.productName || '—'}</span>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Status</label>
+              <span className={`status-badge status-${orderDetailsShipment.latestStatus}`} style={{
+                borderRadius: '20px',
+                padding: '4px 12px',
+                fontSize: '0.8rem',
+                fontWeight: '500',
+                textTransform: 'uppercase'
+              }}>
+                {orderDetailsShipment.latestStatus?.replace(/_/g, ' ') || '—'}
+              </span>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Quantity</label>
+              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.quantity != null ? Number(orderDetailsShipment.quantity).toLocaleString() : '—'}</span>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Pallet Qty</label>
+              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.palletQty || '—'}</span>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>CBM</label>
+              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.cbm || '—'}</span>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Week Number</label>
+              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.weekNumber || '—'}</span>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Final POD</label>
+              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.finalPod || '—'}</span>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Receiving Warehouse</label>
+              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.receivingWarehouse || '—'}</span>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Incoterm</label>
+              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.incoterm || '—'}</span>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Forwarding Agent</label>
+              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.forwardingAgent || '—'}</span>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Vessel Name</label>
+              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.vesselName || '—'}</span>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Created</label>
+              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.createdAt ? new Date(orderDetailsShipment.createdAt).toLocaleDateString() : '—'}</span>
+            </div>
+            {orderDetailsShipment.notes && (
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Notes</label>
+                <span style={{ fontSize: '1rem', color: '#222', whiteSpace: 'pre-wrap' }}>{orderDetailsShipment.notes}</span>
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+            <button
+              onClick={() => {
+                setShowOrderDetailsModal(false);
+                setOrderDetailsShipment(null);
+              }}
+              style={{
+                padding: '0.6rem 1.5rem',
+                backgroundColor: '#6c757d',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.9rem'
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#545b62'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#6c757d'}
+            >
+              Close
+            </button>
+          </div>
+        </ResizableModal>
       )}
     </div>
   );
