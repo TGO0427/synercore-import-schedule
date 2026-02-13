@@ -112,6 +112,7 @@ function App() {
     operations: true,
     finance: true,
     reports: true,
+    resources: false,
   });
   const toggleSection = (key) => setSidebarSections(prev => ({ ...prev, [key]: !prev[key] }));
 
@@ -949,6 +950,18 @@ function App() {
             );
           };
 
+          const externalLinks = [
+            { label: 'Transnet Portal', url: 'https://www.transnet.net/SubsiteRender.aspx?id=8137383', icon: '🚢' },
+            { label: 'Marine Traffic', url: 'https://www.marinetraffic.com/en/ais/home/shipid:157944/zoom:10', icon: '🌊' },
+            { label: 'FreightNews', url: 'https://www.freightnews.co.za/customs/3610/3823-19', icon: '📰' },
+            { label: 'Track-Trace', url: 'https://www.track-trace.com/', icon: '📍' },
+            { label: 'MyDHLi Portal', url: 'https://keycloak.mydhli.com/auth/realms/DCI/protocol/openid-connect/auth?redirect_uri=https%3A%2F%2Fapp.mydhli.com%2Flogin&scope=openid+web-origins&response_type=code&client_id=myDHLi&ui_locales=en', icon: '📦' },
+            { label: 'DSV Solutions', url: 'https://mydsv.com/new/frontpage/', icon: '🚛' },
+            { label: 'Afrigistics', url: 'https://www.afrigistics.com/contact/', icon: '🌍' },
+          ];
+          const resourcesVisible = !q ? externalLinks : externalLinks.filter(l => l.label.toLowerCase().includes(q));
+          const resourcesOpen = q ? resourcesVisible.length > 0 : sidebarSections.resources;
+
           return (
             <nav className="sidebar-nav">
               {/* Dashboard - standalone */}
@@ -959,43 +972,33 @@ function App() {
               {renderSection('Operations', 'operations', ['shipping', 'workflow', 'capacity', 'stored', 'archives'])}
               {renderSection('Finance', 'finance', ['rates', 'costing', 'costingRequests'])}
               {renderSection('Reports', 'reports', ['reports', 'advancedReports'])}
+
+              {/* External Resources — same nav style */}
+              {(!q || resourcesVisible.length > 0) && (
+                <div className="nav-section">
+                  <div className="nav-section-header" onClick={() => !q && toggleSection('resources')}>
+                    Resources
+                    <span className={`chevron ${resourcesOpen ? 'open' : ''}`}>▸</span>
+                  </div>
+                  <div className={`nav-section-items ${resourcesOpen ? 'expanded' : 'collapsed'}`}>
+                    {resourcesVisible.map(link => (
+                      <button
+                        key={link.label}
+                        className="nav-item"
+                        onClick={() => window.open(link.url, '_blank')}
+                        style={{ opacity: 0.8 }}
+                      >
+                        <span className="nav-icon">{link.icon}</span>
+                        {link.label}
+                        <span className="nav-external">↗</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </nav>
           );
         })()}
-
-        {/* External Resources (collapsible) */}
-        <div style={{ padding: '0 12px', marginBottom: '8px' }}>
-          <details style={{ color: 'rgba(255,255,255,0.7)' }}>
-            <summary style={{
-              fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px',
-              color: 'rgba(255,255,255,0.4)', cursor: 'pointer', padding: '8px 10px', userSelect: 'none',
-              listStyle: 'none'
-            }}>
-              External Resources ▸
-            </summary>
-            <div style={{ display: 'grid', gap: '4px', padding: '6px 0' }}>
-              {[
-                { label: 'Transnet Portal', url: 'https://www.transnet.net/SubsiteRender.aspx?id=8137383', icon: '🚢' },
-                { label: 'Marine Traffic', url: 'https://www.marinetraffic.com/en/ais/home/shipid:157944/zoom:10', icon: '🌊' },
-                { label: 'FreightNews', url: 'https://www.freightnews.co.za/customs/3610/3823-19', icon: '📰' },
-                { label: 'Track-Trace', url: 'https://www.track-trace.com/', icon: '📍' },
-                { label: 'MyDHLi Portal', url: 'https://keycloak.mydhli.com/auth/realms/DCI/protocol/openid-connect/auth?redirect_uri=https%3A%2F%2Fapp.mydhli.com%2Flogin&scope=openid+web-origins&response_type=code&client_id=myDHLi&ui_locales=en', icon: '📦' },
-                { label: 'DSV Solutions', url: 'https://mydsv.com/new/frontpage/', icon: '🚛' },
-                { label: 'Afrigistics', url: 'https://www.afrigistics.com/contact/', icon: '🌍' },
-              ].map(link => (
-                <button
-                  key={link.label}
-                  className="nav-item"
-                  onClick={() => window.open(link.url, '_blank')}
-                  style={{ fontSize: '12.5px' }}
-                >
-                  <span className="nav-icon">{link.icon}</span>
-                  {link.label}
-                </button>
-              ))}
-            </div>
-          </details>
-        </div>
 
         {/* Quick Stats */}
         <div style={{
