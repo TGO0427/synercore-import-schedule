@@ -862,7 +862,7 @@ function App() {
       case 'advanced-reports':
         return <AdvancedReports />;
       case 'dashboard':
-        return <Dashboard shipments={shipments} />;
+        return <Dashboard shipments={shipments} onNavigate={setActiveView} />;
       case 'capacity':
         return <WarehouseCapacity shipments={shipments} />;
       case 'users':

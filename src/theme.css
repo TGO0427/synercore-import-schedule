@@ -272,19 +272,48 @@ body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI
 }
 .stat-card {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid rgba(229,233,242,0.7);
+  border-radius: 12px;
   padding: var(--sp-4);
   box-shadow: var(--shadow-1);
-  transition: .15s ease;
+  transition: box-shadow .15s ease, transform .15s ease;
 }
-.stat-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-2); }
+.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); }
 .stat-card h3 { margin: 0 0 6px; font-size: 22px; font-weight: 800; color: var(--navy-900); }
 .stat-card p  { margin: 0; color: var(--text-500); font-size: 13px; }
 .stat-card.success { border-left: 4px solid var(--success); }
 .stat-card.alert   { border-left: 4px solid var(--danger); }
 .stat-card.total   { border-left: 4px solid var(--accent); }
 .stat-card.active  { outline: 2px solid rgba(14,165,168,.25); }
+
+/* Semantic ring variants for stat cards */
+.stat-card.ring-accent  { box-shadow: inset 3px 0 0 var(--accent),  var(--shadow-1); background: rgba(14,165,168,0.03); }
+.stat-card.ring-info    { box-shadow: inset 3px 0 0 var(--info),    var(--shadow-1); background: rgba(59,130,246,0.03); }
+.stat-card.ring-success { box-shadow: inset 3px 0 0 var(--success), var(--shadow-1); background: rgba(16,185,129,0.03); }
+.stat-card.ring-warning { box-shadow: inset 3px 0 0 var(--warning), var(--shadow-1); background: rgba(245,158,11,0.03); }
+.stat-card.ring-danger  { box-shadow: inset 3px 0 0 var(--danger),  var(--shadow-1); background: rgba(239,68,68,0.03); }
+
+/* Brand focus strip */
+.brand-strip {
+  height: 4px;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--navy-600) 100%);
+  border-radius: 2px;
+  margin-bottom: var(--sp-4);
+}
+
+/* Dashboard panel (chart cards) */
+.dash-panel {
+  background: var(--surface);
+  border: 1px solid rgba(229,233,242,0.7);
+  border-radius: 14px;
+  padding: var(--sp-5);
+  box-shadow: var(--shadow-1);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.dash-panel:hover {
+  box-shadow: var(--shadow-2);
+  transform: translateY(-1px);
+}
 
 /* ----------- Buttons ----------- */
 .btn {
