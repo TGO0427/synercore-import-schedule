@@ -38,6 +38,21 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
   const [newDocumentName, setNewDocumentName] = useState('');
   const [archivedEstimates, setArchivedEstimates] = useState([]);
   const [loadingArchived, setLoadingArchived] = useState(false);
+  const [sortBy, setSortBy] = useState('name');
+  const [openMenuId, setOpenMenuId] = useState(null);
+
+  // Initials badge helpers
+  const AVATAR_COLORS = ['#0ea5a8','#3b82f6','#8b5cf6','#ec4899','#f59e0b','#10b981','#ef4444','#6366f1'];
+  const getInitials = (name) => (name || '').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const getAvatarColor = (name) => AVATAR_COLORS[(name || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_COLORS.length];
+
+  // Close kebab menu on outside click
+  useEffect(() => {
+    if (!openMenuId) return;
+    const close = (e) => { if (!e.target.closest('.kebab-wrap')) setOpenMenuId(null); };
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [openMenuId]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -56,13 +71,32 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
     notes: ''
   });
 
+  // Memoize shipment counts per supplier for signals + sorting
+  const supplierShipmentCounts = useMemo(() => {
+    const counts = {};
+    suppliers.forEach(s => {
+      const name = (s.name || '').toLowerCase();
+      const code = (s.code || '').toLowerCase();
+      counts[s.id] = shipments.filter(sh => {
+        const sn = (sh.supplier || '').toLowerCase();
+        return sn === name || sn === code || (name && sn.includes(name));
+      }).length;
+    });
+    return counts;
+  }, [suppliers, shipments]);
+
   const filteredSuppliers = useMemo(() => {
-    return suppliers.filter(supplier =>
+    const filtered = suppliers.filter(supplier =>
       supplier.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       supplier.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       supplier.contactPerson?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [suppliers, searchTerm]);
+    return filtered.sort((a, b) => {
+      if (sortBy === 'country') return (a.country || 'zzz').localeCompare(b.country || 'zzz');
+      if (sortBy === 'shipments') return (supplierShipmentCounts[b.id] || 0) - (supplierShipmentCounts[a.id] || 0);
+      return (a.name || '').localeCompare(b.name || '');
+    });
+  }, [suppliers, searchTerm, sortBy, supplierShipmentCounts]);
 
   const filteredDocuments = useMemo(() => {
     if (!documentSearchTerm.trim()) return supplierDocuments;
@@ -571,8 +605,23 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
     <div className="supplier-management">
       <div className="brand-strip" />
       <div className="page-header table-header" style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', marginBottom: '1rem' }}>
-        <h2 style={{ marginRight: 'auto' }}>Supplier Management</h2>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <h2 style={{ margin: 0 }}>Supplier Management</h2>
+        <span style={{ fontSize: 13, color: 'var(--text-500)', fontWeight: 500 }}>
+          {filteredSuppliers.length} supplier{filteredSuppliers.length !== 1 ? 's' : ''}
+        </span>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginLeft: 'auto' }}>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            style={{
+              padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 6,
+              fontSize: 13, color: 'var(--text-700)', background: 'var(--surface)', cursor: 'pointer',
+            }}
+          >
+            <option value="name">Sort: Name</option>
+            <option value="country">Sort: Country</option>
+            <option value="shipments">Sort: Shipments</option>
+          </select>
           <input
             type="text"
             placeholder="Search suppliers..."
@@ -581,10 +630,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
             className="search-input"
             style={{ minWidth: '200px' }}
           />
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="btn btn-primary"
-          >
+          <button onClick={() => setShowAddForm(true)} className="btn btn-primary">
             Add Supplier
           </button>
         </div>
@@ -592,59 +638,101 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
 
       {/* Suppliers Grid */}
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
-        {filteredSuppliers.map(supplier => (
-          <div
-            key={supplier.id}
-            className={`stat-card ${supplier.isActive !== false ? 'ring-accent' : 'ring-danger'} clickable`}
-            onClick={(e) => handleSupplierCardClick(supplier, e)}
-            style={{ display: 'flex', flexDirection: 'column', minHeight: 200 }}
-          >
-            {/* Header: icon circle + name + status */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
-              <div style={{
-                width: 40, height: 40, borderRadius: '50%', display: 'flex', flexShrink: 0,
-                alignItems: 'center', justifyContent: 'center', fontSize: 18,
-                backgroundColor: supplier.isActive !== false ? 'rgba(14,165,168,0.1)' : 'rgba(239,68,68,0.1)',
-              }}>
-                🏭
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <h3 style={{
-                  fontSize: 16, fontWeight: 700, margin: '0 0 2px', color: 'var(--navy-900)',
-                  lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        {filteredSuppliers.map(supplier => {
+          const shipCount = supplierShipmentCounts[supplier.id] || 0;
+          const avatarColor = getAvatarColor(supplier.name);
+          const isActive = supplier.isActive !== false;
+          const meta = [supplier.contactPerson, supplier.country].filter(Boolean).join(' · ') || '—';
+
+          return (
+            <div
+              key={supplier.id}
+              className={`stat-card ${isActive ? 'ring-accent' : 'ring-danger'} clickable`}
+              onClick={(e) => handleSupplierCardClick(supplier, e)}
+              style={{ display: 'flex', flexDirection: 'column', padding: 14 }}
+            >
+              {/* Header: initials badge + name + status pill */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <div style={{
+                  width: 42, height: 42, borderRadius: '50%', display: 'flex', flexShrink: 0,
+                  alignItems: 'center', justifyContent: 'center',
+                  fontSize: 15, fontWeight: 700, color: '#fff', backgroundColor: avatarColor,
                 }}>
-                  {supplier.name}
-                </h3>
-                {supplier.code && (
-                  <span style={{ fontSize: 11, color: 'var(--text-500)', fontWeight: 500 }}>{supplier.code}</span>
-                )}
+                  {getInitials(supplier.name)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h3 style={{
+                    fontSize: 17, fontWeight: 800, margin: 0, color: 'var(--navy-900)',
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  }} title={supplier.name}>
+                    {supplier.name}
+                  </h3>
+                  <div style={{ fontSize: 12, color: 'var(--text-500)', marginTop: 1 }}>{meta}</div>
+                </div>
+                <span className={`pill ${isActive ? 'pill-ok' : 'pill-bad'}`} style={{ flexShrink: 0, fontSize: 11 }}>
+                  {isActive ? 'Active' : 'Inactive'}
+                </span>
               </div>
-              {supplier.isActive === false && <span className="pill pill-bad" style={{ flexShrink: 0 }}>Inactive</span>}
-            </div>
 
-            {/* Info rows */}
-            <div style={{ fontSize: 13, color: 'var(--text-700)', lineHeight: 1.8, flex: 1 }}>
-              {supplier.contactPerson && <div>👤 {supplier.contactPerson}</div>}
-              {supplier.country && <div>🌍 {supplier.country}</div>}
-              {supplier.contactEmail && <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>✉️ {supplier.contactEmail}</div>}
-              {supplier.defaultTerms && <div>📋 {supplier.defaultTerms}</div>}
-              <div style={{ marginTop: 4 }}>
-                <span className="pill pill-info">{supplier.importFormats?.join(', ') || 'Excel'}</span>
+              {/* Signals row */}
+              <div style={{ fontSize: 12, color: 'var(--text-500)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ color: shipCount > 0 ? 'var(--text-700)' : 'var(--text-500)' }}>
+                  📦 {shipCount > 0 ? `${shipCount} shipment${shipCount !== 1 ? 's' : ''}` : 'No shipments'}
+                </span>
+                {supplier.code && <span style={{ color: 'var(--text-500)' }}>· {supplier.code}</span>}
+                <span className="pill pill-info" style={{ fontSize: 10, padding: '2px 6px' }}>
+                  {supplier.importFormats?.join(', ') || 'Excel'}
+                </span>
+              </div>
+
+              {/* Action toolbar */}
+              <div style={{ display: 'flex', gap: 6, borderTop: '1px solid var(--border)', paddingTop: 8, marginTop: 'auto', alignItems: 'center' }}>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleSupplierCardClick(supplier, e); }}
+                  className="btn-ghost"
+                  style={{ fontSize: 12, fontWeight: 600, padding: '5px 10px' }}
+                >
+                  View
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleEdit(supplier); }}
+                  className="btn-ghost"
+                  style={{ fontSize: 12, fontWeight: 600, padding: '5px 10px' }}
+                >
+                  Edit
+                </button>
+                <div style={{ flex: 1 }} />
+                <div className="kebab-wrap" style={{ position: 'relative' }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === supplier.id ? null : supplier.id); }}
+                    className="btn-ghost"
+                    style={{ fontSize: 18, padding: '4px 8px', lineHeight: 1 }}
+                    title="More actions"
+                  >
+                    ⋮
+                  </button>
+                  {openMenuId === supplier.id && (
+                    <div className="kebab-menu">
+                      <button onClick={(e) => { e.stopPropagation(); generateTemplate(supplier); setOpenMenuId(null); }}>
+                        📥 Download Template
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); setSelectedSupplier(supplier); setShowImportDialog(true); setOpenMenuId(null); }}>
+                        📋 Upload Schedule
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); handleViewDocuments(supplier); setOpenMenuId(null); }}>
+                        📄 View Documents
+                      </button>
+                      <div className="divider" />
+                      <button className="danger" onClick={(e) => { e.stopPropagation(); onDeleteSupplier(supplier.id); setOpenMenuId(null); }}>
+                        🗑️ Delete Supplier
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-
-            {/* Action toolbar */}
-            <div style={{ display: 'flex', gap: 4, borderTop: '1px solid var(--border)', paddingTop: 10, marginTop: 10, alignItems: 'center' }}>
-              <button onClick={() => generateTemplate(supplier)} className="btn-ghost" title="Download Template">📥</button>
-              <button onClick={() => { setSelectedSupplier(supplier); setShowImportDialog(true); }} className="btn-ghost" title="Upload Schedule">📋</button>
-              <button onClick={() => handleViewDocuments(supplier)} className="btn-ghost" title="View Documents">📄</button>
-              <div style={{ flex: 1 }} />
-              <button onClick={() => handleEdit(supplier)} className="btn-ghost" title="Edit Supplier">✏️</button>
-              <button onClick={() => onDeleteSupplier(supplier.id)} className="btn-ghost danger" title="Delete Supplier">🗑️</button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {filteredSuppliers.length === 0 && (

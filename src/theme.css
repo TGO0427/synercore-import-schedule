@@ -378,6 +378,23 @@ button:focus-visible, .btn:focus-visible, input:focus-visible, select:focus-visi
 .btn-ghost:hover { background: var(--accent-100); color: var(--accent); }
 .btn-ghost.danger:hover { background: #fef2f2; color: var(--danger); }
 
+/* ----------- Kebab dropdown menu ----------- */
+.kebab-menu {
+  position: absolute; right: 0; top: 100%; z-index: 10;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; box-shadow: var(--shadow-2);
+  min-width: 180px; padding: 4px 0;
+}
+.kebab-menu button {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 8px 14px; border: none; background: none;
+  font-size: 13px; color: var(--text-700); cursor: pointer; text-align: left;
+}
+.kebab-menu button:hover { background: var(--accent-100); }
+.kebab-menu button.danger { color: var(--danger); }
+.kebab-menu button.danger:hover { background: #fef2f2; }
+.kebab-menu .divider { height: 1px; background: var(--border); margin: 4px 0; }
+
 /* ----------- Scrollbar (subtle) ----------- */
 *::-webkit-scrollbar { height: 10px; width: 10px; }
 *::-webkit-scrollbar-thumb { background: #cfd8ea; border-radius: 10px; }
