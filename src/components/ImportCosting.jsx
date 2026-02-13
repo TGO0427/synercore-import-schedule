@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getApiUrl } from '../config/api';
 import { authFetch } from '../utils/authFetch';
-import useAuthStore from '../stores/authStore';
+import { authUtils } from '../utils/auth';
 import {
   calculateAllTotals,
   formatCurrency,
@@ -123,8 +123,8 @@ const INITIAL_FORM_STATE = {
 };
 
 function ImportCosting() {
-  const userRole = useAuthStore(state => state.userRole);
-  const isAdmin = userRole === 'admin';
+  const currentUser = authUtils.getUser();
+  const isAdmin = currentUser?.role === 'admin';
   const [estimates, setEstimates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
