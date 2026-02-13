@@ -1133,14 +1133,16 @@ function App() {
       {/* main panel */}
       <div className="main-content">
         <div style={{
+          position: 'sticky', top: 0, zIndex: 10,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          paddingTop: '1rem', paddingBottom: '1rem', paddingLeft: '1rem', paddingRight: '1rem',
-          borderBottom: '1px solid #eee', marginBottom: '1rem', width: '100%'
+          padding: '1rem',
+          borderBottom: '1px solid var(--border)', marginBottom: '1rem',
+          background: 'var(--surface)', width: '100%'
         }}>
           <SynercoreLogo size="medium" />
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ fontSize: '0.9rem', color: '#64748b' }}>
-              Logged in as: <strong style={{ color: '#0f172a' }}>{username}</strong>
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>
+              Logged in as: <strong style={{ color: 'var(--text-900)' }}>{username}</strong>
             </div>
             <button
               onClick={() => setAlertHubOpen(true)}
@@ -1157,7 +1159,7 @@ function App() {
                   position: 'absolute',
                   top: '-8px',
                   right: '-8px',
-                  backgroundColor: '#ef4444',
+                  backgroundColor: 'var(--danger)',
                   color: 'white',
                   borderRadius: '50%',
                   minWidth: '20px',
@@ -1179,7 +1181,7 @@ function App() {
                 style={{
                   position: 'relative',
                   fontSize: '0.9rem',
-                  backgroundColor: '#f59e0b',
+                  backgroundColor: 'var(--warning)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -1193,7 +1195,7 @@ function App() {
                   position: 'absolute',
                   top: '-8px',
                   right: '-8px',
-                  backgroundColor: '#ef4444',
+                  backgroundColor: 'var(--danger)',
                   color: 'white',
                   borderRadius: '50%',
                   minWidth: '20px',
