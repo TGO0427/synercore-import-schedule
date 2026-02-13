@@ -103,8 +103,9 @@ function App() {
   // Live Board mode
   const [liveBoardOpen, setLiveBoardOpen] = useState(false);
 
-  // Sidebar nav search
+  // Sidebar nav search + collapse
   const [navSearch, setNavSearch] = useState('');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Sidebar collapsible sections
   const [sidebarSections, setSidebarSections] = useState({
@@ -861,14 +862,23 @@ function App() {
   const isAdmin = currentUser?.role === 'admin';
 
   return (
-    <div className="container">
+    <div className={`container ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <OfflineIndicator />
       {/* ===== SIDEBAR ===== */}
       <div className="sidebar">
         {/* Header */}
         <div className="sidebar-header">
-          <h1>Import SCM</h1>
-          <p className="sidebar-subtitle">Supply Chain Management</p>
+          <div className="sidebar-title">
+            <h1>Import SCM</h1>
+            <p className="sidebar-subtitle">Supply Chain Management</p>
+          </div>
+          <button
+            className="sidebar-collapse-btn"
+            onClick={() => setSidebarCollapsed(c => !c)}
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {sidebarCollapsed ? '»' : '«'}
+          </button>
         </div>
 
         {/* Search */}
@@ -917,9 +927,10 @@ function App() {
                 key={key}
                 className={`nav-item ${activeView === item.view ? 'active' : ''}`}
                 onClick={() => setActiveView(item.view)}
+                title={sidebarCollapsed ? item.label : undefined}
               >
                 <span className="nav-icon">{item.icon}</span>
-                {item.label}
+                <span className="nav-label">{item.label}</span>
                 {item.badge > 0 && <span className="nav-badge">{item.badge}</span>}
               </button>
             );
@@ -973,9 +984,9 @@ function App() {
               {renderSection('Finance', 'finance', ['rates', 'costing', 'costingRequests'])}
               {renderSection('Reports', 'reports', ['reports', 'advancedReports'])}
 
-              {/* External Resources — same nav style */}
-              {(!q || resourcesVisible.length > 0) && (
-                <div className="nav-section">
+              {/* External Resources — card at bottom */}
+              {!sidebarCollapsed && (!q || resourcesVisible.length > 0) && (
+                <div className="sidebar-resources">
                   <div className="nav-section-header" onClick={() => !q && toggleSection('resources')}>
                     Resources
                     <span className={`chevron ${resourcesOpen ? 'open' : ''}`}>▸</span>
@@ -986,10 +997,9 @@ function App() {
                         key={link.label}
                         className="nav-item"
                         onClick={() => window.open(link.url, '_blank')}
-                        style={{ opacity: 0.8 }}
                       >
                         <span className="nav-icon">{link.icon}</span>
-                        {link.label}
+                        <span className="nav-label">{link.label}</span>
                         <span className="nav-external">↗</span>
                       </button>
                     ))}
@@ -1001,7 +1011,7 @@ function App() {
         })()}
 
         {/* Quick Stats */}
-        <div style={{
+        <div className="sidebar-quick-stats" style={{
           margin: '0 12px 8px', padding: '10px 12px',
           backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: '8px',
           fontSize: '12px', color: 'rgba(255,255,255,0.7)'
@@ -1020,25 +1030,25 @@ function App() {
 
         {/* Footer */}
         <div className="sidebar-footer">
-          <button className="nav-item" onClick={() => setHelpOpen(true)}>
-            <span className="nav-icon">📚</span> Help & Guide
+          <button className="nav-item" onClick={() => setHelpOpen(true)} title={sidebarCollapsed ? 'Help & Guide' : undefined}>
+            <span className="nav-icon">📚</span> <span className="nav-label">Help & Guide</span>
           </button>
-          <button className="nav-item" onClick={() => setSettingsOpen(true)}>
-            <span className="nav-icon">⚙️</span> Settings
+          <button className="nav-item" onClick={() => setSettingsOpen(true)} title={sidebarCollapsed ? 'Settings' : undefined}>
+            <span className="nav-icon">⚙️</span> <span className="nav-label">Settings</span>
           </button>
-          <button className="nav-item" onClick={() => setNotificationPrefsOpen(true)}>
-            <span className="nav-icon">🔔</span> Notifications
+          <button className="nav-item" onClick={() => setNotificationPrefsOpen(true)} title={sidebarCollapsed ? 'Notifications' : undefined}>
+            <span className="nav-icon">🔔</span> <span className="nav-label">Notifications</span>
           </button>
-          <button className="nav-item" onClick={() => setShowSupplierPortal(true)}>
-            <span className="nav-icon">🏢</span> Supplier Portal
+          <button className="nav-item" onClick={() => setShowSupplierPortal(true)} title={sidebarCollapsed ? 'Supplier Portal' : undefined}>
+            <span className="nav-icon">🏢</span> <span className="nav-label">Supplier Portal</span>
           </button>
           {isAdmin && (
-            <button className={`nav-item ${activeView === 'users' ? 'active' : ''}`} onClick={() => setActiveView('users')}>
-              <span className="nav-icon">👥</span> User Management
+            <button className={`nav-item ${activeView === 'users' ? 'active' : ''}`} onClick={() => setActiveView('users')} title={sidebarCollapsed ? 'User Management' : undefined}>
+              <span className="nav-icon">👥</span> <span className="nav-label">User Management</span>
             </button>
           )}
-          <button className="nav-item logout" onClick={handleLogout}>
-            <span className="nav-icon">🚪</span> Logout
+          <button className="nav-item logout" onClick={handleLogout} title={sidebarCollapsed ? 'Logout' : undefined}>
+            <span className="nav-icon">🚪</span> <span className="nav-label">Logout</span>
           </button>
         </div>
       </div>
