@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getApiUrl } from '../config/api';
 import { authFetch } from '../utils/authFetch';
+import useAuthStore from '../stores/authStore';
 import {
   calculateAllTotals,
   formatCurrency,
@@ -122,6 +123,8 @@ const INITIAL_FORM_STATE = {
 };
 
 function ImportCosting() {
+  const userRole = useAuthStore(state => state.userRole);
+  const isAdmin = userRole === 'admin';
   const [estimates, setEstimates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -144,6 +147,12 @@ function ImportCosting() {
   const [selectedProduct, setSelectedProduct] = useState('all');
   const [selectedSupplier, setSelectedSupplier] = useState('all');
   const chartRef = useRef(null);
+
+  // Costing request state (for non-admin users)
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [requestForm, setRequestForm] = useState({ supplier_name: '', product_description: '', priority: 'normal', notes: '' });
+  const [requestSubmitting, setRequestSubmitting] = useState(false);
+  const [myRequests, setMyRequests] = useState([]);
 
   // Get unique products from estimates - filtered by selected supplier
   const allProducts = useMemo(() => {
@@ -272,6 +281,7 @@ function ImportCosting() {
     fetchEstimates();
     fetchExchangeRate();
     fetchSuppliers();
+    if (!isAdmin) fetchMyRequests();
   }, []);
 
   // Recalculate totals when form data changes
@@ -293,6 +303,41 @@ function ImportCosting() {
       setError('Failed to load cost estimates');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMyRequests = async () => {
+    try {
+      const response = await authFetch(getApiUrl('/api/costing-requests'));
+      if (response.ok) {
+        const result = await response.json();
+        setMyRequests(result.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch costing requests:', err);
+    }
+  };
+
+  const handleSubmitRequest = async () => {
+    setRequestSubmitting(true);
+    try {
+      const response = await authFetch(getApiUrl('/api/costing-requests'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestForm),
+      });
+      if (response.ok) {
+        setShowRequestModal(false);
+        setRequestForm({ supplier_name: '', product_description: '', priority: 'normal', notes: '' });
+        fetchMyRequests();
+      } else {
+        setError('Failed to submit costing request');
+      }
+    } catch (err) {
+      console.error('Failed to submit costing request:', err);
+      setError('Failed to submit costing request');
+    } finally {
+      setRequestSubmitting(false);
     }
   };
 
@@ -1436,15 +1481,27 @@ function ImportCosting() {
           >
             {showReports ? '✕ Close Reports' : '📊 Reports'}
           </button>
-          <button
-            onClick={() => { resetForm(); setShowForm(true); }}
-            style={{
-              padding: '10px 20px', backgroundColor: '#0ea5a8', color: 'white',
-              border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500'
-            }}
-          >
-            + New Estimate
-          </button>
+          {isAdmin ? (
+            <button
+              onClick={() => { resetForm(); setShowForm(true); }}
+              style={{
+                padding: '10px 20px', backgroundColor: '#0ea5a8', color: 'white',
+                border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500'
+              }}
+            >
+              + New Estimate
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowRequestModal(true)}
+              style={{
+                padding: '10px 20px', backgroundColor: '#f59e0b', color: 'white',
+                border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500'
+              }}
+            >
+              Request Costing
+            </button>
+          )}
         </div>
       </div>
 
@@ -1452,6 +1509,13 @@ function ImportCosting() {
         <div style={{ padding: '12px', backgroundColor: '#fef2f2', color: '#dc2626', borderRadius: '6px', marginBottom: '1rem' }}>
           {error}
           <button onClick={() => setError(null)} style={{ marginLeft: '12px', background: 'none', border: 'none', cursor: 'pointer' }}>x</button>
+        </div>
+      )}
+
+      {/* Pending Requests Banner (non-admin) */}
+      {!isAdmin && myRequests.filter(r => r.status === 'pending').length > 0 && (
+        <div style={{ padding: '12px', backgroundColor: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.85rem', color: '#92400e' }}>
+          You have <strong>{myRequests.filter(r => r.status === 'pending').length}</strong> pending costing request(s). An admin will prepare them for you.
         </div>
       )}
 
@@ -2402,12 +2466,14 @@ function ImportCosting() {
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                         <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-                          <button
-                            onClick={() => handleEdit(est)}
-                            style={{ padding: '6px 10px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
-                          >
-                            Edit
-                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleEdit(est)}
+                              style={{ padding: '6px 10px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
+                            >
+                              Edit
+                            </button>
+                          )}
                           <button
                             onClick={() => generatePDF(est)}
                             style={{ padding: '6px 10px', backgroundColor: '#8b5cf6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
@@ -2420,18 +2486,22 @@ function ImportCosting() {
                           >
                             Email
                           </button>
-                          <button
-                            onClick={() => handleDuplicate(est.id)}
-                            style={{ padding: '6px 10px', backgroundColor: '#6b7280', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
-                          >
-                            Copy
-                          </button>
-                          <button
-                            onClick={() => handleDelete(est.id)}
-                            style={{ padding: '6px 10px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
-                          >
-                            Del
-                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleDuplicate(est.id)}
+                              style={{ padding: '6px 10px', backgroundColor: '#6b7280', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
+                            >
+                              Copy
+                            </button>
+                          )}
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleDelete(est.id)}
+                              style={{ padding: '6px 10px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
+                            >
+                              Del
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -2499,6 +2569,92 @@ function ImportCosting() {
                 }}
               >
                 {emailSending ? 'Sending...' : 'Send Email'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Request Costing Modal (non-admin) */}
+      {showRequestModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center',
+          alignItems: 'center', zIndex: 2000
+        }}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '12px', padding: '1.5rem',
+            width: '500px', maxWidth: '90vw', maxHeight: '80vh', overflow: 'auto'
+          }}>
+            <h3 style={{ margin: '0 0 1rem', color: '#0b1f3a' }}>Request a Costing</h3>
+            <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '1rem' }}>
+              Submit a request and an admin will prepare the cost estimate for you.
+            </p>
+            <div style={{ display: 'grid', gap: '0.75rem' }}>
+              <div>
+                <label style={{ display: 'block', fontWeight: '500', fontSize: '0.85rem', marginBottom: '0.25rem' }}>Supplier Name</label>
+                <input
+                  type="text"
+                  value={requestForm.supplier_name}
+                  onChange={(e) => setRequestForm(prev => ({ ...prev, supplier_name: e.target.value }))}
+                  placeholder="e.g. ABC Trading Co."
+                  className="input"
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontWeight: '500', fontSize: '0.85rem', marginBottom: '0.25rem' }}>Product / Description</label>
+                <textarea
+                  value={requestForm.product_description}
+                  onChange={(e) => setRequestForm(prev => ({ ...prev, product_description: e.target.value }))}
+                  placeholder="Describe the product(s) you need costed..."
+                  rows={3}
+                  className="input"
+                  style={{ width: '100%', resize: 'vertical' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontWeight: '500', fontSize: '0.85rem', marginBottom: '0.25rem' }}>Priority</label>
+                <select
+                  value={requestForm.priority}
+                  onChange={(e) => setRequestForm(prev => ({ ...prev, priority: e.target.value }))}
+                  className="select"
+                  style={{ width: '100%' }}
+                >
+                  <option value="low">Low</option>
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontWeight: '500', fontSize: '0.85rem', marginBottom: '0.25rem' }}>Additional Notes</label>
+                <textarea
+                  value={requestForm.notes}
+                  onChange={(e) => setRequestForm(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Any additional context, deadlines, or details..."
+                  rows={2}
+                  className="input"
+                  style={{ width: '100%', resize: 'vertical' }}
+                />
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
+              <button
+                onClick={() => setShowRequestModal(false)}
+                style={{ padding: '10px 20px', backgroundColor: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitRequest}
+                disabled={requestSubmitting}
+                style={{
+                  padding: '10px 20px', backgroundColor: requestSubmitting ? '#9ca3af' : '#f59e0b', color: 'white',
+                  border: 'none', borderRadius: '6px', cursor: requestSubmitting ? 'not-allowed' : 'pointer', fontWeight: '500'
+                }}
+              >
+                {requestSubmitting ? 'Submitting...' : 'Submit Request'}
               </button>
             </div>
           </div>

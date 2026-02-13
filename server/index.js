@@ -49,6 +49,7 @@ import notificationsRouter from './routes/notifications.ts';
 import schedulerAdminRouter from './routes/schedulerAdmin.ts';
 import supplierPortalRouter from './routes/supplierPortal.ts';
 import costingRouter from './routes/costing.ts';
+import costingRequestsRouter from './routes/costingRequests.ts';
 
 import { helmetConfig, apiRateLimiter, authRateLimiter, authenticateToken } from './middleware/security.js';
 import { createSingleFileUpload, createMultipleFileUpload, handleUploadError, validateFilesPresent, verifyUploadPermission, generateSafeFilename } from './middleware/fileUpload.js';
@@ -170,6 +171,7 @@ app.use('/api/admin/scheduler', schedulerAdminRouter); // Auth required within r
 app.use('/api/notifications', notificationsRouter); // Auth required within router
 app.use('/api/supplier', supplierPortalRouter); // Supplier portal routes (auth within router)
 app.use('/api/costing', costingRouter); // Import costing routes (auth within router)
+app.use('/api/costing-requests', costingRequestsRouter); // Costing request routes (auth within router)
 
 /* ---------------- Endpoints ---------------- */
 // Create upload instances
@@ -335,6 +337,14 @@ async function start() {
       await addCostingColumns.default();
     } catch (error) {
       console.warn('⚠️  Costing migration warning:', error.message);
+      // Don't fail startup if migration has issues, but log them
+    }
+
+    try {
+      const addCostingRequestsTable = await import('./db/add-costing-requests-table.js');
+      await addCostingRequestsTable.default();
+    } catch (error) {
+      console.warn('⚠️  Costing requests migration warning:', error.message);
       // Don't fail startup if migration has issues, but log them
     }
 

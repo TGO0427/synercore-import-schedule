@@ -7,6 +7,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import CostingController from '../controllers/CostingController.js';
 import { authenticateToken } from '../middleware/security.js';
+import { requireAdmin } from '../middleware/auth.ts';
 import { logInfo, logError } from '../utils/logger.js';
 import EmailService from '../services/emailService.js';
 
@@ -115,6 +116,7 @@ router.get(
 router.post(
   '/',
   authenticateToken,
+  requireAdmin,
   createCostEstimateValidation,
   validate,
   asyncHandler(async (req: Request, res: Response) => {
@@ -136,6 +138,7 @@ router.post(
 router.put(
   '/:id',
   authenticateToken,
+  requireAdmin,
   updateCostEstimateValidation,
   validate,
   asyncHandler(async (req: Request, res: Response) => {
@@ -152,6 +155,7 @@ router.put(
 router.delete(
   '/:id',
   authenticateToken,
+  requireAdmin,
   [param('id').isString().notEmpty()],
   validate,
   asyncHandler(async (req: Request, res: Response) => {
@@ -168,6 +172,7 @@ router.delete(
 router.post(
   '/:id/duplicate',
   authenticateToken,
+  requireAdmin,
   [param('id').isString().notEmpty()],
   validate,
   asyncHandler(async (req: Request, res: Response) => {
@@ -234,6 +239,7 @@ router.get(
 router.post(
   '/exchange-rate/refresh',
   authenticateToken,
+  requireAdmin,
   asyncHandler(async (req: Request, res: Response) => {
     const rate = await CostingController.refreshExchangeRate();
     logInfo('Exchange rate refreshed');
@@ -248,6 +254,7 @@ router.post(
 router.post(
   '/exchange-rate/manual',
   authenticateToken,
+  requireAdmin,
   [body('rate').isFloat({ min: 0 })],
   validate,
   asyncHandler(async (req: Request, res: Response) => {

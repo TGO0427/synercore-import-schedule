@@ -22,6 +22,7 @@ import UserManagement from './components/UserManagement';
 import NotificationPreferences from './components/NotificationPreferences';
 import OfflineIndicator from './components/OfflineIndicator';
 import ImportCosting from './components/ImportCosting';
+import CostingRequests from './components/CostingRequests';
 import SupplierLogin from './pages/SupplierLogin';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -92,6 +93,9 @@ function App() {
 
   // Notification Preferences state
   const [notificationPrefsOpen, setNotificationPrefsOpen] = useState(false);
+
+  // Costing Requests badge count (admin only)
+  const [costingRequestCount, setCostingRequestCount] = useState(0);
 
   // Password Recovery state
   const [currentView, setCurrentView] = useState('login'); // 'login', 'forgotPassword', 'resetPassword'
@@ -207,6 +211,29 @@ function App() {
     createCustomAlert(alert.severity || 'info', alert.title, alert.description, alert.meta),
     ...prev
   ]);
+
+  // Poll for costing request count (admin only)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const currentUser = authUtils.getUser();
+    if (currentUser?.role !== 'admin') return;
+
+    const fetchRequestCount = async () => {
+      try {
+        const res = await authFetch(getApiUrl('/api/costing-requests/count'));
+        if (res.ok) {
+          const data = await res.json();
+          setCostingRequestCount(data.count || 0);
+        }
+      } catch (err) {
+        // Silently fail - not critical
+      }
+    };
+
+    fetchRequestCount();
+    const interval = setInterval(fetchRequestCount, 60000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
 
   // ---------- data: shipments ----------
   const fetchShipments = async (isBackgroundSync = false) => {
@@ -851,6 +878,13 @@ function App() {
         return <RatesQuotes showSuccess={showSuccess} showError={showError} loading={loading} />;
       case 'costing':
         return <ImportCosting />;
+      case 'costing-requests':
+        return isAdmin ? <CostingRequests /> : (
+          <div style={{ padding: '2rem', textAlign: 'center' }}>
+            <h2>Access Denied</h2>
+            <p>You need administrator privileges to view costing requests.</p>
+          </div>
+        );
       case 'workflow':
         return <PostArrivalWorkflow showSuccess={showSuccess} showError={showError} showWarning={showWarning} />;
       case 'stored': {
@@ -923,6 +957,7 @@ function App() {
           <li><button className={activeView === 'archives' ? 'active' : ''} onClick={() => setActiveView('archives')}>📦 Shipment Archives</button></li>
           <li><button className={activeView === 'rates' ? 'active' : ''} onClick={() => setActiveView('rates')}>💰 Rates & Quotes</button></li>
           <li><button className={activeView === 'costing' ? 'active' : ''} onClick={() => setActiveView('costing')}>📊 Import Costing</button></li>
+          {isAdmin && <li><button className={activeView === 'costing-requests' ? 'active' : ''} onClick={() => setActiveView('costing-requests')}>📋 Costing Requests{costingRequestCount > 0 ? ` (${costingRequestCount})` : ''}</button></li>}
           <li><button className={activeView === 'stored' ? 'active' : ''} onClick={() => setActiveView('stored')}>🏪 Warehouse Stored</button></li>
           <li style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
             <button onClick={() => setShowSupplierPortal(true)} style={{ width: '100%', textAlign: 'left', backgroundColor: '#1e7e8c' }} title="Access the supplier portal">🏢 Supplier Portal</button>
@@ -1143,6 +1178,42 @@ function App() {
                 </span>
               )}
             </button>
+            {isAdmin && costingRequestCount > 0 && (
+              <button
+                onClick={() => setActiveView('costing-requests')}
+                className="btn"
+                style={{
+                  position: 'relative',
+                  fontSize: '0.9rem',
+                  backgroundColor: '#f59e0b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '0.5rem 1rem',
+                  cursor: 'pointer'
+                }}
+                title="View costing requests"
+              >
+                Costing Requests
+                <span style={{
+                  position: 'absolute',
+                  top: '-8px',
+                  right: '-8px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  borderRadius: '50%',
+                  minWidth: '20px',
+                  height: '20px',
+                  fontSize: '0.7rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 'bold'
+                }}>
+                  {costingRequestCount}
+                </span>
+              </button>
+            )}
           </div>
         </div>
 
