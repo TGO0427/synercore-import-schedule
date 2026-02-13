@@ -589,42 +589,26 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
       {/* Warehouse Summary */}
       <div className="warehouse-summary" style={{ marginBottom: '1rem' }}>
         <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-900)' }}>Warehouse Summary - Total Pallets by Warehouse</h3>
-        <div className="stats-grid" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <div className="stats-grid">
           {Object.entries(warehouseTotals).map(([warehouse, total]) => (
-            <div 
-              key={warehouse} 
-              className="stat-card" 
+            <div
+              key={warehouse}
+              className={`stat-card ring-info clickable ${selectedWarehouse === warehouse ? 'active' : ''}`}
               onClick={() => handleWarehouseCardClick(warehouse)}
-              style={{ 
-                minWidth: '150px',
-                cursor: 'pointer',
-                backgroundColor: selectedWarehouse === warehouse ? 'var(--surface-2)' : 'white',
-                border: `2px solid ${selectedWarehouse === warehouse ? 'var(--info)' : 'var(--border)'}`,
-                borderRadius: '8px',
-                padding: '12px 16px',
-                transition: 'all 0.3s ease',
-                transform: selectedWarehouse === warehouse ? 'translateY(-1px)' : 'none',
-                boxShadow: selectedWarehouse === warehouse 
-                  ? '0 4px 12px rgba(102, 126, 234, 0.15)' 
-                  : '0 2px 6px rgba(0,0,0,0.1)'
-              }}
-              onMouseEnter={(e) => {
-                if (selectedWarehouse !== warehouse) {
-                  e.target.style.transform = 'translateY(-1px)';
-                  e.target.style.boxShadow = '0 3px 8px rgba(0,0,0,0.12)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (selectedWarehouse !== warehouse) {
-                  e.target.style.transform = 'none';
-                  e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
-                }
-              }}
             >
-              <h4 style={{ fontSize: '1.2rem', color: 'var(--info)', marginBottom: '0.25rem' }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: '50%', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', fontSize: 16,
+                backgroundColor: 'rgba(59,130,246,0.1)', marginBottom: 8,
+              }}>
+                🏭
+              </div>
+              <h3 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 4px', color: 'var(--navy-900)' }}>
                 {Number(total).toLocaleString()}
-              </h4>
-              <p style={{ fontSize: '0.9rem', margin: 0 }}>{warehouse}</p>
+              </h3>
+              <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>
+                {warehouse}
+              </p>
             </div>
           ))}
         </div>

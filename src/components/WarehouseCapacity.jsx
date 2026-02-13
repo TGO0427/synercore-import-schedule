@@ -1025,11 +1025,21 @@ function WarehouseCapacity({ shipments }) {
     
     const getStatusColor = (status) => {
       switch (status) {
-        case 'critical': return '#f44336';
-        case 'warning': return '#ff9800';
-        case 'good': return '#4caf50';
-        case 'low': return '#2196f3';
-        default: return '#9e9e9e';
+        case 'critical': return 'var(--danger)';
+        case 'warning': return 'var(--warning)';
+        case 'good': return 'var(--success)';
+        case 'low': return 'var(--info)';
+        default: return 'var(--text-500)';
+      }
+    };
+
+    const getStatusRing = (status) => {
+      switch (status) {
+        case 'critical': return 'ring-danger';
+        case 'warning': return 'ring-warning';
+        case 'good': return 'ring-success';
+        case 'low': return 'ring-info';
+        default: return 'ring-accent';
       }
     };
 
@@ -1044,31 +1054,11 @@ function WarehouseCapacity({ shipments }) {
     };
 
     return (
-      <div 
-        className="capacity-card" 
+      <div
+        className={`stat-card ${getStatusRing(stats.status)} ${onCardClick ? 'clickable' : ''} ${isSelected ? 'active' : ''}`}
         onClick={() => onCardClick && onCardClick(warehouse)}
-        style={{
-          backgroundColor: isSelected ? '#f8f9ff' : 'white',
-          border: `3px solid ${getStatusColor(stats.status)}`,
-          borderRadius: '12px',
-          padding: '1.5rem',
-          boxShadow: isSelected ? '0 8px 20px rgba(0,0,0,0.15)' : '0 4px 12px rgba(0,0,0,0.1)',
-          transition: 'all 0.3s ease',
-          cursor: onCardClick ? 'pointer' : 'default',
-          transform: isSelected ? 'translateY(-2px)' : 'none'
-        }}
-        onMouseEnter={(e) => {
-          if (onCardClick && !isSelected) {
-            e.target.style.transform = 'translateY(-1px)';
-            e.target.style.boxShadow = '0 6px 16px rgba(0,0,0,0.12)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (onCardClick && !isSelected) {
-            e.target.style.transform = 'none';
-            e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-          }
-        }}>
+        style={{ padding: '1.5rem' }}
+      >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
           <h3 style={{ color: 'var(--text-900)', fontSize: '1.2rem', margin: 0 }}>{warehouse}</h3>
           <span style={{
@@ -1094,7 +1084,7 @@ function WarehouseCapacity({ shipments }) {
           <div style={{
             width: '100%',
             height: '20px',
-            backgroundColor: '#f0f0f0',
+            backgroundColor: 'var(--surface-2)',
             borderRadius: '10px',
             overflow: 'hidden',
             position: 'relative'
@@ -1114,7 +1104,7 @@ function WarehouseCapacity({ shipments }) {
                 transform: 'translateY(-50%)',
                 fontSize: '0.7rem',
                 fontWeight: 'bold',
-                color: '#f44336'
+                color: 'var(--danger)'
               }}>
                 OVERFLOW
               </div>
@@ -1140,7 +1130,7 @@ function WarehouseCapacity({ shipments }) {
               </div>
               <span style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>bins</span>
             </div>
-            <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '0.25rem' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-500)', marginTop: '0.25rem' }}>
               (Stock: {stats.currentStock.toLocaleString()} pallets)
             </div>
           </div>
@@ -1149,7 +1139,7 @@ function WarehouseCapacity({ shipments }) {
             <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--warning)' }}>
               {(stats.currentWeekIncoming || 0).toLocaleString()}
             </div>
-            <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '0.25rem' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-500)', marginTop: '0.25rem' }}>
               (Month total: {stats.incoming.toLocaleString()})
             </div>
           </div>
@@ -1158,7 +1148,7 @@ function WarehouseCapacity({ shipments }) {
             <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--success)' }}>
               {stats.totalBins}
             </div>
-            <div style={{ fontSize: '0.8rem', color: '#888' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-500)' }}>
               (Max: {stats.maxCapacity.toLocaleString()} pallets)
             </div>
           </div>
@@ -1167,11 +1157,11 @@ function WarehouseCapacity({ shipments }) {
             <div style={{
               fontWeight: 'bold',
               fontSize: '1.1rem',
-              color: stats.availableBins >= 0 ? 'var(--success)' : '#f44336' 
+              color: stats.availableBins >= 0 ? 'var(--success)' : 'var(--danger)'
             }}>
               {stats.availableBins >= 0 ? stats.availableBins : `(${Math.abs(stats.availableBins)})`}
             </div>
-            <div style={{ fontSize: '0.8rem', color: '#888' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-500)' }}>
               After incoming: {stats.projectedAvailableBins >= 0 ? stats.projectedAvailableBins : `(${Math.abs(stats.projectedAvailableBins)})`}
             </div>
           </div>
