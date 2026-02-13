@@ -255,6 +255,11 @@ body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI
   margin-bottom: var(--sp-5);
 }
 
+/* ----------- Page Header ----------- */
+.page-header { margin-bottom: var(--sp-4); }
+.page-header h2 { margin: 0; font-size: 1.35rem; font-weight: 700; color: var(--navy-900); }
+.page-header p  { margin: 4px 0 0; font-size: 0.85rem; color: var(--text-500); }
+
 /* ----------- Cards / Surfaces ----------- */
 .card {
   background: var(--surface);

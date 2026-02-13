@@ -129,7 +129,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
 
   const getStatusBadge = (status) => {
     const statusColors = {
-      stored: '#28a745'
+      stored: 'var(--success)'
     };
 
     return (
@@ -139,7 +139,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
         fontSize: '0.8rem',
         fontWeight: 'bold',
         color: 'white',
-        backgroundColor: statusColors[status] || '#6c757d'
+        backgroundColor: statusColors[status] || 'var(--text-500)'
       }}>
         {status.toUpperCase()}
       </span>
@@ -209,10 +209,11 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
 
   return (
     <div className="window-content">
+      <div className="brand-strip" />
       <div style={{ marginBottom: '1rem' }}>
-        <h2 style={{ marginBottom: '1rem', color: '#2c3e50' }}>
-          📋 Warehouse Storage Report
-        </h2>
+        <div className="page-header">
+          <h2>Warehouse Storage Report</h2>
+        </div>
         <div style={{
           display: 'flex',
           gap: '1rem',
@@ -226,7 +227,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
               padding: '8px 12px',
-              border: '1px solid #ddd',
+              border: '1px solid var(--border)',
               borderRadius: '4px',
               fontSize: '14px',
               minWidth: '300px'
@@ -237,7 +238,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
               onClick={() => setShowWeekDropdown(!showWeekDropdown)}
               style={{
                 padding: '8px 12px',
-                border: '1px solid #ddd',
+                border: '1px solid var(--border)',
                 borderRadius: '4px',
                 fontSize: '14px',
                 backgroundColor: 'white',
@@ -246,7 +247,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                 alignItems: 'center',
                 gap: '8px'
               }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
+              onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--surface-2)'}
               onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
             >
               📅 Week {weekFilters.length > 0 ? `(${weekFilters.length})` : ''}
@@ -258,7 +259,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                 top: '100%',
                 left: 0,
                 backgroundColor: 'white',
-                border: '1px solid #ddd',
+                border: '1px solid var(--border)',
                 borderRadius: '4px',
                 marginTop: '4px',
                 maxHeight: '200px',
@@ -272,7 +273,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                     display: 'block',
                     padding: '8px 12px',
                     cursor: 'pointer',
-                    borderBottom: '1px solid #f0f0f0',
+                    borderBottom: '1px solid var(--border)',
                     fontSize: '14px',
                     userSelect: 'none'
                   }}>
@@ -286,17 +287,17 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                   </label>
                 ))}
                 {availableWeeks.length === 0 && (
-                  <div style={{ padding: '12px', color: '#999', textAlign: 'center' }}>
+                  <div style={{ padding: '12px', color: 'var(--text-500)', textAlign: 'center' }}>
                     No weeks available
                   </div>
                 )}
               </div>
             )}
           </div>
-          <div style={{ color: '#666', fontSize: '14px' }}>
+          <div style={{ color: 'var(--text-500)', fontSize: '14px' }}>
             {filteredAndSortedShipments.length} stored shipment(s)
             {activeShipmentsCount > 0 && (
-              <span style={{ color: '#17a2b8', marginLeft: '8px' }}>
+              <span style={{ color: 'var(--info)', marginLeft: '8px' }}>
                 ({activeShipmentsCount} active)
               </span>
             )}
@@ -307,7 +308,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
               disabled={archivingAll}
               style={{
                 padding: '8px 16px',
-                backgroundColor: archivingAll ? '#6c757d' : '#17a2b8',
+                backgroundColor: archivingAll ? 'var(--text-500)' : 'var(--info)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
@@ -319,8 +320,8 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                 gap: '6px',
                 marginLeft: 'auto'
               }}
-              onMouseEnter={(e) => !archivingAll && (e.target.style.backgroundColor = '#138496')}
-              onMouseLeave={(e) => !archivingAll && (e.target.style.backgroundColor = '#17a2b8')}
+              onMouseEnter={(e) => !archivingAll && (e.target.style.backgroundColor = 'var(--accent-600)')}
+              onMouseLeave={(e) => !archivingAll && (e.target.style.backgroundColor = 'var(--info)')}
             >
               {archivingAll ? (
                 <>⏳ Archiving...</>
@@ -336,30 +337,28 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
         <div style={{
           textAlign: 'center',
           padding: '2rem',
-          color: '#666',
-          backgroundColor: '#f8f9fa',
+          color: 'var(--text-500)',
+          backgroundColor: 'var(--surface-2)',
           borderRadius: '8px',
-          border: '1px solid #e9ecef'
+          border: '1px solid var(--border)'
         }}>
           <h3>No stored shipments found</h3>
           <p>Shipments that have been received and stored in the warehouse will appear here for reference.</p>
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
-          <table style={{
+          <table className="dash-panel" style={{
             width: '100%',
             borderCollapse: 'collapse',
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            overflow: 'hidden',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            padding: 0,
+            overflow: 'hidden'
           }}>
-            <thead style={{ backgroundColor: '#f8f9fa' }}>
+            <thead style={{ backgroundColor: 'var(--surface-2)' }}>
               <tr>
                 <th style={{
                   padding: '12px',
                   textAlign: 'left',
-                  borderBottom: '1px solid #dee2e6',
+                  borderBottom: '1px solid var(--border)',
                   cursor: 'pointer',
                   userSelect: 'none'
                 }} onClick={() => handleSort('orderRef')}>
@@ -368,7 +367,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                 <th style={{
                   padding: '12px',
                   textAlign: 'left',
-                  borderBottom: '1px solid #dee2e6',
+                  borderBottom: '1px solid var(--border)',
                   cursor: 'pointer',
                   userSelect: 'none'
                 }} onClick={() => handleSort('supplier')}>
@@ -377,7 +376,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                 <th style={{
                   padding: '12px',
                   textAlign: 'left',
-                  borderBottom: '1px solid #dee2e6',
+                  borderBottom: '1px solid var(--border)',
                   cursor: 'pointer',
                   userSelect: 'none'
                 }} onClick={() => handleSort('productName')}>
@@ -386,7 +385,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                 <th style={{
                   padding: '12px',
                   textAlign: 'left',
-                  borderBottom: '1px solid #dee2e6',
+                  borderBottom: '1px solid var(--border)',
                   cursor: 'pointer',
                   userSelect: 'none'
                 }} onClick={() => handleSort('quantity')}>
@@ -395,7 +394,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                 <th style={{
                   padding: '12px',
                   textAlign: 'left',
-                  borderBottom: '1px solid #dee2e6',
+                  borderBottom: '1px solid var(--border)',
                   cursor: 'pointer',
                   userSelect: 'none'
                 }} onClick={() => handleSort('receivingWarehouse')}>
@@ -404,7 +403,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                 <th style={{
                   padding: '12px',
                   textAlign: 'left',
-                  borderBottom: '1px solid #dee2e6',
+                  borderBottom: '1px solid var(--border)',
                   cursor: 'pointer',
                   userSelect: 'none'
                 }} onClick={() => handleSort('storedDate')}>
@@ -413,14 +412,14 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                 <th style={{
                   padding: '12px',
                   textAlign: 'left',
-                  borderBottom: '1px solid #dee2e6'
+                  borderBottom: '1px solid var(--border)'
                 }}>
                   Status
                 </th>
                 <th style={{
                   padding: '12px',
                   textAlign: 'center',
-                  borderBottom: '1px solid #dee2e6'
+                  borderBottom: '1px solid var(--border)'
                 }}>
                   Actions
                 </th>
@@ -429,10 +428,10 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
             <tbody>
               {filteredAndSortedShipments.map((shipment) => (
                 <tr key={shipment.id} style={{
-                  borderBottom: '1px solid #dee2e6',
+                  borderBottom: '1px solid var(--border)',
                   transition: 'background-color 0.2s'
                 }}
-                onMouseEnter={(e) => e.target.closest('tr').style.backgroundColor = '#f8f9fa'}
+                onMouseEnter={(e) => e.target.closest('tr').style.backgroundColor = 'var(--surface-2)'}
                 onMouseLeave={(e) => e.target.closest('tr').style.backgroundColor = 'white'}>
                   <td style={{ padding: '12px', fontWeight: 'bold' }}>
                     {shipment.orderRef}
@@ -461,7 +460,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                         fontSize: '0.75rem',
                         fontWeight: 'bold',
                         color: 'white',
-                        backgroundColor: '#6c757d'
+                        backgroundColor: 'var(--text-500)'
                       }}>
                         ARCHIVED
                       </span>
@@ -472,15 +471,15 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                       onClick={() => onArchiveShipment ? onArchiveShipment(shipment.id) : onDeleteShipment(shipment.id)}
                       style={{
                         padding: '6px 12px',
-                        backgroundColor: '#17a2b8',
+                        backgroundColor: 'var(--info)',
                         color: 'white',
                         border: 'none',
                         borderRadius: '4px',
                         cursor: 'pointer',
                         fontSize: '12px'
                       }}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = '#138496'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = '#17a2b8'}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--accent-600)'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--info)'}
                     >
                       Archive
                     </button>

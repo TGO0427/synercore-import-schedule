@@ -294,13 +294,9 @@ function ArchiveView() {
   const ArchiveChart = () => {
     if (filteredArchives.length === 0) {
       return (
-        <div style={{
+        <div className="dash-panel" style={{
           textAlign: 'center',
-          padding: '3rem',
-          color: '#666',
-          backgroundColor: 'white',
-          borderRadius: '12px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+          color: 'var(--text-500)'
         }}>
           <h3>No Archives Found</h3>
           <p>No archived shipments found for {monthOptions.find(m => m.value === selectedMonth)?.label}</p>
@@ -311,9 +307,9 @@ function ArchiveView() {
     // Group archives by type for visualization
     const archiveTypeData = Object.entries(monthlyStats.archiveTypes).map(([type, count], index) => {
       const colors = {
-        'Custom Archive': '#4caf50',
-        'Manual Archive': '#2196f3',
-        'Auto Archive': '#ff9800',
+        'Custom Archive': 'var(--success)',
+        'Manual Archive': 'var(--info)',
+        'Auto Archive': 'var(--warning)',
         'Other': '#9e9e9e'
       };
 
@@ -385,13 +381,8 @@ function ArchiveView() {
         </div>
 
         {/* Archive Types Breakdown */}
-        <div style={{
-          backgroundColor: 'white',
-          padding: '2rem',
-          borderRadius: '12px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-        }}>
-          <h3 style={{ marginBottom: '1.5rem', color: '#2c3e50' }}>📊 Archive Types Distribution</h3>
+        <div className="dash-panel">
+          <h3 style={{ marginBottom: '1.5rem', color: 'var(--text-900)' }}>Archive Types Distribution</h3>
 
           <div style={{ display: 'grid', gap: '1rem' }}>
             {archiveTypeData.map(({ type, count, color, percentage }) => (
@@ -417,7 +408,7 @@ function ArchiveView() {
                   flex: 1,
                   position: 'relative',
                   height: '30px',
-                  backgroundColor: '#f0f0f0',
+                  backgroundColor: 'var(--surface-2)',
                   borderRadius: '15px',
                   overflow: 'hidden'
                 }}>
@@ -436,7 +427,7 @@ function ArchiveView() {
                     transform: 'translate(-50%, -50%)',
                     fontSize: '0.8rem',
                     fontWeight: 'bold',
-                    color: parseFloat(percentage) > 30 ? 'white' : '#333'
+                    color: parseFloat(percentage) > 30 ? 'white' : 'var(--text-900)'
                   }}>
                     {count} ({percentage}%)
                   </div>
@@ -447,13 +438,8 @@ function ArchiveView() {
         </div>
 
         {/* Daily Archive Activity */}
-        <div style={{
-          backgroundColor: 'white',
-          padding: '2rem',
-          borderRadius: '12px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-        }}>
-          <h3 style={{ marginBottom: '1.5rem', color: '#2c3e50' }}>📅 Archive Activity by Day</h3>
+        <div className="dash-panel">
+          <h3 style={{ marginBottom: '1.5rem', color: 'var(--text-900)' }}>Archive Activity by Day</h3>
 
           <div style={{
             display: 'flex',
@@ -481,7 +467,7 @@ function ArchiveView() {
                   <div style={{
                     width: '20px',
                     height: `${barHeight}px`,
-                    backgroundColor: shipments > 0 ? '#4caf50' : '#e0e0e0',
+                    backgroundColor: shipments > 0 ? 'var(--success)' : 'var(--border)',
                     borderRadius: '3px 3px 0 0',
                     marginBottom: '4px',
                     position: 'relative',
@@ -498,7 +484,7 @@ function ArchiveView() {
                         transform: 'translateX(-50%)',
                         fontSize: '0.7rem',
                         fontWeight: 'bold',
-                        color: '#4caf50',
+                        color: 'var(--success)',
                         marginBottom: '2px'
                       }}>
                         {shipments}
@@ -508,7 +494,7 @@ function ArchiveView() {
 
                   <div style={{
                     fontSize: '0.7rem',
-                    color: '#666',
+                    color: 'var(--text-500)',
                     fontWeight: '500'
                   }}>
                     {day}
@@ -576,12 +562,8 @@ function ArchiveView() {
               shipment.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
               shipment.finalPod?.toLowerCase().includes(searchTerm.toLowerCase())
             ).map((shipment) => (
-              <div key={shipment.id} style={{
-                backgroundColor: 'white',
-                border: '1px solid #e0e0e0',
-                borderRadius: '12px',
-                padding: '1.5rem',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              <div key={shipment.id} className="dash-panel" style={{
+                border: '1px solid var(--border)'
               }}>
                 {/* Header */}
                 <div style={{
@@ -590,13 +572,13 @@ function ArchiveView() {
                   alignItems: 'flex-start',
                   marginBottom: '1.5rem',
                   paddingBottom: '1rem',
-                  borderBottom: '2px solid #f0f0f0'
+                  borderBottom: '2px solid var(--border)'
                 }}>
                   <div>
-                    <h3 style={{ margin: '0 0 0.5rem 0', color: '#333', fontSize: '1.2rem' }}>
+                    <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-900)', fontSize: '1.2rem' }}>
                       {shipment.supplier}
                     </h3>
-                    <div style={{ color: '#666', fontSize: '0.9rem' }}>
+                    <div style={{ color: 'var(--text-500)', fontSize: '0.9rem' }}>
                       📦 {shipment.orderRef}
                     </div>
                   </div>
@@ -604,9 +586,9 @@ function ArchiveView() {
                     <span style={{
                       display: 'inline-block',
                       padding: '0.5rem 1rem',
-                      backgroundColor: shipment.latestStatus === 'stored' ? '#28a745' :
-                                      shipment.latestStatus === 'rejected' ? '#dc3545' :
-                                      shipment.latestStatus === 'inspection_failed' ? '#ffc107' : '#17a2b8',
+                      backgroundColor: shipment.latestStatus === 'stored' ? 'var(--success)' :
+                                      shipment.latestStatus === 'rejected' ? 'var(--danger)' :
+                                      shipment.latestStatus === 'inspection_failed' ? 'var(--warning)' : 'var(--info)',
                       color: 'white',
                       borderRadius: '20px',
                       fontSize: '0.85rem',
@@ -642,34 +624,34 @@ function ArchiveView() {
                   marginBottom: '1.5rem'
                 }}>
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: '#999', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-500)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
                       Product
                     </div>
-                    <div style={{ fontSize: '0.95rem', color: '#333', fontWeight: '500' }}>
+                    <div style={{ fontSize: '0.95rem', color: 'var(--text-900)', fontWeight: '500' }}>
                       {shipment.productName}
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: '#999', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-500)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
                       Destination
                     </div>
-                    <div style={{ fontSize: '0.95rem', color: '#333', fontWeight: '500' }}>
+                    <div style={{ fontSize: '0.95rem', color: 'var(--text-900)', fontWeight: '500' }}>
                       📍 {shipment.finalPod}
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: '#999', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-500)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
                       Quantity
                     </div>
-                    <div style={{ fontSize: '0.95rem', color: '#333', fontWeight: '500' }}>
+                    <div style={{ fontSize: '0.95rem', color: 'var(--text-900)', fontWeight: '500' }}>
                       {shipment.quantity?.toLocaleString()} units
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: '#999', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-500)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
                       Week
                     </div>
-                    <div style={{ fontSize: '0.95rem', color: '#333', fontWeight: '500' }}>
+                    <div style={{ fontSize: '0.95rem', color: 'var(--text-900)', fontWeight: '500' }}>
                       Week {shipment.weekNumber}
                     </div>
                   </div>
@@ -678,12 +660,12 @@ function ArchiveView() {
                 {/* Workflow Timeline */}
                 {(shipment.unloadingStartDate || shipment.inspectionDate || shipment.receivingDate || shipment.rejectionDate) && (
                   <div style={{
-                    backgroundColor: '#f8f9fa',
+                    backgroundColor: 'var(--surface-2)',
                     borderRadius: '8px',
                     padding: '1rem',
                     marginBottom: '1rem'
                   }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: '600', color: '#333', marginBottom: '0.75rem' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-900)', marginBottom: '0.75rem' }}>
                       📋 Workflow Timeline
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -692,7 +674,7 @@ function ArchiveView() {
                           <span style={{ fontSize: '1.2rem' }}>🚚</span>
                           <div>
                             <div style={{ fontSize: '0.8rem', fontWeight: '500' }}>Unloading Started</div>
-                            <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-500)' }}>
                               {new Date(shipment.unloadingStartDate).toLocaleString()}
                             </div>
                           </div>
@@ -706,11 +688,11 @@ function ArchiveView() {
                               Inspection {shipment.inspectionStatus === 'passed' ? '✅ Passed' :
                                          shipment.inspectionStatus === 'failed' ? '❌ Failed' : ''}
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-500)' }}>
                               By {shipment.inspectedBy} on {new Date(shipment.inspectionDate).toLocaleDateString()}
                             </div>
                             {shipment.inspectionNotes && (
-                              <div style={{ fontSize: '0.75rem', color: '#666', fontStyle: 'italic', marginTop: '0.25rem' }}>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-500)', fontStyle: 'italic', marginTop: '0.25rem' }}>
                                 "{shipment.inspectionNotes}"
                               </div>
                             )}
@@ -722,16 +704,16 @@ function ArchiveView() {
                           <span style={{ fontSize: '1.2rem' }}>📋</span>
                           <div>
                             <div style={{ fontSize: '0.8rem', fontWeight: '500' }}>Receiving Completed</div>
-                            <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-500)' }}>
                               By {shipment.receivedBy} on {new Date(shipment.receivingDate).toLocaleDateString()}
                             </div>
                             {shipment.receivedQuantity !== null && (
-                              <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-500)' }}>
                                 Received: {shipment.receivedQuantity} / {shipment.quantity} units
                               </div>
                             )}
                             {shipment.receivingNotes && (
-                              <div style={{ fontSize: '0.75rem', color: '#666', fontStyle: 'italic', marginTop: '0.25rem' }}>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-500)', fontStyle: 'italic', marginTop: '0.25rem' }}>
                                 "{shipment.receivingNotes}"
                               </div>
                             )}
@@ -742,14 +724,14 @@ function ArchiveView() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <span style={{ fontSize: '1.2rem' }}>↩️</span>
                           <div>
-                            <div style={{ fontSize: '0.8rem', fontWeight: '500', color: '#dc3545' }}>
+                            <div style={{ fontSize: '0.8rem', fontWeight: '500', color: 'var(--danger)' }}>
                               Rejected/Returned to Supplier
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-500)' }}>
                               By {shipment.rejectedBy} on {new Date(shipment.rejectionDate).toLocaleDateString()}
                             </div>
                             {shipment.rejectionReason && (
-                              <div style={{ fontSize: '0.75rem', color: '#dc3545', fontStyle: 'italic', marginTop: '0.25rem' }}>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--danger)', fontStyle: 'italic', marginTop: '0.25rem' }}>
                                 Reason: "{shipment.rejectionReason}"
                               </div>
                             )}
@@ -767,7 +749,7 @@ function ArchiveView() {
                     gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
                     gap: '1rem',
                     fontSize: '0.85rem',
-                    color: '#666'
+                    color: 'var(--text-500)'
                   }}>
                     {shipment.cbm && (
                       <div>
@@ -830,7 +812,7 @@ function ArchiveView() {
                     border: 'none',
                     fontSize: '1.5rem',
                     cursor: 'pointer',
-                    color: '#666'
+                    color: 'var(--text-500)'
                   }}
                 >
                   ✕
@@ -1052,7 +1034,7 @@ function ArchiveView() {
                     onClick={saveShipmentEdit}
                     style={{
                       padding: '0.75rem 1.5rem',
-                      backgroundColor: '#28a745',
+                      backgroundColor: 'var(--success)',
                       color: 'white',
                       border: 'none',
                       borderRadius: '6px',
@@ -1073,10 +1055,11 @@ function ArchiveView() {
 
   return (
     <div className="product-view">
+      <div className="brand-strip" />
       <div className="warehouse-summary">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <div>
-            <h2>📦 Shipment Archives</h2>
+          <div className="page-header" style={{ marginBottom: 0 }}>
+            <h2>Shipment Archives</h2>
             <p>View archived shipment records for {monthOptions.find(m => m.value === selectedMonth)?.label}</p>
           </div>
 
@@ -1106,8 +1089,8 @@ function ArchiveView() {
                 onClick={() => setViewMode('chart')}
                 style={{
                   padding: '8px 12px',
-                  backgroundColor: viewMode === 'chart' ? '#667eea' : 'white',
-                  color: viewMode === 'chart' ? 'white' : '#333',
+                  backgroundColor: viewMode === 'chart' ? 'var(--info)' : 'white',
+                  color: viewMode === 'chart' ? 'white' : 'var(--text-900)',
                   border: 'none',
                   cursor: 'pointer',
                   fontSize: '14px'
@@ -1119,8 +1102,8 @@ function ArchiveView() {
                 onClick={() => setViewMode('table')}
                 style={{
                   padding: '8px 12px',
-                  backgroundColor: viewMode === 'table' ? '#667eea' : 'white',
-                  color: viewMode === 'table' ? 'white' : '#333',
+                  backgroundColor: viewMode === 'table' ? 'var(--info)' : 'white',
+                  color: viewMode === 'table' ? 'white' : 'var(--text-900)',
                   border: 'none',
                   cursor: 'pointer',
                   fontSize: '14px'
@@ -1133,13 +1116,13 @@ function ArchiveView() {
         </div>
       </div>
 
-      <div style={{ padding: '2rem', backgroundColor: '#f8f9fc', minHeight: '100vh' }}>
+      <div style={{ padding: '2rem', minHeight: '100vh' }}>
         {loading && (
           <div className="loading">Loading archives...</div>
         )}
 
         {!loading && archives.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-500)' }}>
             <h3>No Archives Found</h3>
             <p>Archived shipments will appear here when you archive completed or stored shipments.</p>
           </div>
@@ -1163,7 +1146,7 @@ function ArchiveView() {
                   flex: 1
                 }}
               />
-              <div style={{ fontSize: '14px', color: '#666' }}>
+              <div style={{ fontSize: '14px', color: 'var(--text-500)' }}>
                 Showing {filteredArchives.length} archives (Data Backup Archives excluded)
               </div>
             </div>
@@ -1219,7 +1202,7 @@ function ArchiveView() {
                                 onClick={() => handleRenameArchive(archive.fileName, newName)}
                                 style={{
                                   padding: '4px 8px',
-                                  backgroundColor: '#28a745',
+                                  backgroundColor: 'var(--success)',
                                   color: 'white',
                                   border: 'none',
                                   borderRadius: '4px',
@@ -1233,7 +1216,7 @@ function ArchiveView() {
                                 onClick={cancelEditing}
                                 style={{
                                   padding: '4px 8px',
-                                  backgroundColor: '#dc3545',
+                                  backgroundColor: 'var(--danger)',
                                   color: 'white',
                                   border: 'none',
                                   borderRadius: '4px',

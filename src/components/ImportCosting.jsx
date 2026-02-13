@@ -1394,7 +1394,7 @@ function ImportCosting() {
   // Render input field helper
   const renderInput = (label, field, type = 'text', options = {}) => (
     <div style={{ marginBottom: '12px' }}>
-      <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
+      <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>
         {label}
       </label>
       <input
@@ -1402,7 +1402,7 @@ function ImportCosting() {
         value={formData[field] || ''}
         onChange={(e) => handleInputChange(field, type === 'number' ? parseFloat(e.target.value) || '' : e.target.value)}
         className="input"
-        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #ddd' }}
+        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}
         {...options}
       />
     </div>
@@ -1411,14 +1411,14 @@ function ImportCosting() {
   // Render select field helper
   const renderSelect = (label, field, options) => (
     <div style={{ marginBottom: '12px' }}>
-      <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
+      <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>
         {label}
       </label>
       <select
         value={formData[field] || ''}
         onChange={(e) => handleInputChange(field, e.target.value)}
         className="select"
-        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #ddd' }}
+        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}
       >
         <option value="">Select...</option>
         {options.map(opt => (
@@ -1431,7 +1431,7 @@ function ImportCosting() {
   // Render currency input
   const renderCurrencyInput = (label, field, currency = 'ZAR') => (
     <div style={{ marginBottom: '12px' }}>
-      <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
+      <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>
         {label} ({currency})
       </label>
       <input
@@ -1439,7 +1439,7 @@ function ImportCosting() {
         value={formData[field] || ''}
         onChange={(e) => handleInputChange(field, parseFloat(e.target.value) || 0)}
         className="input"
-        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #ddd' }}
+        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}
         min="0"
         step="0.01"
       />
@@ -1456,18 +1456,19 @@ function ImportCosting() {
 
   return (
     <div style={{ padding: '1.5rem' }}>
+      <div className="brand-strip" />
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <div>
+        <div className="page-header">
           <h2 style={{ margin: 0, fontSize: '1.5rem', color: '#0b1f3a' }}>Import Costing</h2>
-          <p style={{ margin: '0.25rem 0 0', color: '#666', fontSize: '0.9rem' }}>
+          <p style={{ margin: '0.25rem 0 0', color: 'var(--text-500)', fontSize: '0.9rem' }}>
             FCL Import Cost Comparison
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           {exchangeRate && (
             <div style={{ padding: '8px 12px', backgroundColor: '#f0f9ff', borderRadius: '6px', fontSize: '0.85rem' }}>
-              <span style={{ color: '#666' }}>Market Rate: </span>
+              <span style={{ color: 'var(--text-500)' }}>Market Rate: </span>
               <strong>{formatNumber(exchangeRate.rate, 4)}</strong>
               <span style={{ color: '#888', marginLeft: '4px', fontSize: '0.75rem' }}>(ref only - use Finex SA)</span>
             </div>
@@ -1521,13 +1522,13 @@ function ImportCosting() {
 
       {/* Reports Section */}
       {showReports && (
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '1.5rem', overflow: 'hidden' }}>
+        <div className="dash-panel" style={{ marginBottom: '1.5rem', overflow: 'hidden' }}>
           <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f5f3ff' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
               <h3 style={{ margin: 0, color: '#5b21b6', fontSize: '1.1rem' }}>📊 Cost Analysis by Supplier</h3>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <label style={{ fontSize: '0.85rem', color: '#666' }}>Supplier:</label>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-500)' }}>Supplier:</label>
                   <select
                     value={selectedSupplier}
                     onChange={(e) => {
@@ -1549,7 +1550,7 @@ function ImportCosting() {
                   </select>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <label style={{ fontSize: '0.85rem', color: '#666' }}>Product:</label>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-500)' }}>Product:</label>
                   <select
                     value={selectedProduct}
                     onChange={(e) => setSelectedProduct(e.target.value)}
@@ -1678,7 +1679,7 @@ function ImportCosting() {
                     </thead>
                     <tbody>
                       {getSupplierChartData.supplierDetails.map((supplier, idx) => (
-                        <tr key={supplier.name} style={{ backgroundColor: idx % 2 === 0 ? 'white' : '#f9fafb' }}>
+                        <tr key={supplier.name} style={{ backgroundColor: idx % 2 === 0 ? 'white' : 'var(--surface-2)' }}>
                           <td style={{ padding: '10px 12px', fontWeight: '500' }}>{supplier.name}</td>
                           <td style={{ padding: '10px 12px', textAlign: 'right' }}>{supplier.estimateCount}</td>
                           <td style={{ padding: '10px 12px', textAlign: 'right' }}>{formatNumber(supplier.totalWeight)} kg</td>
@@ -1721,7 +1722,7 @@ function ImportCosting() {
               </h3>
               <button
                 onClick={() => { setShowForm(false); setEditingId(null); }}
-                style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#666' }}
+                style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-500)' }}
               >
                 x
               </button>
@@ -1734,7 +1735,7 @@ function ImportCosting() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
                   {renderInput('Reference Number', 'reference_number')}
                   <div style={{ marginBottom: '12px' }}>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>
                       Supplier
                     </label>
                     {showAddSupplier ? (
@@ -1762,7 +1763,7 @@ function ImportCosting() {
                         <button
                           type="button"
                           onClick={() => { setShowAddSupplier(false); setNewSupplierName(''); }}
-                          style={{ padding: '8px 12px', backgroundColor: '#f3f4f6', color: '#666', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}
+                          style={{ padding: '8px 12px', backgroundColor: '#f3f4f6', color: 'var(--text-500)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}
                         >
                           Cancel
                         </button>
@@ -1773,7 +1774,7 @@ function ImportCosting() {
                           value={formData.supplier_name || ''}
                           onChange={(e) => handleInputChange('supplier_name', e.target.value)}
                           className="select"
-                          style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid #ddd' }}
+                          style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}
                         >
                           <option value="">Select Supplier...</option>
                           {suppliers.map(s => (
@@ -1860,7 +1861,7 @@ function ImportCosting() {
                                 type="text"
                                 value={product.name || ''}
                                 onChange={(e) => updateProduct(index, 'name', e.target.value)}
-                                style={{ width: '100%', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem' }}
+                                style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.85rem' }}
                                 placeholder="e.g. SHMP 26/30"
                               />
                             </td>
@@ -1869,7 +1870,7 @@ function ImportCosting() {
                                 type="text"
                                 value={product.hs_code || ''}
                                 onChange={(e) => updateProduct(index, 'hs_code', e.target.value)}
-                                style={{ width: '100px', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem' }}
+                                style={{ width: '100px', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.85rem' }}
                                 placeholder="0306.17"
                               />
                             </td>
@@ -1878,7 +1879,7 @@ function ImportCosting() {
                                 type="text"
                                 value={product.pack_size || ''}
                                 onChange={(e) => updateProduct(index, 'pack_size', e.target.value)}
-                                style={{ width: '70px', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'center' }}
+                                style={{ width: '70px', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'center' }}
                                 placeholder="10x1kg"
                               />
                             </td>
@@ -1887,7 +1888,7 @@ function ImportCosting() {
                                 type="text"
                                 value={product.pack_type || ''}
                                 onChange={(e) => updateProduct(index, 'pack_type', e.target.value)}
-                                style={{ width: '80px', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'center' }}
+                                style={{ width: '80px', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'center' }}
                                 placeholder="Carton"
                               />
                             </td>
@@ -1896,7 +1897,7 @@ function ImportCosting() {
                                 type="number"
                                 value={product.weight_kg || ''}
                                 onChange={(e) => updateProduct(index, 'weight_kg', parseFloat(e.target.value) || 0)}
-                                style={{ width: '90px', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'right' }}
+                                style={{ width: '90px', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'right' }}
                                 step="0.01"
                                 placeholder="0.00"
                               />
@@ -1906,7 +1907,7 @@ function ImportCosting() {
                                 type="number"
                                 value={product.rate_per_kg || ''}
                                 onChange={(e) => updateProduct(index, 'rate_per_kg', parseFloat(e.target.value) || 0)}
-                                style={{ width: '80px', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'right' }}
+                                style={{ width: '80px', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'right' }}
                                 step="0.01"
                                 placeholder="0.00"
                               />
@@ -1915,7 +1916,7 @@ function ImportCosting() {
                               <select
                                 value={product.currency || 'USD'}
                                 onChange={(e) => updateProduct(index, 'currency', e.target.value)}
-                                style={{ padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem' }}
+                                style={{ padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.85rem' }}
                               >
                                 <option value="USD">USD</option>
                                 <option value="EUR">EUR</option>
@@ -1935,7 +1936,7 @@ function ImportCosting() {
                                 type="number"
                                 value={product.duty_percent || ''}
                                 onChange={(e) => updateProduct(index, 'duty_percent', parseFloat(e.target.value) || 0)}
-                                style={{ width: '60px', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'center' }}
+                                style={{ width: '60px', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'center' }}
                                 step="0.1"
                                 placeholder="0"
                               />
@@ -1945,7 +1946,7 @@ function ImportCosting() {
                                 type="number"
                                 value={product.duty_schedule1_percent || ''}
                                 onChange={(e) => updateProduct(index, 'duty_schedule1_percent', parseFloat(e.target.value) || 0)}
-                                style={{ width: '60px', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'center' }}
+                                style={{ width: '60px', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'center' }}
                                 step="0.1"
                                 placeholder="0"
                               />
@@ -1982,7 +1983,7 @@ function ImportCosting() {
               {/* Section: Exchange Rate & Customs Value */}
               <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#ecfdf5', borderRadius: '8px' }}>
                 <h4 style={{ margin: '0 0 1rem', color: '#065f46', fontSize: '1rem' }}>Finex SA Exchange Rates</h4>
-                <p style={{ margin: '0 0 1rem', fontSize: '0.8rem', color: '#666' }}>Enter the Finex SA rates from your daily email</p>
+                <p style={{ margin: '0 0 1rem', fontSize: '0.8rem', color: 'var(--text-500)' }}>Enter the Finex SA rates from your daily email</p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
                   <div style={{ marginBottom: '12px' }}>
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#166534' }}>
@@ -2103,7 +2104,7 @@ function ImportCosting() {
                   {renderCurrencyInput('Local Cartage: DBN WHS to PTA (12M Deck)', 'local_cartage_dbn_whs_pretoria_12m_zar')}
                   {renderCurrencyInput('Transport: PE/Coega Port to Pretoria', 'transport_pe_coega_to_pretoria_zar')}
                   <div style={{ marginBottom: '12px' }}>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>
                       Local Charges Sub-Total - Auto
                     </label>
                     <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', borderRadius: '6px', fontWeight: '600', color: '#166534' }}>
@@ -2126,7 +2127,7 @@ function ImportCosting() {
                   {renderCurrencyInput('State Vet Cancellation Fee', 'state_vet_cancellation_fee_zar')}
                   {renderCurrencyInput('JNB Turn In (At Cost)', 'jnb_turn_in_zar')}
                   <div style={{ marginBottom: '12px' }}>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>
                       Destination Sub-Total - Auto
                     </label>
                     <div style={{ padding: '8px 12px', backgroundColor: '#dbeafe', borderRadius: '6px', fontWeight: '600', color: '#1e40af' }}>
@@ -2310,14 +2311,14 @@ function ImportCosting() {
 
               {/* Notes */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Notes
                 </label>
                 <textarea
                   value={formData.notes || ''}
                   onChange={(e) => handleInputChange('notes', e.target.value)}
                   className="input"
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #ddd', minHeight: '80px' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)', minHeight: '80px' }}
                   placeholder="Additional notes..."
                 />
               </div>
@@ -2350,7 +2351,7 @@ function ImportCosting() {
       )}
 
       {/* Estimates Table */}
-      <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+      <div className="dash-panel" style={{ overflow: 'hidden' }}>
         {/* Search and Sort Controls */}
         <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ flex: '1', minWidth: '200px', maxWidth: '300px' }}>
@@ -2527,14 +2528,14 @@ function ImportCosting() {
             <h3 style={{ margin: '0 0 1rem', color: '#0b1f3a' }}>Send Cost Estimate via Email</h3>
 
             <div style={{ marginBottom: '1rem', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
-              <div style={{ fontSize: '0.85rem', color: '#666' }}>Reference</div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-500)' }}>Reference</div>
               <div style={{ fontWeight: '600' }}>{emailEstimate.reference_number || emailEstimate.id}</div>
-              <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '8px' }}>Supplier</div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-500)', marginTop: '8px' }}>Supplier</div>
               <div style={{ fontWeight: '600' }}>{emailEstimate.supplier_name || 'N/A'}</div>
             </div>
 
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#333' }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>
                 Send to Email Address
               </label>
               <input
@@ -2542,7 +2543,7 @@ function ImportCosting() {
                 value={emailTo}
                 onChange={(e) => setEmailTo(e.target.value)}
                 placeholder="colleague@company.com"
-                style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.95rem' }}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '0.95rem' }}
                 autoFocus
               />
             </div>
@@ -2550,7 +2551,7 @@ function ImportCosting() {
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => { setShowEmailModal(false); setEmailTo(''); setEmailEstimate(null); }}
-                style={{ padding: '10px 20px', backgroundColor: '#f3f4f6', color: '#333', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}
+                style={{ padding: '10px 20px', backgroundColor: '#f3f4f6', color: 'var(--text-900)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}
               >
                 Cancel
               </button>
@@ -2587,7 +2588,7 @@ function ImportCosting() {
             width: '500px', maxWidth: '90vw', maxHeight: '80vh', overflow: 'auto'
           }}>
             <h3 style={{ margin: '0 0 1rem', color: '#0b1f3a' }}>Request a Costing</h3>
-            <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '1rem' }}>
+            <p style={{ color: 'var(--text-500)', fontSize: '0.85rem', marginBottom: '1rem' }}>
               Submit a request and an admin will prepare the cost estimate for you.
             </p>
             <div style={{ display: 'grid', gap: '0.75rem' }}>

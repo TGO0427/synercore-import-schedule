@@ -229,6 +229,7 @@ function UserManagement() {
       maxWidth: '1200px',
       margin: '0 auto'
     }}>
+      <div className="brand-strip" />
       {/* Header */}
       <div style={{
         display: 'flex',
@@ -236,18 +237,14 @@ function UserManagement() {
         alignItems: 'center',
         marginBottom: '2rem'
       }}>
-        <h1 style={{
-          margin: 0,
-          fontSize: '28px',
-          color: '#2c3e50'
-        }}>
-          User Management
-        </h1>
+        <div className="page-header">
+          <h2>User Management</h2>
+        </div>
         <button
           onClick={() => setShowCreateForm(!showCreateForm)}
           style={{
             padding: '10px 20px',
-            backgroundColor: '#667eea',
+            backgroundColor: 'var(--accent)',
             color: 'white',
             border: 'none',
             borderRadius: '6px',
@@ -256,8 +253,8 @@ function UserManagement() {
             cursor: 'pointer',
             transition: 'background-color 0.2s'
           }}
-          onMouseEnter={(e) => e.target.style.backgroundColor = '#5a6fd8'}
-          onMouseLeave={(e) => e.target.style.backgroundColor = '#667eea'}
+          onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--accent-600)'}
+          onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--accent)'}
         >
           {showCreateForm ? '✕ Cancel' : '+ Create New User'}
         </button>
@@ -280,18 +277,15 @@ function UserManagement() {
 
       {/* Create User Form */}
       {showCreateForm && (
-        <div style={{
-          backgroundColor: 'white',
+        <div className="dash-panel" style={{
           padding: '24px',
-          borderRadius: '8px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
           marginBottom: '2rem',
-          border: '1px solid #e1e5e9'
+          border: '1px solid var(--border)'
         }}>
           <h2 style={{
             margin: '0 0 20px 0',
             fontSize: '20px',
-            color: '#2c3e50'
+            color: 'var(--text-900)'
           }}>
             Create New User
           </h2>
@@ -308,7 +302,7 @@ function UserManagement() {
                   marginBottom: '6px',
                   fontSize: '14px',
                   fontWeight: '500',
-                  color: '#333'
+                  color: 'var(--text-900)'
                 }}>
                   Username *
                 </label>
@@ -322,7 +316,7 @@ function UserManagement() {
                   style={{
                     width: '100%',
                     padding: '10px 12px',
-                    border: '2px solid #e1e5e9',
+                    border: '2px solid var(--border)',
                     borderRadius: '6px',
                     fontSize: '14px',
                     outline: 'none'
@@ -337,7 +331,7 @@ function UserManagement() {
                   marginBottom: '6px',
                   fontSize: '14px',
                   fontWeight: '500',
-                  color: '#333'
+                  color: 'var(--text-900)'
                 }}>
                   Email
                 </label>
@@ -350,7 +344,7 @@ function UserManagement() {
                   style={{
                     width: '100%',
                     padding: '10px 12px',
-                    border: '2px solid #e1e5e9',
+                    border: '2px solid var(--border)',
                     borderRadius: '6px',
                     fontSize: '14px',
                     outline: 'none'
@@ -365,7 +359,7 @@ function UserManagement() {
                   marginBottom: '6px',
                   fontSize: '14px',
                   fontWeight: '500',
-                  color: '#333'
+                  color: 'var(--text-900)'
                 }}>
                   Password *
                 </label>
@@ -381,7 +375,7 @@ function UserManagement() {
                       width: '100%',
                       padding: '10px 12px',
                       paddingRight: '45px',
-                      border: '2px solid #e1e5e9',
+                      border: '2px solid var(--border)',
                       borderRadius: '6px',
                       fontSize: '14px',
                       outline: 'none'
@@ -401,7 +395,7 @@ function UserManagement() {
                       cursor: 'pointer',
                       padding: '4px 8px',
                       fontSize: '18px',
-                      color: '#666',
+                      color: 'var(--text-500)',
                       lineHeight: '1'
                     }}
                     tabIndex="-1"
@@ -417,7 +411,7 @@ function UserManagement() {
                   marginBottom: '6px',
                   fontSize: '14px',
                   fontWeight: '500',
-                  color: '#333'
+                  color: 'var(--text-900)'
                 }}>
                   Full Name
                 </label>
@@ -430,7 +424,7 @@ function UserManagement() {
                   style={{
                     width: '100%',
                     padding: '10px 12px',
-                    border: '2px solid #e1e5e9',
+                    border: '2px solid var(--border)',
                     borderRadius: '6px',
                     fontSize: '14px',
                     outline: 'none'
@@ -445,7 +439,7 @@ function UserManagement() {
                   marginBottom: '6px',
                   fontSize: '14px',
                   fontWeight: '500',
-                  color: '#333'
+                  color: 'var(--text-900)'
                 }}>
                   Role *
                 </label>
@@ -457,7 +451,7 @@ function UserManagement() {
                   style={{
                     width: '100%',
                     padding: '10px 12px',
-                    border: '2px solid #e1e5e9',
+                    border: '2px solid var(--border)',
                     borderRadius: '6px',
                     fontSize: '14px',
                     outline: 'none',
@@ -475,7 +469,7 @@ function UserManagement() {
               disabled={loading}
               style={{
                 padding: '12px 24px',
-                backgroundColor: loading ? '#9ca3af' : '#28a745',
+                backgroundColor: loading ? '#9ca3af' : 'var(--success)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
@@ -492,12 +486,10 @@ function UserManagement() {
       )}
 
       {/* Users List */}
-      <div style={{
-        backgroundColor: 'white',
-        borderRadius: '8px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+      <div className="dash-panel" style={{
+        padding: 0,
         overflow: 'hidden',
-        border: '1px solid #e1e5e9'
+        border: '1px solid var(--border)'
       }}>
         <table style={{
           width: '100%',
@@ -505,15 +497,15 @@ function UserManagement() {
         }}>
           <thead>
             <tr style={{
-              backgroundColor: '#f8f9fa',
-              borderBottom: '2px solid #e1e5e9'
+              backgroundColor: 'var(--surface-2)',
+              borderBottom: '2px solid var(--border)'
             }}>
               <th style={{
                 padding: '16px',
                 textAlign: 'left',
                 fontSize: '14px',
                 fontWeight: '600',
-                color: '#2c3e50'
+                color: 'var(--text-900)'
               }}>
                 Username
               </th>
@@ -522,7 +514,7 @@ function UserManagement() {
                 textAlign: 'left',
                 fontSize: '14px',
                 fontWeight: '600',
-                color: '#2c3e50'
+                color: 'var(--text-900)'
               }}>
                 Email
               </th>
@@ -531,7 +523,7 @@ function UserManagement() {
                 textAlign: 'left',
                 fontSize: '14px',
                 fontWeight: '600',
-                color: '#2c3e50'
+                color: 'var(--text-900)'
               }}>
                 Full Name
               </th>
@@ -540,7 +532,7 @@ function UserManagement() {
                 textAlign: 'left',
                 fontSize: '14px',
                 fontWeight: '600',
-                color: '#2c3e50'
+                color: 'var(--text-900)'
               }}>
                 Role
               </th>
@@ -549,7 +541,7 @@ function UserManagement() {
                 textAlign: 'left',
                 fontSize: '14px',
                 fontWeight: '600',
-                color: '#2c3e50'
+                color: 'var(--text-900)'
               }}>
                 Status
               </th>
@@ -558,7 +550,7 @@ function UserManagement() {
                 textAlign: 'left',
                 fontSize: '14px',
                 fontWeight: '600',
-                color: '#2c3e50'
+                color: 'var(--text-900)'
               }}>
                 Created
               </th>
@@ -567,7 +559,7 @@ function UserManagement() {
                 textAlign: 'center',
                 fontSize: '14px',
                 fontWeight: '600',
-                color: '#2c3e50'
+                color: 'var(--text-900)'
               }}>
                 Actions
               </th>
@@ -579,7 +571,7 @@ function UserManagement() {
                 <td colSpan="7" style={{
                   padding: '40px',
                   textAlign: 'center',
-                  color: '#6c757d'
+                  color: 'var(--text-500)'
                 }}>
                   Loading users...
                 </td>
@@ -589,7 +581,7 @@ function UserManagement() {
                 <td colSpan="7" style={{
                   padding: '40px',
                   textAlign: 'center',
-                  color: '#6c757d'
+                  color: 'var(--text-500)'
                 }}>
                   No users found
                 </td>
@@ -599,16 +591,16 @@ function UserManagement() {
                 <tr
                   key={user.id}
                   style={{
-                    borderBottom: '1px solid #e1e5e9',
+                    borderBottom: '1px solid var(--border)',
                     transition: 'background-color 0.2s'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-2)'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   <td style={{
                     padding: '16px',
                     fontSize: '14px',
-                    color: '#2c3e50',
+                    color: 'var(--text-900)',
                     fontWeight: '500'
                   }}>
                     {user.username}
@@ -616,14 +608,14 @@ function UserManagement() {
                   <td style={{
                     padding: '16px',
                     fontSize: '14px',
-                    color: '#6c757d'
+                    color: 'var(--text-500)'
                   }}>
                     {user.email || '-'}
                   </td>
                   <td style={{
                     padding: '16px',
                     fontSize: '14px',
-                    color: '#6c757d'
+                    color: 'var(--text-500)'
                   }}>
                     {user.fullName || '-'}
                   </td>
@@ -637,7 +629,7 @@ function UserManagement() {
                       fontSize: '12px',
                       fontWeight: '600',
                       textTransform: 'uppercase',
-                      backgroundColor: user.role === 'admin' ? '#667eea' : '#28a745',
+                      backgroundColor: user.role === 'admin' ? 'var(--info)' : 'var(--success)',
                       color: 'white'
                     }}>
                       {user.role}
@@ -661,7 +653,7 @@ function UserManagement() {
                   <td style={{
                     padding: '16px',
                     fontSize: '14px',
-                    color: '#6c757d'
+                    color: 'var(--text-500)'
                   }}>
                     {new Date(user.createdAt).toLocaleDateString()}
                   </td>
@@ -678,7 +670,7 @@ function UserManagement() {
                         onClick={() => handleEditClick(user)}
                         style={{
                           padding: '6px 12px',
-                          backgroundColor: '#667eea',
+                          backgroundColor: 'var(--info)',
                           color: 'white',
                           border: 'none',
                           borderRadius: '4px',
@@ -687,8 +679,8 @@ function UserManagement() {
                           cursor: 'pointer',
                           transition: 'background-color 0.2s'
                         }}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = '#5a6fd8'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = '#667eea'}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--info)'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--info)'}
                       >
                         Edit
                       </button>
@@ -696,8 +688,8 @@ function UserManagement() {
                         onClick={() => handleResetPasswordClick(user)}
                         style={{
                           padding: '6px 12px',
-                          backgroundColor: '#ffc107',
-                          color: '#333',
+                          backgroundColor: 'var(--warning)',
+                          color: 'var(--text-900)',
                           border: 'none',
                           borderRadius: '4px',
                           fontSize: '12px',
@@ -705,8 +697,8 @@ function UserManagement() {
                           cursor: 'pointer',
                           transition: 'background-color 0.2s'
                         }}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = '#e0a800'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = '#ffc107'}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--warning)'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--warning)'}
                       >
                         Reset Password
                       </button>
@@ -746,7 +738,7 @@ function UserManagement() {
             <h2 style={{
               margin: '0 0 20px 0',
               fontSize: '20px',
-              color: '#2c3e50'
+              color: 'var(--text-900)'
             }}>
               Edit User
             </h2>
@@ -763,7 +755,7 @@ function UserManagement() {
                     marginBottom: '6px',
                     fontSize: '14px',
                     fontWeight: '500',
-                    color: '#333'
+                    color: 'var(--text-900)'
                   }}>
                     Username *
                   </label>
@@ -777,7 +769,7 @@ function UserManagement() {
                     style={{
                       width: '100%',
                       padding: '10px 12px',
-                      border: '2px solid #e1e5e9',
+                      border: '2px solid var(--border)',
                       borderRadius: '6px',
                       fontSize: '14px',
                       outline: 'none'
@@ -791,7 +783,7 @@ function UserManagement() {
                     marginBottom: '6px',
                     fontSize: '14px',
                     fontWeight: '500',
-                    color: '#333'
+                    color: 'var(--text-900)'
                   }}>
                     Email
                   </label>
@@ -804,7 +796,7 @@ function UserManagement() {
                     style={{
                       width: '100%',
                       padding: '10px 12px',
-                      border: '2px solid #e1e5e9',
+                      border: '2px solid var(--border)',
                       borderRadius: '6px',
                       fontSize: '14px',
                       outline: 'none'
@@ -818,7 +810,7 @@ function UserManagement() {
                     marginBottom: '6px',
                     fontSize: '14px',
                     fontWeight: '500',
-                    color: '#333'
+                    color: 'var(--text-900)'
                   }}>
                     Full Name
                   </label>
@@ -831,7 +823,7 @@ function UserManagement() {
                     style={{
                       width: '100%',
                       padding: '10px 12px',
-                      border: '2px solid #e1e5e9',
+                      border: '2px solid var(--border)',
                       borderRadius: '6px',
                       fontSize: '14px',
                       outline: 'none'
@@ -845,7 +837,7 @@ function UserManagement() {
                     marginBottom: '6px',
                     fontSize: '14px',
                     fontWeight: '500',
-                    color: '#333'
+                    color: 'var(--text-900)'
                   }}>
                     Role *
                   </label>
@@ -857,7 +849,7 @@ function UserManagement() {
                     style={{
                       width: '100%',
                       padding: '10px 12px',
-                      border: '2px solid #e1e5e9',
+                      border: '2px solid var(--border)',
                       borderRadius: '6px',
                       fontSize: '14px',
                       outline: 'none',
@@ -876,7 +868,7 @@ function UserManagement() {
                     cursor: 'pointer',
                     fontSize: '14px',
                     fontWeight: '500',
-                    color: '#333'
+                    color: 'var(--text-900)'
                   }}>
                     <input
                       type="checkbox"
@@ -908,7 +900,7 @@ function UserManagement() {
                   disabled={loading}
                   style={{
                     padding: '10px 20px',
-                    backgroundColor: '#6c757d',
+                    backgroundColor: 'var(--text-500)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
@@ -924,7 +916,7 @@ function UserManagement() {
                   disabled={loading}
                   style={{
                     padding: '10px 20px',
-                    backgroundColor: loading ? '#9ca3af' : '#28a745',
+                    backgroundColor: loading ? '#9ca3af' : 'var(--success)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
@@ -966,7 +958,7 @@ function UserManagement() {
             <h2 style={{
               margin: '0 0 20px 0',
               fontSize: '20px',
-              color: '#2c3e50'
+              color: 'var(--text-900)'
             }}>
               Reset Password for {resetPasswordUser.username}
             </h2>
@@ -977,7 +969,7 @@ function UserManagement() {
                   marginBottom: '6px',
                   fontSize: '14px',
                   fontWeight: '500',
-                  color: '#333'
+                  color: 'var(--text-900)'
                 }}>
                   New Password *
                 </label>
@@ -992,7 +984,7 @@ function UserManagement() {
                       width: '100%',
                       padding: '10px 12px',
                       paddingRight: '45px',
-                      border: '2px solid #e1e5e9',
+                      border: '2px solid var(--border)',
                       borderRadius: '6px',
                       fontSize: '14px',
                       outline: 'none'
@@ -1012,7 +1004,7 @@ function UserManagement() {
                       cursor: 'pointer',
                       padding: '4px 8px',
                       fontSize: '18px',
-                      color: '#666',
+                      color: 'var(--text-500)',
                       lineHeight: '1'
                     }}
                     tabIndex="-1"
@@ -1037,7 +1029,7 @@ function UserManagement() {
                   disabled={loading}
                   style={{
                     padding: '10px 20px',
-                    backgroundColor: '#6c757d',
+                    backgroundColor: 'var(--text-500)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
@@ -1053,8 +1045,8 @@ function UserManagement() {
                   disabled={loading}
                   style={{
                     padding: '10px 20px',
-                    backgroundColor: loading ? '#9ca3af' : '#ffc107',
-                    color: loading ? 'white' : '#333',
+                    backgroundColor: loading ? '#9ca3af' : 'var(--warning)',
+                    color: loading ? 'white' : 'var(--text-900)',
                     border: 'none',
                     borderRadius: '6px',
                     fontSize: '14px',

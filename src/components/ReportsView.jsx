@@ -397,17 +397,17 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
     if (total === 0) return <div>No data available</div>;
 
     const statusColors = {
-      [ShipmentStatus.PLANNED_AIRFREIGHT]: '#2196F3',
-      [ShipmentStatus.PLANNED_SEAFREIGHT]: '#1976D2',
+      [ShipmentStatus.PLANNED_AIRFREIGHT]: 'var(--info)',
+      [ShipmentStatus.PLANNED_SEAFREIGHT]: 'var(--info)',
       [ShipmentStatus.IN_TRANSIT_AIRFREIGHT]: '#1565C0',
-      [ShipmentStatus.IN_TRANSIT_ROADWAY]: '#FF9800',
+      [ShipmentStatus.IN_TRANSIT_ROADWAY]: 'var(--warning)',
       [ShipmentStatus.IN_TRANSIT_SEAWAY]: '#FFB74D',
       [ShipmentStatus.MOORED]: '#AB47BC',
       [ShipmentStatus.BERTH_WORKING]: '#8E24AA',
       [ShipmentStatus.BERTH_COMPLETE]: '#7B1FA2',
-      [ShipmentStatus.ARRIVED_PTA]: '#4CAF50',
+      [ShipmentStatus.ARRIVED_PTA]: 'var(--success)',
       [ShipmentStatus.ARRIVED_KLM]: '#66BB6A',
-      [ShipmentStatus.DELAYED]: '#F44336',
+      [ShipmentStatus.DELAYED]: 'var(--danger)',
       [ShipmentStatus.CANCELLED]: '#9E9E9E',
     };
 
@@ -458,7 +458,7 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
                   className="bar" 
                   style={{ 
                     height: `${percentage}%`,
-                    backgroundColor: isCurrentWeek ? '#FF5722' : '#667eea'
+                    backgroundColor: isCurrentWeek ? '#FF5722' : 'var(--info)'
                   }}
                   title={`Week ${week}: ${count} shipments`}
                 ></div>
@@ -1000,8 +1000,9 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
   if (loadingShipments) {
     return (
       <div className="reports-view">
-        <div className="reports-header">
-          <h2>📊 Reports & Analytics</h2>
+        <div className="brand-strip" />
+        <div className="page-header">
+          <h2>Reports & Analytics</h2>
           <p>Loading shipment data...</p>
         </div>
       </div>
@@ -1010,8 +1011,9 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
 
   return (
     <div className="reports-view">
-      <div className="reports-header">
-        <h2>📊 Reports & Analytics</h2>
+      <div className="brand-strip" />
+      <div className="page-header">
+        <h2>Reports & Analytics</h2>
         <p>Comprehensive insights into your shipment operations ({filteredShipments.length} shipments)</p>
       </div>
 
@@ -1047,18 +1049,7 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
       <style>{`
         .reports-view {
           padding: 2rem;
-          background: #f8f9fc;
           min-height: 100vh;
-        }
-        
-        .reports-header {
-          text-align: center;
-          margin-bottom: 2rem;
-        }
-        
-        .reports-header h2 {
-          color: #2c3e50;
-          margin-bottom: 0.5rem;
         }
         
         .summary-cards {

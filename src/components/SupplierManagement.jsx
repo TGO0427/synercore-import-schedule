@@ -569,7 +569,8 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
 
   return (
     <div className="supplier-management">
-      <div className="table-header" style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', marginBottom: '1rem' }}>
+      <div className="brand-strip" />
+      <div className="page-header table-header" style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', marginBottom: '1rem' }}>
         <h2 style={{ marginRight: 'auto' }}>Supplier Management</h2>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <input
@@ -596,10 +597,10 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
             key={supplier.id} 
             onClick={(e) => handleSupplierCardClick(supplier, e)}
             style={{
-              border: '1px solid #e1e5e9',
+              border: '1px solid var(--border)',
               borderRadius: '8px',
               padding: '1rem',
-              backgroundColor: supplier.isActive ? 'white' : '#f8f9fa',
+              backgroundColor: supplier.isActive ? 'white' : 'var(--surface-2)',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               '&:hover': {
@@ -612,7 +613,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
               e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = '#e1e5e9';
+              e.currentTarget.style.borderColor = 'var(--border)';
               e.currentTarget.style.boxShadow = 'none';
             }}
           >
@@ -1657,7 +1658,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
             </div>
 
             {/* Supplier Summary */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem', padding: '1rem', backgroundColor: 'var(--surface-2)', borderRadius: '8px' }}>
               {detailSupplier.contactPerson && (
                 <div><strong>Contact:</strong> {detailSupplier.contactPerson}</div>
               )}
@@ -1678,7 +1679,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
               
               if (supplierShipments.length === 0) {
                 return (
-                  <div style={{ textAlign: 'center', padding: '3rem', color: '#718096', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                  <div style={{ textAlign: 'center', padding: '3rem', color: '#718096', backgroundColor: 'var(--surface-2)', borderRadius: '8px' }}>
                     <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📦</div>
                     <h3 style={{ margin: '0 0 1rem 0' }}>No Incoming Shipments</h3>
                     <p>No shipments found for this supplier. Upload a shipment schedule to see incoming deliveries.</p>
@@ -1708,7 +1709,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
                         {supplierShipments.map((shipment, index) => (
                           <tr key={shipment.id || index} style={{ 
                             borderBottom: '1px solid #e2e8f0',
-                            backgroundColor: index % 2 === 0 ? 'white' : '#f8f9fa'
+                            backgroundColor: index % 2 === 0 ? 'white' : 'var(--surface-2)'
                           }}>
                             <td style={{ padding: '0.75rem', fontWeight: '500' }}>{shipment.orderRef}</td>
                             <td style={{ padding: '0.75rem' }}>{shipment.productName}</td>
@@ -1794,7 +1795,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
                   Loading archived estimates...
                 </div>
               ) : archivedEstimates.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2rem', color: '#718096', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                <div style={{ textAlign: 'center', padding: '2rem', color: '#718096', backgroundColor: 'var(--surface-2)', borderRadius: '8px' }}>
                   <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📋</div>
                   <p>No archived cost estimates for this supplier.</p>
                 </div>
@@ -1815,7 +1816,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
                       {archivedEstimates.map((est, index) => (
                         <tr key={est.id} style={{
                           borderBottom: '1px solid #e2e8f0',
-                          backgroundColor: index % 2 === 0 ? 'white' : '#f8f9fa'
+                          backgroundColor: index % 2 === 0 ? 'white' : 'var(--surface-2)'
                         }}>
                           <td style={{ padding: '0.75rem', fontWeight: '500' }}>
                             {est.reference_number || '-'}

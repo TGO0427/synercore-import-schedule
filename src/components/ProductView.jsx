@@ -421,8 +421,9 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
 
   return (
     <div className="product-view">
+      <div className="brand-strip" />
       <div className="table-header" style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-        <h2 style={{ marginRight: 'auto' }}>Product & Warehouse View</h2>
+        <div className="page-header"><h2 style={{ marginRight: 'auto' }}>Product & Warehouse View</h2></div>
 
         {/* Save All Button */}
         {unsavedCount > 0 && (
@@ -430,7 +431,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
             onClick={saveAllChanges}
             style={{
               padding: '8px 16px',
-              backgroundColor: '#ff9800',
+              backgroundColor: 'var(--warning)',
               color: 'white',
               border: 'none',
               borderRadius: '6px',
@@ -485,9 +486,9 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
               onClick={() => setStatusFilter('all')}
               style={{
                 padding: '6px 10px',
-                backgroundColor: statusFilter === 'all' ? '#007bff' : '#f8f9fa',
-                color: statusFilter === 'all' ? 'white' : '#495057',
-                border: '1px solid #dee2e6',
+                backgroundColor: statusFilter === 'all' ? 'var(--info)' : 'var(--surface-2)',
+                color: statusFilter === 'all' ? 'white' : 'var(--text-700)',
+                border: '1px solid var(--border)',
                 borderRadius: '4px',
                 cursor: 'pointer',
                 fontSize: '0.75rem',
@@ -501,9 +502,9 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
               onClick={() => setStatusFilter('arrived')}
               style={{
                 padding: '6px 10px',
-                backgroundColor: (statusFilter === ShipmentStatus.ARRIVED_PTA || statusFilter === ShipmentStatus.ARRIVED_KLM || statusFilter === 'arrived') ? '#28a745' : '#f8f9fa',
-                color: (statusFilter === ShipmentStatus.ARRIVED_PTA || statusFilter === ShipmentStatus.ARRIVED_KLM || statusFilter === 'arrived') ? 'white' : '#495057',
-                border: '1px solid #dee2e6',
+                backgroundColor: (statusFilter === ShipmentStatus.ARRIVED_PTA || statusFilter === ShipmentStatus.ARRIVED_KLM || statusFilter === 'arrived') ? 'var(--success)' : 'var(--surface-2)',
+                color: (statusFilter === ShipmentStatus.ARRIVED_PTA || statusFilter === ShipmentStatus.ARRIVED_KLM || statusFilter === 'arrived') ? 'white' : 'var(--text-700)',
+                border: '1px solid var(--border)',
                 borderRadius: '4px',
                 cursor: 'pointer',
                 fontSize: '0.75rem',
@@ -522,7 +523,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
               alignItems: 'center',
               gap: '8px',
               padding: '8px 16px',
-              backgroundColor: '#4caf50',
+              backgroundColor: 'var(--success)',
               color: 'white',
               border: 'none',
               borderRadius: '6px',
@@ -532,11 +533,11 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
               transition: 'all 0.2s ease'
             }}
             onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#45a049';
+              e.target.style.backgroundColor = 'var(--success)';
               e.target.style.transform = 'translateY(-1px)';
             }}
             onMouseLeave={(e) => {
-              e.target.style.backgroundColor = '#4caf50';
+              e.target.style.backgroundColor = 'var(--success)';
               e.target.style.transform = 'none';
             }}
             title={`Export ${filteredAndSortedProducts.length} products to Excel`}
@@ -554,9 +555,9 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
               gap: 8,
               padding: '6px 10px',
               borderRadius: 999,
-              background: '#f2f4f7',
+              background: 'var(--surface-2)',
               fontSize: 12,
-              color: '#344054',
+              color: 'var(--text-900)',
             }}
           >
             <span>
@@ -566,7 +567,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
               onClick={clearSort}
               style={{
                 border: 'none',
-                background: '#e5e7eb',
+                background: 'var(--border)',
                 borderRadius: 999,
                 padding: '2px 6px',
                 cursor: 'pointer',
@@ -587,7 +588,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
 
       {/* Warehouse Summary */}
       <div className="warehouse-summary" style={{ marginBottom: '1rem' }}>
-        <h3 style={{ marginBottom: '0.5rem', color: '#333' }}>Warehouse Summary - Total Pallets by Warehouse</h3>
+        <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-900)' }}>Warehouse Summary - Total Pallets by Warehouse</h3>
         <div className="stats-grid" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           {Object.entries(warehouseTotals).map(([warehouse, total]) => (
             <div 
@@ -597,8 +598,8 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
               style={{ 
                 minWidth: '150px',
                 cursor: 'pointer',
-                backgroundColor: selectedWarehouse === warehouse ? '#f0f4ff' : 'white',
-                border: `2px solid ${selectedWarehouse === warehouse ? '#667eea' : '#e1e5e9'}`,
+                backgroundColor: selectedWarehouse === warehouse ? 'var(--surface-2)' : 'white',
+                border: `2px solid ${selectedWarehouse === warehouse ? 'var(--info)' : 'var(--border)'}`,
                 borderRadius: '8px',
                 padding: '12px 16px',
                 transition: 'all 0.3s ease',
@@ -620,7 +621,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
                 }
               }}
             >
-              <h4 style={{ fontSize: '1.2rem', color: '#667eea', marginBottom: '0.25rem' }}>
+              <h4 style={{ fontSize: '1.2rem', color: 'var(--info)', marginBottom: '0.25rem' }}>
                 {Number(total).toLocaleString()}
               </h4>
               <p style={{ fontSize: '0.9rem', margin: 0 }}>{warehouse}</p>
@@ -679,7 +680,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
                         onChange={(e) => setEdit(shipment.id, 'quantity', e.target.value)}
                         onKeyDown={(e) => onFieldKeyDown(e, shipment, 'quantity')}
                         style={{
-                          border: edits[shipment.id]?.quantity !== undefined ? '2px solid #ff9800' : '1px solid #ddd',
+                          border: edits[shipment.id]?.quantity !== undefined ? '2px solid var(--warning)' : '1px solid var(--border)',
                           padding: '4px 8px',
                           borderRadius: '4px',
                           width: '80px',
@@ -698,7 +699,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
                         onKeyDown={(e) => onFieldKeyDown(e, shipment, 'palletQty')}
                         placeholder="Pallet Qty"
                         style={{
-                          border: edits[shipment.id]?.palletQty !== undefined ? '2px solid #ff9800' : '1px solid #ddd',
+                          border: edits[shipment.id]?.palletQty !== undefined ? '2px solid var(--warning)' : '1px solid var(--border)',
                           padding: '4px 8px',
                           backgroundColor: edits[shipment.id]?.palletQty !== undefined ? '#fff3e0' : 'white',
                           borderRadius: '4px',
@@ -716,7 +717,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
                         onKeyDown={(e) => onFieldKeyDown(e, shipment, 'receivingWarehouse')}
                         placeholder="Warehouse"
                         style={{
-                          border: edits[shipment.id]?.receivingWarehouse !== undefined ? '2px solid #ff9800' : '1px solid #ddd',
+                          border: edits[shipment.id]?.receivingWarehouse !== undefined ? '2px solid var(--warning)' : '1px solid var(--border)',
                           padding: '4px 8px',
                           borderRadius: '4px',
                           width: '120px',
@@ -739,15 +740,15 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
                         selectedWeekDate={shipment.selectedWeekDate ? new Date(shipment.selectedWeekDate) : null}
                       />
                     </td>
-                    <td style={{ fontSize: '0.9rem', color: '#666' }}>{shipment.supplier}</td>
-                    <td style={{ fontSize: '0.9rem', color: '#666' }}>{shipment.orderRef}</td>
+                    <td style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>{shipment.supplier}</td>
+                    <td style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>{shipment.orderRef}</td>
                     <td>
                       {edits[shipment.id] && Object.keys(edits[shipment.id]).length > 0 ? (
                         <button
                           onClick={() => saveShipment(shipment.id)}
                           style={{
                             padding: '4px 12px',
-                            backgroundColor: '#4caf50',
+                            backgroundColor: 'var(--success)',
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',

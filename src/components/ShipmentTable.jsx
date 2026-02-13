@@ -748,8 +748,9 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
 
   return (
    <div className="shipments-table card">
+      <div className="brand-strip" />
       <div className="table-header">
-        <h2>Shipment Schedule</h2>
+        <div className="page-header"><h2>Shipment Schedule</h2></div>
 
         {/* Save All Button */}
         {unsavedCount > 0 && (
@@ -757,7 +758,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
             onClick={saveAllChanges}
             style={{
               padding: '8px 16px',
-              backgroundColor: '#ff9800',
+              backgroundColor: 'var(--warning)',
               color: 'white',
               border: 'none',
               borderRadius: '6px',
@@ -824,7 +825,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </select>
               <div style={{
                 fontSize: '0.8rem',
-                color: '#666',
+                color: 'var(--text-500)',
                 marginTop: '2px',
                 fontStyle: 'italic'
               }}>
@@ -970,9 +971,9 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
         position: 'relative'
       }}>
         <table className="table" style={{ minWidth: '1200px' }}>
-          <thead style={{ position: 'sticky', top: 0, backgroundColor: '#f8f9fa', zIndex: 10 }}>
+          <thead style={{ position: 'sticky', top: 0, backgroundColor: 'var(--surface-2)', zIndex: 10 }}>
             <tr>
-              <th style={{ width: '40px', textAlign: 'center', backgroundColor: '#f8f9fa' }}>
+              <th style={{ width: '40px', textAlign: 'center', backgroundColor: 'var(--surface-2)' }}>
                 <input
                   type="checkbox"
                   checked={selectedShipments.length > 0 && selectedShipments.length === filteredAndSortedShipments.filter(s => s.latestStatus === 'arrived_pta' || s.latestStatus === 'arrived_klm' || s.latestStatus === 'arrived_offsite').length}
@@ -1093,7 +1094,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                       className="input"
                       style={{
                         minWidth: '80px',
-                        border: edits[shipment.id]?.palletQty !== undefined ? '2px solid #ff9800' : undefined,
+                        border: edits[shipment.id]?.palletQty !== undefined ? '2px solid var(--warning)' : undefined,
                         backgroundColor: edits[shipment.id]?.palletQty !== undefined ? '#fff3e0' : undefined,
                       }}
                       min="0"
@@ -1110,7 +1111,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                         style={{
                           minWidth: '120px',
                           flex: 1,
-                          border: edits[shipment.id]?.vesselName !== undefined ? '2px solid #ff9800' : undefined,
+                          border: edits[shipment.id]?.vesselName !== undefined ? '2px solid var(--warning)' : undefined,
                           backgroundColor: edits[shipment.id]?.vesselName !== undefined ? '#fff3e0' : undefined,
                         }}
                       />
@@ -1150,7 +1151,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                       className="select"
                       style={{
                         minWidth: '80px',
-                        border: edits[shipment.id]?.incoterm !== undefined ? '2px solid #ff9800' : undefined,
+                        border: edits[shipment.id]?.incoterm !== undefined ? '2px solid var(--warning)' : undefined,
                         backgroundColor: edits[shipment.id]?.incoterm !== undefined ? '#fff3e0' : undefined,
                       }}
                     >
@@ -1175,7 +1176,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                       className="select"
                       style={{
                         minWidth: '120px',
-                        border: edits[shipment.id]?.forwardingAgent !== undefined ? '2px solid #ff9800' : undefined,
+                        border: edits[shipment.id]?.forwardingAgent !== undefined ? '2px solid var(--warning)' : undefined,
                         backgroundColor: edits[shipment.id]?.forwardingAgent !== undefined ? '#fff3e0' : undefined,
                       }}
                     >
@@ -1192,7 +1193,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                           onClick={() => saveShipment(shipment.id)}
                           style={{
                             padding: '4px 8px',
-                            backgroundColor: '#4caf50',
+                            backgroundColor: 'var(--success)',
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
@@ -1237,7 +1238,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
         >
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Supplier *
                 </label>
                 {!showCustomSupplier ? (
@@ -1289,7 +1290,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
               
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Order/Ref *
                 </label>
                 <input
@@ -1302,7 +1303,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
               
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Final POD *
                 </label>
                 <input
@@ -1315,7 +1316,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
               
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Status
                 </label>
                 <select
@@ -1338,7 +1339,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
               
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Week Number
                 </label>
                 <WeekCalendar
@@ -1349,7 +1350,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Expected Arrival Date <span style={{ color: '#999', fontSize: '0.85em' }}>Optional</span>
                 </label>
                 <input
@@ -1375,7 +1376,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Product Name
                 </label>
                 <input
@@ -1391,7 +1392,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
               
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Quantity
                 </label>
                 <input
@@ -1408,7 +1409,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
               
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#666' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-500)' }}>
                   CBM (Cubic Meters) <span style={{ color: '#999', fontSize: '0.85em' }}>Optional</span>
                 </label>
                 <input
@@ -1426,7 +1427,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Pallet Qty
                 </label>
                 <input
@@ -1444,7 +1445,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
               
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Receiving Warehouse
                 </label>
                 <select
@@ -1463,7 +1464,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Forwarding Agent
                 </label>
                 <select
@@ -1482,7 +1483,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Vessel Name
                 </label>
                 <input
@@ -1498,7 +1499,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Incoterm
                 </label>
                 <select
@@ -1525,7 +1526,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
 
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Notes
                 </label>
                 <textarea
@@ -1574,7 +1575,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 disabled={!newShipment.supplier || !newShipment.orderRef || !newShipment.finalPod}
                 style={{
                   padding: '0.75rem 1.5rem',
-                  backgroundColor: (!newShipment.supplier || !newShipment.orderRef || !newShipment.finalPod) ? '#6c757d' : '#28a745',
+                  backgroundColor: (!newShipment.supplier || !newShipment.orderRef || !newShipment.finalPod) ? '#6c757d' : 'var(--success)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -1589,7 +1590,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 }}
                 onMouseLeave={(e) => {
                   if (newShipment.supplier && newShipment.orderRef && newShipment.finalPod) {
-                    e.target.style.backgroundColor = '#28a745';
+                    e.target.style.backgroundColor = 'var(--success)';
                   }
                 }}
               >
@@ -1624,7 +1625,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
         >
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Supplier *
                 </label>
                 <input
@@ -1640,7 +1641,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Order/Ref *
                 </label>
                 <input
@@ -1656,7 +1657,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Final POD *
                 </label>
                 <input
@@ -1672,7 +1673,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Status
                 </label>
                 <select
@@ -1695,7 +1696,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Week Number
                 </label>
                 <WeekCalendar
@@ -1706,7 +1707,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Product Name
                 </label>
                 <input
@@ -1722,7 +1723,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Quantity
                 </label>
                 <input
@@ -1739,7 +1740,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Pallet Qty
                 </label>
                 <input
@@ -1757,7 +1758,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Receiving Warehouse
                 </label>
                 <select
@@ -1776,7 +1777,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Forwarding Agent
                 </label>
                 <select
@@ -1795,7 +1796,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Vessel Name
                 </label>
                 <input
@@ -1811,7 +1812,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Incoterm
                 </label>
                 <select
@@ -1838,7 +1839,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </div>
 
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Notes
                 </label>
                 <textarea
@@ -1893,7 +1894,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 }}
                 style={{
                   padding: '0.75rem 1.5rem',
-                  backgroundColor: '#dc3545',
+                  backgroundColor: 'var(--danger)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -1902,7 +1903,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   transition: 'background-color 0.2s ease'
                 }}
                 onMouseEnter={(e) => e.target.style.backgroundColor = '#c82333'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#dc3545'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--danger)'}
               >
                 Remove Shipment
               </button>
@@ -1911,7 +1912,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 disabled={!amendingShipment.supplier || !amendingShipment.orderRef || !amendingShipment.finalPod}
                 style={{
                   padding: '0.75rem 1.5rem',
-                  backgroundColor: (!amendingShipment.supplier || !amendingShipment.orderRef || !amendingShipment.finalPod) ? '#6c757d' : '#007bff',
+                  backgroundColor: (!amendingShipment.supplier || !amendingShipment.orderRef || !amendingShipment.finalPod) ? '#6c757d' : 'var(--info)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -1926,7 +1927,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 }}
                 onMouseLeave={(e) => {
                   if (amendingShipment.supplier && amendingShipment.orderRef && amendingShipment.finalPod) {
-                    e.target.style.backgroundColor = '#007bff';
+                    e.target.style.backgroundColor = 'var(--info)';
                   }
                 }}
               >
@@ -1959,7 +1960,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
           minHeight={300}
         >
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                 Archive shipments older than (days):
               </label>
               <input
@@ -1973,7 +1974,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 min="1"
                 max="365"
               />
-              <span style={{ marginLeft: '0.5rem', color: '#666', fontSize: '0.9rem' }}>
+              <span style={{ marginLeft: '0.5rem', color: 'var(--text-500)', fontSize: '0.9rem' }}>
                 days
               </span>
             </div>
@@ -2002,13 +2003,13 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
 
             {autoArchiveStats && (
               <div style={{
-                backgroundColor: '#f8f9fa',
+                backgroundColor: 'var(--surface-2)',
                 padding: '1rem',
                 borderRadius: '8px',
                 marginBottom: '1.5rem',
                 border: '1px solid #e9ecef'
               }}>
-                <h4 style={{ margin: '0 0 1rem 0', color: '#333' }}>Archive Statistics</h4>
+                <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-900)' }}>Archive Statistics</h4>
                 <div style={{ marginBottom: '0.5rem' }}>
                   <strong>Eligible for archive:</strong> {autoArchiveStats.eligibleForArchive} shipments
                 </div>
@@ -2018,7 +2019,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
 
                 {autoArchiveStats.eligibleShipments.length > 0 && (
                   <div>
-                    <h5 style={{ margin: '0 0 0.5rem 0', color: '#666' }}>Shipments to be archived:</h5>
+                    <h5 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-500)' }}>Shipments to be archived:</h5>
                     <div style={{ maxHeight: '200px', overflow: 'auto' }}>
                       {autoArchiveStats.eligibleShipments.map((shipment, index) => (
                         <div key={index} style={{
@@ -2030,7 +2031,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                           fontSize: '0.85rem'
                         }}>
                           <div><strong>{shipment.supplier}</strong> - {shipment.orderRef}</div>
-                          <div style={{ color: '#666' }}>
+                          <div style={{ color: 'var(--text-500)' }}>
                             Arrived: {new Date(shipment.arrivedDate).toLocaleDateString()}
                             ({shipment.daysOld} days ago)
                           </div>
@@ -2072,7 +2073,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   disabled={autoArchiveLoading}
                   style={{
                     padding: '0.75rem 1.5rem',
-                    backgroundColor: autoArchiveLoading ? '#ccc' : '#dc3545',
+                    backgroundColor: autoArchiveLoading ? '#ccc' : 'var(--danger)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',

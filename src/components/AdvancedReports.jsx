@@ -438,24 +438,15 @@ function AdvancedReports() {
 
   return (
     <div style={{ padding: '20px' }}>
-      <div style={{
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        color: 'white',
-        padding: '2rem',
-        borderRadius: '12px',
-        marginBottom: '2rem'
-      }}>
-        <h1 style={{ margin: 0, marginBottom: '0.5rem' }}>📊 Advanced Reports</h1>
-        <p style={{ margin: 0, opacity: 0.9 }}>Custom filters, aggregations, and data analysis</p>
+      <div className="brand-strip" />
+      <div className="page-header">
+        <h2>Advanced Reports</h2>
+        <p>Custom filters, aggregations, and data analysis</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '20px' }}>
         {/* Filters Panel */}
-        <div style={{
-          backgroundColor: 'white',
-          padding: '20px',
-          borderRadius: '12px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        <div className="dash-panel" style={{
           maxHeight: '80vh',
           overflowY: 'auto'
         }}>
@@ -710,7 +701,7 @@ function AdvancedReports() {
           </div>
 
           {/* Aggregation Options */}
-          <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '2px solid #eee' }}>
+          <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '2px solid var(--border)' }}>
             <h4 style={{ marginBottom: '10px' }}>📈 Aggregation</h4>
 
             <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 'bold' }}>
@@ -770,15 +761,10 @@ function AdvancedReports() {
         </div>
 
         {/* Results Panel */}
-        <div style={{
-          backgroundColor: 'white',
-          padding: '20px',
-          borderRadius: '12px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-        }}>
+        <div className="dash-panel">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h3 style={{ margin: 0 }}>
-              📊 Results ({aggregation.groupBy === 'none' ? filteredShipments.length : aggregatedData.length} {aggregation.groupBy === 'none' ? 'shipments' : 'groups'})
+              Results ({aggregation.groupBy === 'none' ? filteredShipments.length : aggregatedData.length} {aggregation.groupBy === 'none' ? 'shipments' : 'groups'})
             </h3>
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
@@ -831,10 +817,10 @@ function AdvancedReports() {
               borderRadius: '8px',
               textAlign: 'center'
             }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1976d2' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--info)' }}>
                 {filteredShipments.length}
               </div>
-              <div style={{ fontSize: '0.9rem', color: '#666' }}>Total Shipments</div>
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>Total Shipments</div>
             </div>
             <div style={{
               padding: '15px',
@@ -845,7 +831,7 @@ function AdvancedReports() {
               <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#7b1fa2' }}>
                 {filteredShipments.reduce((sum, s) => sum + (s.quantity || 0), 0).toLocaleString()}
               </div>
-              <div style={{ fontSize: '0.9rem', color: '#666' }}>Total Quantity</div>
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>Total Quantity</div>
             </div>
             <div style={{
               padding: '15px',
@@ -853,10 +839,10 @@ function AdvancedReports() {
               borderRadius: '8px',
               textAlign: 'center'
             }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#388e3c' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--success)' }}>
                 {filteredShipments.reduce((sum, s) => sum + (s.palletQty || 0), 0).toLocaleString()}
               </div>
-              <div style={{ fontSize: '0.9rem', color: '#666' }}>Total Pallets</div>
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>Total Pallets</div>
             </div>
             <div style={{
               padding: '15px',
@@ -864,12 +850,12 @@ function AdvancedReports() {
               borderRadius: '8px',
               textAlign: 'center'
             }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f57c00' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--warning)' }}>
                 {aggregation.groupBy === 'none'
                   ? filteredShipments.length
                   : aggregatedData.length}
               </div>
-              <div style={{ fontSize: '0.9rem', color: '#666' }}>
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>
                 {aggregation.groupBy === 'none' ? 'Records' : 'Groups'}
               </div>
             </div>
@@ -878,14 +864,14 @@ function AdvancedReports() {
           {/* Data Table */}
           <div style={{ overflowX: 'auto' }}>
             {loading ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+              <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-500)' }}>
                 Loading shipments...
               </div>
             ) : aggregation.groupBy === 'none' ? (
               // Detailed shipment list
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                 <thead>
-                  <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
+                  <tr style={{ backgroundColor: 'var(--surface-2)', borderBottom: '2px solid var(--border)' }}>
                     <th style={{ padding: '12px', textAlign: 'left' }}>Supplier</th>
                     <th style={{ padding: '12px', textAlign: 'left' }}>Order Ref</th>
                     <th style={{ padding: '12px', textAlign: 'left' }}>Product</th>
@@ -899,13 +885,13 @@ function AdvancedReports() {
                 <tbody>
                   {filteredShipments.map((shipment, index) => (
                     <tr key={shipment.id} style={{
-                      borderBottom: '1px solid #eee',
+                      borderBottom: '1px solid var(--border)',
                       backgroundColor: index % 2 === 0 ? 'white' : '#fafafa'
                     }}>
                       <td style={{ padding: '10px' }}>{shipment.supplier || '-'}</td>
                       <td style={{ padding: '10px' }}>{shipment.orderRef || '-'}</td>
                       <td style={{ padding: '10px' }}>{shipment.productName || '-'}</td>
-                      <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold', color: '#667eea' }}>
+                      <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold', color: 'var(--info)' }}>
                         {shipment.weekNumber || '-'}
                       </td>
                       <td style={{ padding: '10px', textAlign: 'right' }}>{(shipment.quantity || 0).toLocaleString()}</td>
@@ -916,7 +902,7 @@ function AdvancedReports() {
                           borderRadius: '4px',
                           fontSize: '0.75rem',
                           backgroundColor: '#e3f2fd',
-                          color: '#1976d2'
+                          color: 'var(--info)'
                         }}>
                           {shipment.latestStatus || '-'}
                         </span>
@@ -930,7 +916,7 @@ function AdvancedReports() {
               // Aggregated data
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                 <thead>
-                  <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
+                  <tr style={{ backgroundColor: 'var(--surface-2)', borderBottom: '2px solid var(--border)' }}>
                     <th style={{ padding: '12px', textAlign: 'left' }}>{aggregation.groupBy.toUpperCase()}</th>
                     <th style={{ padding: '12px', textAlign: 'right' }}>Count</th>
                     <th style={{ padding: '12px', textAlign: 'right' }}>Total Quantity</th>
@@ -941,7 +927,7 @@ function AdvancedReports() {
                 <tbody>
                   {aggregatedData.map((data, index) => (
                     <tr key={index} style={{
-                      borderBottom: '1px solid #eee',
+                      borderBottom: '1px solid var(--border)',
                       backgroundColor: index % 2 === 0 ? 'white' : '#fafafa'
                     }}>
                       <td style={{ padding: '10px', fontWeight: 'bold' }}>{data.group}</td>

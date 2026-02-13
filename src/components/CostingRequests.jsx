@@ -78,13 +78,10 @@ function CostingRequests() {
 
   return (
     <div style={{ padding: '1.5rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: '1.5rem', color: '#0b1f3a' }}>Costing Requests</h2>
-          <p style={{ margin: '0.25rem 0 0', color: '#666', fontSize: '0.9rem' }}>
-            Manage costing requests from team members
-          </p>
-        </div>
+      <div className="brand-strip" />
+      <div className="page-header">
+        <h2>Costing Requests</h2>
+        <p>Manage costing requests from team members</p>
       </div>
 
       {error && (
@@ -102,8 +99,8 @@ function CostingRequests() {
             onClick={() => setStatusFilter(status)}
             style={{
               padding: '8px 16px',
-              backgroundColor: statusFilter === status ? '#0b1f3a' : '#f3f4f6',
-              color: statusFilter === status ? 'white' : '#374151',
+              backgroundColor: statusFilter === status ? 'var(--navy-900)' : 'var(--surface-2)',
+              color: statusFilter === status ? 'white' : 'var(--text-700)',
               border: 'none',
               borderRadius: '6px',
               cursor: 'pointer',
@@ -118,13 +115,13 @@ function CostingRequests() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>Loading...</div>
+        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-500)' }}>Loading...</div>
       ) : requests.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '2rem', color: '#666', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-500)', backgroundColor: 'var(--surface-2)', borderRadius: '8px' }}>
           No {statusFilter === 'all' ? '' : statusFilter.replace('_', ' ')} requests found.
         </div>
       ) : (
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+        <div className="dash-panel" style={{ padding: 0, overflow: 'hidden' }}>
           <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ backgroundColor: '#f8f9fa' }}>
@@ -145,7 +142,7 @@ function CostingRequests() {
                   <td style={{ padding: '12px 16px', maxWidth: '300px' }}>
                     <div style={{ whiteSpace: 'pre-wrap', fontSize: '0.85rem' }}>{req.product_description || '—'}</div>
                     {req.notes && (
-                      <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px', fontStyle: 'italic' }}>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-500)', marginTop: '4px', fontStyle: 'italic' }}>
                         Notes: {req.notes}
                       </div>
                     )}
@@ -168,7 +165,7 @@ function CostingRequests() {
                       {req.status.replace('_', ' ')}
                     </span>
                   </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: '0.85rem', color: '#666' }}>
+                  <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-500)' }}>
                     {new Date(req.created_at).toLocaleDateString()}
                   </td>
                   <td style={{ padding: '12px 16px', textAlign: 'center' }}>
@@ -176,7 +173,7 @@ function CostingRequests() {
                       {req.status === 'pending' && (
                         <button
                           onClick={() => handleUpdateStatus(req.id, 'in_progress')}
-                          style={{ padding: '5px 8px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem' }}
+                          style={{ padding: '5px 8px', backgroundColor: 'var(--info)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem' }}
                         >
                           In Progress
                         </button>
@@ -184,7 +181,7 @@ function CostingRequests() {
                       {(req.status === 'pending' || req.status === 'in_progress') && (
                         <button
                           onClick={() => handleUpdateStatus(req.id, 'completed')}
-                          style={{ padding: '5px 8px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem' }}
+                          style={{ padding: '5px 8px', backgroundColor: 'var(--success)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem' }}
                         >
                           Complete
                         </button>
@@ -192,14 +189,14 @@ function CostingRequests() {
                       {(req.status === 'pending' || req.status === 'in_progress') && (
                         <button
                           onClick={() => handleUpdateStatus(req.id, 'dismissed')}
-                          style={{ padding: '5px 8px', backgroundColor: '#6b7280', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem' }}
+                          style={{ padding: '5px 8px', backgroundColor: 'var(--text-500)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem' }}
                         >
                           Dismiss
                         </button>
                       )}
                       <button
                         onClick={() => handleDelete(req.id)}
-                        style={{ padding: '5px 8px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem' }}
+                        style={{ padding: '5px 8px', backgroundColor: 'var(--danger)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem' }}
                       >
                         Del
                       </button>

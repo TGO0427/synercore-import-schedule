@@ -341,7 +341,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
         {/* Upload Section */}
         <div
           style={{
-            backgroundColor: "#f8f9fa",
+            backgroundColor: "var(--surface-2)",
             border: "2px dashed #dee2e6",
             borderRadius: "12px",
             padding: "2rem",
@@ -413,7 +413,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
               marginBottom: "1rem",
             }}
           >
-            <h4 style={{ margin: 0, color: "#333" }}>
+            <h4 style={{ margin: 0, color: "var(--text-900)" }}>
               📋 {forwarderInfo.name} Documents ({forwarderQuotes.length})
             </h4>
 
@@ -422,7 +422,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
               <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                 {selectedQuotes.length > 0 && (
                   <>
-                    <span style={{ fontSize: "0.9rem", color: "#666" }}>
+                    <span style={{ fontSize: "0.9rem", color: "var(--text-500)" }}>
                       {selectedQuotes.length} selected
                     </span>
                     <button
@@ -445,7 +445,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                       style={{
                         padding: "6px 12px",
                         backgroundColor:
-                          selectedQuotes.length >= 2 ? "#28a745" : "#6c757d",
+                          selectedQuotes.length >= 2 ? "var(--success)" : "#6c757d",
                         color: "white",
                         border: "none",
                         borderRadius: "4px",
@@ -467,7 +467,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                 textAlign: "center",
                 padding: "3rem",
                 color: "#6c757d",
-                backgroundColor: "#f8f9fa",
+                backgroundColor: "var(--surface-2)",
                 borderRadius: "8px",
               }}
             >
@@ -493,9 +493,9 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                       alignItems: "center",
                       justifyContent: "space-between",
                       padding: "1rem",
-                      backgroundColor: isSelected ? "#f8f9fa" : "white",
+                      backgroundColor: isSelected ? "var(--surface-2)" : "white",
                       border: `1px solid ${
-                        isSelected ? forwarderInfo.color : "#dee2e6"
+                        isSelected ? forwarderInfo.color : "var(--border)"
                       }`,
                       borderRadius: "8px",
                       transition: "all 0.2s ease",
@@ -508,7 +508,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                     onMouseLeave={(e) => {
                       e.currentTarget.style.boxShadow = "none";
                       if (!isSelected)
-                        e.currentTarget.style.borderColor = "#dee2e6";
+                        e.currentTarget.style.borderColor = "var(--border)";
                     }}
                   >
                     <div
@@ -541,7 +541,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                           <span style={{ fontSize: "1.2rem" }}>
                             {isPDF ? "📄" : "📋"}
                           </span>
-                          <span style={{ fontWeight: 600, color: "#333" }}>
+                          <span style={{ fontWeight: 600, color: "var(--text-900)" }}>
                             {quote.filename}
                           </span>
                           {isPDF && (
@@ -575,7 +575,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                           disabled={isAnalyzing}
                           style={{
                             padding: "8px 12px",
-                            backgroundColor: isAnalyzing ? "#6c757d" : "#17a2b8",
+                            backgroundColor: isAnalyzing ? "#6c757d" : "var(--info)",
                             color: "white",
                             border: "none",
                             borderRadius: "6px",
@@ -592,7 +592,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                           }}
                           onMouseLeave={(e) => {
                             if (!isAnalyzing)
-                              e.currentTarget.style.backgroundColor = "#17a2b8";
+                              e.currentTarget.style.backgroundColor = "var(--info)";
                           }}
                           title="Analyze PDF rates and prices"
                         >
@@ -604,7 +604,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                         onClick={() => handleDownloadQuote(forwarder, quote.filename)}
                         style={{
                           padding: "8px 12px",
-                          backgroundColor: "#28a745",
+                          backgroundColor: "var(--success)",
                           color: "white",
                           border: "none",
                           borderRadius: "6px",
@@ -619,7 +619,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                           (e.currentTarget.style.backgroundColor = "#218838")
                         }
                         onMouseLeave={(e) =>
-                          (e.currentTarget.style.backgroundColor = "#28a745")
+                          (e.currentTarget.style.backgroundColor = "var(--success)")
                         }
                         title="Download document"
                       >
@@ -630,8 +630,8 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                         onClick={() => openRenameDialog(forwarder, quote)}
                         style={{
                           padding: "8px 12px",
-                          backgroundColor: "#ffc107",
-                          color: "#333",
+                          backgroundColor: "var(--warning)",
+                          color: "var(--text-900)",
                           border: "none",
                           borderRadius: "6px",
                           cursor: "pointer",
@@ -645,7 +645,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                           (e.currentTarget.style.backgroundColor = "#e0a800")
                         }
                         onMouseLeave={(e) =>
-                          (e.currentTarget.style.backgroundColor = "#ffc107")
+                          (e.currentTarget.style.backgroundColor = "var(--warning)")
                         }
                         title="Rename document"
                       >
@@ -656,7 +656,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                         onClick={() => handleDeleteQuote(forwarder, quote.filename)}
                         style={{
                           padding: "8px 12px",
-                          backgroundColor: "#dc3545",
+                          backgroundColor: "var(--danger)",
                           color: "white",
                           border: "none",
                           borderRadius: "6px",
@@ -671,7 +671,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                           (e.currentTarget.style.backgroundColor = "#c82333")
                         }
                         onMouseLeave={(e) =>
-                          (e.currentTarget.style.backgroundColor = "#dc3545")
+                          (e.currentTarget.style.backgroundColor = "var(--danger)")
                         }
                         title="Delete document"
                       >
@@ -691,15 +691,17 @@ function RatesQuotes({ showSuccess, showError, loading }) {
   return (
     <>
       <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+        <div className="brand-strip" />
         {/* Header */}
         <div
+          className="page-header"
           style={{
             padding: "2rem 2rem 1rem 2rem",
-            borderBottom: "1px solid #dee2e6",
+            borderBottom: "1px solid var(--border)",
             backgroundColor: "white",
           }}
         >
-          <h1 style={{ margin: 0, color: "#333", fontSize: "2rem" }}>
+          <h1 style={{ margin: 0, color: "var(--text-900)", fontSize: "2rem" }}>
             💰 Rates & Quotes Management
           </h1>
           <p style={{ margin: "0.5rem 0 0 0", color: "#6c757d" }}>
@@ -712,7 +714,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
           style={{
             display: "flex",
             borderBottom: "1px solid #dee2e6",
-            backgroundColor: "#f8f9fa",
+            backgroundColor: "var(--surface-2)",
           }}
         >
           {Object.entries(forwarders).map(([key, forwarder]) => (
@@ -772,7 +774,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
         </div>
 
         {/* Tab Content */}
-        <div style={{ flex: 1, overflow: "auto", backgroundColor: "#f8f9fa" }}>
+        <div style={{ flex: 1, overflow: "auto", backgroundColor: "var(--surface-2)" }}>
           {renderTabContent(activeTab)}
         </div>
       </div>
@@ -811,7 +813,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                 marginBottom: "1.5rem",
               }}
             >
-              <h3 style={{ margin: 0, color: "#333" }}>Rename Quote Document</h3>
+              <h3 style={{ margin: 0, color: "var(--text-900)" }}>Rename Quote Document</h3>
               <button
                 onClick={() => {
                   setShowRenameDialog(false);
@@ -823,7 +825,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                   border: "none",
                   fontSize: "1.5rem",
                   cursor: "pointer",
-                  color: "#666",
+                  color: "var(--text-500)",
                   padding: "0.25rem",
                 }}
                 title="Close"
@@ -839,7 +841,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                   marginBottom: "0.5rem",
                   fontSize: "0.9rem",
                   fontWeight: 500,
-                  color: "#333",
+                  color: "var(--text-900)",
                 }}
               >
                 New filename:
@@ -863,7 +865,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                 style={{
                   width: "100%",
                   padding: "0.75rem",
-                  border: "2px solid #e1e5e9",
+                  border: "2px solid var(--border)",
                   borderRadius: "6px",
                   fontSize: "0.9rem",
                   outline: "none",
@@ -921,7 +923,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                 disabled={!newQuoteName.trim()}
                 style={{
                   padding: "0.75rem 1.5rem",
-                  backgroundColor: newQuoteName.trim() ? "#28a745" : "#6c757d",
+                  backgroundColor: newQuoteName.trim() ? "var(--success)" : "#6c757d",
                   color: "white",
                   border: "none",
                   borderRadius: "6px",
@@ -935,7 +937,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                 }}
                 onMouseLeave={(e) => {
                   if (newQuoteName.trim())
-                    e.currentTarget.style.backgroundColor = "#28a745";
+                    e.currentTarget.style.backgroundColor = "var(--success)";
                 }}
               >
                 Rename
@@ -979,11 +981,11 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                 justifyContent: "space-between",
                 alignItems: "center",
                 marginBottom: "2rem",
-                borderBottom: "1px solid #eee",
+                borderBottom: "1px solid var(--border)",
                 paddingBottom: "1rem",
               }}
             >
-              <h2 style={{ margin: 0, color: "#333" }}>📊 Quote Comparison Report</h2>
+              <h2 style={{ margin: 0, color: "var(--text-900)" }}>📊 Quote Comparison Report</h2>
               <button
                 onClick={() => setShowComparisonReport(false)}
                 style={{
@@ -991,7 +993,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                   border: "none",
                   fontSize: "1.5rem",
                   cursor: "pointer",
-                  color: "#666",
+                  color: "var(--text-500)",
                   padding: "0.25rem",
                 }}
                 title="Close"
@@ -1002,7 +1004,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
 
             {/* Report Summary */}
             <div style={{ marginBottom: "2rem" }}>
-              <h3 style={{ color: "#333", marginBottom: "1rem" }}>Summary</h3>
+              <h3 style={{ color: "var(--text-900)", marginBottom: "1rem" }}>Summary</h3>
               <div
                 style={{
                   display: "grid",
@@ -1010,23 +1012,23 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                   gap: "1rem",
                 }}
               >
-                <div style={{ padding: "1rem", backgroundColor: "#f8f9fa", borderRadius: "8px" }}>
-                  <div style={{ fontSize: "1.5rem", fontWeight: 600, color: "#28a745" }}>
+                <div style={{ padding: "1rem", backgroundColor: "var(--surface-2)", borderRadius: "8px" }}>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 600, color: "var(--success)" }}>
                     {comparisonReport.summary.totalQuotes}
                   </div>
-                  <div style={{ fontSize: "0.9rem", color: "#666" }}>Quotes Analyzed</div>
+                  <div style={{ fontSize: "0.9rem", color: "var(--text-500)" }}>Quotes Analyzed</div>
                 </div>
-                <div style={{ padding: "1rem", backgroundColor: "#f8f9fa", borderRadius: "8px" }}>
-                  <div style={{ fontSize: "1.5rem", fontWeight: 600, color: "#17a2b8" }}>
+                <div style={{ padding: "1rem", backgroundColor: "var(--surface-2)", borderRadius: "8px" }}>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 600, color: "var(--info)" }}>
                     {comparisonReport.summary.totalPricesFound}
                   </div>
-                  <div style={{ fontSize: "0.9rem", color: "#666" }}>Prices Found</div>
+                  <div style={{ fontSize: "0.9rem", color: "var(--text-500)" }}>Prices Found</div>
                 </div>
-                <div style={{ padding: "1rem", backgroundColor: "#f8f9fa", borderRadius: "8px" }}>
-                  <div style={{ fontSize: "1.5rem", fontWeight: 600, color: "#ffc107" }}>
+                <div style={{ padding: "1rem", backgroundColor: "var(--surface-2)", borderRadius: "8px" }}>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 600, color: "var(--warning)" }}>
                     {comparisonReport.summary.averageConfidence}%
                   </div>
-                  <div style={{ fontSize: "0.9rem", color: "#666" }}>Avg Confidence</div>
+                  <div style={{ fontSize: "0.9rem", color: "var(--text-500)" }}>Avg Confidence</div>
                 </div>
               </div>
             </div>
@@ -1034,7 +1036,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
             {/* Best Prices */}
             {comparisonReport.bestPrices?.length > 0 && (
               <div style={{ marginBottom: "2rem" }}>
-                <h3 style={{ color: "#333", marginBottom: "1rem" }}>💰 Best Prices</h3>
+                <h3 style={{ color: "var(--text-900)", marginBottom: "1rem" }}>💰 Best Prices</h3>
                 <div style={{ display: "grid", gap: "0.5rem" }}>
                   {comparisonReport.bestPrices.slice(0, 5).map((price, index) => (
                     <div
@@ -1043,7 +1045,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                         display: "flex",
                         justifyContent: "space-between",
                         padding: "0.75rem",
-                        backgroundColor: index === 0 ? "#d4edda" : "#f8f9fa",
+                        backgroundColor: index === 0 ? "#d4edda" : "var(--surface-2)",
                         borderRadius: "6px",
                         border: index === 0 ? "1px solid #c3e6cb" : "1px solid #e9ecef",
                       }}
@@ -1055,7 +1057,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                       <span
                         style={{
                           fontWeight: 600,
-                          color: index === 0 ? "#155724" : "#333",
+                          color: index === 0 ? "#155724" : "var(--text-900)",
                         }}
                       >
                         {price.formatted}
@@ -1069,7 +1071,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
             {/* Recommendations */}
             {comparisonReport.recommendations?.length > 0 && (
               <div style={{ marginBottom: "2rem" }}>
-                <h3 style={{ color: "#333", marginBottom: "1rem" }}>💡 Recommendations</h3>
+                <h3 style={{ color: "var(--text-900)", marginBottom: "1rem" }}>💡 Recommendations</h3>
                 <div style={{ display: "grid", gap: "1rem" }}>
                   {comparisonReport.recommendations.map((rec, index) => (
                     <div
@@ -1086,7 +1088,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                       <div style={{ fontWeight: 600, marginBottom: "0.5rem" }}>
                         {rec.priority === "high" ? "⚠️" : "ℹ️"} {rec.title}
                       </div>
-                      <div style={{ fontSize: "0.9rem", marginBottom: "0.5rem", color: "#666" }}>
+                      <div style={{ fontSize: "0.9rem", marginBottom: "0.5rem", color: "var(--text-500)" }}>
                         {rec.description}
                       </div>
                       <div style={{ fontSize: "0.85rem", fontStyle: "italic", color: "#444" }}>
@@ -1100,7 +1102,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
 
             {/* Quote Details */}
             <div>
-              <h3 style={{ color: "#333", marginBottom: "1rem" }}>📋 Quote Details</h3>
+              <h3 style={{ color: "var(--text-900)", marginBottom: "1rem" }}>📋 Quote Details</h3>
               <div style={{ display: "grid", gap: "1rem" }}>
                 {comparisonReport.quotes.map((quote, index) => (
                   <div
@@ -1143,12 +1145,12 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                         {quote.confidence}% confidence
                       </span>
                     </div>
-                    <div style={{ fontSize: "0.9rem", color: "#666" }}>
+                    <div style={{ fontSize: "0.9rem", color: "var(--text-500)" }}>
                       Found {quote.summary.priceCount} prices, {quote.summary.routeCount} routes,{" "}
                       {quote.summary.serviceCount} services
                     </div>
                     {quote.summary.lowestPrice && (
-                      <div style={{ fontSize: "0.9rem", color: "#28a745", marginTop: "0.25rem" }}>
+                      <div style={{ fontSize: "0.9rem", color: "var(--success)", marginTop: "0.25rem" }}>
                         Lowest price: {quote.summary.lowestPrice.toLocaleString()}
                       </div>
                     )}
@@ -1163,14 +1165,14 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                 justifyContent: "flex-end",
                 marginTop: "2rem",
                 paddingTop: "1rem",
-                borderTop: "1px solid #eee",
+                borderTop: "1px solid var(--border)",
               }}
             >
               <button
                 onClick={() => setShowComparisonReport(false)}
                 style={{
                   padding: "0.75rem 1.5rem",
-                  backgroundColor: "#28a745",
+                  backgroundColor: "var(--success)",
                   color: "white",
                   border: "none",
                   borderRadius: "6px",

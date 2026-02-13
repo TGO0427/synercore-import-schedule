@@ -64,19 +64,19 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
 
   const getStatusColor = (status) => {
     const colors = {
-      'arrived_pta': '#28a745',
-      'arrived_klm': '#28a745',
-      'arrived_offsite': '#28a745',
-      'unloading': '#fd7e14',
-      'inspection_pending': '#ffc107',
-      'inspecting': '#17a2b8',
-      'inspection_failed': '#dc3545',
-      'inspection_passed': '#28a745',
-      'receiving': '#6f42c1',
-      'received': '#20c997',
-      'stored': '#6c757d'
+      'arrived_pta': 'var(--success)',
+      'arrived_klm': 'var(--success)',
+      'arrived_offsite': 'var(--success)',
+      'unloading': 'var(--warning)',
+      'inspection_pending': 'var(--warning)',
+      'inspecting': 'var(--info)',
+      'inspection_failed': 'var(--danger)',
+      'inspection_passed': 'var(--success)',
+      'receiving': 'var(--navy-600)',
+      'received': 'var(--success)',
+      'stored': 'var(--text-500)'
     };
-    return colors[status] || '#6c757d';
+    return colors[status] || 'var(--text-500)';
   };
 
   const getStatusIcon = (status) => {
@@ -119,26 +119,26 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
     const status = shipment.latest_status;
 
     if (status === 'arrived_pta' || status === 'arrived_klm' || status === 'arrived_offsite') {
-      actions.push({ key: 'start-unloading', label: 'Start Unloading', icon: '📦', color: '#fd7e14' });
+      actions.push({ key: 'start-unloading', label: 'Start Unloading', icon: '📦', color: 'var(--warning)' });
     } else if (status === 'unloading') {
-      actions.push({ key: 'complete-unloading', label: 'Complete Unloading', icon: '✅', color: '#28a745' });
+      actions.push({ key: 'complete-unloading', label: 'Complete Unloading', icon: '✅', color: 'var(--success)' });
     } else if (status === 'inspection_pending') {
-      actions.push({ key: 'start-inspection', label: 'Start Inspection', icon: '🔍', color: '#17a2b8' });
+      actions.push({ key: 'start-inspection', label: 'Start Inspection', icon: '🔍', color: 'var(--info)' });
     } else if (status === 'inspecting') {
-      actions.push({ key: 'complete-inspection', label: 'Complete Inspection', icon: '✅', color: '#28a745' });
+      actions.push({ key: 'complete-inspection', label: 'Complete Inspection', icon: '✅', color: 'var(--success)' });
     } else if (status === 'inspection_passed') {
-      actions.push({ key: 'start-receiving', label: 'Start Receiving', icon: '📋', color: '#6f42c1' });
+      actions.push({ key: 'start-receiving', label: 'Start Receiving', icon: '📋', color: 'var(--navy-600)' });
     } else if (status === 'inspection_failed') {
-      actions.push({ key: 'start-inspection', label: 'Re-inspect', icon: '🔍', color: '#17a2b8' });
-      actions.push({ key: 'reject-shipment', label: 'Reject/Return to Supplier', icon: '↩️', color: '#dc3545' });
+      actions.push({ key: 'start-inspection', label: 'Re-inspect', icon: '🔍', color: 'var(--info)' });
+      actions.push({ key: 'reject-shipment', label: 'Reject/Return to Supplier', icon: '↩️', color: 'var(--danger)' });
     } else if (status === 'receiving' || status === 'receiving_goods') {
-      actions.push({ key: 'complete-receiving', label: 'Complete Receiving', icon: '✔️', color: '#20c997' });
+      actions.push({ key: 'complete-receiving', label: 'Complete Receiving', icon: '✔️', color: 'var(--success)' });
     } else if (status === 'received' || status === 'in_warehouse') {
-      actions.push({ key: 'mark-stored', label: 'Mark as Stored', icon: '🏪', color: '#6c757d' });
+      actions.push({ key: 'mark-stored', label: 'Mark as Stored', icon: '🏪', color: 'var(--text-500)' });
     }
 
     // Always add the ability to amend status (revert to shipping schedule)
-    actions.push({ key: 'amend-status', label: 'Amend Status', icon: '🔄', color: '#dc3545' });
+    actions.push({ key: 'amend-status', label: 'Amend Status', icon: '🔄', color: 'var(--danger)' });
 
     return actions;
   };
@@ -413,11 +413,12 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
 
   return (
     <div style={{ padding: '2rem' }}>
-      <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ margin: '0 0 0.5rem 0', color: '#333' }}>
+      <div className="brand-strip" />
+      <div className="page-header" style={{ marginBottom: '2rem' }}>
+        <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-900)' }}>
           📋 Post-Arrival Workflow Management
         </h2>
-        <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>
+        <p style={{ margin: 0, color: 'var(--text-500)', fontSize: '0.9rem' }}>
           Manage shipments through the post-arrival workflow: unloading → inspection → receiving → storage
         </p>
       </div>
@@ -426,13 +427,13 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
         <div style={{
           textAlign: 'center',
           padding: '3rem',
-          backgroundColor: '#f8f9fa',
+          backgroundColor: 'var(--surface-2)',
           borderRadius: '8px',
-          border: '2px dashed #dee2e6'
+          border: '2px dashed var(--border)'
         }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📦</div>
-          <h3 style={{ margin: '0 0 0.5rem 0', color: '#6c757d' }}>No Shipments in Post-Arrival Workflow</h3>
-          <p style={{ margin: 0, color: '#6c757d' }}>
+          <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-500)' }}>No Shipments in Post-Arrival Workflow</h3>
+          <p style={{ margin: 0, color: 'var(--text-500)' }}>
             Shipments will appear here once they reach "ARRIVED" status.
           </p>
         </div>
@@ -443,19 +444,15 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
             const actions = getAvailableActions(shipment);
 
             return (
-              <div key={shipment.id} style={{
-                backgroundColor: 'white',
-                border: '1px solid #e9ecef',
-                borderRadius: '8px',
-                padding: '1.5rem',
-                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+              <div key={shipment.id} className="dash-panel" style={{
+                padding: '1.5rem'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                   <div>
-                    <h4 style={{ margin: '0 0 0.5rem 0', color: '#333' }}>
+                    <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-900)' }}>
                       {shipment.supplier} - {shipment.orderRef}
                     </h4>
-                    <div style={{ color: '#666', fontSize: '0.9rem' }}>
+                    <div style={{ color: 'var(--text-500)', fontSize: '0.9rem' }}>
                       📍 {shipment.finalPod} | 📦 {shipment.quantity} units | 🏭 {shipment.receivingWarehouse}
                     </div>
                   </div>
@@ -479,10 +476,10 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
                 {/* Progress Bar */}
                 <div style={{ marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.8rem', color: '#666' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-500)' }}>
                       Progress: Step {progress.currentStep} of {progress.totalSteps}
                     </span>
-                    <span style={{ fontSize: '0.8rem', color: '#666', fontWeight: '600' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-500)', fontWeight: '600' }}>
                       {progress.percentage}%
                     </span>
                   </div>
@@ -506,25 +503,25 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
                 {/* Workflow Details */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
                   {shipment.unloadingStartDate && (
-                    <div style={{ fontSize: '0.8rem', color: '#666' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-500)' }}>
                       🚚 <strong>Unloading Started:</strong><br />
                       {new Date(shipment.unloadingStartDate).toLocaleString()}
                     </div>
                   )}
                   {shipment.inspectionDate && (
-                    <div style={{ fontSize: '0.8rem', color: '#666' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-500)' }}>
                       🔍 <strong>Inspection:</strong><br />
                       {shipment.inspectedBy} ({new Date(shipment.inspectionDate).toLocaleDateString()})
                     </div>
                   )}
                   {shipment.receivingDate && (
-                    <div style={{ fontSize: '0.8rem', color: '#666' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-500)' }}>
                       📋 <strong>Receiving:</strong><br />
                       {shipment.receivedBy} ({new Date(shipment.receivingDate).toLocaleDateString()})
                     </div>
                   )}
                   {shipment.receivedQuantity !== null && shipment.receivedQuantity !== undefined && (
-                    <div style={{ fontSize: '0.8rem', color: '#666' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-500)' }}>
                       📦 <strong>Received:</strong><br />
                       {shipment.receivedQuantity} / {shipment.quantity} units
                     </div>
@@ -535,12 +532,12 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
                 {(shipment.inspectionNotes || shipment.receivingNotes) && (
                   <div style={{ marginBottom: '1rem' }}>
                     {shipment.inspectionNotes && (
-                      <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.5rem' }}>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-500)', marginBottom: '0.5rem' }}>
                         <strong>Inspection Notes:</strong> {shipment.inspectionNotes}
                       </div>
                     )}
                     {shipment.receivingNotes && (
-                      <div style={{ fontSize: '0.8rem', color: '#666' }}>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-500)' }}>
                         <strong>Receiving Notes:</strong> {shipment.receivingNotes}
                       </div>
                     )}
@@ -731,10 +728,10 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
             overflow: 'auto'
           }}>
             <div style={{ marginBottom: '1.5rem' }}>
-              <h3 style={{ margin: '0 0 0.5rem 0', color: '#333' }}>
+              <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-900)' }}>
                 {selectedShipment.latest_status === 'inspection_in_progress' ? '🔍 Inspection Details' : '📋 Receiving Details'}
               </h3>
-              <div style={{ color: '#666', fontSize: '0.9rem' }}>
+              <div style={{ color: 'var(--text-500)', fontSize: '0.9rem' }}>
                 {selectedShipment.supplier} - {selectedShipment.orderRef}
               </div>
             </div>
@@ -742,7 +739,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
             {(selectedShipment.latest_status === 'inspection_in_progress') ? (
               <div style={{ marginBottom: '1.5rem' }}>
                 <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                     Inspector Name
                   </label>
                   <input
@@ -752,7 +749,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      border: '2px solid #e1e5e9',
+                      border: '2px solid var(--border)',
                       borderRadius: '6px',
                       fontSize: '0.9rem',
                       outline: 'none'
@@ -764,7 +761,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
                 {selectedShipment.latest_status === 'inspection_in_progress' && (
                   <>
                     <div style={{ marginBottom: '1rem' }}>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                         Inspection Result
                       </label>
                       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
@@ -797,14 +794,14 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
 
                     {workflowData.inspectionOnHold && (
                       <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
-                          Hold Type(s) <span style={{ color: '#dc3545' }}>*</span>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
+                          Hold Type(s) <span style={{ color: 'var(--danger)' }}>*</span>
                         </label>
                         <div style={{
-                          border: '2px solid #e1e5e9',
+                          border: '2px solid var(--border)',
                           borderRadius: '6px',
                           padding: '0.75rem',
-                          backgroundColor: '#f8f9fa'
+                          backgroundColor: 'var(--surface-2)'
                         }}>
                           {['Pending Results', 'Damage Stock', 'Non Compliant Documentation', 'Awaiting COA'].map((type) => (
                             <label
@@ -844,11 +841,11 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
 
                     {workflowData.inspectionFailed && (
                       <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
-                          Failure Reason(s) <span style={{ color: '#dc3545' }}>*</span>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
+                          Failure Reason(s) <span style={{ color: 'var(--danger)' }}>*</span>
                         </label>
                         <div style={{
-                          border: '2px solid #e1e5e9',
+                          border: '2px solid var(--border)',
                           borderRadius: '6px',
                           padding: '0.75rem',
                           backgroundColor: '#fff5f5'
@@ -890,7 +887,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
                     )}
 
                     <div style={{ marginBottom: '1rem' }}>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                         Inspection Notes
                       </label>
                       <textarea
@@ -899,7 +896,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
                         style={{
                           width: '100%',
                           padding: '0.75rem',
-                          border: '2px solid #e1e5e9',
+                          border: '2px solid var(--border)',
                           borderRadius: '6px',
                           fontSize: '0.9rem',
                           outline: 'none',
@@ -915,7 +912,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
             ) : (
               <div style={{ marginBottom: '1.5rem' }}>
                 <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                     Receiver Name
                   </label>
                   <input
@@ -925,7 +922,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      border: '2px solid #e1e5e9',
+                      border: '2px solid var(--border)',
                       borderRadius: '6px',
                       fontSize: '0.9rem',
                       outline: 'none'
@@ -937,7 +934,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
                 {selectedShipment.latest_status === 'receiving_goods' && (
                   <>
                     <div style={{ marginBottom: '1rem' }}>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                         Received Quantity
                       </label>
                       <input
@@ -947,7 +944,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
                         style={{
                           width: '100%',
                           padding: '0.75rem',
-                          border: '2px solid #e1e5e9',
+                          border: '2px solid var(--border)',
                           borderRadius: '6px',
                           fontSize: '0.9rem',
                           outline: 'none'
@@ -957,7 +954,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
                     </div>
 
                     <div style={{ marginBottom: '1rem' }}>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                         Receiving Notes
                       </label>
                       <textarea
@@ -966,7 +963,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
                         style={{
                           width: '100%',
                           padding: '0.75rem',
-                          border: '2px solid #e1e5e9',
+                          border: '2px solid var(--border)',
                           borderRadius: '6px',
                           fontSize: '0.9rem',
                           outline: 'none',
@@ -989,7 +986,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
                 }}
                 style={{
                   padding: '0.75rem 1.5rem',
-                  backgroundColor: '#6c757d',
+                  backgroundColor: 'var(--text-500)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -1030,7 +1027,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
                 disabled={actionLoading}
                 style={{
                   padding: '0.75rem 1.5rem',
-                  backgroundColor: actionLoading ? '#ccc' : '#007bff',
+                  backgroundColor: actionLoading ? '#ccc' : 'var(--info)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -1071,17 +1068,17 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
             overflow: 'auto'
           }}>
             <div style={{ marginBottom: '1.5rem' }}>
-              <h3 style={{ margin: '0 0 0.5rem 0', color: '#dc3545' }}>
+              <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--danger)' }}>
                 ↩️ Reject/Return Shipment to Supplier
               </h3>
-              <div style={{ color: '#666', fontSize: '0.9rem' }}>
+              <div style={{ color: 'var(--text-500)', fontSize: '0.9rem' }}>
                 {selectedShipment.supplier} - {selectedShipment.orderRef}
               </div>
             </div>
 
             <div style={{
               backgroundColor: '#fff3cd',
-              border: '1px solid #ffc107',
+              border: '1px solid var(--warning)',
               borderRadius: '6px',
               padding: '1rem',
               marginBottom: '1.5rem',
@@ -1093,7 +1090,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
             </div>
 
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                 Rejected By
               </label>
               <input
@@ -1103,7 +1100,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  border: '2px solid #e1e5e9',
+                  border: '2px solid var(--border)',
                   borderRadius: '6px',
                   fontSize: '0.9rem',
                   outline: 'none'
@@ -1113,8 +1110,8 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
             </div>
 
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
-                Rejection Reason <span style={{ color: '#dc3545' }}>*</span>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
+                Rejection Reason <span style={{ color: 'var(--danger)' }}>*</span>
               </label>
               <textarea
                 value={rejectionData.rejectionReason}
@@ -1122,7 +1119,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  border: '2px solid #e1e5e9',
+                  border: '2px solid var(--border)',
                   borderRadius: '6px',
                   fontSize: '0.9rem',
                   outline: 'none',
@@ -1158,7 +1155,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
                 }}
                 style={{
                   padding: '0.75rem 1.5rem',
-                  backgroundColor: '#6c757d',
+                  backgroundColor: 'var(--text-500)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -1175,7 +1172,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
                 disabled={actionLoading || !rejectionData.rejectionReason.trim()}
                 style={{
                   padding: '0.75rem 1.5rem',
-                  backgroundColor: actionLoading || !rejectionData.rejectionReason.trim() ? '#ccc' : '#dc3545',
+                  backgroundColor: actionLoading || !rejectionData.rejectionReason.trim() ? '#ccc' : 'var(--danger)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',

@@ -75,10 +75,10 @@ const SimpleBinInput = ({ warehouseKey, initialValue, maxValue, onUpdate, hasUns
       style={{
         padding: '4px 8px',
         borderRadius: '4px',
-        border: hasUnsavedChanges ? '2px solid #ff9800' : '2px solid #ddd',
+        border: hasUnsavedChanges ? '2px solid var(--warning)' : '2px solid var(--border)',
         fontSize: '1.1rem',
         fontWeight: 'bold',
-        color: '#2c3e50',
+        color: 'var(--text-900)',
         width: '70px',
         backgroundColor: hasUnsavedChanges ? '#fff3e0' : 'white'
       }}
@@ -1070,7 +1070,7 @@ function WarehouseCapacity({ shipments }) {
           }
         }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-          <h3 style={{ color: '#2c3e50', fontSize: '1.2rem', margin: 0 }}>{warehouse}</h3>
+          <h3 style={{ color: 'var(--text-900)', fontSize: '1.2rem', margin: 0 }}>{warehouse}</h3>
           <span style={{
             backgroundColor: getStatusColor(stats.status),
             color: 'white',
@@ -1125,28 +1125,28 @@ function WarehouseCapacity({ shipments }) {
         {/* Stats Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.9rem' }}>
           <div>
-            <div style={{ color: '#666', marginBottom: '0.25rem' }}>Current Bins Utilized</div>
+            <div style={{ color: 'var(--text-500)', marginBottom: '0.25rem' }}>Current Bins Utilized</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <div style={{
                 fontWeight: 'bold',
                 fontSize: '1.1rem',
-                color: '#2c3e50',
+                color: 'var(--text-900)',
                 padding: '4px 8px',
                 borderRadius: '4px',
-                backgroundColor: pendingChanges[warehouse] !== undefined ? '#fff3e0' : '#f8f9fa',
-                border: pendingChanges[warehouse] !== undefined ? '2px solid #ff9800' : '2px solid transparent'
+                backgroundColor: pendingChanges[warehouse] !== undefined ? '#fff3e0' : 'var(--surface-2)',
+                border: pendingChanges[warehouse] !== undefined ? '2px solid var(--warning)' : '2px solid transparent'
               }}>
                 {editableBinsUsed[warehouse] !== undefined ? editableBinsUsed[warehouse] : stats.usedBins}
               </div>
-              <span style={{ fontSize: '0.9rem', color: '#666' }}>bins</span>
+              <span style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>bins</span>
             </div>
             <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '0.25rem' }}>
               (Stock: {stats.currentStock.toLocaleString()} pallets)
             </div>
           </div>
           <div>
-            <div style={{ color: '#666', marginBottom: '0.25rem' }}>Incoming (Week {warehouseData.currentWeek}) 🔄</div>
-            <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#ff9800' }}>
+            <div style={{ color: 'var(--text-500)', marginBottom: '0.25rem' }}>Incoming (Week {warehouseData.currentWeek}) 🔄</div>
+            <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--warning)' }}>
               {(stats.currentWeekIncoming || 0).toLocaleString()}
             </div>
             <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '0.25rem' }}>
@@ -1154,8 +1154,8 @@ function WarehouseCapacity({ shipments }) {
             </div>
           </div>
           <div>
-            <div style={{ color: '#666', marginBottom: '0.25rem' }}>Total Bins</div>
-            <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#4caf50' }}>
+            <div style={{ color: 'var(--text-500)', marginBottom: '0.25rem' }}>Total Bins</div>
+            <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--success)' }}>
               {stats.totalBins}
             </div>
             <div style={{ fontSize: '0.8rem', color: '#888' }}>
@@ -1163,11 +1163,11 @@ function WarehouseCapacity({ shipments }) {
             </div>
           </div>
           <div>
-            <div style={{ color: '#666', marginBottom: '0.25rem' }}>Available Bins</div>
-            <div style={{ 
-              fontWeight: 'bold', 
-              fontSize: '1.1rem', 
-              color: stats.availableBins >= 0 ? '#4caf50' : '#f44336' 
+            <div style={{ color: 'var(--text-500)', marginBottom: '0.25rem' }}>Available Bins</div>
+            <div style={{
+              fontWeight: 'bold',
+              fontSize: '1.1rem',
+              color: stats.availableBins >= 0 ? 'var(--success)' : '#f44336' 
             }}>
               {stats.availableBins >= 0 ? stats.availableBins : `(${Math.abs(stats.availableBins)})`}
             </div>
@@ -1198,25 +1198,19 @@ function WarehouseCapacity({ shipments }) {
     const warehouses = Object.keys(warehouseStats);
 
     return (
-      <div style={{ 
-        backgroundColor: 'white', 
-        padding: '2rem', 
-        borderRadius: '12px', 
-        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-        marginTop: '2rem'
-      }}>
-        <h3 style={{ color: '#2c3e50', marginBottom: '1.5rem' }}>📈 Weekly Capacity Inflow (Pallets) - Current Month</h3>
+      <div className="dash-panel" style={{ marginTop: '2rem' }}>
+        <h3 style={{ color: 'var(--text-900)', marginBottom: '1.5rem' }}>📈 Weekly Capacity Inflow (Pallets) - Current Month</h3>
         
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ backgroundColor: '#f8f9fa' }}>
-                <th style={{ padding: '12px', textAlign: 'left', border: '1px solid #dee2e6' }}>Warehouse</th>
+              <tr style={{ backgroundColor: 'var(--surface-2)' }}>
+                <th style={{ padding: '12px', textAlign: 'left', border: '1px solid var(--border)' }}>Warehouse</th>
                 {weeks.map(week => (
-                  <th key={week} style={{ 
-                    padding: '12px', 
-                    textAlign: 'center', 
-                    border: '1px solid #dee2e6',
+                  <th key={week} style={{
+                    padding: '12px',
+                    textAlign: 'center',
+                    border: '1px solid var(--border)',
                     minWidth: '80px'
                   }}>
                     Week {week}
@@ -1227,10 +1221,10 @@ function WarehouseCapacity({ shipments }) {
             <tbody>
               {warehouses.map(warehouse => (
                 <tr key={warehouse}>
-                  <td style={{ 
-                    padding: '12px', 
-                    fontWeight: 'bold', 
-                    border: '1px solid #dee2e6',
+                  <td style={{
+                    padding: '12px',
+                    fontWeight: 'bold',
+                    border: '1px solid var(--border)',
                     backgroundColor: '#f8f9fc'
                   }}>
                     {warehouse}
@@ -1238,10 +1232,10 @@ function WarehouseCapacity({ shipments }) {
                   {weeks.map(week => {
                     const amount = warehouseStats[warehouse].weeklyIncoming[week] || 0;
                     return (
-                      <td key={week} style={{ 
-                        padding: '12px', 
-                        textAlign: 'center', 
-                        border: '1px solid #dee2e6',
+                      <td key={week} style={{
+                        padding: '12px',
+                        textAlign: 'center',
+                        border: '1px solid var(--border)',
                         backgroundColor: amount > 0 ? '#e3f2fd' : 'white'
                       }}>
                         {amount > 0 ? amount.toLocaleString() : '-'}
@@ -1262,14 +1256,8 @@ function WarehouseCapacity({ shipments }) {
     const maxUtil = Math.max(...warehouses.map(([_, stats]) => stats.binUtilizationPercent));
     
     return (
-      <div style={{ 
-        backgroundColor: 'white', 
-        padding: '2rem', 
-        borderRadius: '12px', 
-        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-        marginTop: '2rem'
-      }}>
-        <h3 style={{ color: '#2c3e50', marginBottom: '1.5rem' }}>📊 Bin Utilization Overview</h3>
+      <div className="dash-panel" style={{ marginTop: '2rem' }}>
+        <h3 style={{ color: 'var(--text-900)', marginBottom: '1.5rem' }}>📊 Bin Utilization Overview</h3>
         
         <div style={{ display: 'grid', gap: '1rem' }}>
           {warehouses.map(([warehouse, stats]) => {
@@ -1301,12 +1289,12 @@ function WarehouseCapacity({ shipments }) {
                     transform: 'translate(-50%, -50%)',
                     fontSize: '0.8rem',
                     fontWeight: 'bold',
-                    color: percentage > 50 ? 'white' : '#333'
+                    color: percentage > 50 ? 'white' : 'var(--text-900)'
                   }}>
                     {percentage.toFixed(1)}%
                   </div>
                 </div>
-                <div style={{ minWidth: '100px', fontSize: '0.8rem', textAlign: 'right', color: '#666' }}>
+                <div style={{ minWidth: '100px', fontSize: '0.8rem', textAlign: 'right', color: 'var(--text-500)' }}>
                   {stats.projectedBinsUsed}/{stats.totalBins} bins
                 </div>
               </div>
@@ -1357,15 +1345,9 @@ function WarehouseCapacity({ shipments }) {
     };
     
     return (
-      <div style={{ 
-        backgroundColor: 'white', 
-        padding: '2rem', 
-        borderRadius: '12px', 
-        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-        marginTop: '2rem'
-      }}>
+      <div className="dash-panel" style={{ marginTop: '2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h3 style={{ color: '#2c3e50', margin: 0 }}>📦 Products by ETA Week</h3>
+          <h3 style={{ color: 'var(--text-900)', margin: 0 }}>📦 Products by ETA Week</h3>
           
           {/* Color Legend */}
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
@@ -1375,38 +1357,38 @@ function WarehouseCapacity({ shipments }) {
                 height: '16px', 
                 backgroundColor: '#2196f3', 
                 borderRadius: '3px',
-                border: '1px solid #ddd'
+                border: '1px solid var(--border)'
               }}></div>
-              <span style={{ fontSize: '0.9rem', color: '#666' }}>Pretoria</span>
+              <span style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>Pretoria</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ 
-                width: '16px', 
-                height: '16px', 
-                backgroundColor: '#4caf50', 
+              <div style={{
+                width: '16px',
+                height: '16px',
+                backgroundColor: '#4caf50',
                 borderRadius: '3px',
-                border: '1px solid #ddd'
+                border: '1px solid var(--border)'
               }}></div>
-              <span style={{ fontSize: '0.9rem', color: '#666' }}>Klapmuts</span>
+              <span style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>Klapmuts</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ 
-                width: '16px', 
-                height: '16px', 
-                backgroundColor: '#ff9800', 
+              <div style={{
+                width: '16px',
+                height: '16px',
+                backgroundColor: '#ff9800',
                 borderRadius: '3px',
-                border: '1px solid #ddd'
+                border: '1px solid var(--border)'
               }}></div>
-              <span style={{ fontSize: '0.9rem', color: '#666' }}>Other</span>
+              <span style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>Other</span>
             </div>
           </div>
         </div>
         
         {productData.length === 0 ? (
           <div style={{ 
-            textAlign: 'center', 
-            padding: '3rem', 
-            color: '#666',
+            textAlign: 'center',
+            padding: '3rem',
+            color: 'var(--text-500)',
             fontStyle: 'italic',
             fontSize: '1.1rem'
           }}>
@@ -1514,7 +1496,7 @@ function WarehouseCapacity({ shipments }) {
                       marginTop: '8px',
                       fontSize: '0.8rem',
                       fontWeight: '500',
-                      color: '#333',
+                      color: 'var(--text-900)',
                       textAlign: 'center',
                       maxWidth: '100px',
                       overflow: 'hidden',
@@ -1528,7 +1510,7 @@ function WarehouseCapacity({ shipments }) {
                     {/* Warehouse label */}
                     <div style={{
                       fontSize: '0.7rem',
-                      color: '#666',
+                      color: 'var(--text-500)',
                       textAlign: 'center',
                       marginTop: '2px'
                     }}>
@@ -1543,17 +1525,17 @@ function WarehouseCapacity({ shipments }) {
             <div style={{ 
               maxHeight: '400px', 
               overflowY: 'auto',
-              border: '1px solid #e1e5e9',
+              border: '1px solid var(--border)',
               borderRadius: '8px'
             }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead style={{ backgroundColor: '#f8f9fa', position: 'sticky', top: 0 }}>
+                <thead style={{ backgroundColor: 'var(--surface-2)', position: 'sticky', top: 0 }}>
                   <tr>
-                    <th style={{ padding: '12px', textAlign: 'left', border: '1px solid #dee2e6' }}>Product Name</th>
-                    <th style={{ padding: '12px', textAlign: 'center', border: '1px solid #dee2e6' }}>ETA Week</th>
-                    <th style={{ padding: '12px', textAlign: 'center', border: '1px solid #dee2e6' }}>Quantity</th>
-                    <th style={{ padding: '12px', textAlign: 'center', border: '1px solid #dee2e6' }}>Pallet Qty</th>
-                    <th style={{ padding: '12px', textAlign: 'left', border: '1px solid #dee2e6' }}>Warehouse</th>
+                    <th style={{ padding: '12px', textAlign: 'left', border: '1px solid var(--border)' }}>Product Name</th>
+                    <th style={{ padding: '12px', textAlign: 'center', border: '1px solid var(--border)' }}>ETA Week</th>
+                    <th style={{ padding: '12px', textAlign: 'center', border: '1px solid var(--border)' }}>Quantity</th>
+                    <th style={{ padding: '12px', textAlign: 'center', border: '1px solid var(--border)' }}>Pallet Qty</th>
+                    <th style={{ padding: '12px', textAlign: 'left', border: '1px solid var(--border)' }}>Warehouse</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1565,41 +1547,41 @@ function WarehouseCapacity({ shipments }) {
                       <tr key={`${product.id}-${index}`} style={{ 
                         backgroundColor: isCurrentWeek ? '#f0f8f0' : 'white'
                       }}>
-                        <td style={{ 
-                          padding: '10px 12px', 
-                          border: '1px solid #dee2e6',
+                        <td style={{
+                          padding: '10px 12px',
+                          border: '1px solid var(--border)',
                           fontWeight: '500'
                         }}>
                           {product.name}
                         </td>
-                        <td style={{ 
-                          padding: '10px 12px', 
-                          border: '1px solid #dee2e6',
+                        <td style={{
+                          padding: '10px 12px',
+                          border: '1px solid var(--border)',
                           textAlign: 'center',
                           fontWeight: isCurrentWeek ? 'bold' : 'normal',
-                          color: '#333'
+                          color: 'var(--text-900)'
                         }}>
                           {isCurrentWeek ? `${product.weekNumber} (Current)` : product.weekNumber}
                         </td>
-                        <td style={{ 
-                          padding: '10px 12px', 
-                          border: '1px solid #dee2e6', 
+                        <td style={{
+                          padding: '10px 12px',
+                          border: '1px solid var(--border)',
                           textAlign: 'center',
                           fontWeight: '500'
                         }}>
                           {product.quantity.toLocaleString()}
                         </td>
-                        <td style={{ 
-                          padding: '10px 12px', 
-                          border: '1px solid #dee2e6', 
+                        <td style={{
+                          padding: '10px 12px',
+                          border: '1px solid var(--border)',
                           textAlign: 'center',
-                          color: '#666'
+                          color: 'var(--text-500)'
                         }}>
                           {product.palletQty > 0 ? product.palletQty : '-'}
                         </td>
-                        <td style={{ 
-                          padding: '10px 12px', 
-                          border: '1px solid #dee2e6',
+                        <td style={{
+                          padding: '10px 12px',
+                          border: '1px solid var(--border)',
                           fontSize: '0.9rem',
                           color: warehouseColor,
                           fontWeight: '500'
@@ -1675,20 +1657,14 @@ function WarehouseCapacity({ shipments }) {
     };
     
     return (
-      <div style={{ 
-        backgroundColor: 'white', 
-        padding: '2rem', 
-        borderRadius: '12px', 
-        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-        marginTop: '2rem'
-      }}>
-        <h3 style={{ color: '#2c3e50', marginBottom: '1.5rem' }}>📋 Incoming Products by Warehouse</h3>
+      <div className="dash-panel" style={{ marginTop: '2rem' }}>
+        <h3 style={{ color: 'var(--text-900)', marginBottom: '1.5rem' }}>📋 Incoming Products by Warehouse</h3>
         
         {warehouses.length === 0 ? (
           <div style={{ 
-            textAlign: 'center', 
-            padding: '3rem', 
-            color: '#666',
+            textAlign: 'center',
+            padding: '3rem',
+            color: 'var(--text-500)',
             fontStyle: 'italic',
             fontSize: '1.1rem'
           }}>
@@ -1698,7 +1674,7 @@ function WarehouseCapacity({ shipments }) {
           <div style={{ display: 'grid', gap: '2rem' }}>
             {/* Quantity Chart */}
             <div>
-              <h4 style={{ color: '#2c3e50', marginBottom: '1rem', fontSize: '1.1rem' }}>📊 Quantity by Warehouse</h4>
+              <h4 style={{ color: 'var(--text-900)', marginBottom: '1rem', fontSize: '1.1rem' }}>📊 Quantity by Warehouse</h4>
               <div style={{ display: 'grid', gap: '1rem' }}>
                 {warehouses.map(([warehouse, data]) => (
                   <div key={`qty-${warehouse}`} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -1727,7 +1703,7 @@ function WarehouseCapacity({ shipments }) {
                         </div>
                       </div>
                     </div>
-                    <div style={{ minWidth: '80px', fontSize: '0.8rem', color: '#666' }}>
+                    <div style={{ minWidth: '80px', fontSize: '0.8rem', color: 'var(--text-500)' }}>
                       tonnage
                     </div>
                   </div>
@@ -1737,7 +1713,7 @@ function WarehouseCapacity({ shipments }) {
             
             {/* Pallets Chart */}
             <div>
-              <h4 style={{ color: '#2c3e50', marginBottom: '1rem', fontSize: '1.1rem' }}>🚛 Pallets by Warehouse</h4>
+              <h4 style={{ color: 'var(--text-900)', marginBottom: '1rem', fontSize: '1.1rem' }}>🚛 Pallets by Warehouse</h4>
               <div style={{ display: 'grid', gap: '1rem' }}>
                 {warehouses.map(([warehouse, data]) => (
                   <div key={`pallets-${warehouse}`} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -1767,7 +1743,7 @@ function WarehouseCapacity({ shipments }) {
                         </div>
                       </div>
                     </div>
-                    <div style={{ minWidth: '80px', fontSize: '0.8rem', color: '#666' }}>
+                    <div style={{ minWidth: '80px', fontSize: '0.8rem', color: 'var(--text-500)' }}>
                       pallets
                     </div>
                   </div>
@@ -1778,7 +1754,7 @@ function WarehouseCapacity({ shipments }) {
             {/* Summary Stats */}
             <div style={{ 
               padding: '1.5rem', 
-              backgroundColor: '#f8f9fa', 
+              backgroundColor: 'var(--surface-2)',
               borderRadius: '12px',
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -1789,23 +1765,23 @@ function WarehouseCapacity({ shipments }) {
                 <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#2196f3', marginBottom: '0.5rem' }}>
                   {incomingShipments.length}
                 </div>
-                <div style={{ fontSize: '0.9rem', color: '#666', fontWeight: '500' }}>
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-500)', fontWeight: '500' }}>
                   Total Products
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4caf50', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--success)', marginBottom: '0.5rem' }}>
                   {incomingShipments.reduce((sum, s) => sum + (s.palletQty || 0), 0).toLocaleString()}
                 </div>
-                <div style={{ fontSize: '0.9rem', color: '#666', fontWeight: '500' }}>
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-500)', fontWeight: '500' }}>
                   Total Pallet Qty
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#ff9800', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--warning)', marginBottom: '0.5rem' }}>
                   {incomingShipments.reduce((sum, s) => sum + (s.quantity || 0), 0).toLocaleString()}
                 </div>
-                <div style={{ fontSize: '0.9rem', color: '#666', fontWeight: '500' }}>
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-500)', fontWeight: '500' }}>
                   Total Tonnage
                 </div>
               </div>
@@ -1815,7 +1791,7 @@ function WarehouseCapacity({ shipments }) {
                     return sum + (s.palletQty || 0);
                   }, 0).toLocaleString()}
                 </div>
-                <div style={{ fontSize: '0.9rem', color: '#666', fontWeight: '500' }}>
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-500)', fontWeight: '500' }}>
                   Total Pallets
                 </div>
               </div>
@@ -1842,14 +1818,8 @@ function WarehouseCapacity({ shipments }) {
     const totalWarehouses = Object.keys(warehouseStats).length;
     
     return (
-      <div style={{ 
-        backgroundColor: 'white', 
-        padding: '2rem', 
-        borderRadius: '12px', 
-        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-        marginTop: '2rem'
-      }}>
-        <h3 style={{ color: '#2c3e50', marginBottom: '1.5rem' }}>🎯 Capacity Status Distribution</h3>
+      <div className="dash-panel" style={{ marginTop: '2rem' }}>
+        <h3 style={{ color: 'var(--text-900)', marginBottom: '1.5rem' }}>🎯 Capacity Status Distribution</h3>
         
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
           {statusData.map(({ status, label, color, count }) => {
@@ -1878,8 +1848,8 @@ function WarehouseCapacity({ shipments }) {
                 }}>
                   {count}
                 </div>
-                <div style={{ fontWeight: '600', marginBottom: '0.5rem', color: '#2c3e50' }}>{label}</div>
-                <div style={{ fontSize: '0.9rem', color: '#666' }}>{percentage.toFixed(1)}% of warehouses</div>
+                <div style={{ fontWeight: '600', marginBottom: '0.5rem', color: 'var(--text-900)' }}>{label}</div>
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>{percentage.toFixed(1)}% of warehouses</div>
               </div>
             );
           })}
@@ -1956,6 +1926,7 @@ function WarehouseCapacity({ shipments }) {
 
   return (
     <div style={{ padding: '2rem', backgroundColor: '#f8f9fc', minHeight: '100vh' }}>
+      <div className="brand-strip" />
       {/* Capacity Warnings Banner */}
       {capacityWarnings.length > 0 && (
         <div style={{
@@ -1992,11 +1963,11 @@ function WarehouseCapacity({ shipments }) {
         </div>
       )}
 
-      <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-        <h2 style={{ color: '#2c3e50', marginBottom: '0.5rem' }}>
+      <div className="page-header" style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        <h2 style={{ color: 'var(--text-900)', marginBottom: '0.5rem' }}>
           🏭 Warehouse Capacity Management
           {selectedWarehouse !== 'all' && (
-            <span style={{ color: '#667eea', fontSize: '0.8em', marginLeft: '0.5rem' }}>
+            <span style={{ color: 'var(--info)', fontSize: '0.8em', marginLeft: '0.5rem' }}>
               - {selectedWarehouse}
             </span>
           )}
@@ -2015,7 +1986,7 @@ function WarehouseCapacity({ shipments }) {
           justifyContent: 'center',
           marginTop: '0.75rem',
           fontSize: '0.9rem',
-          color: '#666'
+          color: 'var(--text-500)'
         }}>
           <span style={{
             display: 'inline-block',
@@ -2044,7 +2015,7 @@ function WarehouseCapacity({ shipments }) {
           style={{
             padding: '8px 16px',
             borderRadius: '8px',
-            border: '2px solid #667eea',
+            border: '2px solid var(--info)',
             backgroundColor: 'white',
             fontSize: '1rem',
             cursor: 'pointer'
@@ -2131,14 +2102,8 @@ function WarehouseCapacity({ shipments }) {
       </div>
 
       {/* Edit Panel for Current Bins Utilized */}
-      <div style={{
-        backgroundColor: 'white',
-        padding: '1.5rem',
-        borderRadius: '12px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        marginBottom: '2rem'
-      }}>
-        <h3 style={{ color: '#2c3e50', marginBottom: '1rem', fontSize: '1.1rem' }}>
+      <div className="dash-panel" style={{ marginBottom: '2rem' }}>
+        <h3 style={{ color: 'var(--text-900)', marginBottom: '1rem', fontSize: '1.1rem' }}>
           📝 Edit Current Bins Utilized
         </h3>
         <div style={{
@@ -2152,14 +2117,14 @@ function WarehouseCapacity({ shipments }) {
               alignItems: 'center',
               gap: '0.5rem',
               padding: '0.75rem',
-              backgroundColor: pendingChanges[warehouse] !== undefined ? '#fff3e0' : '#f8f9fa',
+              backgroundColor: pendingChanges[warehouse] !== undefined ? '#fff3e0' : 'var(--surface-2)',
               borderRadius: '8px',
-              border: pendingChanges[warehouse] !== undefined ? '2px solid #ff9800' : '2px solid #e0e0e0'
+              border: pendingChanges[warehouse] !== undefined ? '2px solid var(--warning)' : '2px solid var(--border)'
             }}>
               <label style={{
                 flex: 1,
                 fontWeight: '500',
-                color: '#2c3e50',
+                color: 'var(--text-900)',
                 fontSize: '0.9rem'
               }}>
                 {warehouse}:
@@ -2174,7 +2139,7 @@ function WarehouseCapacity({ shipments }) {
                 style={{
                   width: '80px',
                   padding: '6px 8px',
-                  border: '2px solid #ddd',
+                  border: '2px solid var(--border)',
                   borderRadius: '6px',
                   fontSize: '1rem',
                   fontWeight: 'bold',
@@ -2183,24 +2148,18 @@ function WarehouseCapacity({ shipments }) {
                 min="0"
                 max={stats.totalBins}
               />
-              <span style={{ fontSize: '0.85rem', color: '#666' }}>/ {stats.totalBins}</span>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-500)' }}>/ {stats.totalBins}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* Edit Panel for Available Bins */}
-      <div style={{
-        backgroundColor: 'white',
-        padding: '1.5rem',
-        borderRadius: '12px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        marginBottom: '2rem'
-      }}>
-        <h3 style={{ color: '#2c3e50', marginBottom: '1rem', fontSize: '1.1rem' }}>
+      <div className="dash-panel" style={{ marginBottom: '2rem' }}>
+        <h3 style={{ color: 'var(--text-900)', marginBottom: '1rem', fontSize: '1.1rem' }}>
           📦 Adjust Available Bins
         </h3>
-        <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1rem' }}>
+        <p style={{ color: 'var(--text-500)', fontSize: '0.9rem', marginBottom: '1rem' }}>
           Set the number of available bins for each warehouse. This represents bins that can be used for incoming shipments.
         </p>
         <div style={{
@@ -2214,13 +2173,13 @@ function WarehouseCapacity({ shipments }) {
               flexDirection: 'column',
               gap: '0.5rem',
               padding: '0.75rem',
-              backgroundColor: pendingAvailableBinsChanges[warehouse] !== undefined ? '#e8f5e9' : '#f8f9fa',
+              backgroundColor: pendingAvailableBinsChanges[warehouse] !== undefined ? '#e8f5e9' : 'var(--surface-2)',
               borderRadius: '8px',
-              border: pendingAvailableBinsChanges[warehouse] !== undefined ? '2px solid #4caf50' : '2px solid #e0e0e0'
+              border: pendingAvailableBinsChanges[warehouse] !== undefined ? '2px solid var(--success)' : '2px solid var(--border)'
             }}>
               <label style={{
                 fontWeight: '500',
-                color: '#2c3e50',
+                color: 'var(--text-900)',
                 fontSize: '0.9rem'
               }}>
                 {warehouse}:
@@ -2236,7 +2195,7 @@ function WarehouseCapacity({ shipments }) {
                   style={{
                     width: '80px',
                     padding: '6px 8px',
-                    border: '2px solid #ddd',
+                    border: '2px solid var(--border)',
                     borderRadius: '6px',
                     fontSize: '1rem',
                     fontWeight: 'bold',
@@ -2244,9 +2203,9 @@ function WarehouseCapacity({ shipments }) {
                   }}
                   min="0"
                 />
-                <span style={{ fontSize: '0.85rem', color: '#666' }}>bins</span>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-500)' }}>bins</span>
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#999', marginTop: '0.25rem' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-500)', marginTop: '0.25rem' }}>
                 Total capacity: {stats.totalBins} bins
               </div>
             </div>
@@ -2255,22 +2214,16 @@ function WarehouseCapacity({ shipments }) {
       </div>
 
       {/* Edit Total Capacity Section */}
-      <div style={{
-        backgroundColor: 'white',
-        padding: '1.5rem',
-        borderRadius: '12px',
-        marginBottom: '2rem',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-      }}>
+      <div className="dash-panel" style={{ marginBottom: '2rem' }}>
         <h3 style={{
           marginTop: 0,
           marginBottom: '0.5rem',
           fontSize: '1.2rem',
-          color: '#2c3e50'
+          color: 'var(--text-900)'
         }}>
           📊 Edit Total Capacity
         </h3>
-        <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1rem' }}>
+        <p style={{ color: 'var(--text-500)', fontSize: '0.9rem', marginBottom: '1rem' }}>
           Set the total bin capacity for each warehouse. This is the maximum number of bins each warehouse can hold.
         </p>
         <div style={{
@@ -2284,13 +2237,13 @@ function WarehouseCapacity({ shipments }) {
               flexDirection: 'column',
               gap: '0.5rem',
               padding: '0.75rem',
-              backgroundColor: pendingTotalCapacityChanges[warehouse] !== undefined ? '#e3f2fd' : '#f8f9fa',
+              backgroundColor: pendingTotalCapacityChanges[warehouse] !== undefined ? '#e3f2fd' : 'var(--surface-2)',
               borderRadius: '8px',
-              border: pendingTotalCapacityChanges[warehouse] !== undefined ? '2px solid #2196f3' : '2px solid #e0e0e0'
+              border: pendingTotalCapacityChanges[warehouse] !== undefined ? '2px solid #2196f3' : '2px solid var(--border)'
             }}>
               <label style={{
                 fontWeight: '500',
-                color: '#2c3e50',
+                color: 'var(--text-900)',
                 fontSize: '0.9rem'
               }}>
                 {warehouse}:
@@ -2306,7 +2259,7 @@ function WarehouseCapacity({ shipments }) {
                   style={{
                     width: '80px',
                     padding: '6px 8px',
-                    border: '2px solid #ddd',
+                    border: '2px solid var(--border)',
                     borderRadius: '6px',
                     fontSize: '1rem',
                     fontWeight: 'bold',
@@ -2314,9 +2267,9 @@ function WarehouseCapacity({ shipments }) {
                   }}
                   min="0"
                 />
-                <span style={{ fontSize: '0.85rem', color: '#666' }}>bins</span>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-500)' }}>bins</span>
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#999', marginTop: '0.25rem' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-500)', marginTop: '0.25rem' }}>
                 Currently using: {stats.usedBins} bins
               </div>
             </div>
