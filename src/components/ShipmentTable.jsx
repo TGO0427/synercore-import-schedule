@@ -11,6 +11,7 @@ import * as XLSX from 'xlsx';
 import { getApiUrl } from '../config/api';
 import { authFetch } from '../utils/authFetch';
 import filterPreferencesManager from '../utils/filterPreferences';
+import { copyToClipboard } from '../utils/clipboard';
 
 // Forwarding agent options for airfreight (major passenger airlines with cargo divisions)
 const AIRFREIGHT_AGENTS = [
@@ -45,6 +46,17 @@ const SEAFREIGHT_AGENTS = [
   { value: 'OOCL', label: 'OOCL' },
 ];
 
+const getShippingProgress = (status) => {
+  const stages = {
+    planned_airfreight: 1, planned_seafreight: 1,
+    in_transit_airfreight: 2, in_transit_roadway: 2, in_transit_seaway: 2, air_customs_clearance: 2,
+    moored: 3, berth_working: 3, berth_complete: 3,
+    arrived_pta: 4, arrived_klm: 4, arrived_offsite: 4,
+    received: 5, stored: 5, archived: 5,
+  };
+  return { current: stages[status] || 0, total: 5 };
+};
+
 // Helper to check if status is airfreight-related
 const isAirfreightStatus = (status) => {
   return status === 'planned_airfreight' || status === 'in_transit_airfreight' || status === 'air_customs_clearance';
@@ -55,7 +67,7 @@ const getForwardingAgents = (status) => {
   return isAirfreightStatus(status) ? AIRFREIGHT_AGENTS : SEAFREIGHT_AGENTS;
 };
 
-function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreateShipment, loading }) {
+function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreateShipment, loading, showSuccess, showError, showWarning, globalSearchTerm, onClearGlobalSearch }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState(['all']);
   const [sortConfig, setSortConfig] = useState({ key: 'weekNumber', direction: 'asc' });
@@ -97,6 +109,14 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
     incoterm: '',
     notes: ''
   });
+
+  // Pick up search term from global search
+  useEffect(() => {
+    if (globalSearchTerm) {
+      setSearchTerm(globalSearchTerm);
+      if (onClearGlobalSearch) onClearGlobalSearch();
+    }
+  }, [globalSearchTerm, onClearGlobalSearch]);
 
   // Refs for debounced input timeouts
   const timeoutRefs = useRef({});
@@ -479,7 +499,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
 
   const handleAddShipment = async () => {
     if (!newShipment.supplier || !newShipment.orderRef || !newShipment.finalPod) {
-      alert('Please fill in at least Supplier, Order/Ref, and Final POD fields.');
+      showWarning('Please fill in at least Supplier, Order/Ref, and Final POD fields.');
       return;
     }
 
@@ -523,7 +543,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
       setShowAddShipmentDialog(false);
     } catch (error) {
       console.error('Error adding shipment:', error);
-      alert('Failed to add shipment. Please try again.');
+      showError('Failed to add shipment. Please try again.');
     }
   };
 
@@ -563,7 +583,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
 
   const handleSaveAmendment = async () => {
     if (!amendingShipment.supplier || !amendingShipment.orderRef || !amendingShipment.finalPod) {
-      alert('Please fill in at least Supplier, Order/Ref, and Final POD fields.');
+      showWarning('Please fill in at least Supplier, Order/Ref, and Final POD fields.');
       return;
     }
 
@@ -589,7 +609,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
       setAmendShipmentSelectedWeekDate(null);
     } catch (error) {
       console.error('Error amending shipment:', error);
-      alert('Failed to amend shipment. Please try again.');
+      showError('Failed to amend shipment. Please try again.');
     }
   };
 
@@ -612,7 +632,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
 
   const performAutoArchive = async () => {
     if (!autoArchiveStats?.eligibleForArchive) {
-      alert('No shipments eligible for auto-archive.');
+      showWarning('No shipments eligible for auto-archive.');
       return;
     }
 
@@ -632,7 +652,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
 
       if (response.ok) {
         const result = await response.json();
-        alert(`Successfully archived ${result.archivedCount} shipments to ${result.archiveFileName}`);
+        showSuccess(`Successfully archived ${result.archivedCount} shipments`);
         setShowAutoArchiveDialog(false);
         setAutoArchiveStats(null);
         // Trigger a reload of shipments
@@ -640,11 +660,11 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
       } else {
         const error = await response.json();
         console.error('Failed to perform auto-archive:', error);
-        alert('Failed to perform auto-archive. Please try again.');
+        showError('Failed to perform auto-archive. Please try again.');
       }
     } catch (error) {
       console.error('Error performing auto-archive:', error);
-      alert('Error performing auto-archive. Please try again.');
+      showError('Error performing auto-archive. Please try again.');
     } finally {
       setAutoArchiveLoading(false);
     }
@@ -669,7 +689,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
 
   const performManualArchive = async () => {
     if (selectedShipments.length === 0) {
-      alert('No shipments selected for archive.');
+      showWarning('No shipments selected for archive.');
       setShowManualArchiveDialog(false);
       return;
     }
@@ -680,7 +700,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
     });
 
     if (arrivedShipments.length === 0) {
-      alert('No ARRIVED shipments selected for archive.');
+      showWarning('No ARRIVED shipments selected for archive.');
       setShowManualArchiveDialog(false);
       return;
     }
@@ -697,7 +717,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
 
       if (response.ok) {
         const result = await response.json();
-        alert(`Successfully archived ${result.archivedCount} shipments to ${result.archiveFileName}`);
+        showSuccess(`Successfully archived ${result.archivedCount} shipments`);
         setShowManualArchiveDialog(false);
         setSelectedShipments([]);
         // Trigger a reload of shipments
@@ -705,11 +725,11 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
       } else {
         const error = await response.json();
         console.error('Failed to perform manual archive:', error);
-        alert('Failed to perform manual archive. Please try again.');
+        showError('Failed to perform manual archive. Please try again.');
       }
     } catch (error) {
       console.error('Error performing manual archive:', error);
-      alert('Error performing manual archive. Please try again.');
+      showError('Error performing manual archive. Please try again.');
     } finally {
       setManualArchiveLoading(false);
     }
@@ -733,10 +753,10 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
       await Promise.all(updatePromises);
 
       setShowBulkStatusUpdate(false);
-      alert(`Successfully updated ${shipmentIds.length} shipment(s) to ${newStatus.replace(/_/g, ' ').toUpperCase()}`);
+      showSuccess(`Successfully updated ${shipmentIds.length} shipment(s) to ${newStatus.replace(/_/g, ' ').toUpperCase()}`);
     } catch (error) {
       console.error('Error updating shipments:', error);
-      alert('Error updating shipments. Please try again.');
+      showError('Error updating shipments. Please try again.');
     } finally {
       setBulkUpdateLoading(false);
     }
@@ -993,6 +1013,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               <th onClick={() => handleSort('latestStatus')} style={{ cursor: 'pointer' }}>
                 LATEST STATUS {sortConfig.key === 'latestStatus' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
               </th>
+              <th style={{ minWidth: '100px' }}>PROGRESS</th>
               <th onClick={() => handleSort('weekNumber')} style={{ cursor: 'pointer' }}>
                 WEEK NUMBER {sortConfig.key === 'weekNumber' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
               </th>
@@ -1014,7 +1035,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
           <tbody>
             {filteredAndSortedShipments.length === 0 ? (
               <tr>
-                <td colSpan="11" style={{ textAlign: 'center', padding: '2rem' }}>
+                <td colSpan="12" style={{ textAlign: 'center', padding: '2rem' }}>
                   No shipments found
                 </td>
               </tr>
@@ -1035,17 +1056,28 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                     <strong>{shipment.supplier}</strong>
                   </td>
                   <td>
-                    <span
-                      onClick={() => {
-                        setOrderDetailsShipment(shipment);
-                        setShowOrderDetailsModal(true);
-                      }}
-                      style={{ color: '#1976d2', cursor: 'pointer', textDecoration: 'underline' }}
-                      title="Click to view order details"
-                    >
-                      {shipment.orderRef}
-                    </span>
-                    {isDelayed(shipment) && <span style={{ color: '#d32f2f', marginLeft: '0.5rem' }}>⚠️</span>}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span
+                        onClick={() => {
+                          setOrderDetailsShipment(shipment);
+                          setShowOrderDetailsModal(true);
+                        }}
+                        style={{ color: 'var(--info)', cursor: 'pointer', textDecoration: 'underline' }}
+                        title="Click to view order details"
+                      >
+                        {shipment.orderRef}
+                      </span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); copyToClipboard(shipment.orderRef, showSuccess); }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', fontSize: '0.7rem', color: 'var(--text-500)', opacity: 0.5 }}
+                        title="Copy order ref"
+                        onMouseEnter={(e) => e.target.style.opacity = 1}
+                        onMouseLeave={(e) => e.target.style.opacity = 0.5}
+                      >
+                        📋
+                      </button>
+                      {isDelayed(shipment) && <span style={{ color: 'var(--danger)', marginLeft: '0.25rem' }}>⚠️</span>}
+                    </div>
                   </td>
                   <td>{shipment.finalPod}</td>
                   <td>
@@ -1077,6 +1109,34 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                       <option value={ShipmentStatus.DELAYED}>Delayed</option>
                       <option value={ShipmentStatus.CANCELLED}>Cancelled</option>
                     </select>
+                  </td>
+                  <td>
+                    {shipment.latestStatus !== 'delayed' && shipment.latestStatus !== 'cancelled' ? (() => {
+                      const progress = getShippingProgress(shipment.latestStatus);
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{ display: 'flex', gap: '2px', flex: 1, minWidth: '60px' }}>
+                            {[1,2,3,4,5].map(step => (
+                              <div key={step} style={{
+                                height: '6px', flex: 1, borderRadius: '3px',
+                                backgroundColor: step <= progress.current ? 'var(--accent)' : 'var(--border)',
+                                transition: 'background-color 0.2s ease'
+                              }} />
+                            ))}
+                          </div>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-500)', whiteSpace: 'nowrap' }}>
+                            {progress.current}/{progress.total}
+                          </span>
+                        </div>
+                      );
+                    })() : (
+                      <span style={{
+                        fontSize: '0.7rem', fontWeight: 600,
+                        color: shipment.latestStatus === 'delayed' ? 'var(--danger)' : 'var(--text-500)'
+                      }}>
+                        {shipment.latestStatus === 'delayed' ? 'DELAYED' : 'CANCELLED'}
+                      </span>
+                    )}
                   </td>
                   <td>
                     <WeekCalendar

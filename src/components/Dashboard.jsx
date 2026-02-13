@@ -13,7 +13,7 @@ import { Line } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip);
 
-function Dashboard({ shipments, onNavigate }) {
+function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
   const getShipmentStats = () => {
     // Track unique ORDER/REF per supplier
     const supplierOrderRefs = {};
@@ -214,11 +214,11 @@ function Dashboard({ shipments, onNavigate }) {
 
   // KPI card config
   const kpiCards = [
-    { key: 'total', value: stats.total, label: 'Total Shipments', icon: '📦', ring: 'ring-accent', tint: 'rgba(14,165,168,0.1)' },
-    { key: 'transit', value: stats.inTransit, label: 'In Transit', icon: '🚢', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
-    { key: 'arrived', value: stats.arrived, label: 'Arrived', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
-    { key: 'delayed', value: stats.delayed, label: 'Delayed', icon: '⚠️', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
-    { key: 'planned', value: stats.planned, label: 'Planned', icon: '📅', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
+    { key: 'total', value: stats.total, label: 'Total Shipments', icon: '📦', ring: 'ring-accent', tint: 'rgba(14,165,168,0.1)', filter: null },
+    { key: 'transit', value: stats.inTransit, label: 'In Transit', icon: '🚢', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)', filter: 'in_transit' },
+    { key: 'arrived', value: stats.arrived, label: 'Arrived', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)', filter: 'arrived' },
+    { key: 'delayed', value: stats.delayed, label: 'Delayed', icon: '⚠️', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)', filter: 'delayed' },
+    { key: 'planned', value: stats.planned, label: 'Planned', icon: '📅', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)', filter: 'planned' },
   ];
 
   // Sparkline chart config
@@ -278,7 +278,9 @@ function Dashboard({ shipments, onNavigate }) {
       {/* KPI Cards */}
       <div className="stats-grid">
         {kpiCards.map(card => (
-          <div key={card.key} className={`stat-card ${card.ring}`}>
+          <div key={card.key} className={`stat-card ${card.ring} clickable`}
+            onClick={() => onNavigate('shipping', { statusFilter: card.filter })}
+          >
             <div style={{
               width: 40, height: 40, borderRadius: '50%', display: 'flex',
               alignItems: 'center', justifyContent: 'center', fontSize: 18,
@@ -442,6 +444,15 @@ function Dashboard({ shipments, onNavigate }) {
             onClick={() => onNavigate('capacity')}>
             Warehouse Capacity
           </button>
+          {onOpenLiveBoard && (
+            <button className="btn" style={{
+              padding: '10px 20px', fontSize: 13,
+              background: 'var(--navy-900)', color: 'white', border: 'none',
+            }}
+              onClick={onOpenLiveBoard}>
+              Live Board
+            </button>
+          )}
         </div>
       )}
     </div>

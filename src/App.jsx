@@ -23,6 +23,8 @@ import NotificationPreferences from './components/NotificationPreferences';
 import OfflineIndicator from './components/OfflineIndicator';
 import ImportCosting from './components/ImportCosting';
 import CostingRequests from './components/CostingRequests';
+import GlobalSearch from './components/GlobalSearch';
+import LiveBoard from './components/LiveBoard';
 import SupplierLogin from './pages/SupplierLogin';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -79,6 +81,7 @@ function App() {
   const [username, setUsername] = useState('');
   const [lastSyncTime, setLastSyncTime] = useState(null);
   const [statusFilter, setStatusFilter] = useState(null); // null = no filter
+  const [globalSearchTerm, setGlobalSearchTerm] = useState(''); // from GlobalSearch
   const [showSupplierPortal, setShowSupplierPortal] = useState(false); // New state for supplier portal
 
   // Alert Hub state
@@ -96,6 +99,9 @@ function App() {
 
   // Costing Requests badge count (admin only)
   const [costingRequestCount, setCostingRequestCount] = useState(0);
+
+  // Live Board mode
+  const [liveBoardOpen, setLiveBoardOpen] = useState(false);
 
   // Sidebar nav search
   const [navSearch, setNavSearch] = useState('');
@@ -593,6 +599,18 @@ function App() {
     setStatusFilter(prev => (prev === status ? null : status));
   };
 
+  const handleDashboardNavigate = (view, options = {}) => {
+    if (options.statusFilter !== undefined) {
+      setStatusFilter(options.statusFilter);
+    } else {
+      setStatusFilter(null);
+    }
+    if (options.searchTerm) {
+      setGlobalSearchTerm(options.searchTerm);
+    }
+    setActiveView(view);
+  };
+
   const renderMainContent = () => {
     switch (activeView) {
       case 'shipping': {
@@ -610,7 +628,13 @@ function App() {
         );
 
         if (statusFilter) {
-          shippingShipments = shippingShipments.filter(s => s.latestStatus === statusFilter);
+          const META_FILTERS = {
+            in_transit: ['in_transit_airfreight', 'in_transit_roadway', 'in_transit_seaway'],
+            arrived: ['arrived_pta', 'arrived_klm', 'arrived_offsite'],
+            planned: ['planned_airfreight', 'planned_seafreight'],
+          };
+          const matchStatuses = META_FILTERS[statusFilter] || [statusFilter];
+          shippingShipments = shippingShipments.filter(s => matchStatuses.includes(s.latestStatus));
         }
 
         // Count unique ORDER/REF - duplicates count as 1 shipment
@@ -849,6 +873,11 @@ function App() {
               onDeleteShipment={handleDeleteShipment}
               onCreateShipment={handleCreateShipment}
               loading={loading}
+              showSuccess={showSuccess}
+              showError={showError}
+              showWarning={showWarning}
+              globalSearchTerm={globalSearchTerm}
+              onClearGlobalSearch={() => setGlobalSearchTerm('')}
             />
           </div>
         );
@@ -862,7 +891,7 @@ function App() {
       case 'advanced-reports':
         return <AdvancedReports />;
       case 'dashboard':
-        return <Dashboard shipments={shipments} onNavigate={setActiveView} />;
+        return <Dashboard shipments={shipments} onNavigate={handleDashboardNavigate} onOpenLiveBoard={() => setLiveBoardOpen(true)} />;
       case 'capacity':
         return <WarehouseCapacity shipments={shipments} />;
       case 'users':
@@ -889,7 +918,7 @@ function App() {
       case 'rates':
         return <RatesQuotes showSuccess={showSuccess} showError={showError} loading={loading} />;
       case 'costing':
-        return <ImportCosting />;
+        return <ImportCosting showSuccess={showSuccess} showError={showError} />;
       case 'costing-requests':
         return isAdmin ? <CostingRequests /> : (
           <div style={{ padding: '2rem', textAlign: 'center' }}>
@@ -1140,6 +1169,7 @@ function App() {
           background: 'var(--surface)', width: '100%'
         }}>
           <SynercoreLogo size="medium" />
+          <GlobalSearch shipments={shipments} onNavigate={handleDashboardNavigate} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <div style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>
               Logged in as: <strong style={{ color: 'var(--text-900)' }}>{username}</strong>
@@ -1216,6 +1246,13 @@ function App() {
         {renderMainContent()}
       </div>
 
+      {liveBoardOpen && (
+        <LiveBoard
+          shipments={shipments}
+          onClose={() => setLiveBoardOpen(false)}
+          onRefresh={() => fetchShipments(true)}
+        />
+      )}
       <NotificationContainer notifications={notifications} onRemoveNotification={removeNotification} />
       <AlertHub
         open={alertHubOpen}

@@ -122,7 +122,7 @@ const INITIAL_FORM_STATE = {
   status: 'draft',
 };
 
-function ImportCosting() {
+function ImportCosting({ showSuccess, showError }) {
   const currentUser = authUtils.getUser();
   const isAdmin = currentUser?.role === 'admin';
   const [estimates, setEstimates] = useState([]);
@@ -1367,17 +1367,17 @@ function ImportCosting() {
       });
 
       if (response.ok) {
-        alert('Email sent successfully!');
+        if (showSuccess) showSuccess('Email sent successfully!');
         setShowEmailModal(false);
         setEmailTo('');
         setEmailEstimate(null);
       } else {
         const data = await response.json();
-        alert(`Failed to send email: ${data.error || 'Unknown error'}`);
+        if (showError) showError(`Failed to send email: ${data.error || 'Unknown error'}`);
       }
     } catch (err) {
       console.error('Error sending email:', err);
-      alert('Failed to send email. Please try again.');
+      if (showError) showError('Failed to send email. Please try again.');
     } finally {
       setEmailSending(false);
     }
