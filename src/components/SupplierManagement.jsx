@@ -591,96 +591,64 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
       </div>
 
       {/* Suppliers Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
         {filteredSuppliers.map(supplier => (
-          <div 
-            key={supplier.id} 
+          <div
+            key={supplier.id}
+            className={`stat-card ${supplier.isActive !== false ? 'ring-accent' : 'ring-danger'} clickable`}
             onClick={(e) => handleSupplierCardClick(supplier, e)}
-            style={{
-              border: '1px solid var(--border)',
-              borderRadius: '8px',
-              padding: '1rem',
-              backgroundColor: supplier.isActive ? 'white' : 'var(--surface-2)',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              '&:hover': {
-                borderColor: '#3182ce',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-              }
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#3182ce';
-              e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'var(--border)';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
+            style={{ display: 'flex', flexDirection: 'column', minHeight: 200 }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-              <h3 style={{ margin: 0, color: supplier.isActive ? '#2d3748' : '#718096' }}>
-                {supplier.name}
-                {supplier.code && <span style={{ fontSize: '0.9em', color: '#718096' }}> ({supplier.code})</span>}
-              </h3>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                <button
-                  onClick={() => generateTemplate(supplier)}
-                  className="btn btn-secondary btn-small"
-                  title="Download Import Template"
-                >
-                  📥
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedSupplier(supplier);
-                    setShowImportDialog(true);
-                  }}
-                  className="btn btn-primary btn-small"
-                  title="Upload Schedule Documents"
-                >
-                  📋
-                </button>
-                <button
-                  onClick={() => handleViewDocuments(supplier)}
-                  className="btn btn-info btn-small"
-                  title="View Documents"
-                >
-                  📄
-                </button>
-                <button
-                  onClick={() => handleEdit(supplier)}
-                  className="btn btn-secondary btn-small"
-                  title="Edit Supplier"
-                >
-                  ✏️
-                </button>
-                <button
-                  onClick={() => onDeleteSupplier(supplier.id)}
-                  className="btn btn-danger btn-small"
-                  title="Delete Supplier"
-                >
-                  🗑️
-                </button>
+            {/* Header: icon circle + name + status */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
+              <div style={{
+                width: 40, height: 40, borderRadius: '50%', display: 'flex', flexShrink: 0,
+                alignItems: 'center', justifyContent: 'center', fontSize: 18,
+                backgroundColor: supplier.isActive !== false ? 'rgba(14,165,168,0.1)' : 'rgba(239,68,68,0.1)',
+              }}>
+                🏭
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h3 style={{
+                  fontSize: 16, fontWeight: 700, margin: '0 0 2px', color: 'var(--navy-900)',
+                  lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                }}>
+                  {supplier.name}
+                </h3>
+                {supplier.code && (
+                  <span style={{ fontSize: 11, color: 'var(--text-500)', fontWeight: 500 }}>{supplier.code}</span>
+                )}
+              </div>
+              {supplier.isActive === false && <span className="pill pill-bad" style={{ flexShrink: 0 }}>Inactive</span>}
+            </div>
+
+            {/* Info rows */}
+            <div style={{ fontSize: 13, color: 'var(--text-700)', lineHeight: 1.8, flex: 1 }}>
+              {supplier.contactPerson && <div>👤 {supplier.contactPerson}</div>}
+              {supplier.country && <div>🌍 {supplier.country}</div>}
+              {supplier.contactEmail && <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>✉️ {supplier.contactEmail}</div>}
+              {supplier.defaultTerms && <div>📋 {supplier.defaultTerms}</div>}
+              <div style={{ marginTop: 4 }}>
+                <span className="pill pill-info">{supplier.importFormats?.join(', ') || 'Excel'}</span>
               </div>
             </div>
-            
-            <div style={{ fontSize: '0.9em', color: '#4a5568', lineHeight: '1.4' }}>
-              {supplier.contactPerson && <div><strong>Contact:</strong> {supplier.contactPerson}</div>}
-              {supplier.contactEmail && <div><strong>Email:</strong> {supplier.contactEmail}</div>}
-              {supplier.country && <div><strong>Country:</strong> {supplier.country}</div>}
-              {supplier.defaultTerms && <div><strong>Terms:</strong> {supplier.defaultTerms}</div>}
-              <div><strong>Formats:</strong> {supplier.importFormats?.join(', ') || 'Excel'}</div>
-              {!supplier.isActive && <div style={{ color: '#e53e3e', fontWeight: 'bold' }}>INACTIVE</div>}
-              <div style={{ fontSize: '0.8rem', color: '#a0aec0', marginTop: '0.5rem', fontStyle: 'italic' }}>
-                💡 Click card to view incoming shipments
-              </div>
+
+            {/* Action toolbar */}
+            <div style={{ display: 'flex', gap: 4, borderTop: '1px solid var(--border)', paddingTop: 10, marginTop: 10, alignItems: 'center' }}>
+              <button onClick={() => generateTemplate(supplier)} className="btn-ghost" title="Download Template">📥</button>
+              <button onClick={() => { setSelectedSupplier(supplier); setShowImportDialog(true); }} className="btn-ghost" title="Upload Schedule">📋</button>
+              <button onClick={() => handleViewDocuments(supplier)} className="btn-ghost" title="View Documents">📄</button>
+              <div style={{ flex: 1 }} />
+              <button onClick={() => handleEdit(supplier)} className="btn-ghost" title="Edit Supplier">✏️</button>
+              <button onClick={() => onDeleteSupplier(supplier.id)} className="btn-ghost danger" title="Delete Supplier">🗑️</button>
             </div>
           </div>
         ))}
       </div>
 
       {filteredSuppliers.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '3rem', color: '#718096' }}>
+        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-500)' }}>
           {searchTerm ? `No suppliers found matching "${searchTerm}"` : 'No suppliers added yet. Click "Add Supplier" to get started.'}
         </div>
       )}
