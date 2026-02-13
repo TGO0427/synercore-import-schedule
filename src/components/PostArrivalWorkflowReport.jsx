@@ -401,41 +401,30 @@ function PostArrivalWorkflowReport({ shipments }) {
   };
 
   const WorkflowTimeCards = ({ timeAnalysis }) => (
-    <div className="workflow-time-cards">
-      <div className="time-card primary">
-        <div className="card-icon">⏱️</div>
-        <div className="card-content">
-          <h3>{timeAnalysis.avgProcessingTime}h</h3>
-          <p>Avg. Processing Time</p>
-        </div>
+    <div className="stats-grid">
+      <div className="stat-card ring-accent">
+        <div style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, backgroundColor: 'rgba(14,165,168,0.1)', marginBottom: 10 }}>⏱️</div>
+        <h3 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 4px', color: 'var(--navy-900)' }}>{timeAnalysis.avgProcessingTime}h</h3>
+        <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>Avg. Processing Time</p>
       </div>
-
-      <div className="time-card success">
-        <div className="card-icon">🏁</div>
-        <div className="card-content">
-          <h3>{timeAnalysis.completedShipments.length}</h3>
-          <p>Completed Shipments</p>
-        </div>
+      <div className="stat-card ring-success">
+        <div style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, backgroundColor: 'rgba(16,185,129,0.1)', marginBottom: 10 }}>🏁</div>
+        <h3 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 4px', color: 'var(--navy-900)' }}>{timeAnalysis.completedShipments.length}</h3>
+        <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>Completed Shipments</p>
       </div>
-
-      <div className="time-card info">
-        <div className="card-icon">🔄</div>
-        <div className="card-content">
-          <h3>{timeAnalysis.currentProcessingTimes.length}</h3>
-          <p>Currently Processing</p>
-        </div>
+      <div className="stat-card ring-info">
+        <div style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, backgroundColor: 'rgba(59,130,246,0.1)', marginBottom: 10 }}>🔄</div>
+        <h3 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 4px', color: 'var(--navy-900)' }}>{timeAnalysis.currentProcessingTimes.length}</h3>
+        <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>Currently Processing</p>
       </div>
-
-      <div className="time-card warning">
-        <div className="card-icon">⚠️</div>
-        <div className="card-content">
-          <h3>
-            {timeAnalysis.currentProcessingTimes.filter(ship =>
-              ship.currentTime > 72 || ship.stuckTime > 24
-            ).length}
-          </h3>
-          <p>Delayed Shipments</p>
-        </div>
+      <div className="stat-card ring-danger">
+        <div style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, backgroundColor: 'rgba(239,68,68,0.1)', marginBottom: 10 }}>⚠️</div>
+        <h3 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 4px', color: 'var(--navy-900)' }}>
+          {timeAnalysis.currentProcessingTimes.filter(ship =>
+            ship.currentTime > 72 || ship.stuckTime > 24
+          ).length}
+        </h3>
+        <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>Delayed Shipments</p>
       </div>
     </div>
   );
@@ -565,49 +554,35 @@ function PostArrivalWorkflowReport({ shipments }) {
   };
 
   const WorkflowSummaryCards = ({ analytics }) => (
-    <div className="workflow-summary-cards">
-      <div className="summary-card primary">
-        <div className="card-icon">📦</div>
-        <div className="card-content">
-          <h3>{analytics.totalInWorkflow}</h3>
-          <p>Total in Workflow</p>
-        </div>
+    <div className="stats-grid">
+      <div className="stat-card ring-accent">
+        <div style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, backgroundColor: 'rgba(14,165,168,0.1)', marginBottom: 10 }}>📦</div>
+        <h3 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 4px', color: 'var(--navy-900)' }}>{analytics.totalInWorkflow}</h3>
+        <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>Total in Workflow</p>
       </div>
-
-      <div className="summary-card success">
-        <div className="card-icon">✅</div>
-        <div className="card-content">
-          <h3>{(analytics.statusCounts.stored || 0) + (analytics.statusCounts.archived || 0)}</h3>
-          <p>Completed (Stored/Archived)</p>
-        </div>
+      <div className="stat-card ring-success">
+        <div style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, backgroundColor: 'rgba(16,185,129,0.1)', marginBottom: 10 }}>✅</div>
+        <h3 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 4px', color: 'var(--navy-900)' }}>{(analytics.statusCounts.stored || 0) + (analytics.statusCounts.archived || 0)}</h3>
+        <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>Completed (Stored/Archived)</p>
       </div>
-
-      <div className="summary-card info">
-        <div className="card-icon">🔄</div>
-        <div className="card-content">
-          <h3>
-            {(analytics.statusCounts.unloading || 0) +
-             (analytics.statusCounts.inspecting || 0) +
-             (analytics.statusCounts.receiving || 0)}
-          </h3>
-          <p>Actively Processing</p>
-        </div>
+      <div className="stat-card ring-info">
+        <div style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, backgroundColor: 'rgba(59,130,246,0.1)', marginBottom: 10 }}>🔄</div>
+        <h3 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 4px', color: 'var(--navy-900)' }}>
+          {(analytics.statusCounts.unloading || 0) +
+           (analytics.statusCounts.inspecting || 0) +
+           (analytics.statusCounts.receiving || 0)}
+        </h3>
+        <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>Actively Processing</p>
       </div>
-
-      <div className="summary-card warning">
-        <div className="card-icon">⚠️</div>
-        <div className="card-content">
-          <h3>{analytics.bottlenecks.inspection_pending + analytics.bottlenecks.arrived}</h3>
-          <p>Potential Bottlenecks</p>
-        </div>
+      <div className="stat-card ring-warning">
+        <div style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, backgroundColor: 'rgba(245,158,11,0.1)', marginBottom: 10 }}>⚠️</div>
+        <h3 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 4px', color: 'var(--navy-900)' }}>{analytics.bottlenecks.inspection_pending + analytics.bottlenecks.arrived}</h3>
+        <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>Potential Bottlenecks</p>
       </div>
-
-      <div className="summary-card rate">
-        <div className="card-icon">📊</div>
-        <div className="card-content">
-          <h3>{analytics.completionRate}%</h3>
-          <p>Completion Rate</p>
-        </div>
+      <div className="stat-card ring-accent">
+        <div style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, backgroundColor: 'rgba(14,165,168,0.1)', marginBottom: 10 }}>📊</div>
+        <h3 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 4px', color: 'var(--navy-900)' }}>{analytics.completionRate}%</h3>
+        <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>Completion Rate</p>
       </div>
     </div>
   );
@@ -687,52 +662,6 @@ function PostArrivalWorkflowReport({ shipments }) {
         .report-header p {
           color: #7f8c8d;
           margin: 0;
-        }
-
-        .workflow-summary-cards {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 1rem;
-          margin-bottom: 2rem;
-        }
-
-        .summary-card {
-          background: white;
-          padding: 1.5rem;
-          border-radius: 12px;
-          border: 2px solid #eee;
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-          transition: all 0.2s;
-        }
-
-        .summary-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-
-        .summary-card.primary { border-color: #2196F3; }
-        .summary-card.success { border-color: #4CAF50; }
-        .summary-card.info { border-color: #00BCD4; }
-        .summary-card.warning { border-color: #FF9800; }
-        .summary-card.rate { border-color: #9C27B0; }
-
-        .card-icon {
-          font-size: 2rem;
-        }
-
-        .card-content h3 {
-          font-size: 1.8rem;
-          font-weight: bold;
-          color: #2c3e50;
-          margin: 0;
-        }
-
-        .card-content p {
-          color: #7f8c8d;
-          margin: 0;
-          font-size: 0.9rem;
         }
 
         .workflow-charts-grid {
@@ -953,34 +882,6 @@ function PostArrivalWorkflowReport({ shipments }) {
           font-weight: 600;
         }
 
-        .workflow-time-cards {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 1rem;
-          margin-bottom: 2rem;
-        }
-
-        .time-card {
-          background: white;
-          padding: 1.5rem;
-          border-radius: 12px;
-          border: 2px solid #eee;
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-          transition: all 0.2s;
-        }
-
-        .time-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-
-        .time-card.primary { border-color: #667eea; }
-        .time-card.success { border-color: #4CAF50; }
-        .time-card.info { border-color: #00BCD4; }
-        .time-card.warning { border-color: #FF9800; }
-
         .time-tracking-section {
           margin-top: 2rem;
         }
@@ -1125,14 +1026,6 @@ function PostArrivalWorkflowReport({ shipments }) {
         @media (max-width: 768px) {
           .workflow-charts-grid {
             grid-template-columns: 1fr;
-          }
-
-          .workflow-summary-cards {
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-          }
-
-          .workflow-time-cards {
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
           }
 
           .completed-shipments-table,

@@ -696,306 +696,61 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
     </div>
   );
 
-  const SummaryCards = ({ analytics, statusFilter, onStatusFilter }) => (
-    <div className="summary-cards">
-      <div className="summary-card total">
-        <div className="card-icon">📦</div>
-        <div className="card-content">
-          <h3>{analytics.totalShipments}</h3>
-          <p>Total Shipments</p>
-        </div>
+  const SummaryCards = ({ analytics, statusFilter, onStatusFilter }) => {
+    const cards = [
+      { key: 'total', status: null, value: analytics.totalShipments, label: 'Total Shipments', icon: '📦', ring: 'ring-accent', tint: 'rgba(14,165,168,0.1)' },
+      { key: 'planned_air', status: ShipmentStatus.PLANNED_AIRFREIGHT, value: analytics.statusCounts[ShipmentStatus.PLANNED_AIRFREIGHT] || 0, label: 'Planned Airfreight', icon: '✈️', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
+      { key: 'planned_sea', status: ShipmentStatus.PLANNED_SEAFREIGHT, value: analytics.statusCounts[ShipmentStatus.PLANNED_SEAFREIGHT] || 0, label: 'Planned Seafreight', icon: '🚢', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
+      { key: 'transit_air', status: ShipmentStatus.IN_TRANSIT_AIRFREIGHT, value: analytics.statusCounts[ShipmentStatus.IN_TRANSIT_AIRFREIGHT] || 0, label: 'In Transit Air', icon: '✈️', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+      { key: 'transit_road', status: ShipmentStatus.IN_TRANSIT_ROADWAY, value: analytics.statusCounts[ShipmentStatus.IN_TRANSIT_ROADWAY] || 0, label: 'In Transit Road', icon: '🚛', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+      { key: 'transit_sea', status: ShipmentStatus.IN_TRANSIT_SEAWAY, value: analytics.statusCounts[ShipmentStatus.IN_TRANSIT_SEAWAY] || 0, label: 'In Transit Sea', icon: '🌊', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+      { key: 'moored', status: ShipmentStatus.MOORED, value: analytics.statusCounts[ShipmentStatus.MOORED] || 0, label: 'Moored', icon: '⚓', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+      { key: 'berth_working', status: ShipmentStatus.BERTH_WORKING, value: analytics.statusCounts[ShipmentStatus.BERTH_WORKING] || 0, label: 'Berth Working', icon: '🏗️', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+      { key: 'berth_complete', status: ShipmentStatus.BERTH_COMPLETE, value: analytics.statusCounts[ShipmentStatus.BERTH_COMPLETE] || 0, label: 'Berth Complete', icon: '✅', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+      { key: 'arrived_pta', status: ShipmentStatus.ARRIVED_PTA, value: analytics.statusCounts[ShipmentStatus.ARRIVED_PTA] || 0, label: 'Arrived PTA', icon: '🏢', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
+      { key: 'arrived_klm', status: ShipmentStatus.ARRIVED_KLM, value: analytics.statusCounts[ShipmentStatus.ARRIVED_KLM] || 0, label: 'Arrived KLM', icon: '🏢', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
+      { key: 'unloading', status: ShipmentStatus.UNLOADING, value: analytics.statusCounts[ShipmentStatus.UNLOADING] || 0, label: 'Unloading', icon: '📦', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
+      { key: 'insp_pending', status: ShipmentStatus.INSPECTION_PENDING, value: analytics.statusCounts[ShipmentStatus.INSPECTION_PENDING] || 0, label: 'Inspection Pending', icon: '🔍', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
+      { key: 'inspecting', status: ShipmentStatus.INSPECTING, value: analytics.statusCounts[ShipmentStatus.INSPECTING] || 0, label: 'Inspecting', icon: '🔍', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
+      { key: 'insp_failed', status: ShipmentStatus.INSPECTION_FAILED, value: analytics.statusCounts[ShipmentStatus.INSPECTION_FAILED] || 0, label: 'Inspection Failed', icon: '❌', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
+      { key: 'insp_passed', status: ShipmentStatus.INSPECTION_PASSED, value: analytics.statusCounts[ShipmentStatus.INSPECTION_PASSED] || 0, label: 'Inspection Passed', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
+      { key: 'receiving', status: ShipmentStatus.RECEIVING, value: analytics.statusCounts[ShipmentStatus.RECEIVING] || 0, label: 'Receiving', icon: '📥', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+      { key: 'received', status: ShipmentStatus.RECEIVED, value: analytics.statusCounts[ShipmentStatus.RECEIVED] || 0, label: 'Received', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
+      { key: 'stored', status: ShipmentStatus.STORED, value: analytics.statusCounts[ShipmentStatus.STORED] || 0, label: 'Stored', icon: '🏪', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
+      { key: 'delayed', status: ShipmentStatus.DELAYED, value: analytics.statusCounts[ShipmentStatus.DELAYED] || 0, label: 'Delayed', icon: '⚠️', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
+      { key: 'cancelled', status: ShipmentStatus.CANCELLED, value: analytics.statusCounts[ShipmentStatus.CANCELLED] || 0, label: 'Cancelled', icon: '❌', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
+      { key: 'week', status: '__info__', value: `Week ${analytics.currentWeek}`, label: 'Current Week', icon: '📅', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+      { key: 'suppliers', status: '__info__', value: Object.keys(analytics.supplierStats).length, label: 'Active Suppliers', icon: '🏭', ring: 'ring-accent', tint: 'rgba(14,165,168,0.1)' },
+    ];
+
+    return (
+      <div className="stats-grid">
+        {cards
+          .filter(card => card.status === null || card.status === '__info__' || card.value > 0)
+          .map(card => (
+            <div key={card.key}
+              className={`stat-card ${card.ring} ${card.status !== '__info__' ? 'clickable' : ''} ${statusFilter === card.status ? 'active' : ''}`}
+              onClick={() => card.status !== '__info__' ? onStatusFilter(card.status) : undefined}
+            >
+              <div style={{
+                width: 40, height: 40, borderRadius: '50%', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', fontSize: 18,
+                backgroundColor: card.tint, marginBottom: 10,
+              }}>
+                {card.icon}
+              </div>
+              <h3 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 4px', color: 'var(--navy-900)' }}>
+                {card.value}
+              </h3>
+              <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>
+                {card.label}
+              </p>
+            </div>
+          ))
+        }
       </div>
-
-      {/* Planning Phase */}
-      {(analytics.statusCounts[ShipmentStatus.PLANNED_AIRFREIGHT] || 0) > 0 && (
-        <div
-          className={`summary-card ${statusFilter === ShipmentStatus.PLANNED_AIRFREIGHT ? 'active' : ''}`}
-          onClick={() => onStatusFilter(ShipmentStatus.PLANNED_AIRFREIGHT)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="card-icon">✈️</div>
-          <div className="card-content">
-            <h3>{analytics.statusCounts[ShipmentStatus.PLANNED_AIRFREIGHT]}</h3>
-            <p>Planned Airfreight</p>
-          </div>
-        </div>
-      )}
-      {(analytics.statusCounts[ShipmentStatus.PLANNED_SEAFREIGHT] || 0) > 0 && (
-        <div
-          className={`summary-card ${statusFilter === ShipmentStatus.PLANNED_SEAFREIGHT ? 'active' : ''}`}
-          onClick={() => onStatusFilter(ShipmentStatus.PLANNED_SEAFREIGHT)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="card-icon">🚢</div>
-          <div className="card-content">
-            <h3>{analytics.statusCounts[ShipmentStatus.PLANNED_SEAFREIGHT]}</h3>
-            <p>Planned Seafreight</p>
-          </div>
-        </div>
-      )}
-
-      {/* In Transit Phase */}
-      {(analytics.statusCounts[ShipmentStatus.IN_TRANSIT_AIRFREIGHT] || 0) > 0 && (
-        <div
-          className={`summary-card ${statusFilter === ShipmentStatus.IN_TRANSIT_AIRFREIGHT ? 'active' : ''}`}
-          onClick={() => onStatusFilter(ShipmentStatus.IN_TRANSIT_AIRFREIGHT)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="card-icon">✈️</div>
-          <div className="card-content">
-            <h3>{analytics.statusCounts[ShipmentStatus.IN_TRANSIT_AIRFREIGHT]}</h3>
-            <p>In Transit Air</p>
-          </div>
-        </div>
-      )}
-      {(analytics.statusCounts[ShipmentStatus.IN_TRANSIT_ROADWAY] || 0) > 0 && (
-        <div
-          className={`summary-card ${statusFilter === ShipmentStatus.IN_TRANSIT_ROADWAY ? 'active' : ''}`}
-          onClick={() => onStatusFilter(ShipmentStatus.IN_TRANSIT_ROADWAY)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="card-icon">🚛</div>
-          <div className="card-content">
-            <h3>{analytics.statusCounts[ShipmentStatus.IN_TRANSIT_ROADWAY]}</h3>
-            <p>In Transit Road</p>
-          </div>
-        </div>
-      )}
-      {(analytics.statusCounts[ShipmentStatus.IN_TRANSIT_SEAWAY] || 0) > 0 && (
-        <div
-          className={`summary-card ${statusFilter === ShipmentStatus.IN_TRANSIT_SEAWAY ? 'active' : ''}`}
-          onClick={() => onStatusFilter(ShipmentStatus.IN_TRANSIT_SEAWAY)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="card-icon">🌊</div>
-          <div className="card-content">
-            <h3>{analytics.statusCounts[ShipmentStatus.IN_TRANSIT_SEAWAY]}</h3>
-            <p>In Transit Sea</p>
-          </div>
-        </div>
-      )}
-      {(analytics.statusCounts[ShipmentStatus.MOORED] || 0) > 0 && (
-        <div
-          className={`summary-card ${statusFilter === ShipmentStatus.MOORED ? 'active' : ''}`}
-          onClick={() => onStatusFilter(ShipmentStatus.MOORED)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="card-icon">⚓</div>
-          <div className="card-content">
-            <h3>{analytics.statusCounts[ShipmentStatus.MOORED]}</h3>
-            <p>Moored</p>
-          </div>
-        </div>
-      )}
-      {(analytics.statusCounts[ShipmentStatus.BERTH_WORKING] || 0) > 0 && (
-        <div
-          className={`summary-card ${statusFilter === ShipmentStatus.BERTH_WORKING ? 'active' : ''}`}
-          onClick={() => onStatusFilter(ShipmentStatus.BERTH_WORKING)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="card-icon">🏗️</div>
-          <div className="card-content">
-            <h3>{analytics.statusCounts[ShipmentStatus.BERTH_WORKING]}</h3>
-            <p>Berth Working</p>
-          </div>
-        </div>
-      )}
-      {(analytics.statusCounts[ShipmentStatus.BERTH_COMPLETE] || 0) > 0 && (
-        <div
-          className={`summary-card ${statusFilter === ShipmentStatus.BERTH_COMPLETE ? 'active' : ''}`}
-          onClick={() => onStatusFilter(ShipmentStatus.BERTH_COMPLETE)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="card-icon">✅</div>
-          <div className="card-content">
-            <h3>{analytics.statusCounts[ShipmentStatus.BERTH_COMPLETE]}</h3>
-            <p>Berth Complete</p>
-          </div>
-        </div>
-      )}
-
-      {/* Arrival Phase */}
-      {(analytics.statusCounts[ShipmentStatus.ARRIVED_PTA] || 0) > 0 && (
-        <div
-          className={`summary-card ${statusFilter === ShipmentStatus.ARRIVED_PTA ? 'active' : ''}`}
-          onClick={() => onStatusFilter(ShipmentStatus.ARRIVED_PTA)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="card-icon">🏢</div>
-          <div className="card-content">
-            <h3>{analytics.statusCounts[ShipmentStatus.ARRIVED_PTA]}</h3>
-            <p>Arrived PTA</p>
-          </div>
-        </div>
-      )}
-      {(analytics.statusCounts[ShipmentStatus.ARRIVED_KLM] || 0) > 0 && (
-        <div
-          className={`summary-card ${statusFilter === ShipmentStatus.ARRIVED_KLM ? 'active' : ''}`}
-          onClick={() => onStatusFilter(ShipmentStatus.ARRIVED_KLM)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="card-icon">🏢</div>
-          <div className="card-content">
-            <h3>{analytics.statusCounts[ShipmentStatus.ARRIVED_KLM]}</h3>
-            <p>Arrived KLM</p>
-          </div>
-        </div>
-      )}
-
-      {/* Processing Phase */}
-      {(analytics.statusCounts[ShipmentStatus.UNLOADING] || 0) > 0 && (
-        <div
-          className={`summary-card ${statusFilter === ShipmentStatus.UNLOADING ? 'active' : ''}`}
-          onClick={() => onStatusFilter(ShipmentStatus.UNLOADING)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="card-icon">📦</div>
-          <div className="card-content">
-            <h3>{analytics.statusCounts[ShipmentStatus.UNLOADING]}</h3>
-            <p>Unloading</p>
-          </div>
-        </div>
-      )}
-      {(analytics.statusCounts[ShipmentStatus.INSPECTION_PENDING] || 0) > 0 && (
-        <div
-          className={`summary-card ${statusFilter === ShipmentStatus.INSPECTION_PENDING ? 'active' : ''}`}
-          onClick={() => onStatusFilter(ShipmentStatus.INSPECTION_PENDING)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="card-icon">🔍</div>
-          <div className="card-content">
-            <h3>{analytics.statusCounts[ShipmentStatus.INSPECTION_PENDING]}</h3>
-            <p>Inspection Pending</p>
-          </div>
-        </div>
-      )}
-      {(analytics.statusCounts[ShipmentStatus.INSPECTING] || 0) > 0 && (
-        <div
-          className={`summary-card ${statusFilter === ShipmentStatus.INSPECTING ? 'active' : ''}`}
-          onClick={() => onStatusFilter(ShipmentStatus.INSPECTING)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="card-icon">🔍</div>
-          <div className="card-content">
-            <h3>{analytics.statusCounts[ShipmentStatus.INSPECTING]}</h3>
-            <p>Inspecting</p>
-          </div>
-        </div>
-      )}
-      {(analytics.statusCounts[ShipmentStatus.INSPECTION_FAILED] || 0) > 0 && (
-        <div
-          className={`summary-card alert ${statusFilter === ShipmentStatus.INSPECTION_FAILED ? 'active' : ''}`}
-          onClick={() => onStatusFilter(ShipmentStatus.INSPECTION_FAILED)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="card-icon">❌</div>
-          <div className="card-content">
-            <h3>{analytics.statusCounts[ShipmentStatus.INSPECTION_FAILED]}</h3>
-            <p>Inspection Failed</p>
-          </div>
-        </div>
-      )}
-      {(analytics.statusCounts[ShipmentStatus.INSPECTION_PASSED] || 0) > 0 && (
-        <div
-          className={`summary-card success ${statusFilter === ShipmentStatus.INSPECTION_PASSED ? 'active' : ''}`}
-          onClick={() => onStatusFilter(ShipmentStatus.INSPECTION_PASSED)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="card-icon">✅</div>
-          <div className="card-content">
-            <h3>{analytics.statusCounts[ShipmentStatus.INSPECTION_PASSED]}</h3>
-            <p>Inspection Passed</p>
-          </div>
-        </div>
-      )}
-      {(analytics.statusCounts[ShipmentStatus.RECEIVING] || 0) > 0 && (
-        <div
-          className={`summary-card ${statusFilter === ShipmentStatus.RECEIVING ? 'active' : ''}`}
-          onClick={() => onStatusFilter(ShipmentStatus.RECEIVING)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="card-icon">📥</div>
-          <div className="card-content">
-            <h3>{analytics.statusCounts[ShipmentStatus.RECEIVING]}</h3>
-            <p>Receiving</p>
-          </div>
-        </div>
-      )}
-
-      {/* Completion Phase */}
-      {(analytics.statusCounts[ShipmentStatus.RECEIVED] || 0) > 0 && (
-        <div
-          className={`summary-card success ${statusFilter === ShipmentStatus.RECEIVED ? 'active' : ''}`}
-          onClick={() => onStatusFilter(ShipmentStatus.RECEIVED)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="card-icon">✅</div>
-          <div className="card-content">
-            <h3>{analytics.statusCounts[ShipmentStatus.RECEIVED]}</h3>
-            <p>Received</p>
-          </div>
-        </div>
-      )}
-      {(analytics.statusCounts[ShipmentStatus.STORED] || 0) > 0 && (
-        <div
-          className={`summary-card success ${statusFilter === ShipmentStatus.STORED ? 'active' : ''}`}
-          onClick={() => onStatusFilter(ShipmentStatus.STORED)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="card-icon">🏪</div>
-          <div className="card-content">
-            <h3>{analytics.statusCounts[ShipmentStatus.STORED]}</h3>
-            <p>Stored</p>
-          </div>
-        </div>
-      )}
-
-      {/* Issue Statuses */}
-      {(analytics.statusCounts[ShipmentStatus.DELAYED] || 0) > 0 && (
-        <div
-          className={`summary-card alert ${statusFilter === ShipmentStatus.DELAYED ? 'active' : ''}`}
-          onClick={() => onStatusFilter(ShipmentStatus.DELAYED)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="card-icon">⚠️</div>
-          <div className="card-content">
-            <h3>{analytics.statusCounts[ShipmentStatus.DELAYED]}</h3>
-            <p>Delayed</p>
-          </div>
-        </div>
-      )}
-      {(analytics.statusCounts[ShipmentStatus.CANCELLED] || 0) > 0 && (
-        <div
-          className={`summary-card cancelled ${statusFilter === ShipmentStatus.CANCELLED ? 'active' : ''}`}
-          onClick={() => onStatusFilter(ShipmentStatus.CANCELLED)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="card-icon">❌</div>
-          <div className="card-content">
-            <h3>{analytics.statusCounts[ShipmentStatus.CANCELLED]}</h3>
-            <p>Cancelled</p>
-          </div>
-        </div>
-      )}
-
-      {/* Additional Info Cards */}
-      <div className="summary-card">
-        <div className="card-icon">📅</div>
-        <div className="card-content">
-          <h3>Week {analytics.currentWeek}</h3>
-          <p>Current Week</p>
-        </div>
-      </div>
-
-      <div className="summary-card">
-        <div className="card-icon">🏭</div>
-        <div className="card-content">
-          <h3>{Object.keys(analytics.supplierStats).length}</h3>
-          <p>Active Suppliers</p>
-        </div>
-      </div>
-    </div>
-  );
+    );
+  };
 
   if (loadingShipments) {
     return (
@@ -1050,66 +805,6 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
         .reports-view {
           padding: 2rem;
           min-height: 100vh;
-        }
-        
-        .summary-cards {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 1rem;
-          margin-bottom: 2rem;
-        }
-        
-        .summary-card {
-          background: white;
-          padding: 1.5rem;
-          border-radius: 12px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-          transition: transform 0.2s;
-        }
-        
-        .summary-card:hover {
-          transform: translateY(-2px);
-        }
-        
-        .summary-card.total {
-          border-left: 4px solid #2196F3;
-          background: linear-gradient(135deg, #f8f9fc 0%, #e3f2fd 100%);
-        }
-
-        .summary-card.success {
-          border-left: 4px solid #4CAF50;
-          background: linear-gradient(135deg, #f8f9fc 0%, #e8f5e8 100%);
-        }
-
-        .summary-card.alert {
-          border-left: 4px solid #f44336;
-          background: linear-gradient(135deg, #f8f9fc 0%, #ffebee 100%);
-        }
-
-        .summary-card.cancelled {
-          border-left: 4px solid #9E9E9E;
-          background: linear-gradient(135deg, #f8f9fc 0%, #f5f5f5 100%);
-          opacity: 0.8;
-        }
-        
-        .card-icon {
-          font-size: 2rem;
-        }
-        
-        .card-content h3 {
-          font-size: 1.8rem;
-          font-weight: bold;
-          color: #2c3e50;
-          margin: 0;
-        }
-        
-        .card-content p {
-          color: #7f8c8d;
-          margin: 0;
-          font-size: 0.9rem;
         }
         
         .charts-grid {
@@ -1402,10 +1097,6 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
         @media (max-width: 768px) {
           .charts-grid {
             grid-template-columns: 1fr;
-          }
-          
-          .summary-cards {
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
           }
           
           .bar-chart {

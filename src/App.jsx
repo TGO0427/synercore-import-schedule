@@ -674,163 +674,51 @@ function App() {
           <div className="window-content">
             {/* stat cards */}
             <div className="stats-grid">
-              <div className={`stat-card total ${statusFilter === null ? 'active' : ''}`}
-                   onClick={() => setStatusFilter(null)}
-                   style={{ cursor: 'pointer' }}>
-                <h3>{stats.total}</h3><p>Total Shipments</p>
-              </div>
-
-              {/* planning */}
-              {stats.planned_airfreight > 0 && (
-                <div className={`stat-card ${statusFilter === 'planned_airfreight' ? 'active' : ''}`}
-                     onClick={() => handleStatusCardClick('planned_airfreight')}
-                     style={{ cursor: 'pointer' }}>
-                  <h3>{stats.planned_airfreight}</h3><p>Planned Airfreight</p>
-                </div>
-              )}
-              {stats.planned_seafreight > 0 && (
-                <div className={`stat-card ${statusFilter === 'planned_seafreight' ? 'active' : ''}`}
-                     onClick={() => handleStatusCardClick('planned_seafreight')}
-                     style={{ cursor: 'pointer' }}>
-                  <h3>{stats.planned_seafreight}</h3><p>Planned Seafreight</p>
-                </div>
-              )}
-
-              {/* transit */}
-              {stats.in_transit_airfreight > 0 && (
-                <div className={`stat-card ${statusFilter === 'in_transit_airfreight' ? 'active' : ''}`}
-                     onClick={() => handleStatusCardClick('in_transit_airfreight')}
-                     style={{ cursor: 'pointer' }}>
-                  <h3>{stats.in_transit_airfreight}</h3><p>In Transit Air</p>
-                </div>
-              )}
-              {stats.in_transit_roadway > 0 && (
-                <div className={`stat-card ${statusFilter === 'in_transit_roadway' ? 'active' : ''}`}
-                     onClick={() => handleStatusCardClick('in_transit_roadway')}
-                     style={{ cursor: 'pointer' }}>
-                  <h3>{stats.in_transit_roadway}</h3><p>In Transit Road</p>
-                </div>
-              )}
-              {stats.in_transit_seaway > 0 && (
-                <div className={`stat-card ${statusFilter === 'in_transit_seaway' ? 'active' : ''}`}
-                     onClick={() => handleStatusCardClick('in_transit_seaway')}
-                     style={{ cursor: 'pointer' }}>
-                  <h3>{stats.in_transit_seaway}</h3><p>In Transit Sea</p>
-                </div>
-              )}
-              {stats.moored > 0 && (
-                <div className={`stat-card ${statusFilter === 'moored' ? 'active' : ''}`}
-                     onClick={() => handleStatusCardClick('moored')}
-                     style={{ cursor: 'pointer' }}>
-                  <h3>{stats.moored}</h3><p>Moored</p>
-                </div>
-              )}
-              {stats.berth_working > 0 && (
-                <div className={`stat-card ${statusFilter === 'berth_working' ? 'active' : ''}`}
-                     onClick={() => handleStatusCardClick('berth_working')}
-                     style={{ cursor: 'pointer' }}>
-                  <h3>{stats.berth_working}</h3><p>Berth Working</p>
-                </div>
-              )}
-              {stats.berth_complete > 0 && (
-                <div className={`stat-card ${statusFilter === 'berth_complete' ? 'active' : ''}`}
-                     onClick={() => handleStatusCardClick('berth_complete')}
-                     style={{ cursor: 'pointer' }}>
-                  <h3>{stats.berth_complete}</h3><p>Berth Complete</p>
-                </div>
-              )}
-
-              {/* arrival */}
-              {stats.arrived_pta > 0 && (
-                <div className={`stat-card ${statusFilter === 'arrived_pta' ? 'active' : ''}`}
-                     onClick={() => handleStatusCardClick('arrived_pta')}
-                     style={{ cursor: 'pointer' }}>
-                  <h3>{stats.arrived_pta}</h3><p>Arrived PTA</p>
-                </div>
-              )}
-              {stats.arrived_klm > 0 && (
-                <div className={`stat-card ${statusFilter === 'arrived_klm' ? 'active' : ''}`}
-                     onClick={() => handleStatusCardClick('arrived_klm')}
-                     style={{ cursor: 'pointer' }}>
-                  <h3>{stats.arrived_klm}</h3><p>Arrived KLM</p>
-                </div>
-              )}
-
-              {/* processing */}
-              {stats.unloading > 0 && (
-                <div className={`stat-card ${statusFilter === 'unloading' ? 'active' : ''}`}
-                     onClick={() => handleStatusCardClick('unloading')}
-                     style={{ cursor: 'pointer' }}>
-                  <h3>{stats.unloading}</h3><p>Unloading</p>
-                </div>
-              )}
-              {stats.inspection_pending > 0 && (
-                <div className={`stat-card ${statusFilter === 'inspection_pending' ? 'active' : ''}`}
-                     onClick={() => handleStatusCardClick('inspection_pending')}
-                     style={{ cursor: 'pointer' }}>
-                  <h3>{stats.inspection_pending}</h3><p>Inspection Pending</p>
-                </div>
-              )}
-              {stats.inspecting > 0 && (
-                <div className={`stat-card ${statusFilter === 'inspecting' ? 'active' : ''}`}
-                     onClick={() => handleStatusCardClick('inspecting')}
-                     style={{ cursor: 'pointer' }}>
-                  <h3>{stats.inspecting}</h3><p>Inspecting</p>
-                </div>
-              )}
-              {stats.inspection_failed > 0 && (
-                <div className={`stat-card alert ${statusFilter === 'inspection_failed' ? 'active' : ''}`}
-                     onClick={() => handleStatusCardClick('inspection_failed')}
-                     style={{ cursor: 'pointer' }}>
-                  <h3>{stats.inspection_failed}</h3><p>Inspection Failed</p>
-                </div>
-              )}
-              {stats.inspection_passed > 0 && (
-                <div className={`stat-card success ${statusFilter === 'inspection_passed' ? 'active' : ''}`}
-                     onClick={() => handleStatusCardClick('inspection_passed')}
-                     style={{ cursor: 'pointer' }}>
-                  <h3>{stats.inspection_passed}</h3><p>Inspection Passed</p>
-                </div>
-              )}
-              {stats.receiving > 0 && (
-                <div className={`stat-card ${statusFilter === 'receiving' ? 'active' : ''}`}
-                     onClick={() => handleStatusCardClick('receiving')}
-                     style={{ cursor: 'pointer' }}>
-                  <h3>{stats.receiving}</h3><p>Receiving</p>
-                </div>
-              )}
-
-              {/* completion */}
-              {stats.received > 0 && (
-                <div className={`stat-card success ${statusFilter === 'received' ? 'active' : ''}`}
-                     onClick={() => handleStatusCardClick('received')}
-                     style={{ cursor: 'pointer' }}>
-                  <h3>{stats.received}</h3><p>Received</p>
-                </div>
-              )}
-              {stats.stored > 0 && (
-                <div className={`stat-card success ${statusFilter === 'stored' ? 'active' : ''}`}
-                     onClick={() => handleStatusCardClick('stored')}
-                     style={{ cursor: 'pointer' }}>
-                  <h3>{stats.stored}</h3><p>Stored</p>
-                </div>
-              )}
-
-              {/* issues */}
-              {stats.delayed > 0 && (
-                <div className={`stat-card alert ${statusFilter === 'delayed' ? 'active' : ''}`}
-                     onClick={() => handleStatusCardClick('delayed')}
-                     style={{ cursor: 'pointer' }}>
-                  <h3>{stats.delayed}</h3><p>Delayed</p>
-                </div>
-              )}
-              {stats.cancelled > 0 && (
-                <div className={`stat-card cancelled ${statusFilter === 'cancelled' ? 'active' : ''}`}
-                     onClick={() => handleStatusCardClick('cancelled')}
-                     style={{ cursor: 'pointer' }}>
-                  <h3>{stats.cancelled}</h3><p>Cancelled</p>
-                </div>
-              )}
+              {[
+                { key: 'total', status: null, value: stats.total, label: 'Total Shipments', icon: '📦', ring: 'ring-accent', tint: 'rgba(14,165,168,0.1)' },
+                { key: 'planned_airfreight', status: 'planned_airfreight', value: stats.planned_airfreight, label: 'Planned Airfreight', icon: '✈️', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
+                { key: 'planned_seafreight', status: 'planned_seafreight', value: stats.planned_seafreight, label: 'Planned Seafreight', icon: '🚢', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
+                { key: 'in_transit_airfreight', status: 'in_transit_airfreight', value: stats.in_transit_airfreight, label: 'In Transit Air', icon: '✈️', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+                { key: 'in_transit_roadway', status: 'in_transit_roadway', value: stats.in_transit_roadway, label: 'In Transit Road', icon: '🚛', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+                { key: 'in_transit_seaway', status: 'in_transit_seaway', value: stats.in_transit_seaway, label: 'In Transit Sea', icon: '🌊', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+                { key: 'moored', status: 'moored', value: stats.moored, label: 'Moored', icon: '⚓', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+                { key: 'berth_working', status: 'berth_working', value: stats.berth_working, label: 'Berth Working', icon: '🏗️', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+                { key: 'berth_complete', status: 'berth_complete', value: stats.berth_complete, label: 'Berth Complete', icon: '✅', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+                { key: 'arrived_pta', status: 'arrived_pta', value: stats.arrived_pta, label: 'Arrived PTA', icon: '🏢', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
+                { key: 'arrived_klm', status: 'arrived_klm', value: stats.arrived_klm, label: 'Arrived KLM', icon: '🏢', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
+                { key: 'unloading', status: 'unloading', value: stats.unloading, label: 'Unloading', icon: '📦', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
+                { key: 'inspection_pending', status: 'inspection_pending', value: stats.inspection_pending, label: 'Inspection Pending', icon: '🔍', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
+                { key: 'inspecting', status: 'inspecting', value: stats.inspecting, label: 'Inspecting', icon: '🔍', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
+                { key: 'inspection_failed', status: 'inspection_failed', value: stats.inspection_failed, label: 'Inspection Failed', icon: '❌', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
+                { key: 'inspection_passed', status: 'inspection_passed', value: stats.inspection_passed, label: 'Inspection Passed', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
+                { key: 'receiving', status: 'receiving', value: stats.receiving, label: 'Receiving', icon: '📥', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+                { key: 'received', status: 'received', value: stats.received, label: 'Received', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
+                { key: 'stored', status: 'stored', value: stats.stored, label: 'Stored', icon: '🏪', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
+                { key: 'delayed', status: 'delayed', value: stats.delayed, label: 'Delayed', icon: '⚠️', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
+                { key: 'cancelled', status: 'cancelled', value: stats.cancelled, label: 'Cancelled', icon: '❌', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
+              ]
+                .filter(card => card.status === null || card.value > 0)
+                .map(card => (
+                  <div key={card.key}
+                    className={`stat-card ${card.ring} clickable ${statusFilter === card.status ? 'active' : ''}`}
+                    onClick={() => card.status === null ? setStatusFilter(null) : handleStatusCardClick(card.status)}
+                  >
+                    <div style={{
+                      width: 40, height: 40, borderRadius: '50%', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center', fontSize: 18,
+                      backgroundColor: card.tint, marginBottom: 10,
+                    }}>
+                      {card.icon}
+                    </div>
+                    <h3 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 4px', color: 'var(--navy-900)' }}>
+                      {card.value}
+                    </h3>
+                    <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>
+                      {card.label}
+                    </p>
+                  </div>
+                ))
+              }
             </div>
 
             {/* current filter chip */}
@@ -838,27 +726,20 @@ function App() {
               <div style={{
                 margin: '1rem 0',
                 padding: '0.75rem 1rem',
-                backgroundColor: '#e3f2fd',
-                border: '1px solid #90caf9',
+                backgroundColor: 'rgba(59,130,246,0.08)',
+                border: '1px solid rgba(59,130,246,0.3)',
                 borderRadius: '8px',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center'
               }}>
-                <span style={{ color: '#1976d2', fontWeight: 'bold' }}>
-                  🔍 Filtered by: {statusFilter.replace('_', ' ').toUpperCase()}
+                <span style={{ color: 'var(--info)', fontWeight: 'bold' }}>
+                  Filtered by: {statusFilter.replace(/_/g, ' ').toUpperCase()}
                 </span>
                 <button
                   onClick={() => setStatusFilter(null)}
-                  style={{
-                    padding: '0.25rem 0.5rem',
-                    backgroundColor: '#1976d2',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '0.8rem'
-                  }}
+                  className="btn btn-sm"
+                  style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}
                 >
                   Clear Filter
                 </button>
