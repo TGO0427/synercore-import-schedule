@@ -42,7 +42,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
   const [openMenuId, setOpenMenuId] = useState(null);
 
   // Initials badge helpers
-  const AVATAR_COLORS = ['#0ea5a8','#3b82f6','#8b5cf6','#ec4899','#f59e0b','#10b981','#ef4444','#6366f1'];
+  const AVATAR_COLORS = ['#059669','#3b82f6','#8b5cf6','#ec4899','#f59e0b','#10b981','#ef4444','#6366f1'];
   const getInitials = (name) => (name || '').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
   const getAvatarColor = (name) => AVATAR_COLORS[(name || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_COLORS.length];
 

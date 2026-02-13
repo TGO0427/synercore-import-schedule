@@ -677,7 +677,7 @@ function App() {
             {/* stat cards */}
             <div className="stats-grid">
               {[
-                { key: 'total', status: null, value: stats.total, label: 'Total Shipments', icon: '📦', ring: 'ring-accent', tint: 'rgba(14,165,168,0.1)' },
+                { key: 'total', status: null, value: stats.total, label: 'Total Shipments', icon: '📦', ring: 'ring-accent', tint: 'rgba(5,150,105,0.1)' },
                 { key: 'planned_airfreight', status: 'planned_airfreight', value: stats.planned_airfreight, label: 'Planned Airfreight', icon: '✈️', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
                 { key: 'planned_seafreight', status: 'planned_seafreight', value: stats.planned_seafreight, label: 'Planned Seafreight', icon: '🚢', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
                 { key: 'in_transit_airfreight', status: 'in_transit_airfreight', value: stats.in_transit_airfreight, label: 'In Transit Air', icon: '✈️', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },

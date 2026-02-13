@@ -28,20 +28,17 @@ function RatesQuotes({ showSuccess, showError, loading }) {
   const forwarders = {
     dhl: {
       name: "DHL",
-      color: "#d40511",
-      hoverColor: "#b50410",
+      brandColor: "#d40511",
       icon: "📦",
     },
     dsv: {
       name: "DSV",
-      color: "#003d6b",
-      hoverColor: "#002d4f",
+      brandColor: "#003d6b",
       icon: "🚛",
     },
     afrigistics: {
       name: "Afrigistics",
-      color: "#1a5f2f",
-      hoverColor: "#134521",
+      brandColor: "#1a5f2f",
       icon: "🌍",
     },
   };
@@ -352,7 +349,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
           <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>
             {forwarderInfo.icon}
           </div>
-          <h3 style={{ marginBottom: "1rem", color: forwarderInfo.color }}>
+          <h3 style={{ marginBottom: "1rem", color: "var(--text-900)" }}>
             Upload {forwarderInfo.name} Quotes & Rates
           </h3>
           <p style={{ color: "#6c757d", marginBottom: "1.5rem" }}>
@@ -364,7 +361,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
             style={{
               display: "inline-block",
               padding: "12px 24px",
-              backgroundColor: forwarderInfo.color,
+              backgroundColor: "var(--accent)",
               color: "white",
               borderRadius: "8px",
               cursor: uploading ? "not-allowed" : "pointer",
@@ -374,11 +371,11 @@ function RatesQuotes({ showSuccess, showError, loading }) {
             }}
             onMouseEnter={(e) => {
               if (!uploading)
-                e.currentTarget.style.backgroundColor = forwarderInfo.hoverColor;
+                e.currentTarget.style.backgroundColor = "var(--accent-600)";
             }}
             onMouseLeave={(e) => {
               if (!uploading)
-                e.currentTarget.style.backgroundColor = forwarderInfo.color;
+                e.currentTarget.style.backgroundColor = "var(--accent)";
             }}
           >
             {uploading ? "📤 Uploading..." : "📎 Choose Files"}
@@ -495,7 +492,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                       padding: "1rem",
                       backgroundColor: isSelected ? "var(--surface-2)" : "white",
                       border: `1px solid ${
-                        isSelected ? forwarderInfo.color : "var(--border)"
+                        isSelected ? "var(--accent)" : "var(--border)"
                       }`,
                       borderRadius: "8px",
                       transition: "all 0.2s ease",
@@ -503,7 +500,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                     onMouseEnter={(e) => {
                       e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
                       if (!isSelected)
-                        e.currentTarget.style.borderColor = forwarderInfo.color;
+                        e.currentTarget.style.borderColor = "var(--accent)";
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.boxShadow = "none";
@@ -726,10 +723,10 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                 padding: "1rem 2rem",
                 border: "none",
                 backgroundColor: activeTab === key ? "white" : "transparent",
-                color: activeTab === key ? forwarder.color : "#6c757d",
+                color: activeTab === key ? "var(--accent)" : "#6c757d",
                 borderBottom:
                   activeTab === key
-                    ? `3px solid ${forwarder.color}`
+                    ? "3px solid var(--accent)"
                     : "3px solid transparent",
                 cursor: "pointer",
                 fontSize: "1rem",
@@ -743,7 +740,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
               onMouseEnter={(e) => {
                 if (activeTab !== key) {
                   e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.5)";
-                  e.currentTarget.style.color = forwarder.color;
+                  e.currentTarget.style.color = "var(--accent)";
                 }
               }}
               onMouseLeave={(e) => {
@@ -757,7 +754,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
               <span>{forwarder.name}</span>
               <span
                 style={{
-                  backgroundColor: activeTab === key ? forwarder.color : "#6c757d",
+                  backgroundColor: activeTab === key ? "var(--accent)" : "#6c757d",
                   color: "white",
                   borderRadius: "12px",
                   padding: "2px 8px",

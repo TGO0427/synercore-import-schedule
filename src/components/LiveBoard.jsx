@@ -119,7 +119,7 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
   }, [shipments]);
 
   const kpiTiles = [
-    { label: 'Total', value: stats.total, color: '#0ea5a8' },
+    { label: 'Total', value: stats.total, color: '#059669' },
     { label: 'In Transit', value: stats.inTransit, color: '#3b82f6' },
     { label: 'At Port', value: stats.port, color: '#8b5cf6' },
     { label: 'Arrived', value: stats.arrived, color: '#10b981' },
@@ -130,13 +130,13 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
-      background: 'linear-gradient(135deg, #0b1f3a 0%, #0e274a 50%, #112d56 100%)',
+      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e293b 100%)',
       color: 'white', overflow: 'auto',
       animation: 'liveboard-in 0.3s ease',
     }}>
       <style>{`
         @keyframes liveboard-in { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
-        @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(14,165,168,0.4); } 70% { box-shadow: 0 0 0 10px rgba(14,165,168,0); } 100% { box-shadow: 0 0 0 0 rgba(14,165,168,0); } }
+        @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(5,150,105,0.4); } 70% { box-shadow: 0 0 0 10px rgba(5,150,105,0); } 100% { box-shadow: 0 0 0 0 rgba(5,150,105,0); } }
       `}</style>
 
       {/* Header */}
@@ -229,7 +229,7 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
               <div key={s.id} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '10px 14px', background: 'rgba(255,255,255,0.03)',
-                borderRadius: '8px', borderLeft: '3px solid rgba(14,165,168,0.5)',
+                borderRadius: '8px', borderLeft: '3px solid rgba(5,150,105,0.5)',
               }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{s.orderRef}</div>

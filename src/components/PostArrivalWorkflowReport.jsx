@@ -403,7 +403,7 @@ function PostArrivalWorkflowReport({ shipments }) {
   const WorkflowTimeCards = ({ timeAnalysis }) => (
     <div className="stats-grid">
       <div className="stat-card ring-accent">
-        <div style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, backgroundColor: 'rgba(14,165,168,0.1)', marginBottom: 10 }}>⏱️</div>
+        <div style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, backgroundColor: 'rgba(5,150,105,0.1)', marginBottom: 10 }}>⏱️</div>
         <h3 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 4px', color: 'var(--navy-900)' }}>{timeAnalysis.avgProcessingTime}h</h3>
         <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>Avg. Processing Time</p>
       </div>
@@ -556,7 +556,7 @@ function PostArrivalWorkflowReport({ shipments }) {
   const WorkflowSummaryCards = ({ analytics }) => (
     <div className="stats-grid">
       <div className="stat-card ring-accent">
-        <div style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, backgroundColor: 'rgba(14,165,168,0.1)', marginBottom: 10 }}>📦</div>
+        <div style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, backgroundColor: 'rgba(5,150,105,0.1)', marginBottom: 10 }}>📦</div>
         <h3 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 4px', color: 'var(--navy-900)' }}>{analytics.totalInWorkflow}</h3>
         <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>Total in Workflow</p>
       </div>
@@ -580,7 +580,7 @@ function PostArrivalWorkflowReport({ shipments }) {
         <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>Potential Bottlenecks</p>
       </div>
       <div className="stat-card ring-accent">
-        <div style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, backgroundColor: 'rgba(14,165,168,0.1)', marginBottom: 10 }}>📊</div>
+        <div style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, backgroundColor: 'rgba(5,150,105,0.1)', marginBottom: 10 }}>📊</div>
         <h3 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 4px', color: 'var(--navy-900)' }}>{analytics.completionRate}%</h3>
         <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>Completion Rate</p>
       </div>

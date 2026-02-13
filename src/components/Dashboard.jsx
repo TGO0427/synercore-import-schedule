@@ -214,7 +214,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
 
   // KPI card config
   const kpiCards = [
-    { key: 'total', value: stats.total, label: 'Total Shipments', icon: '📦', ring: 'ring-accent', tint: 'rgba(14,165,168,0.1)', filter: null },
+    { key: 'total', value: stats.total, label: 'Total Shipments', icon: '📦', ring: 'ring-accent', tint: 'rgba(5,150,105,0.1)', filter: null },
     { key: 'transit', value: stats.inTransit, label: 'In Transit', icon: '🚢', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)', filter: 'in_transit' },
     { key: 'arrived', value: stats.arrived, label: 'Arrived', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)', filter: 'arrived' },
     { key: 'delayed', value: stats.delayed, label: 'Delayed', icon: '⚠️', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)', filter: 'delayed' },
@@ -227,13 +227,13 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
       labels: weeklyTrendData.labels,
       datasets: [{
         data: weeklyTrendData.values,
-        borderColor: '#0ea5a8',
-        backgroundColor: 'rgba(14,165,168,0.08)',
+        borderColor: '#059669',
+        backgroundColor: 'rgba(5,150,105,0.08)',
         fill: true,
         tension: 0.4,
         borderWidth: 2,
         pointRadius: 3,
-        pointBackgroundColor: '#0ea5a8',
+        pointBackgroundColor: '#059669',
         pointBorderColor: '#fff',
         pointBorderWidth: 1.5,
         pointHoverRadius: 5,
@@ -245,7 +245,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: '#0b1f3a',
+          backgroundColor: '#0f172a',
           titleFont: { size: 12 },
           bodyFont: { size: 12 },
           padding: 8,

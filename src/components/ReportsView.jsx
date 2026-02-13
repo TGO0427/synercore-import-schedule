@@ -698,7 +698,7 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
 
   const SummaryCards = ({ analytics, statusFilter, onStatusFilter }) => {
     const cards = [
-      { key: 'total', status: null, value: analytics.totalShipments, label: 'Total Shipments', icon: '📦', ring: 'ring-accent', tint: 'rgba(14,165,168,0.1)' },
+      { key: 'total', status: null, value: analytics.totalShipments, label: 'Total Shipments', icon: '📦', ring: 'ring-accent', tint: 'rgba(5,150,105,0.1)' },
       { key: 'planned_air', status: ShipmentStatus.PLANNED_AIRFREIGHT, value: analytics.statusCounts[ShipmentStatus.PLANNED_AIRFREIGHT] || 0, label: 'Planned Airfreight', icon: '✈️', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
       { key: 'planned_sea', status: ShipmentStatus.PLANNED_SEAFREIGHT, value: analytics.statusCounts[ShipmentStatus.PLANNED_SEAFREIGHT] || 0, label: 'Planned Seafreight', icon: '🚢', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
       { key: 'transit_air', status: ShipmentStatus.IN_TRANSIT_AIRFREIGHT, value: analytics.statusCounts[ShipmentStatus.IN_TRANSIT_AIRFREIGHT] || 0, label: 'In Transit Air', icon: '✈️', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
@@ -720,7 +720,7 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
       { key: 'delayed', status: ShipmentStatus.DELAYED, value: analytics.statusCounts[ShipmentStatus.DELAYED] || 0, label: 'Delayed', icon: '⚠️', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
       { key: 'cancelled', status: ShipmentStatus.CANCELLED, value: analytics.statusCounts[ShipmentStatus.CANCELLED] || 0, label: 'Cancelled', icon: '❌', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
       { key: 'week', status: '__info__', value: `Week ${analytics.currentWeek}`, label: 'Current Week', icon: '📅', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
-      { key: 'suppliers', status: '__info__', value: Object.keys(analytics.supplierStats).length, label: 'Active Suppliers', icon: '🏭', ring: 'ring-accent', tint: 'rgba(14,165,168,0.1)' },
+      { key: 'suppliers', status: '__info__', value: Object.keys(analytics.supplierStats).length, label: 'Active Suppliers', icon: '🏭', ring: 'ring-accent', tint: 'rgba(5,150,105,0.1)' },
     ];
 
     return (

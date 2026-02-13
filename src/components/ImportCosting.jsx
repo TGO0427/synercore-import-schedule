@@ -1460,7 +1460,7 @@ function ImportCosting({ showSuccess, showError }) {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div className="page-header">
-          <h2 style={{ margin: 0, fontSize: '1.5rem', color: '#0b1f3a' }}>Import Costing</h2>
+          <h2 style={{ margin: 0, fontSize: '1.5rem', color: '#0f172a' }}>Import Costing</h2>
           <p style={{ margin: '0.25rem 0 0', color: 'var(--text-500)', fontSize: '0.9rem' }}>
             FCL Import Cost Comparison
           </p>
@@ -1486,7 +1486,7 @@ function ImportCosting({ showSuccess, showError }) {
             <button
               onClick={() => { resetForm(); setShowForm(true); }}
               style={{
-                padding: '10px 20px', backgroundColor: '#0ea5a8', color: 'white',
+                padding: '10px 20px', backgroundColor: '#059669', color: 'white',
                 border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500'
               }}
             >
@@ -1717,7 +1717,7 @@ function ImportCosting({ showSuccess, showError }) {
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               position: 'sticky', top: 0, backgroundColor: 'white', zIndex: 10
             }}>
-              <h3 style={{ margin: 0, color: '#0b1f3a' }}>
+              <h3 style={{ margin: 0, color: '#0f172a' }}>
                 {editingId ? 'Edit Cost Estimate' : 'New Cost Estimate'}
               </h3>
               <button
@@ -1731,7 +1731,7 @@ function ImportCosting({ showSuccess, showError }) {
             <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
               {/* Section: Header Details */}
               <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 1rem', color: '#0b1f3a', fontSize: '1rem' }}>Shipment Details</h4>
+                <h4 style={{ margin: '0 0 1rem', color: '#0f172a', fontSize: '1rem' }}>Shipment Details</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
                   {renderInput('Reference Number', 'reference_number')}
                   <div style={{ marginBottom: '12px' }}>
@@ -1746,7 +1746,7 @@ function ImportCosting({ showSuccess, showError }) {
                           onChange={(e) => setNewSupplierName(e.target.value)}
                           placeholder="Enter supplier name..."
                           className="input"
-                          style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid #0ea5a8' }}
+                          style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid #059669' }}
                           autoFocus
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') { e.preventDefault(); createSupplier(); }
@@ -1756,7 +1756,7 @@ function ImportCosting({ showSuccess, showError }) {
                         <button
                           type="button"
                           onClick={createSupplier}
-                          style={{ padding: '8px 12px', backgroundColor: '#0ea5a8', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}
+                          style={{ padding: '8px 12px', backgroundColor: '#059669', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}
                         >
                           Add
                         </button>
@@ -2279,7 +2279,7 @@ function ImportCosting({ showSuccess, showError }) {
               )}
 
               {/* Section: Totals Summary */}
-              <div style={{ marginBottom: '1.5rem', padding: '1.5rem', backgroundColor: '#0b1f3a', borderRadius: '8px', color: 'white' }}>
+              <div style={{ marginBottom: '1.5rem', padding: '1.5rem', backgroundColor: '#0f172a', borderRadius: '8px', color: 'white' }}>
                 <h4 style={{ margin: '0 0 1rem', fontSize: '1.1rem' }}>Summary Totals</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem' }}>
                   <div>
@@ -2338,7 +2338,7 @@ function ImportCosting({ showSuccess, showError }) {
                 <button
                   type="submit"
                   style={{
-                    padding: '10px 24px', backgroundColor: '#0ea5a8', color: 'white',
+                    padding: '10px 24px', backgroundColor: '#059669', color: 'white',
                     border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500'
                   }}
                 >
@@ -2525,7 +2525,7 @@ function ImportCosting({ showSuccess, showError }) {
             backgroundColor: 'white', borderRadius: '12px', padding: '1.5rem',
             width: '100%', maxWidth: '450px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
           }}>
-            <h3 style={{ margin: '0 0 1rem', color: '#0b1f3a' }}>Send Cost Estimate via Email</h3>
+            <h3 style={{ margin: '0 0 1rem', color: '#0f172a' }}>Send Cost Estimate via Email</h3>
 
             <div style={{ marginBottom: '1rem', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
               <div style={{ fontSize: '0.85rem', color: 'var(--text-500)' }}>Reference</div>
@@ -2587,7 +2587,7 @@ function ImportCosting({ showSuccess, showError }) {
             backgroundColor: 'white', borderRadius: '12px', padding: '1.5rem',
             width: '500px', maxWidth: '90vw', maxHeight: '80vh', overflow: 'auto'
           }}>
-            <h3 style={{ margin: '0 0 1rem', color: '#0b1f3a' }}>Request a Costing</h3>
+            <h3 style={{ margin: '0 0 1rem', color: '#0f172a' }}>Request a Costing</h3>
             <p style={{ color: 'var(--text-500)', fontSize: '0.85rem', marginBottom: '1rem' }}>
               Submit a request and an admin will prepare the cost estimate for you.
             </p>
