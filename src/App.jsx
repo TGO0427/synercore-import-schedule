@@ -97,6 +97,18 @@ function App() {
   // Costing Requests badge count (admin only)
   const [costingRequestCount, setCostingRequestCount] = useState(0);
 
+  // Sidebar nav search
+  const [navSearch, setNavSearch] = useState('');
+
+  // Sidebar collapsible sections
+  const [sidebarSections, setSidebarSections] = useState({
+    masterData: true,
+    operations: true,
+    finance: true,
+    reports: true,
+  });
+  const toggleSection = (key) => setSidebarSections(prev => ({ ...prev, [key]: !prev[key] }));
+
   // Password Recovery state
   const [currentView, setCurrentView] = useState('login'); // 'login', 'forgotPassword', 'resetPassword'
 
@@ -940,199 +952,181 @@ function App() {
   return (
     <div className="container">
       <OfflineIndicator />
+      {/* ===== SIDEBAR ===== */}
       <div className="sidebar">
-        <div style={{ marginBottom: '1rem' }}>
-          <h2>Import Supply Chain Management</h2>
+        {/* Header */}
+        <div className="sidebar-header">
+          <h1>Import SCM</h1>
+          <p className="sidebar-subtitle">Supply Chain Management</p>
         </div>
 
-        <ul className="sidebar-nav">
-          <li><button className={activeView === 'dashboard' ? 'active' : ''} onClick={() => setActiveView('dashboard')}>📊 Dashboard</button></li>
-          <li><button className={activeView === 'suppliers' ? 'active' : ''} onClick={() => setActiveView('suppliers')}>🏢 Suppliers</button></li>
-          <li><button className={activeView === 'capacity' ? 'active' : ''} onClick={() => setActiveView('capacity')}>🏭 Warehouse Capacity</button></li>
-          <li><button className={activeView === 'products' ? 'active' : ''} onClick={() => setActiveView('products')}>📋 Product & Warehouse</button></li>
-          <li><button className={activeView === 'shipping' ? 'active' : ''} onClick={() => setActiveView('shipping')}>📦 Shipping Schedule</button></li>
-          <li><button className={activeView === 'workflow' ? 'active' : ''} onClick={() => setActiveView('workflow')}>📋 Post-Arrival Workflow</button></li>
-          <li><button className={activeView === 'reports' ? 'active' : ''} onClick={() => setActiveView('reports')}>📊 Reports</button></li>
-          <li><button className={activeView === 'advanced-reports' ? 'active' : ''} onClick={() => setActiveView('advanced-reports')}>📈 Advanced Reports</button></li>
-          <li><button className={activeView === 'archives' ? 'active' : ''} onClick={() => setActiveView('archives')}>📦 Shipment Archives</button></li>
-          <li><button className={activeView === 'rates' ? 'active' : ''} onClick={() => setActiveView('rates')}>💰 Rates & Quotes</button></li>
-          <li><button className={activeView === 'costing' ? 'active' : ''} onClick={() => setActiveView('costing')}>📊 Import Costing</button></li>
-          {isAdmin && <li><button className={activeView === 'costing-requests' ? 'active' : ''} onClick={() => setActiveView('costing-requests')}>📋 Costing Requests{costingRequestCount > 0 ? ` (${costingRequestCount})` : ''}</button></li>}
-          <li><button className={activeView === 'stored' ? 'active' : ''} onClick={() => setActiveView('stored')}>🏪 Warehouse Stored</button></li>
-          <li style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
-            <button onClick={() => setShowSupplierPortal(true)} style={{ width: '100%', textAlign: 'left', backgroundColor: '#1e7e8c' }} title="Access the supplier portal">🏢 Supplier Portal</button>
-          </li>
-          <li>
-            <button onClick={() => setHelpOpen(true)} style={{ width: '100%', textAlign: 'left' }}>📚 Help & Guide</button>
-          </li>
-          <li>
-            <button onClick={() => setSettingsOpen(true)} style={{ width: '100%', textAlign: 'left' }}>👤 User Settings</button>
-          </li>
-          <li>
-            <button onClick={() => setNotificationPrefsOpen(true)} style={{ width: '100%', textAlign: 'left' }}>📧 Notification Preferences</button>
-          </li>
-          <li>
-            <button onClick={handleLogout} style={{ width: '100%', textAlign: 'left', backgroundColor: '#dc3545' }}>🚪 Logout</button>
-          </li>
-          {isAdmin && <li><button className={activeView === 'users' ? 'active' : ''} onClick={() => setActiveView('users')}>👥 User Management</button></li>}
-        </ul>
+        {/* Search */}
+        <div className="sidebar-search">
+          <input
+            type="text"
+            placeholder="Search menu..."
+            value={navSearch}
+            onChange={e => setNavSearch(e.target.value)}
+          />
+        </div>
 
-        {/* External links & quick stats unchanged (kept for brevity) */}
-        {/* --- External Resources --- */}
+        {/* Navigation */}
+        {(() => {
+          const q = navSearch.toLowerCase();
+
+          const navItems = {
+            dashboard: { label: 'Dashboard', icon: '📊', view: 'dashboard' },
+            // Master Data
+            suppliers: { label: 'Suppliers', icon: '🏢', view: 'suppliers' },
+            products: { label: 'Products & Warehouses', icon: '📋', view: 'products' },
+            // Operations
+            shipping: { label: 'Shipping Schedule', icon: '📦', view: 'shipping' },
+            workflow: { label: 'Post-Arrival Workflow', icon: '📋', view: 'workflow' },
+            capacity: { label: 'Warehouse Capacity', icon: '🏭', view: 'capacity' },
+            stored: { label: 'Stored Stock', icon: '🏪', view: 'stored' },
+            archives: { label: 'Shipment Archives', icon: '📦', view: 'archives' },
+            // Finance
+            rates: { label: 'Rates & Quotes', icon: '💰', view: 'rates' },
+            costing: { label: 'Import Costing', icon: '📊', view: 'costing' },
+            costingRequests: { label: 'Cost Requests', icon: '📋', view: 'costing-requests', adminOnly: true, badge: costingRequestCount },
+            // Reports
+            reports: { label: 'Reports', icon: '📊', view: 'reports' },
+            advancedReports: { label: 'Advanced Reports', icon: '📈', view: 'advanced-reports' },
+          };
+
+          const match = (label) => !q || label.toLowerCase().includes(q);
+
+          const renderItem = (key) => {
+            const item = navItems[key];
+            if (!item) return null;
+            if (item.adminOnly && !isAdmin) return null;
+            if (!match(item.label)) return null;
+            return (
+              <button
+                key={key}
+                className={`nav-item ${activeView === item.view ? 'active' : ''}`}
+                onClick={() => setActiveView(item.view)}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                {item.label}
+                {item.badge > 0 && <span className="nav-badge">{item.badge}</span>}
+              </button>
+            );
+          };
+
+          const renderSection = (title, sectionKey, itemKeys) => {
+            const visibleItems = itemKeys.filter(k => {
+              const item = navItems[k];
+              if (!item) return false;
+              if (item.adminOnly && !isAdmin) return false;
+              return match(item.label);
+            });
+            // If search is active and no items match, hide section
+            if (q && visibleItems.length === 0) return null;
+            // If search is active, force sections open
+            const isOpen = q ? true : sidebarSections[sectionKey];
+
+            return (
+              <div className="nav-section" key={sectionKey}>
+                <div className="nav-section-header" onClick={() => !q && toggleSection(sectionKey)}>
+                  {title}
+                  <span className={`chevron ${isOpen ? 'open' : ''}`}>▸</span>
+                </div>
+                <div className={`nav-section-items ${isOpen ? 'expanded' : 'collapsed'}`}>
+                  {visibleItems.map(k => renderItem(k))}
+                </div>
+              </div>
+            );
+          };
+
+          return (
+            <nav className="sidebar-nav">
+              {/* Dashboard - standalone */}
+              {match('Dashboard') && renderItem('dashboard')}
+
+              {/* Grouped sections */}
+              {renderSection('Master Data', 'masterData', ['suppliers', 'products'])}
+              {renderSection('Operations', 'operations', ['shipping', 'workflow', 'capacity', 'stored', 'archives'])}
+              {renderSection('Finance', 'finance', ['rates', 'costing', 'costingRequests'])}
+              {renderSection('Reports', 'reports', ['reports', 'advancedReports'])}
+            </nav>
+          );
+        })()}
+
+        {/* External Resources (collapsible) */}
+        <div style={{ padding: '0 12px', marginBottom: '8px' }}>
+          <details style={{ color: 'rgba(255,255,255,0.7)' }}>
+            <summary style={{
+              fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px',
+              color: 'rgba(255,255,255,0.4)', cursor: 'pointer', padding: '8px 10px', userSelect: 'none',
+              listStyle: 'none'
+            }}>
+              External Resources ▸
+            </summary>
+            <div style={{ display: 'grid', gap: '4px', padding: '6px 0' }}>
+              {[
+                { label: 'Transnet Portal', url: 'https://www.transnet.net/SubsiteRender.aspx?id=8137383', icon: '🚢' },
+                { label: 'Marine Traffic', url: 'https://www.marinetraffic.com/en/ais/home/shipid:157944/zoom:10', icon: '🌊' },
+                { label: 'FreightNews', url: 'https://www.freightnews.co.za/customs/3610/3823-19', icon: '📰' },
+                { label: 'Track-Trace', url: 'https://www.track-trace.com/', icon: '📍' },
+                { label: 'MyDHLi Portal', url: 'https://keycloak.mydhli.com/auth/realms/DCI/protocol/openid-connect/auth?redirect_uri=https%3A%2F%2Fapp.mydhli.com%2Flogin&scope=openid+web-origins&response_type=code&client_id=myDHLi&ui_locales=en', icon: '📦' },
+                { label: 'DSV Solutions', url: 'https://mydsv.com/new/frontpage/', icon: '🚛' },
+                { label: 'Afrigistics', url: 'https://www.afrigistics.com/contact/', icon: '🌍' },
+              ].map(link => (
+                <button
+                  key={link.label}
+                  className="nav-item"
+                  onClick={() => window.open(link.url, '_blank')}
+                  style={{ fontSize: '12.5px' }}
+                >
+                  <span className="nav-icon">{link.icon}</span>
+                  {link.label}
+                </button>
+              ))}
+            </div>
+          </details>
+        </div>
+
+        {/* Quick Stats */}
         <div style={{
-          marginTop: '1.5rem',
-          padding: '1rem',
-          backgroundColor: 'rgba(255,255,255,0.05)',
-          borderRadius: '8px',
-          border: '1px solid rgba(255,255,255,0.1)'
+          margin: '0 12px 8px', padding: '10px 12px',
+          backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: '8px',
+          fontSize: '12px', color: 'rgba(255,255,255,0.7)'
         }}>
-          <h4 style={{ marginBottom: '0.75rem', fontSize: '0.9rem', opacity: 0.8 }}>External Resources</h4>
-          <button
-            onClick={() => window.open('https://www.transnet.net/SubsiteRender.aspx?id=8137383', '_blank')}
-            style={{
-              width: '100%', padding: '0.75rem', backgroundColor: '#0066cc', color: 'white', border: 'none',
-              borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', gap: '0.5rem', transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => { e.target.style.backgroundColor = '#0052a3'; e.target.style.transform = 'translateY(-1px)'; }}
-            onMouseLeave={(e) => { e.target.style.backgroundColor = '#0066cc'; e.target.style.transform = 'translateY(0)'; }}
-            title="Open Transnet website in new tab"
-          >
-            🚢 Transnet Portal
-          </button>
-
-          <button
-            onClick={() => window.open('https://www.marinetraffic.com/en/ais/home/shipid:157944/zoom:10', '_blank')}
-            style={{
-              width: '100%', padding: '0.75rem', backgroundColor: '#1e7e8c', color: 'white', border: 'none',
-              borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', gap: '0.5rem', transition: 'all 0.2s ease', marginTop: '0.5rem'
-            }}
-            onMouseEnter={(e) => { e.target.style.backgroundColor = '#165f6a'; e.target.style.transform = 'translateY(-1px)'; }}
-            onMouseLeave={(e) => { e.target.style.backgroundColor = '#1e7e8c'; e.target.style.transform = 'translateY(0)'; }}
-            title="Open MarineTraffic ship tracking in new tab"
-          >
-            🌊 Marine Traffic
-          </button>
-
-          <button
-            onClick={() => window.open('https://www.freightnews.co.za/customs/3610/3823-19', '_blank')}
-            style={{
-              width: '100%', padding: '0.75rem', backgroundColor: '#e85d04', color: 'white', border: 'none',
-              borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', gap: '0.5rem', transition: 'all 0.2s ease', marginTop: '0.5rem'
-            }}
-            onMouseEnter={(e) => { e.target.style.backgroundColor = '#dc5404'; e.target.style.transform = 'translateY(-1px)'; }}
-            onMouseLeave={(e) => { e.target.style.backgroundColor = '#e85d04'; e.target.style.transform = 'translateY(0)'; }}
-            title="Open FreightNews customs information in new tab"
-          >
-            📰 FreightNews Customs
-          </button>
-
-          <button
-            onClick={() => window.open('https://www.track-trace.com/', '_blank')}
-            style={{
-              width: '100%', padding: '0.75rem', backgroundColor: '#2563eb', color: 'white', border: 'none',
-              borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', gap: '0.5rem', transition: 'all 0.2s ease', marginTop: '0.5rem'
-            }}
-            onMouseEnter={(e) => { e.target.style.backgroundColor = '#1d4ed8'; e.target.style.transform = 'translateY(-1px)'; }}
-            onMouseLeave={(e) => { e.target.style.backgroundColor = '#2563eb'; e.target.style.transform = 'translateY(0)'; }}
-            title="Open Track-Trace container tracking in new tab"
-          >
-            📍 Track-Trace
-          </button>
-
-          <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-            <h5 style={{ marginBottom: '0.75rem', fontSize: '0.85rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Freight Forwarding
-            </h5>
-
-            <button
-              onClick={() => window.open('https://keycloak.mydhli.com/auth/realms/DCI/protocol/openid-connect/auth?redirect_uri=https%3A%2F%2Fapp.mydhli.com%2Flogin&scope=openid+web-origins&response_type=code&client_id=myDHLi&ui_locales=en', '_blank')}
-              style={{
-                width: '100%', padding: '0.6rem', backgroundColor: '#d40511', color: 'white', border: 'none',
-                borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '500', display: 'flex',
-                alignItems: 'center', justifyContent: 'center', gap: '0.5rem', transition: 'all 0.2s ease', marginBottom: '0.4rem'
-              }}
-              onMouseEnter={(e) => { e.target.style.backgroundColor = '#b50410'; e.target.style.transform = 'translateY(-1px)'; }}
-              onMouseLeave={(e) => { e.target.style.backgroundColor = '#d40511'; e.target.style.transform = 'translateY(0)'; }}
-              title="Access MyDHLi platform"
-            >
-              📦 MyDHLi Portal
-            </button>
-
-            <button
-              onClick={() => window.open('https://mydsv.com/new/frontpage/', '_blank')}
-              style={{
-                width: '100%', padding: '0.6rem', backgroundColor: '#003d6b', color: 'white', border: 'none',
-                borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '500', display: 'flex',
-                alignItems: 'center', justifyContent: 'center', gap: '0.5rem', transition: 'all 0.2s ease', marginBottom: '0.4rem'
-              }}
-              onMouseEnter={(e) => { e.target.style.backgroundColor = '#002d4f'; e.target.style.transform = 'translateY(-1px)'; }}
-              onMouseLeave={(e) => { e.target.style.backgroundColor = '#003d6b'; e.target.style.transform = 'translateY(0)'; }}
-              title="Get DSV freight forwarding quotes"
-            >
-              🚛 DSV Solutions
-            </button>
-
-            <button
-              onClick={() => window.open('https://www.afrigistics.com/contact/', '_blank')}
-              style={{
-                width: '100%', padding: '0.6rem', backgroundColor: '#1a5f2f', color: 'white', border: 'none',
-                borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '500', display: 'flex',
-                alignItems: 'center', justifyContent: 'center', gap: '0.5rem', transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => { e.target.style.backgroundColor = '#134521'; e.target.style.transform = 'translateY(-1px)'; }}
-              onMouseLeave={(e) => { e.target.style.backgroundColor = '#1a5f2f'; e.target.style.transform = 'translateY(0)'; }}
-              title="Contact Afrigistics for freight forwarding quotes"
-            >
-              🌍 Afrigistics
-            </button>
+          <div style={{ fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'rgba(255,255,255,0.4)', marginBottom: '6px' }}>Quick Stats</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+            <span>Total Items</span><strong>{shipments.length}</strong>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+            <span>In Transit</span><strong>{shipments.filter(s => s.latestStatus === 'in_transit_roadway' || s.latestStatus === 'in_transit_seaway').length}</strong>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>Delayed</span><strong style={{ color: '#fbbf24' }}>{shipments.filter(s => s.latestStatus === 'delayed').length}</strong>
           </div>
         </div>
 
-        {/* current view */}
-        <div style={{
-          marginTop: '1rem',
-          padding: '0.75rem',
-          backgroundColor: 'rgba(255,255,255,0.1)',
-          borderRadius: '8px',
-          borderLeft: '4px solid #fff'
-        }}>
-          <p style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '0.25rem' }}>Active View:</p>
-          <p style={{ fontSize: '0.95rem', fontWeight: 'bold' }}>
-            {activeView === 'dashboard' ? '📊 Dashboard' :
-             activeView === 'suppliers' ? '🏢 Suppliers' :
-             activeView === 'capacity' ? '🏭 Warehouse Capacity' :
-             activeView === 'products' ? '📋 Product & Warehouse' :
-             activeView === 'shipping' ? '📦 Shipping Schedule' :
-             activeView === 'workflow' ? '📋 Post-Arrival Workflow' :
-             activeView === 'reports' ? '📊 Reports' :
-             activeView === 'advanced-reports' ? '📈 Advanced Reports' :
-             activeView === 'archives' ? '📦 Shipment Archives' :
-             activeView === 'rates' ? '💰 Rates & Quotes' :
-             activeView === 'stored' ? '🏪 Warehouse Stored' :
-             '❓ Select View'}
-          </p>
-        </div>
-
-        {/* quick stats */}
-        <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}>
-          <h4 style={{ marginBottom: '0.75rem', fontSize: '1rem' }}>Quick Stats</h4>
-          <div style={{ display: 'grid', gap: '0.5rem' }}>
-            <p style={{ fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between' }}>
-              <span>Total Items:</span><strong>{shipments.length}</strong>
-            </p>
-            <p style={{ fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between' }}>
-              <span>In Transit:</span>
-              <strong>{shipments.filter(s => s.latestStatus === 'in_transit_roadway' || s.latestStatus === 'in_transit_seaway').length}</strong>
-            </p>
-            <p style={{ fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between' }}>
-              <span>Delayed:</span>
-              <strong style={{ color: '#ffeb3b' }}>{shipments.filter(s => s.latestStatus === 'delayed').length}</strong>
-            </p>
-          </div>
+        {/* Footer */}
+        <div className="sidebar-footer">
+          <button className="nav-item" onClick={() => setHelpOpen(true)}>
+            <span className="nav-icon">📚</span> Help & Guide
+          </button>
+          <button className="nav-item" onClick={() => setSettingsOpen(true)}>
+            <span className="nav-icon">⚙️</span> Settings
+          </button>
+          <button className="nav-item" onClick={() => setNotificationPrefsOpen(true)}>
+            <span className="nav-icon">🔔</span> Notifications
+          </button>
+          <button className="nav-item" onClick={() => setShowSupplierPortal(true)}>
+            <span className="nav-icon">🏢</span> Supplier Portal
+          </button>
+          {isAdmin && (
+            <button className={`nav-item ${activeView === 'users' ? 'active' : ''}`} onClick={() => setActiveView('users')}>
+              <span className="nav-icon">👥</span> User Management
+            </button>
+          )}
+          <button className="nav-item logout" onClick={handleLogout}>
+            <span className="nav-icon">🚪</span> Logout
+          </button>
         </div>
       </div>
 
