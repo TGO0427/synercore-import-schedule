@@ -345,9 +345,9 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
       }}>
         {/* Weekly Trend Sparkline */}
         {weeklyTrendData.values.length > 1 && (
-          <div className="dash-panel" style={{ minHeight: 280 }}>
+          <div className="dash-panel">
             <PanelHeader icon="📈" title="Weekly Trend" subtitle="Last 12 weeks" />
-            <div style={{ height: 200 }}>
+            <div style={{ height: 160 }}>
               <Line data={sparklineConfig.data} options={sparklineConfig.options} />
             </div>
           </div>
@@ -355,12 +355,12 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
 
         {/* Status Distribution (donut) */}
         {statusChartData.length > 0 && (
-          <div className="dash-panel" style={{ minHeight: 280 }}>
+          <div className="dash-panel">
             <PanelHeader icon="📊" title="Status Distribution" subtitle="By current status" />
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
               <div style={{ position: 'relative', flexShrink: 0 }}>
-                <svg width="180" height="180" viewBox="0 0 180 180">
-                  {generatePieChart(statusChartData, 180, 180)}
+                <svg width="150" height="150" viewBox="0 0 150 150">
+                  {generatePieChart(statusChartData, 150, 150)}
                 </svg>
                 {/* Center total */}
                 <div style={{
@@ -393,7 +393,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
 
         {/* Warehouse Distribution */}
         {warehouseChartData.length > 0 && (
-          <div className="dash-panel" style={{ minHeight: 280 }}>
+          <div className="dash-panel">
             <PanelHeader icon="🏭" title="By Warehouse" subtitle={`${warehouseChartData.length} location${warehouseChartData.length !== 1 ? 's' : ''}`} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {warehouseChartData.map((warehouse, idx) => (
@@ -422,7 +422,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
 
         {/* Top Suppliers */}
         {topSuppliersData.length > 0 && (
-          <div className="dash-panel" style={{ minHeight: 280 }}>
+          <div className="dash-panel">
             <PanelHeader icon="🏆" title="Top Suppliers" subtitle="By shipment volume" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {topSuppliersData.map((supplier, idx) => (
