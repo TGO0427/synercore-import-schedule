@@ -1140,9 +1140,9 @@ function ArchiveView() {
             <h3 style={{ margin: '0 0 0.75rem', fontSize: 15, fontWeight: 700, color: 'var(--navy-900)' }}>
               Archived Shipments ({dbArchived.filter(s =>
                 searchTerm === '' ||
-                s.orderRef?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                s.supplier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                s.productName?.toLowerCase().includes(searchTerm.toLowerCase())
+                (s.orderRef || s.order_ref || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (s.supplier || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (s.productName || s.product_name || '').toLowerCase().includes(searchTerm.toLowerCase())
               ).length})
             </h3>
             <div className="dash-panel" style={{ padding: 0, overflow: 'hidden' }}>
@@ -1161,20 +1161,20 @@ function ArchiveView() {
                   <tbody>
                     {dbArchived.filter(s =>
                       searchTerm === '' ||
-                      s.orderRef?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      s.supplier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      s.productName?.toLowerCase().includes(searchTerm.toLowerCase())
+                      (s.orderRef || s.order_ref || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      (s.supplier || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      (s.productName || s.product_name || '').toLowerCase().includes(searchTerm.toLowerCase())
                     ).map(s => (
                       <tr key={s.id} style={{ borderBottom: '1px solid var(--border)' }}
                         onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--surface-2)'}
                         onMouseLeave={e => e.currentTarget.style.backgroundColor = ''}>
-                        <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--accent)', fontSize: 13 }}>{s.orderRef}</td>
+                        <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--accent)', fontSize: 13 }}>{s.orderRef || s.order_ref}</td>
                         <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.supplier}</td>
-                        <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.productName || 'N/A'}</td>
+                        <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.productName || s.product_name || 'N/A'}</td>
                         <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.quantity || 'N/A'}</td>
-                        <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.palletQty || '-'}</td>
-                        <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.receivingWarehouse || 'N/A'}</td>
-                        <td style={{ padding: '8px 12px', fontSize: 13 }}>{formatDate(s.updatedAt)}</td>
+                        <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.palletQty || s.pallet_qty || '-'}</td>
+                        <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.receivingWarehouse || s.receiving_warehouse || 'N/A'}</td>
+                        <td style={{ padding: '8px 12px', fontSize: 13 }}>{formatDate(s.updatedAt || s.updated_at)}</td>
                       </tr>
                     ))}
                   </tbody>
