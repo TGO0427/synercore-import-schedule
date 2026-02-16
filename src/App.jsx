@@ -1013,10 +1013,11 @@ function App() {
         {/* Quick Stats */}
         <div className="sidebar-quick-stats" style={{
           margin: '0 12px 8px', padding: '10px 12px',
-          backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: '8px',
-          fontSize: '12px', color: 'rgba(255,255,255,0.7)'
+          backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '8px',
+          border: '1px solid rgba(255,255,255,0.08)',
+          fontSize: '12px', color: '#94a3b8'
         }}>
-          <div style={{ fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'rgba(255,255,255,0.4)', marginBottom: '6px' }}>Quick Stats</div>
+          <div style={{ fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#64748b', marginBottom: '6px' }}>Quick Stats</div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
             <span>Total Items</span><strong>{shipments.length}</strong>
           </div>
