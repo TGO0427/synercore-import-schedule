@@ -371,7 +371,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
         cellPadding: 2,
       },
       headStyles: {
-        fillColor: [102, 126, 234],
+        fillColor: [5, 150, 105],
         textColor: 255,
         fontStyle: 'bold',
         fontSize: 9
@@ -769,231 +769,154 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
   return (
    <div className="shipments-table card">
       <div className="brand-strip" />
-      <div className="table-header">
-        <div className="page-header"><h2>Shipment Schedule</h2></div>
 
-        {/* Save All Button */}
-        {unsavedCount > 0 && (
-          <button
-            onClick={saveAllChanges}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: 'var(--warning)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '0.95rem',
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-            }}
-            title={`Save ${unsavedCount} unsaved ${unsavedCount === 1 ? 'change' : 'changes'}`}
-          >
-            💾 Save All Changes ({unsavedCount})
-          </button>
-        )}
-
-        <div className="table-controls" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div className="search-box">
-            <input
-              type="text"
-              placeholder="Search shipments..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="input"
-            />
-            <div className="multi-select-container" style={{ position: 'relative' }}>
-              <select
-                multiple
-                value={statusFilter}
-                onChange={(e) => {
-                  const selected = Array.from(e.target.selectedOptions, option => option.value);
-                  if (selected.includes('all')) {
-                    setStatusFilter(['all']);
-                  } else if (selected.length === 0) {
-                    setStatusFilter(['all']);
-                  } else {
-                    setStatusFilter(selected);
-                  }
-                }}
-                className="select"
-                style={{
-                  minHeight: '40px',
-                  maxHeight: '120px',
-                  overflowY: 'auto'
-                }}
-              >
-                <option value="all">All Status</option>
-                <option value={ShipmentStatus.PLANNED_AIRFREIGHT}>Planned Airfreight</option>
-                <option value={ShipmentStatus.PLANNED_SEAFREIGHT}>Planned Seafreight</option>
-                <option value={ShipmentStatus.IN_TRANSIT_AIRFREIGHT}>In Transit Airfreight</option>
-                <option value={ShipmentStatus.AIR_CUSTOMS_CLEARANCE}>Air Customs Clearance Event</option>
-                <option value={ShipmentStatus.IN_TRANSIT_ROADWAY}>In Transit Roadway</option>
-                <option value={ShipmentStatus.IN_TRANSIT_SEAWAY}>In Transit Seaway</option>
-                <option value={ShipmentStatus.MOORED}>Moored</option>
-                <option value={ShipmentStatus.BERTH_WORKING}>Berth Working</option>
-                <option value={ShipmentStatus.BERTH_COMPLETE}>Berth Complete</option>
-                <option value={ShipmentStatus.ARRIVED_PTA}>Arrived PTA</option>
-                <option value={ShipmentStatus.ARRIVED_KLM}>Arrived KLM</option>
-                <option value={ShipmentStatus.ARRIVED_OFFSITE}>Arrived OffSite</option>
-                <option value={ShipmentStatus.DELAYED}>Delayed</option>
-                <option value={ShipmentStatus.CANCELLED}>Cancelled</option>
-                <option value="arrived">Arrived (Combined)</option>
-              </select>
-              <div style={{
-                fontSize: '0.8rem',
-                color: 'var(--text-500)',
-                marginTop: '2px',
-                fontStyle: 'italic'
-              }}>
-                Hold Ctrl/Cmd to select multiple
-              </div>
-            </div>
-          </div>
-
-          {/* Week Range Filter */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <label style={{ fontWeight: '500', fontSize: '0.85rem', color: '#555', whiteSpace: 'nowrap' }}>Weeks:</label>
-            <input
-              type="number"
-              value={weekFrom}
-              onChange={(e) => setWeekFrom(parseInt(e.target.value) || 1)}
-              className="input"
-              style={{ width: '65px', textAlign: 'center' }}
-              min="1"
-              max="53"
-            />
-            <span style={{ color: '#999' }}>–</span>
-            <input
-              type="number"
-              value={weekTo}
-              onChange={(e) => setWeekTo(parseInt(e.target.value) || 53)}
-              className="input"
-              style={{ width: '65px', textAlign: 'center' }}
-              min="1"
-              max="53"
-            />
-            <button
-              className="btn"
-              onClick={() => { setWeekFrom(currentWeek); setWeekTo(currentWeek + 2); }}
-              style={{ fontSize: '0.8rem', padding: '0.35rem 0.6rem', whiteSpace: 'nowrap' }}
-              title="Reset to current week + 2 weeks"
-            >
-              Reset
+      {/* ── Row 1: Title + primary actions ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--navy-900)' }}>Shipping Schedule</h2>
+          <span style={{ fontSize: 12, color: 'var(--text-500)', fontWeight: 500 }}>
+            {filteredAndSortedShipments.length} shipment{filteredAndSortedShipments.length !== 1 ? 's' : ''}
+          </span>
+          {unsavedCount > 0 && (
+            <button onClick={saveAllChanges} className="btn" style={{
+              background: 'var(--warning)', color: '#fff', fontSize: 12, padding: '5px 12px',
+              border: 'none', fontWeight: 700,
+            }}>
+              Save {unsavedCount} change{unsavedCount !== 1 ? 's' : ''}
             </button>
-            <button
-              className="btn"
-              onClick={() => { setWeekFrom(1); setWeekTo(53); }}
-              style={{ fontSize: '0.8rem', padding: '0.35rem 0.6rem', whiteSpace: 'nowrap' }}
-              title="Show all weeks"
-            >
-              All Weeks
-            </button>
-          </div>
-
-          {/* Quick Filter Buttons */}
-          <div className="quick-filters" style={{ display: 'flex', gap: '0.5rem' }}>
-            <button
-              className={statusFilter.includes('all') ? 'btn btn-primary' : 'btn'}
-              onClick={() => setStatusFilter(['all'])}
-            >
-              All ({shipments.length})
-            </button>
-            <button
-              className={(statusFilter.includes(ShipmentStatus.ARRIVED_PTA) || statusFilter.includes(ShipmentStatus.ARRIVED_KLM) || statusFilter.includes(ShipmentStatus.ARRIVED_OFFSITE) || statusFilter.includes('arrived')) ? 'btn btn-success' : 'btn'}
-              onClick={() => {
-                if (statusFilter.includes('arrived') || statusFilter.includes(ShipmentStatus.ARRIVED_PTA) || statusFilter.includes(ShipmentStatus.ARRIVED_KLM) || statusFilter.includes(ShipmentStatus.ARRIVED_OFFSITE)) {
-                  setStatusFilter(['all']);
-                } else {
-                  setStatusFilter(['arrived']);
-                }
-              }}
-            >
-              ✅ Arrived ({shipments.filter(s => s.latestStatus === ShipmentStatus.ARRIVED_PTA || s.latestStatus === ShipmentStatus.ARRIVED_KLM || s.latestStatus === ShipmentStatus.ARRIVED_OFFSITE).length})
-            </button>
-          </div>
-
-          <FilterPresetManager
-            viewName="shipments"
-            currentFilters={{
-              search: searchTerm,
-              status: statusFilter
-            }}
-            onLoadPreset={(filters) => {
-              if (filters.search) setSearchTerm(filters.search);
-              if (filters.status) setStatusFilter(filters.status);
-              // Auto-save to search history when loading
-              filterPreferencesManager.addSearchHistory('shipments', filters.search || '');
-            }}
-            onSavePreset={(presetName) => {
-              // Save search term to history when saving preset
-              if (searchTerm) {
-                filterPreferencesManager.addSearchHistory('shipments', searchTerm);
-              }
-            }}
-          />
-
-          <button
-            className="btn btn-primary"
-            onClick={() => setShowAddShipmentDialog(true)}
-            title="Add new shipment to schedule"
-          >
-            ➕ Add Shipment
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button className="btn btn-primary" onClick={() => setShowAddShipmentDialog(true)} style={{ fontSize: 13 }}>
+            + Add Shipment
           </button>
-          <button
-            className="btn btn-danger"
-            onClick={generatePDF}
-            disabled={filteredAndSortedShipments.length === 0}
-            title="Export shipment schedule to PDF"
-          >
-            📄 Print PDF
+          <button className="btn btn-ghost" onClick={generatePDF} disabled={filteredAndSortedShipments.length === 0} style={{ fontSize: 13 }}>
+            PDF
           </button>
-          <button
-            className="btn btn-info"
-            onClick={generateExcel}
-            disabled={filteredAndSortedShipments.length === 0}
-            title="Export shipment schedule to Excel"
-          >
-            📊 Print Excel
-          </button>
-          <button
-            className="btn btn-accent"
-            onClick={() => setShowAutoArchiveDialog(true)}
-            title="Auto-archive old ARRIVED shipments"
-          >
-            📁 Auto-Archive
-          </button>
-          <button
-            className="btn btn-info"
-            onClick={() => setShowManualArchiveDialog(true)}
-            disabled={selectedShipments.length === 0}
-            title="Manually select and archive ARRIVED shipments"
-          >
-            🗂️ Manual Archive
-          </button>
-          <button
-            className="btn btn-warning"
-            onClick={() => setShowBulkStatusUpdate(true)}
-            disabled={filteredAndSortedShipments.length === 0}
-            title="Bulk update status for multiple shipments"
-          >
-            📋 Bulk Status Update
+          <button className="btn btn-ghost" onClick={generateExcel} disabled={filteredAndSortedShipments.length === 0} style={{ fontSize: 13 }}>
+            Excel
           </button>
         </div>
       </div>
 
+      {/* ── Row 2: Filters ── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10, padding: '0.75rem 1.25rem',
+        borderBottom: '1px solid var(--border)', flexWrap: 'wrap',
+      }}>
+        {/* Search */}
+        <input
+          type="text"
+          placeholder="Search orders, suppliers..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="input"
+          style={{ width: 220, fontSize: 13 }}
+        />
+
+        {/* Status filter dropdown */}
+        <select
+          value={statusFilter.includes('all') ? 'all' : statusFilter[0] || 'all'}
+          onChange={(e) => {
+            const val = e.target.value;
+            setStatusFilter(val === 'all' ? ['all'] : [val]);
+          }}
+          className="select"
+          style={{ fontSize: 13, minWidth: 160 }}
+        >
+          <option value="all">All Statuses</option>
+          <option value={ShipmentStatus.PLANNED_AIRFREIGHT}>Planned Airfreight</option>
+          <option value={ShipmentStatus.PLANNED_SEAFREIGHT}>Planned Seafreight</option>
+          <option value={ShipmentStatus.IN_TRANSIT_AIRFREIGHT}>In Transit Airfreight</option>
+          <option value={ShipmentStatus.AIR_CUSTOMS_CLEARANCE}>Air Customs Clearance</option>
+          <option value={ShipmentStatus.IN_TRANSIT_ROADWAY}>In Transit Roadway</option>
+          <option value={ShipmentStatus.IN_TRANSIT_SEAWAY}>In Transit Seaway</option>
+          <option value={ShipmentStatus.MOORED}>Moored</option>
+          <option value={ShipmentStatus.BERTH_WORKING}>Berth Working</option>
+          <option value={ShipmentStatus.BERTH_COMPLETE}>Berth Complete</option>
+          <option value={ShipmentStatus.ARRIVED_PTA}>Arrived PTA</option>
+          <option value={ShipmentStatus.ARRIVED_KLM}>Arrived KLM</option>
+          <option value={ShipmentStatus.ARRIVED_OFFSITE}>Arrived OffSite</option>
+          <option value={ShipmentStatus.DELAYED}>Delayed</option>
+          <option value={ShipmentStatus.CANCELLED}>Cancelled</option>
+          <option value="arrived">Arrived (All)</option>
+        </select>
+
+        {/* Divider */}
+        <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
+
+        {/* Week range */}
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-500)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Wk</span>
+        <input type="number" value={weekFrom} onChange={(e) => setWeekFrom(parseInt(e.target.value) || 1)}
+          className="input" style={{ width: 56, textAlign: 'center', fontSize: 13 }} min="1" max="53" />
+        <span style={{ color: 'var(--text-400)', fontSize: 13 }}>–</span>
+        <input type="number" value={weekTo} onChange={(e) => setWeekTo(parseInt(e.target.value) || 53)}
+          className="input" style={{ width: 56, textAlign: 'center', fontSize: 13 }} min="1" max="53" />
+        <button className="btn btn-ghost" onClick={() => { setWeekFrom(currentWeek); setWeekTo(currentWeek + 2); }}
+          style={{ fontSize: 12, padding: '4px 8px' }}>Reset</button>
+        <button className="btn btn-ghost" onClick={() => { setWeekFrom(1); setWeekTo(53); }}
+          style={{ fontSize: 12, padding: '4px 8px' }}>All</button>
+
+        {/* Divider */}
+        <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
+
+        {/* Quick status pills */}
+        <button className={statusFilter.includes('all') ? 'btn btn-primary' : 'btn btn-ghost'}
+          onClick={() => setStatusFilter(['all'])} style={{ fontSize: 12, padding: '4px 10px' }}>
+          All ({shipments.length})
+        </button>
+        <button
+          className={(statusFilter.includes(ShipmentStatus.ARRIVED_PTA) || statusFilter.includes(ShipmentStatus.ARRIVED_KLM) || statusFilter.includes(ShipmentStatus.ARRIVED_OFFSITE) || statusFilter.includes('arrived')) ? 'btn btn-primary' : 'btn btn-ghost'}
+          onClick={() => {
+            if (statusFilter.includes('arrived') || statusFilter.includes(ShipmentStatus.ARRIVED_PTA) || statusFilter.includes(ShipmentStatus.ARRIVED_KLM) || statusFilter.includes(ShipmentStatus.ARRIVED_OFFSITE)) {
+              setStatusFilter(['all']);
+            } else {
+              setStatusFilter(['arrived']);
+            }
+          }}
+          style={{ fontSize: 12, padding: '4px 10px' }}
+        >
+          Arrived ({shipments.filter(s => s.latestStatus === ShipmentStatus.ARRIVED_PTA || s.latestStatus === ShipmentStatus.ARRIVED_KLM || s.latestStatus === ShipmentStatus.ARRIVED_OFFSITE).length})
+        </button>
+
+        <FilterPresetManager
+          viewName="shipments"
+          currentFilters={{ search: searchTerm, status: statusFilter }}
+          onLoadPreset={(filters) => {
+            if (filters.search) setSearchTerm(filters.search);
+            if (filters.status) setStatusFilter(filters.status);
+            filterPreferencesManager.addSearchHistory('shipments', filters.search || '');
+          }}
+          onSavePreset={() => {
+            if (searchTerm) filterPreferencesManager.addSearchHistory('shipments', searchTerm);
+          }}
+        />
+
+        {/* Spacer */}
+        <div style={{ flex: 1 }} />
+
+        {/* Secondary actions */}
+        <button className="btn btn-ghost" onClick={() => setShowAutoArchiveDialog(true)}
+          style={{ fontSize: 12, padding: '4px 10px' }}>Archive</button>
+        <button className="btn btn-ghost" onClick={() => setShowManualArchiveDialog(true)}
+          disabled={selectedShipments.length === 0} style={{ fontSize: 12, padding: '4px 10px' }}>
+          Manual Archive{selectedShipments.length > 0 ? ` (${selectedShipments.length})` : ''}
+        </button>
+        <button className="btn btn-ghost" onClick={() => setShowBulkStatusUpdate(true)}
+          disabled={filteredAndSortedShipments.length === 0} style={{ fontSize: 12, padding: '4px 10px' }}>
+          Bulk Update
+        </button>
+      </div>
+
       <div style={{
         overflow: 'auto',
-        maxHeight: 'calc(100vh - 280px)',
-        position: 'relative'
+        maxHeight: 'calc(100vh - 260px)',
+        position: 'relative',
       }}>
         <table className="table" style={{ minWidth: '1200px' }}>
-          <thead style={{ position: 'sticky', top: 0, backgroundColor: 'var(--surface-2)', zIndex: 10 }}>
+          <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
             <tr>
-              <th style={{ width: '40px', textAlign: 'center', backgroundColor: 'var(--surface-2)' }}>
+              <th style={{ width: 36, textAlign: 'center' }}>
                 <input
                   type="checkbox"
                   checked={selectedShipments.length > 0 && selectedShipments.length === filteredAndSortedShipments.filter(s => s.latestStatus === 'arrived_pta' || s.latestStatus === 'arrived_klm' || s.latestStatus === 'arrived_offsite').length}
@@ -1001,35 +924,29 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   title="Select all ARRIVED shipments"
                 />
               </th>
-              <th onClick={() => handleSort('supplier')} style={{ cursor: 'pointer' }}>
-                SUPPLIER {sortConfig.key === 'supplier' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-              </th>
-              <th onClick={() => handleSort('orderRef')} style={{ cursor: 'pointer' }}>
-                ORDER/REF {sortConfig.key === 'orderRef' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-              </th>
-              <th onClick={() => handleSort('finalPod')} style={{ cursor: 'pointer' }}>
-                FINAL POD {sortConfig.key === 'finalPod' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-              </th>
-              <th onClick={() => handleSort('latestStatus')} style={{ cursor: 'pointer' }}>
-                LATEST STATUS {sortConfig.key === 'latestStatus' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-              </th>
-              <th style={{ minWidth: '100px' }}>PROGRESS</th>
-              <th onClick={() => handleSort('weekNumber')} style={{ cursor: 'pointer' }}>
-                WEEK NUMBER {sortConfig.key === 'weekNumber' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-              </th>
-              <th onClick={() => handleSort('palletQty')} style={{ cursor: 'pointer' }}>
-                PALLET QTY {sortConfig.key === 'palletQty' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-              </th>
-              <th onClick={() => handleSort('vesselName')} style={{ cursor: 'pointer' }}>
-                VESSEL NAME {sortConfig.key === 'vesselName' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-              </th>
-              <th onClick={() => handleSort('incoterm')} style={{ cursor: 'pointer' }}>
-                INCOTERM {sortConfig.key === 'incoterm' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-              </th>
-              <th onClick={() => handleSort('forwardingAgent')} style={{ cursor: 'pointer' }}>
-                FORWARDING AGENT {sortConfig.key === 'forwardingAgent' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-              </th>
-              <th>Actions</th>
+              {[
+                { key: 'supplier', label: 'Supplier' },
+                { key: 'orderRef', label: 'Order / Ref' },
+                { key: 'finalPod', label: 'Final POD' },
+                { key: 'latestStatus', label: 'Status' },
+                { key: null, label: 'Progress', style: { minWidth: 90 } },
+                { key: 'weekNumber', label: 'Week' },
+                { key: 'palletQty', label: 'Pallets' },
+                { key: 'vesselName', label: 'Vessel' },
+                { key: 'incoterm', label: 'Incoterm' },
+                { key: 'forwardingAgent', label: 'Agent' },
+                { key: null, label: '' },
+              ].map((col, i) => (
+                <th key={i}
+                  onClick={col.key ? () => handleSort(col.key) : undefined}
+                  style={{ cursor: col.key ? 'pointer' : 'default', userSelect: 'none', ...col.style }}
+                >
+                  {col.label}
+                  {col.key && sortConfig.key === col.key && (
+                    <span style={{ marginLeft: 4, opacity: 0.7 }}>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                  )}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -1041,8 +958,10 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </tr>
             ) : (
               filteredAndSortedShipments.map(shipment => (
-                <tr key={shipment.id} style={{ backgroundColor: isDelayed(shipment) ? '#fff5f5' : 'white' }}>
-                  <td style={{ width: '40px', textAlign: 'center' }}>
+                <tr key={shipment.id} style={{
+                  backgroundColor: isDelayed(shipment) ? '#fef2f2' : undefined,
+                }}>
+                  <td style={{ width: 36, textAlign: 'center' }}>
                     {(shipment.latestStatus === 'arrived_pta' || shipment.latestStatus === 'arrived_klm' || shipment.latestStatus === 'arrived_offsite') && (
                       <input
                         type="checkbox"
@@ -1053,45 +972,46 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                     )}
                   </td>
                   <td>
-                    <strong>{shipment.supplier}</strong>
+                    <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-900)' }}>{shipment.supplier}</span>
                   </td>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span
                         onClick={() => {
                           setOrderDetailsShipment(shipment);
                           setShowOrderDetailsModal(true);
                         }}
-                        style={{ color: 'var(--info)', cursor: 'pointer', textDecoration: 'underline' }}
+                        style={{ color: 'var(--accent)', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
                         title="Click to view order details"
                       >
                         {shipment.orderRef}
                       </span>
                       <button
                         onClick={(e) => { e.stopPropagation(); copyToClipboard(shipment.orderRef, showSuccess); }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', fontSize: '0.7rem', color: 'var(--text-500)', opacity: 0.5 }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', fontSize: '0.65rem', color: 'var(--text-500)', opacity: 0.4 }}
                         title="Copy order ref"
                         onMouseEnter={(e) => e.target.style.opacity = 1}
-                        onMouseLeave={(e) => e.target.style.opacity = 0.5}
+                        onMouseLeave={(e) => e.target.style.opacity = 0.4}
                       >
                         📋
                       </button>
-                      {isDelayed(shipment) && <span style={{ color: 'var(--danger)', marginLeft: '0.25rem' }}>⚠️</span>}
+                      {isDelayed(shipment) && <span style={{ color: 'var(--danger)', marginLeft: 2, fontSize: 12 }}>⚠️</span>}
                     </div>
                   </td>
-                  <td>{shipment.finalPod}</td>
+                  <td><span style={{ fontSize: 13 }}>{shipment.finalPod}</span></td>
                   <td>
                     <select
                       value={shipment.latestStatus}
                       onChange={(e) => handleStatusUpdate(shipment.id, e.target.value)}
                       className={`select status-badge status-${shipment.latestStatus}`}
                       style={{
-                        borderRadius: '20px',
-                        padding: '4px 12px',
-                        fontSize: '0.8rem',
-                        fontWeight: '500',
+                        borderRadius: 20,
+                        padding: '3px 10px',
+                        fontSize: 11,
+                        fontWeight: 600,
                         textTransform: 'uppercase',
-                        minWidth: '100px'
+                        minWidth: 90,
+                        border: 'none',
                       }}
                     >
                       <option value={ShipmentStatus.PLANNED_AIRFREIGHT}>Planned Airfreight</option>

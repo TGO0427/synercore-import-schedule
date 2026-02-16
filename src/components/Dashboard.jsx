@@ -158,9 +158,12 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
   const supplierTotal = useMemo(() => topSuppliersData.reduce((s, i) => s + i.count, 0), [topSuppliersData]);
 
   const weeklyTrendData = useMemo(() => {
+    const currentWeek = getCurrentWeek();
+    const maxWeek = currentWeek + 2;
     const entries = Object.entries(stats.byWeek)
       .filter(([w]) => w !== 'N/A')
       .map(([w, c]) => [Number(w), c])
+      .filter(([w]) => w <= maxWeek)
       .sort(([a], [b]) => a - b)
       .slice(-12);
     return {
