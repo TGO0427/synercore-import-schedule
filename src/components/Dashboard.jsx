@@ -1,17 +1,29 @@
 import React, { useMemo } from 'react';
 import { ShipmentStatus } from '../types/shipment';
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Filler,
-  Tooltip,
-} from 'chart.js';
-import { Line } from 'react-chartjs-2';
+  ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  PieChart, Pie, Cell,
+  BarChart, Bar,
+} from 'recharts';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip);
+// Reusable chart wrapper
+const ChartCard = ({ title, subtitle, children, style }) => (
+  <div className="dash-panel" style={style}>
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 16 }}>
+      <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-900)' }}>{title}</h4>
+      {subtitle && <span style={{ fontSize: 11, color: 'var(--text-500)' }}>{subtitle}</span>}
+    </div>
+    {children}
+  </div>
+);
+
+const ChartEmpty = ({ label }) => (
+  <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-500)', fontSize: 13 }}>{label}</div>
+);
+
+const STATUS_COLORS = { Planned: '#f59e0b', 'In Transit': '#3b82f6', Arrived: '#10b981', Delayed: '#ef4444', Cancelled: '#6b7280' };
+const WAREHOUSE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+const RANK_COLORS = ['#f59e0b', '#94a3b8', '#cd7f32', '#64748b', '#64748b'];
 
 function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
   const getCurrentWeek = () => {
@@ -26,17 +38,12 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
     const weekOrderRefs = {};
     const currentWeek = getCurrentWeek();
 
-    // Per-week status tracking for deltas
-    const weekStatusRefs = { curr: { total: new Set(), planned: new Set(), inTransit: new Set(), arrived: new Set(), delayed: new Set() },
-                             prev: { total: new Set(), planned: new Set(), inTransit: new Set(), arrived: new Set(), delayed: new Set() } };
-
-    const statusOrderRefs = {
-      planned: new Set(),
-      inTransit: new Set(),
-      arrived: new Set(),
-      delayed: new Set(),
-      cancelled: new Set()
+    const weekStatusRefs = {
+      curr: { total: new Set(), planned: new Set(), inTransit: new Set(), arrived: new Set(), delayed: new Set() },
+      prev: { total: new Set(), planned: new Set(), inTransit: new Set(), arrived: new Set(), delayed: new Set() },
     };
+
+    const statusOrderRefs = { planned: new Set(), inTransit: new Set(), arrived: new Set(), delayed: new Set(), cancelled: new Set() };
 
     shipments.forEach(shipment => {
       const orderRef = shipment.orderRef;
@@ -49,32 +56,21 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
       switch (shipment.latestStatus) {
         case ShipmentStatus.PLANNED_AIRFREIGHT:
         case ShipmentStatus.PLANNED_SEAFREIGHT:
-          statusOrderRefs.planned.add(orderRef);
-          statusKey = 'planned';
-          break;
+          statusOrderRefs.planned.add(orderRef); statusKey = 'planned'; break;
         case ShipmentStatus.IN_TRANSIT_AIRFREIGHT:
         case ShipmentStatus.IN_TRANSIT_ROADWAY:
         case ShipmentStatus.IN_TRANSIT_SEAWAY:
-          statusOrderRefs.inTransit.add(orderRef);
-          statusKey = 'inTransit';
-          break;
+          statusOrderRefs.inTransit.add(orderRef); statusKey = 'inTransit'; break;
         case ShipmentStatus.ARRIVED_PTA:
         case ShipmentStatus.ARRIVED_KLM:
-          statusOrderRefs.arrived.add(orderRef);
-          statusKey = 'arrived';
-          break;
+          statusOrderRefs.arrived.add(orderRef); statusKey = 'arrived'; break;
         case ShipmentStatus.DELAYED:
-          statusOrderRefs.delayed.add(orderRef);
-          statusKey = 'delayed';
-          break;
+          statusOrderRefs.delayed.add(orderRef); statusKey = 'delayed'; break;
         case ShipmentStatus.CANCELLED:
-          statusOrderRefs.cancelled.add(orderRef);
-          break;
-        default:
-          break;
+          statusOrderRefs.cancelled.add(orderRef); break;
+        default: break;
       }
 
-      // Track week deltas
       if (weekBucket) {
         weekStatusRefs[weekBucket].total.add(orderRef);
         if (statusKey) weekStatusRefs[weekBucket][statusKey].add(orderRef);
@@ -111,68 +107,56 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
         inTransit: weekStatusRefs.curr.inTransit.size - weekStatusRefs.prev.inTransit.size,
         arrived: weekStatusRefs.curr.arrived.size - weekStatusRefs.prev.arrived.size,
         delayed: weekStatusRefs.curr.delayed.size - weekStatusRefs.prev.delayed.size,
-      }
+      },
     };
 
-    Object.keys(warehouseOrderRefs).forEach(warehouse => {
-      stats.byWarehouse[warehouse] = warehouseOrderRefs[warehouse].size;
-    });
-    Object.keys(supplierOrderRefs).forEach(supplier => {
-      stats.bySupplier[supplier] = supplierOrderRefs[supplier].size;
-    });
-    Object.keys(weekOrderRefs).forEach(week => {
-      stats.byWeek[week] = weekOrderRefs[week].size;
-    });
+    Object.keys(warehouseOrderRefs).forEach(w => { stats.byWarehouse[w] = warehouseOrderRefs[w].size; });
+    Object.keys(supplierOrderRefs).forEach(s => { stats.bySupplier[s] = supplierOrderRefs[s].size; });
+    Object.keys(weekOrderRefs).forEach(w => { stats.byWeek[w] = weekOrderRefs[w].size; });
 
     return stats;
   };
 
   const stats = getShipmentStats();
 
-  // Prepare chart data
+  // Status donut data
   const statusChartData = useMemo(() => [
-    { name: 'Planned', value: stats.planned, fill: 'var(--warning)' },
-    { name: 'In Transit', value: stats.inTransit, fill: 'var(--info)' },
-    { name: 'Arrived', value: stats.arrived, fill: 'var(--success)' },
-    { name: 'Delayed', value: stats.delayed, fill: 'var(--danger)' },
-    { name: 'Cancelled', value: stats.cancelled, fill: '#6b7280' }
+    { name: 'Planned', value: stats.planned },
+    { name: 'In Transit', value: stats.inTransit },
+    { name: 'Arrived', value: stats.arrived },
+    { name: 'Delayed', value: stats.delayed },
+    { name: 'Cancelled', value: stats.cancelled },
   ].filter(item => item.value > 0), [stats]);
 
   const statusTotal = useMemo(() => statusChartData.reduce((s, i) => s + i.value, 0), [statusChartData]);
 
+  // Warehouse bar data
   const warehouseChartData = useMemo(() =>
-    Object.entries(stats.byWarehouse).map(([warehouse, count]) => ({
-      name: warehouse,
-      count
-    })), [stats.byWarehouse]);
+    Object.entries(stats.byWarehouse).map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count), [stats.byWarehouse]);
 
+  // Top suppliers
   const topSuppliersData = useMemo(() =>
     Object.entries(stats.bySupplier)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
-      .map(([supplier, count]) => ({
-        name: supplier,
-        count
-      })), [stats.bySupplier]);
+      .map(([name, count]) => ({ name, count })), [stats.bySupplier]);
 
   const supplierTotal = useMemo(() => topSuppliersData.reduce((s, i) => s + i.count, 0), [topSuppliersData]);
 
-  const weeklyTrendData = useMemo(() => {
+  // Weekly trend (orders per week)
+  const weeklyTrend = useMemo(() => {
     const currentWeek = getCurrentWeek();
     const maxWeek = currentWeek + 2;
-    const entries = Object.entries(stats.byWeek)
+    return Object.entries(stats.byWeek)
       .filter(([w]) => w !== 'N/A')
-      .map(([w, c]) => [Number(w), c])
-      .filter(([w]) => w <= maxWeek)
-      .sort(([a], [b]) => a - b)
+      .map(([w, c]) => ({ week: `W${w}`, orders: c, _wk: Number(w) }))
+      .filter(d => d._wk <= maxWeek)
+      .sort((a, b) => a._wk - b._wk)
       .slice(-12);
-    return {
-      labels: entries.map(([w]) => `W${w}`),
-      values: entries.map(([, c]) => c),
-    };
   }, [stats.byWeek]);
 
-  // Products & Pallets weekly trend (replaces ProductView chart)
+  // Products & Pallets trend
   const productsPalletsTrend = useMemo(() => {
     const currentWeek = getCurrentWeek();
     const maxWeek = currentWeek + 2;
@@ -186,21 +170,17 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
     });
     const sorted = Object.keys(weeks).map(Number).sort((a, b) => a - b).slice(-12);
     if (sorted.length < 2) return null;
-    return {
-      labels: sorted.map(w => `W${w}`),
-      products: sorted.map(w => weeks[w].products),
-      pallets: sorted.map(w => weeks[w].pallets),
-    };
+    return sorted.map(w => ({ week: `W${w}`, products: weeks[w].products, pallets: weeks[w].pallets }));
   }, [shipments]);
 
   const getUpcomingOrders = () => {
     const currentWeek = getCurrentWeek();
     return shipments
-      .filter(shipment =>
-        shipment.weekNumber && shipment.weekNumber >= currentWeek &&
-        shipment.latestStatus !== ShipmentStatus.ARRIVED_PTA &&
-        shipment.latestStatus !== ShipmentStatus.ARRIVED_KLM &&
-        shipment.latestStatus !== ShipmentStatus.CANCELLED
+      .filter(s =>
+        s.weekNumber && s.weekNumber >= currentWeek &&
+        s.latestStatus !== ShipmentStatus.ARRIVED_PTA &&
+        s.latestStatus !== ShipmentStatus.ARRIVED_KLM &&
+        s.latestStatus !== ShipmentStatus.CANCELLED
       )
       .sort((a, b) => (a.weekNumber || 0) - (b.weekNumber || 0))
       .slice(0, 5);
@@ -208,56 +188,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
 
   const upcomingOrders = getUpcomingOrders();
 
-  const getColorForWarehouse = (index) => {
-    const colors = ['var(--info)', 'var(--success)', 'var(--warning)', 'var(--danger)', '#8b5cf6', '#ec4899'];
-    return colors[index % colors.length];
-  };
-
-  const RANK_COLORS = ['#f59e0b', '#94a3b8', '#cd7f32', '#64748b', '#64748b'];
-
-  // Color map for SVG (CSS vars don't work in SVG)
-  const colorMap = { 'var(--warning)': '#f59e0b', 'var(--info)': '#3b82f6', 'var(--success)': '#10b981', 'var(--danger)': '#ef4444' };
-
-  // Generate SVG pie chart (donut style)
-  const generatePieChart = (data, width, height) => {
-    const cx = width / 2;
-    const cy = height / 2;
-    const radius = Math.min(width, height) / 2 - 20;
-    const innerRadius = radius * 0.55;
-    const total = data.reduce((sum, item) => sum + item.value, 0);
-
-    let currentAngle = -Math.PI / 2;
-    const slices = [];
-
-    data.forEach((item, index) => {
-      const sliceAngle = (item.value / total) * 2 * Math.PI;
-      const endAngle = currentAngle + sliceAngle;
-
-      const outerStartX = cx + radius * Math.cos(currentAngle);
-      const outerStartY = cy + radius * Math.sin(currentAngle);
-      const outerEndX = cx + radius * Math.cos(endAngle);
-      const outerEndY = cy + radius * Math.sin(endAngle);
-      const innerStartX = cx + innerRadius * Math.cos(endAngle);
-      const innerStartY = cy + innerRadius * Math.sin(endAngle);
-      const innerEndX = cx + innerRadius * Math.cos(currentAngle);
-      const innerEndY = cy + innerRadius * Math.sin(currentAngle);
-
-      const largeArc = sliceAngle > Math.PI ? 1 : 0;
-      const fillColor = colorMap[item.fill] || item.fill;
-
-      const path = `M ${outerStartX} ${outerStartY} A ${radius} ${radius} 0 ${largeArc} 1 ${outerEndX} ${outerEndY} L ${innerStartX} ${innerStartY} A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${innerEndX} ${innerEndY} Z`;
-
-      slices.push(
-        <path key={index} d={path} fill={fillColor} />
-      );
-
-      currentAngle = endAngle;
-    });
-
-    return slices;
-  };
-
-  // KPI card config with deltas
+  // KPI cards
   const kpiCards = [
     { key: 'total', value: stats.total, label: 'Total Shipments', icon: '📦', ring: 'ring-accent', tint: 'rgba(5,150,105,0.1)', filter: null, delta: stats.deltas.total },
     { key: 'transit', value: stats.inTransit, label: 'In Transit', icon: '🚢', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)', filter: 'in_transit', delta: stats.deltas.inTransit },
@@ -266,91 +197,26 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
     { key: 'planned', value: stats.planned, label: 'Planned', icon: '📅', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)', filter: 'planned', delta: stats.deltas.planned },
   ];
 
-  // Delta display helper
   const renderDelta = (delta) => {
     if (delta > 0) return <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--success)' }}>↑ {delta} vs last week</span>;
     if (delta < 0) return <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--danger)' }}>↓ {Math.abs(delta)} vs last week</span>;
     return <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-500)', opacity: 0.6 }}>— vs last week</span>;
   };
 
-  // Panel header helper
-  const PanelHeader = ({ icon, title, subtitle }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-      <span style={{ fontSize: 16 }}>{icon}</span>
-      <div>
-        <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-900)' }}>{title}</h4>
-        {subtitle && <p style={{ margin: 0, fontSize: 11, color: 'var(--text-500)' }}>{subtitle}</p>}
-      </div>
-    </div>
-  );
-
-  // Sparkline chart config
-  const sparklineConfig = useMemo(() => ({
-    data: {
-      labels: weeklyTrendData.labels,
-      datasets: [{
-        data: weeklyTrendData.values,
-        borderColor: '#059669',
-        backgroundColor: 'rgba(5,150,105,0.08)',
-        fill: true,
-        tension: 0.4,
-        borderWidth: 2,
-        pointRadius: 3,
-        pointBackgroundColor: '#059669',
-        pointBorderColor: '#fff',
-        pointBorderWidth: 1.5,
-        pointHoverRadius: 5,
-      }],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#0f172a',
-          titleFont: { size: 12 },
-          bodyFont: { size: 12 },
-          padding: 8,
-          cornerRadius: 6,
-          callbacks: {
-            title: (items) => items[0]?.label || '',
-            label: (item) => `${item.raw} shipments`,
-          },
-        },
-      },
-      scales: {
-        x: {
-          display: true,
-          grid: { display: false },
-          ticks: { color: '#94a3b8', font: { size: 11 } },
-          border: { display: false },
-        },
-        y: {
-          display: false,
-        },
-      },
-    },
-  }), [weeklyTrendData]);
-
   return (
     <div style={{ padding: '1rem' }}>
-      {/* Brand focus strip */}
       <div className="brand-strip" />
 
       {/* KPI Cards */}
       <div className="stats-grid">
         {kpiCards.map(card => (
           <div key={card.key} className={`stat-card ${card.ring} clickable`}
-            onClick={() => onNavigate('shipping', { statusFilter: card.filter })}
-          >
+            onClick={() => onNavigate('shipping', { statusFilter: card.filter })}>
             <div style={{
               width: 40, height: 40, borderRadius: '50%', display: 'flex',
               alignItems: 'center', justifyContent: 'center', fontSize: 18,
               backgroundColor: card.tint, marginBottom: 10,
-            }}>
-              {card.icon}
-            </div>
+            }}>{card.icon}</div>
             <h3 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 4px', color: 'var(--navy-900)' }}>{card.value}</h3>
             <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--text-500)', margin: '0 0 4px' }}>
               {card.label}
@@ -360,50 +226,52 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
         ))}
       </div>
 
-      {/* Charts Grid — 2×2 */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(2, 1fr)',
-        gap: '1.25rem',
-        marginTop: '1.5rem',
-      }}>
-        {/* Weekly Trend Sparkline */}
-        {weeklyTrendData.values.length > 1 && (
-          <div className="dash-panel">
-            <PanelHeader icon="📈" title="Weekly Trend" subtitle="Last 12 weeks" />
-            <div style={{ height: 160 }}>
-              <Line data={sparklineConfig.data} options={sparklineConfig.options} />
-            </div>
-          </div>
-        )}
+      {/* Charts Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem', marginTop: '1.5rem' }}>
 
-        {/* Status Distribution (donut) */}
-        {statusChartData.length > 0 && (
-          <div className="dash-panel">
-            <PanelHeader icon="📊" title="Status Distribution" subtitle="By current status" />
+        {/* Weekly Trend — Orders vs Shipments */}
+        <ChartCard title="Weekly Trend" subtitle="Orders per week">
+          {weeklyTrend && weeklyTrend.length > 1 ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={weeklyTrend} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="week" tick={{ fontSize: 12 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="orders" stroke="#059669" strokeWidth={2} dot={{ r: 4 }} name="Orders" />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <ChartEmpty label="No trend data yet" />
+          )}
+        </ChartCard>
+
+        {/* Status Distribution — Donut */}
+        <ChartCard title="Status Distribution" subtitle="By current status">
+          {statusChartData.length > 0 ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-              <div style={{ position: 'relative', flexShrink: 0 }}>
-                <svg width="150" height="150" viewBox="0 0 150 150">
-                  {generatePieChart(statusChartData, 150, 150)}
-                </svg>
-                {/* Center total */}
-                <div style={{
-                  position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
-                }}>
-                  <span style={{ fontSize: 24, fontWeight: 800, color: 'var(--navy-900)' }}>{statusTotal}</span>
-                  <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-500)' }}>total</span>
-                </div>
-              </div>
+              <ResponsiveContainer width={160} height={160}>
+                <PieChart>
+                  <Pie
+                    data={statusChartData}
+                    cx="50%" cy="50%"
+                    innerRadius={40} outerRadius={70}
+                    paddingAngle={2} dataKey="value"
+                  >
+                    {statusChartData.map((entry) => (
+                      <Cell key={entry.name} fill={STATUS_COLORS[entry.name] || '#6b7280'} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value, name) => [`${value}`, name]} />
+                </PieChart>
+              </ResponsiveContainer>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {statusChartData.map(item => {
                   const pct = statusTotal > 0 ? Math.round((item.value / statusTotal) * 100) : 0;
                   return (
                     <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{
-                        width: 10, height: 10, borderRadius: '50%',
-                        backgroundColor: colorMap[item.fill] || item.fill, flexShrink: 0,
-                      }} />
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: STATUS_COLORS[item.name] || '#6b7280', flexShrink: 0 }} />
                       <span style={{ fontSize: 13, color: 'var(--text-700)', minWidth: 70 }}>{item.name}</span>
                       <strong style={{ fontSize: 13, color: 'var(--text-900)' }}>{item.value}</strong>
                       <span style={{ fontSize: 11, color: 'var(--text-500)' }}>({pct}%)</span>
@@ -412,48 +280,38 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
                 })}
               </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <ChartEmpty label="No status data" />
+          )}
+        </ChartCard>
 
-        {/* Warehouse Distribution */}
-        {warehouseChartData.length > 0 && (
-          <div className="dash-panel" style={{ alignSelf: 'start' }}>
-            <PanelHeader icon="🏭" title="By Warehouse" subtitle={`${warehouseChartData.length} location${warehouseChartData.length !== 1 ? 's' : ''}`} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {warehouseChartData.map((warehouse, idx) => (
-                <div key={warehouse.name}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, alignItems: 'baseline' }}>
-                    <span style={{ fontWeight: 600, fontSize: 11, color: 'var(--text-700)', textTransform: 'uppercase', letterSpacing: '0.3px' }}>{warehouse.name}</span>
-                    <strong style={{ fontSize: 13, color: 'var(--text-900)' }}>{warehouse.count}</strong>
-                  </div>
-                  <div style={{
-                    height: 10, backgroundColor: 'var(--border)',
-                    borderRadius: 5, overflow: 'hidden',
-                  }}>
-                    <div style={{
-                      height: '100%',
-                      width: `${(warehouse.count / Math.max(...warehouseChartData.map(w => w.count))) * 100}%`,
-                      backgroundColor: getColorForWarehouse(idx),
-                      borderRadius: 5,
-                      transition: 'width 0.3s ease',
-                    }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Warehouse Distribution — Bar */}
+        <ChartCard title="By Warehouse" subtitle={`${warehouseChartData.length} locations`} style={{ alignSelf: 'start' }}>
+          {warehouseChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={warehouseChartData.length * 50 + 20}>
+              <BarChart data={warehouseChartData} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fontWeight: 600 }} width={90} />
+                <Tooltip formatter={(value) => [`${value} orders`]} />
+                <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={20}>
+                  {warehouseChartData.map((_, idx) => (
+                    <Cell key={idx} fill={WAREHOUSE_COLORS[idx % WAREHOUSE_COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <ChartEmpty label="No warehouse data" />
+          )}
+        </ChartCard>
 
         {/* Top Suppliers */}
-        {topSuppliersData.length > 0 && (
-          <div className="dash-panel">
-            <PanelHeader icon="🏆" title="Top Suppliers" subtitle="By shipment volume" />
+        <ChartCard title="Top Suppliers" subtitle="By shipment volume">
+          {topSuppliersData.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {topSuppliersData.map((supplier, idx) => (
-                <div key={supplier.name} style={{
-                  padding: '10px 12px', backgroundColor: 'var(--surface-2)',
-                  borderRadius: 8,
-                }}>
+                <div key={supplier.name} style={{ padding: '10px 12px', backgroundColor: 'var(--surface-2)', borderRadius: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                     <span style={{
                       width: 24, height: 24, borderRadius: '50%', display: 'flex',
@@ -465,95 +323,51 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
                       fontSize: 12, fontWeight: 700, color: 'var(--text-700)',
                       backgroundColor: 'var(--surface)', padding: '3px 10px',
                       borderRadius: 12, border: '1px solid var(--border)',
-                    }}>
-                      {supplier.count}
-                    </span>
+                    }}>{supplier.count}</span>
                   </div>
-                  {/* Proportion bar */}
                   <div style={{ height: 4, backgroundColor: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>
                     <div style={{
                       height: '100%',
                       width: `${supplierTotal > 0 ? (supplier.count / supplierTotal) * 100 : 0}%`,
                       backgroundColor: RANK_COLORS[idx] || '#64748b',
-                      borderRadius: 2,
-                      transition: 'width 0.3s ease',
-                      opacity: 0.6,
+                      borderRadius: 2, opacity: 0.6,
                     }} />
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <ChartEmpty label="No supplier data" />
+          )}
+        </ChartCard>
 
-        {/* Products & Pallets Trend */}
-        {productsPalletsTrend && (
-          <div className="dash-panel" style={{ gridColumn: '1 / -1' }}>
-            <PanelHeader icon="📦" title="Products & Pallets by Week" subtitle="Weekly incoming volume" />
-            <div style={{ height: 200 }}>
-              <Line
-                data={{
-                  labels: productsPalletsTrend.labels,
-                  datasets: [
-                    {
-                      label: 'Products',
-                      data: productsPalletsTrend.products,
-                      borderColor: '#3b82f6',
-                      backgroundColor: 'rgba(59,130,246,0.05)',
-                      pointBackgroundColor: '#fff',
-                      pointBorderColor: '#3b82f6',
-                      pointBorderWidth: 2,
-                      pointRadius: 5,
-                      pointHoverRadius: 7,
-                      borderWidth: 2.5,
-                      tension: 0.35,
-                      fill: false,
-                    },
-                    {
-                      label: 'Pallets',
-                      data: productsPalletsTrend.pallets,
-                      borderColor: '#059669',
-                      backgroundColor: 'rgba(5,150,105,0.05)',
-                      pointBackgroundColor: '#fff',
-                      pointBorderColor: '#059669',
-                      pointBorderWidth: 2,
-                      pointRadius: 5,
-                      pointHoverRadius: 7,
-                      borderWidth: 2.5,
-                      tension: 0.35,
-                      fill: false,
-                    },
-                  ],
-                }}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  interaction: { mode: 'index', intersect: false },
-                  plugins: {
-                    legend: {
-                      position: 'top', align: 'end',
-                      labels: { font: { size: 12 }, boxWidth: 10, padding: 16, usePointStyle: true, pointStyle: 'circle' },
-                    },
-                    tooltip: {
-                      backgroundColor: '#0f172a', titleFont: { size: 12 }, bodyFont: { size: 12 },
-                      padding: 8, cornerRadius: 6,
-                    },
-                  },
-                  scales: {
-                    x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#94a3b8' }, border: { display: false } },
-                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 11 }, color: '#94a3b8' }, border: { display: false } },
-                  },
-                }}
-              />
-            </div>
-          </div>
-        )}
+        {/* Products & Pallets by Week */}
+        <ChartCard title="Products & Pallets by Week" subtitle="Weekly incoming volume" style={{ gridColumn: '1 / -1' }}>
+          {productsPalletsTrend && productsPalletsTrend.length > 0 ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={productsPalletsTrend} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="week" tick={{ fontSize: 12 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="products" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} name="Products" />
+                <Line type="monotone" dataKey="pallets" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} name="Pallets" />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <ChartEmpty label="No trend data yet" />
+          )}
+        </ChartCard>
       </div>
 
       {/* Upcoming Orders */}
       {upcomingOrders.length > 0 && (
         <div className="dash-panel" style={{ marginTop: '1.5rem' }}>
-          <PanelHeader icon="📋" title="Upcoming Orders" subtitle={`Next ${upcomingOrders.length} due`} />
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 16 }}>
+            <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-900)' }}>Upcoming Orders</h4>
+            <span style={{ fontSize: 11, color: 'var(--text-500)' }}>Next {upcomingOrders.length} due</span>
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {upcomingOrders.map(shipment => (
               <div key={shipment.id} style={{
@@ -591,15 +405,15 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
         }}>
           <button className="btn btn-primary" style={{ padding: '10px 20px', fontSize: 13 }}
             onClick={() => onNavigate('shipping')}>
-            📋 Shipping Schedule
+            Shipping Schedule
           </button>
           <button className="btn btn-ghost" style={{ padding: '10px 20px', fontSize: 13 }}
             onClick={() => onNavigate('reports')}>
-            📊 Reports
+            Reports
           </button>
           <button className="btn btn-ghost" style={{ padding: '10px 20px', fontSize: 13 }}
             onClick={() => onNavigate('capacity')}>
-            🏭 Warehouse Capacity
+            Warehouse Capacity
           </button>
           {onOpenLiveBoard && (
             <button className="btn" style={{
@@ -607,7 +421,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
               background: 'var(--navy-900)', color: 'white', border: 'none',
             }}
               onClick={onOpenLiveBoard}>
-              📺 Live Board
+              Live Board
             </button>
           )}
         </div>
