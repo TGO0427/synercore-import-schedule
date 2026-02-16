@@ -137,7 +137,7 @@ body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI
 /* Sidebar nav sections */
 .sidebar-nav { list-style: none; padding: 6px 12px; margin: 0; flex: 1; }
 .sidebar-nav .nav-section { margin-bottom: 0; }
-.sidebar-nav .nav-section:not(:first-child) { margin-top: 20px; }
+.sidebar-nav .nav-section:not(:first-child) { margin-top: 24px; }
 .sidebar-nav .nav-section-header {
   display: flex;
   align-items: center;
@@ -180,23 +180,23 @@ body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI
   opacity: 1;
 }
 
-/* Nav items — 44px row height */
+/* Nav items — 48px row height */
 .sidebar-nav .nav-item {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  height: 44px;
+  height: 48px;
   text-align: left;
   background: transparent;
-  color: #94a3b8;
+  color: #cbd5e1;
   border: none;
-  padding: 0 12px;
+  padding: 0 14px;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 450;
   line-height: 1;
   margin: 1px 0;
@@ -207,7 +207,7 @@ body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI
   color: #f1f5f9;
 }
 .sidebar-nav .nav-item.active {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.06);
   color: #ffffff;
   font-weight: 550;
 }
@@ -215,22 +215,22 @@ body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI
   content: '';
   position: absolute;
   left: 0;
-  top: 8px;
-  bottom: 8px;
+  top: 0;
+  bottom: 0;
   width: 3px;
   border-radius: 0 3px 3px 0;
   background: #34d399;
 }
-.sidebar-nav .nav-item.active .nav-icon { opacity: 1; filter: none; }
+.sidebar-nav .nav-item.active .nav-icon { opacity: 1; }
 .sidebar-nav .nav-item .nav-icon {
   width: 22px;
   text-align: center;
-  font-size: 15px;
+  font-size: 16px;
   flex-shrink: 0;
-  opacity: 0.6;
+  opacity: 0.55;
   transition: opacity 0.15s;
 }
-.sidebar-nav .nav-item:hover .nav-icon { opacity: 0.9; }
+.sidebar-nav .nav-item:hover .nav-icon { opacity: 0.85; }
 .sidebar-nav .nav-item .nav-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sidebar-nav .nav-item .nav-badge {
   margin-left: auto;
@@ -324,8 +324,8 @@ body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI
 .sidebar-collapsed .sidebar-nav .nav-item {
   justify-content: center;
   padding: 0;
-  height: 42px;
-  width: 42px;
+  height: 44px;
+  width: 44px;
   margin: 2px auto;
   border-radius: 10px;
 }
