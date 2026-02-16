@@ -680,24 +680,29 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
                   📦 {shipCount > 0 ? `${shipCount} shipment${shipCount !== 1 ? 's' : ''}` : 'No shipments'}
                 </span>
                 {supplier.code && <span style={{ color: 'var(--text-500)' }}>· {supplier.code}</span>}
-                <span className="pill pill-info" style={{ fontSize: 10, padding: '2px 6px' }}>
-                  {supplier.importFormats?.join(', ') || 'Excel'}
-                </span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleSupplierCardClick(supplier, e); }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 999, border: '1px solid var(--accent)', background: 'var(--accent-100)', color: 'var(--accent-600)', cursor: 'pointer', lineHeight: 1.4, whiteSpace: 'nowrap' }}
+                >
+                  📄 Price List
+                </button>
               </div>
 
               {/* Action toolbar */}
               <div style={{ display: 'flex', gap: 6, borderTop: '1px solid var(--border)', paddingTop: 8, marginTop: 'auto', alignItems: 'center' }}>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleSupplierCardClick(supplier, e); }}
-                  className="btn-ghost"
-                  style={{ fontSize: 12, fontWeight: 600, padding: '5px 10px' }}
+                  style={{ fontSize: 12, fontWeight: 600, padding: '5px 12px', borderRadius: 6, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', transition: 'background 0.15s' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--accent-600)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'var(--accent)'}
                 >
                   View
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleEdit(supplier); }}
-                  className="btn-ghost"
-                  style={{ fontSize: 12, fontWeight: 600, padding: '5px 10px' }}
+                  style={{ fontSize: 12, fontWeight: 500, padding: '5px 8px', borderRadius: 6, border: 'none', background: 'transparent', color: 'var(--text-500)', cursor: 'pointer', transition: 'color 0.15s' }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-900)'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-500)'}
                 >
                   Edit
                 </button>
