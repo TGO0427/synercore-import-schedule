@@ -138,7 +138,8 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     return date.toLocaleDateString('en-ZA', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
-  const activeShipmentsCount = shipments.length;
+  const activeStoredShipments = shipments.filter(s => s.latestStatus === 'stored');
+  const activeShipmentsCount = activeStoredShipments.length;
 
   const handleArchiveAll = async () => {
     if (activeShipmentsCount === 0) return;
@@ -152,7 +153,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     let successCount = 0;
     let failCount = 0;
 
-    for (const shipment of shipments) {
+    for (const shipment of activeStoredShipments) {
       try {
         if (onArchiveShipment) {
           await onArchiveShipment(shipment.id);
@@ -293,7 +294,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
           {groupedByWarehouse.map(({ name, shipments: warehouseShipments }) => {
             const isCollapsed = collapsedWarehouses[name];
             const whPallets = warehouseShipments.reduce((sum, s) => sum + (Number(s.palletQty) || 0), 0);
-            const activeCount = warehouseShipments.filter(s => !s.isArchived).length;
+            const activeCount = warehouseShipments.filter(s => !s.isArchived && s.latestStatus !== 'archived').length;
             const archivedCount = warehouseShipments.length - activeCount;
 
             return (
@@ -346,9 +347,12 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-2)'}
                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''}
                           >
+                            {(() => {
+                              const isArch = shipment.isArchived || shipment.latestStatus === 'archived';
+                              return (<>
                             <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--accent)', fontSize: 13 }}>
                               {shipment.orderRef}
-                              {shipment.isArchived && (
+                              {isArch && (
                                 <span style={{
                                   marginLeft: 6, padding: '1px 5px', borderRadius: 4,
                                   fontSize: 10, fontWeight: 600, background: 'var(--surface-2)',
@@ -366,7 +370,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                               {formatDate(shipment.receivingDate || shipment.updatedAt || shipment.estimatedArrival)}
                             </td>
                             <td style={{ padding: '8px 12px', textAlign: 'center' }}>
-                              {!shipment.isArchived && (
+                              {!isArch && (
                                 <button
                                   className="btn btn-ghost"
                                   onClick={() => onArchiveShipment ? onArchiveShipment(shipment.id) : onDeleteShipment(shipment.id)}
@@ -376,6 +380,8 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                                 </button>
                               )}
                             </td>
+                              </>);
+                            })()}
                           </tr>
                         ))}
                       </tbody>

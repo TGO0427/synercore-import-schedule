@@ -812,7 +812,7 @@ function App() {
       case 'workflow':
         return <PostArrivalWorkflow showSuccess={showSuccess} showError={showError} showWarning={showWarning} />;
       case 'stored': {
-        const storedShipments = shipments.filter(s => s.latestStatus === 'stored');
+        const storedShipments = shipments.filter(s => s.latestStatus === 'stored' || s.latestStatus === 'archived');
         return (
           <WarehouseStored
             shipments={storedShipments}
