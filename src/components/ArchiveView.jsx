@@ -4,6 +4,7 @@ import { getApiUrl } from '../config/api';
 
 function ArchiveView() {
   const [archives, setArchives] = useState([]);
+  const [dbArchived, setDbArchived] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedArchive, setSelectedArchive] = useState(null);
   const [archiveData, setArchiveData] = useState(null);
@@ -41,6 +42,7 @@ function ArchiveView() {
 
   useEffect(() => {
     fetchArchives();
+    fetchDbArchived();
   }, []);
 
   const fetchArchives = async () => {
@@ -54,6 +56,17 @@ function ArchiveView() {
       console.error('Error fetching archives:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDbArchived = async () => {
+    try {
+      const response = await authFetch(getApiUrl('/api/shipments?status=archived'));
+      if (!response.ok) return;
+      const result = await response.json();
+      setDbArchived(result.data || result);
+    } catch (error) {
+      console.error('Error fetching DB archived shipments:', error);
     }
   };
 
@@ -1121,7 +1134,57 @@ function ArchiveView() {
           <div className="loading">Loading archives...</div>
         )}
 
-        {!loading && archives.length === 0 && (
+        {/* DB-archived shipments */}
+        {!loading && dbArchived.length > 0 && (
+          <div style={{ marginBottom: '2rem' }}>
+            <h3 style={{ margin: '0 0 0.75rem', fontSize: 15, fontWeight: 700, color: 'var(--navy-900)' }}>
+              Archived Shipments ({dbArchived.filter(s =>
+                searchTerm === '' ||
+                s.orderRef?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                s.supplier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                s.productName?.toLowerCase().includes(searchTerm.toLowerCase())
+              ).length})
+            </h3>
+            <div className="dash-panel" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: 'var(--surface-2)' }}>
+                      {['Order Ref', 'Supplier', 'Product', 'Qty', 'Pallets', 'Warehouse', 'Archived'].map(h => (
+                        <th key={h} style={{
+                          padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid var(--border)',
+                          fontSize: 12, fontWeight: 600, color: 'var(--text-500)', textTransform: 'uppercase', letterSpacing: '0.3px'
+                        }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dbArchived.filter(s =>
+                      searchTerm === '' ||
+                      s.orderRef?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      s.supplier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      s.productName?.toLowerCase().includes(searchTerm.toLowerCase())
+                    ).map(s => (
+                      <tr key={s.id} style={{ borderBottom: '1px solid var(--border)' }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--surface-2)'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = ''}>
+                        <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--accent)', fontSize: 13 }}>{s.orderRef}</td>
+                        <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.supplier}</td>
+                        <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.productName || 'N/A'}</td>
+                        <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.quantity || 'N/A'}</td>
+                        <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.palletQty || '-'}</td>
+                        <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.receivingWarehouse || 'N/A'}</td>
+                        <td style={{ padding: '8px 12px', fontSize: 13 }}>{formatDate(s.updatedAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!loading && archives.length === 0 && dbArchived.length === 0 && (
           <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-500)' }}>
             <h3>No Archives Found</h3>
             <p>Archived shipments will appear here when you archive completed or stored shipments.</p>
