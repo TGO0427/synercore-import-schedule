@@ -351,7 +351,7 @@ function WeekCalendar({ onWeekSelect, currentWeek, selectedWeekDate }) {
             style={{
               width: '100%',
               padding: '8px',
-              backgroundColor: '#667eea',
+              backgroundColor: '#059669',
               color: 'white',
               border: 'none',
               borderRadius: '4px',

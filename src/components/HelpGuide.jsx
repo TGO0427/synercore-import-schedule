@@ -592,7 +592,7 @@ fetch('YOUR_API_URL/api/warehouse-capacity/history/all', {
                   width: '100%',
                   padding: '12px 20px',
                   border: 'none',
-                  backgroundColor: activeSection === key ? '#667eea' : 'transparent',
+                  backgroundColor: activeSection === key ? '#059669' : 'transparent',
                   color: activeSection === key ? 'white' : '#2c3e50',
                   textAlign: 'left',
                   cursor: 'pointer',

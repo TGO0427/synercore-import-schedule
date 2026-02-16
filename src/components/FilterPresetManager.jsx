@@ -85,7 +85,7 @@ function FilterPresetManager({ viewName, currentFilters, onLoadPreset, onSavePre
           alignItems: 'center',
           gap: '8px',
           padding: '8px 12px',
-          backgroundColor: isOpen ? '#667eea' : '#f3f4f6',
+          backgroundColor: isOpen ? '#059669' : '#f3f4f6',
           color: isOpen ? 'white' : '#374151',
           border: '1px solid #d1d5db',
           borderRadius: '6px',

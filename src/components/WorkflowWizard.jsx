@@ -177,7 +177,7 @@ function WorkflowWizard({
           }}>
             <div style={{
               height: '100%',
-              backgroundColor: '#667eea',
+              backgroundColor: '#059669',
               width: `${stepPercentage}%`,
               transition: 'width 0.3s ease'
             }}></div>
@@ -213,7 +213,7 @@ function WorkflowWizard({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: idx <= currentStep ? '#667eea' : '#d1d5db',
+                  backgroundColor: idx <= currentStep ? '#059669' : '#d1d5db',
                   color: 'white',
                   fontWeight: '600',
                   fontSize: '0.85rem',
@@ -235,7 +235,7 @@ function WorkflowWizard({
                   <div style={{
                     width: '20px',
                     height: '2px',
-                    backgroundColor: idx < currentStep ? '#667eea' : '#d1d5db',
+                    backgroundColor: idx < currentStep ? '#059669' : '#d1d5db',
                     margin: '0 4px',
                     transition: 'background-color 0.2s ease'
                   }}></div>
@@ -360,7 +360,7 @@ function WorkflowWizard({
               disabled={isSubmitting}
               style={{
                 padding: '10px 16px',
-                backgroundColor: '#667eea',
+                backgroundColor: '#059669',
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
@@ -372,13 +372,13 @@ function WorkflowWizard({
               }}
               onMouseEnter={(e) => {
                 if (!isSubmitting) {
-                  e.target.style.backgroundColor = '#5a67d8';
+                  e.target.style.backgroundColor = '#047857';
                   e.target.style.transform = 'translateY(-1px)';
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isSubmitting) {
-                  e.target.style.backgroundColor = '#667eea';
+                  e.target.style.backgroundColor = '#059669';
                   e.target.style.transform = 'none';
                 }
               }}

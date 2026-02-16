@@ -401,7 +401,7 @@ function AdvancedReports() {
           s.receivingWarehouse || ''
         ]),
         styles: { fontSize: 8 },
-        headStyles: { fillColor: [102, 126, 234] }
+        headStyles: { fillColor: [5, 150, 105] }
       });
     } else {
       // Aggregated data
@@ -416,7 +416,7 @@ function AdvancedReports() {
           d.avgQuantity.toFixed(2)
         ]),
         styles: { fontSize: 10 },
-        headStyles: { fillColor: [102, 126, 234] }
+        headStyles: { fillColor: [5, 150, 105] }
       });
     }
 

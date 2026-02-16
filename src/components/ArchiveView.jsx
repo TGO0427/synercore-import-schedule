@@ -341,7 +341,7 @@ function ArchiveView() {
           marginBottom: '1rem'
         }}>
           <div style={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
             color: 'white',
             padding: '1.5rem',
             borderRadius: '12px',

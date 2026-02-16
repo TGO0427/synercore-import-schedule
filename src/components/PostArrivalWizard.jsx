@@ -72,7 +72,7 @@ const InspectionStep = ({ formData, updateFormData, errors, touched }) => (
       {['inspection_passed', 'inspection_failed', 'inspection_pending'].map((status) => (
         <label key={status} style={{
           padding: '12px',
-          border: `2px solid ${formData.inspectionStatus === status ? '#667eea' : '#d1d5db'}`,
+          border: `2px solid ${formData.inspectionStatus === status ? '#059669' : '#d1d5db'}`,
           borderRadius: '6px',
           cursor: 'pointer',
           backgroundColor: formData.inspectionStatus === status ? '#eff6ff' : 'white',
@@ -161,7 +161,7 @@ const ReceivingStep = ({ formData, updateFormData, errors, touched }) => (
       {['receiving_pending', 'received'].map((status) => (
         <label key={status} style={{
           padding: '12px',
-          border: `2px solid ${formData.receivingStatus === status ? '#667eea' : '#d1d5db'}`,
+          border: `2px solid ${formData.receivingStatus === status ? '#059669' : '#d1d5db'}`,
           borderRadius: '6px',
           cursor: 'pointer',
           backgroundColor: formData.receivingStatus === status ? '#eff6ff' : 'white',

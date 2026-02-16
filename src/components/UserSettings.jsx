@@ -158,7 +158,7 @@ function UserSettings({ username, onClose }) {
           )}
           <div>
             <strong>Role:</strong> <span style={{
-              backgroundColor: user?.role === 'admin' ? '#667eea' : '#4caf50',
+              backgroundColor: user?.role === 'admin' ? '#059669' : '#4caf50',
               color: 'white',
               padding: '2px 8px',
               borderRadius: '4px',
@@ -353,7 +353,7 @@ function UserSettings({ username, onClose }) {
             style={{
               width: '100%',
               padding: '12px',
-              backgroundColor: loading ? '#9ca3af' : '#667eea',
+              backgroundColor: loading ? '#9ca3af' : '#059669',
               color: 'white',
               border: 'none',
               borderRadius: '6px',

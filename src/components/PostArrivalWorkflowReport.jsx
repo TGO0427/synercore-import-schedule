@@ -801,7 +801,7 @@ function PostArrivalWorkflowReport({ shipments }) {
           background: #f8f9fa;
           padding: 0.2rem 0.5rem;
           border-radius: 4px;
-          border-left: 3px solid #667eea;
+          border-left: 3px solid #059669;
         }
 
         .status-cell {
@@ -871,12 +871,12 @@ function PostArrivalWorkflowReport({ shipments }) {
           text-align: center;
           margin: 2rem 0 1rem 0;
           padding: 1rem 0;
-          border-top: 2px solid #667eea;
+          border-top: 2px solid #059669;
           border-bottom: 1px solid #eee;
         }
 
         .section-divider h4 {
-          color: #667eea;
+          color: #059669;
           margin: 0;
           font-size: 1.3rem;
           font-weight: 600;

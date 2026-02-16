@@ -891,12 +891,12 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
         }
 
         .report-card:hover {
-          border-color: #667eea;
+          border-color: #059669;
           transform: translateY(-2px);
         }
 
         .report-card.selected {
-          border-color: #667eea;
+          border-color: #059669;
           background: #f0f7ff;
         }
 

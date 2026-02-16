@@ -347,7 +347,7 @@ function LoginPage({ onLogin, onForgotPassword }) {
             style={{
               background: 'none',
               border: 'none',
-              color: '#667eea',
+              color: '#059669',
               cursor: loading ? 'not-allowed' : 'pointer',
               fontSize: '14px',
               fontWeight: '500',
@@ -355,8 +355,8 @@ function LoginPage({ onLogin, onForgotPassword }) {
               transition: 'color 0.2s',
               opacity: loading ? 0.6 : 1
             }}
-            onMouseEnter={(e) => !loading && (e.target.style.color = '#764ba2')}
-            onMouseLeave={(e) => !loading && (e.target.style.color = '#667eea')}
+            onMouseEnter={(e) => !loading && (e.target.style.color = '#047857')}
+            onMouseLeave={(e) => !loading && (e.target.style.color = '#059669')}
           >
             Forgot password?
           </button>
