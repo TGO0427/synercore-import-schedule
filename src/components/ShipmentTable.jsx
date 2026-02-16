@@ -1068,7 +1068,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   <td>
                     <input
                       type="number"
-                      value={(localTextValues[`${shipment.id}-palletQty`] ?? shipment.palletQty) || ''}
+                      value={(localTextValues[`${shipment.id}-palletQty`] ?? (shipment.palletQty ? (Math.round(shipment.palletQty) || 1) : '')) || ''}
                       onChange={(e) => handleTextInputChange(shipment.id, 'palletQty', e.target.value)}
                       placeholder="Pallet Qty"
                       className="input"
