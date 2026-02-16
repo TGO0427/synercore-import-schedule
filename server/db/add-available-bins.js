@@ -34,7 +34,7 @@ const addAvailableBinsColumn = async () => {
     const warehouses = [
       { name: 'PRETORIA', totalBins: 650 },
       { name: 'KLAPMUTS', totalBins: 384 },
-      { name: 'Offsite', totalBins: 384 }
+      { name: 'OFFSITE', totalBins: 384 }
     ];
 
     for (const warehouse of warehouses) {

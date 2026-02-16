@@ -73,7 +73,7 @@ function CapacityForecastTable({ shipments, currentBinsUsed }) {
                 fontWeight: '600',
                 color: '#2c3e50'
               }}>
-                Offsite
+                OFFSITE
               </th>
               <th style={{
                 padding: '1rem',
@@ -176,21 +176,21 @@ function CapacityForecastTable({ shipments, currentBinsUsed }) {
                   </div>
                 </td>
 
-                {/* Offsite */}
+                {/* OFFSITE */}
                 <td style={{
                   padding: '1rem',
                   textAlign: 'center',
-                  borderLeft: `4px solid ${getAlertColor(week.warehouses['Offsite'].alert)}`
+                  borderLeft: `4px solid ${getAlertColor(week.warehouses['OFFSITE'].alert)}`
                 }}>
                   <div style={{ fontWeight: '600', color: '#2c3e50' }}>
-                    {week.warehouses['Offsite'].projectedBinsUsed}/{week.warehouses['Offsite'].capacity}
+                    {week.warehouses['OFFSITE'].projectedBinsUsed}/{week.warehouses['OFFSITE'].capacity}
                   </div>
                   <div style={{
                     fontSize: '0.8rem',
-                    color: getAlertColor(week.warehouses['Offsite'].alert),
+                    color: getAlertColor(week.warehouses['OFFSITE'].alert),
                     fontWeight: '500'
                   }}>
-                    {week.warehouses['Offsite'].percentUsed}%
+                    {week.warehouses['OFFSITE'].percentUsed}%
                   </div>
                   <div style={{
                     width: '100%',
@@ -202,9 +202,9 @@ function CapacityForecastTable({ shipments, currentBinsUsed }) {
                   }}>
                     <div
                       style={{
-                        width: `${Math.min(100, week.warehouses['Offsite'].percentUsed)}%`,
+                        width: `${Math.min(100, week.warehouses['OFFSITE'].percentUsed)}%`,
                         height: '100%',
-                        backgroundColor: getAlertColor(week.warehouses['Offsite'].alert),
+                        backgroundColor: getAlertColor(week.warehouses['OFFSITE'].alert),
                         transition: 'width 0.3s ease'
                       }}
                     />

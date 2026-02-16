@@ -8,7 +8,7 @@ export class CapacityForecast {
   static WAREHOUSE_CAPACITY = {
     'PRETORIA': 650,
     'KLAPMUTS': 384,
-    'Offsite': 384
+    'OFFSITE': 384
   };
 
   // Bins per pallet assumption (if pallet qty not specified, estimate)
@@ -137,7 +137,7 @@ export class CapacityForecast {
   static generateRecommendation(warehouseData, weekOffset) {
     const pretoriaData = warehouseData['PRETORIA'];
     const klapmutsData = warehouseData['KLAPMUTS'];
-    const offsiteData = warehouseData['Offsite'];
+    const offsiteData = warehouseData['OFFSITE'];
 
     if (!pretoriaData && !klapmutsData && !offsiteData) return null;
 
@@ -161,13 +161,13 @@ export class CapacityForecast {
       };
     }
 
-    // Offsite overflow check
+    // OFFSITE overflow check
     if (offsiteData && offsiteData.alert === 'overflow') {
       const overflow = offsiteData.projectedBinsUsed - offsiteData.capacity;
       return {
         type: 'overflow',
         severity: 'critical',
-        message: `⚠️ OVERFLOW: Offsite will exceed capacity by ${overflow} bins. Urgent action needed!`
+        message: `⚠️ OVERFLOW: OFFSITE will exceed capacity by ${overflow} bins. Urgent action needed!`
       };
     }
 
@@ -186,13 +186,13 @@ export class CapacityForecast {
         };
       }
 
-      // Try to redistribute to Offsite
+      // Try to redistribute to OFFSITE
       if (offsiteData && offsiteData.percentUsed < 80) {
         const canMove = Math.min(availableBins + 50, offsiteData.capacity - offsiteData.projectedBinsUsed);
         return {
           type: 'redistribute',
           severity: 'warning',
-          message: `🔴 CRITICAL: Move ~${Math.round(canMove / 1.5)} pallets from PRETORIA to Offsite`,
+          message: `🔴 CRITICAL: Move ~${Math.round(canMove / 1.5)} pallets from PRETORIA to OFFSITE`,
           action: `Reduces PRETORIA to ${Math.round((pretoriaData.projectedBinsUsed - canMove) / pretoriaData.capacity * 100)}%`
         };
       }
@@ -208,13 +208,13 @@ export class CapacityForecast {
     if (klapmutsData && klapmutsData.alert === 'critical') {
       const availableBins = klapmutsData.capacity - klapmutsData.projectedBinsUsed;
 
-      // Try to redistribute to Offsite
+      // Try to redistribute to OFFSITE
       if (offsiteData && offsiteData.percentUsed < 80) {
         const canMove = Math.min(availableBins + 30, offsiteData.capacity - offsiteData.projectedBinsUsed);
         return {
           type: 'redistribute',
           severity: 'warning',
-          message: `🔴 CRITICAL: Move ~${Math.round(canMove / 1.5)} pallets from KLAPMUTS to Offsite`,
+          message: `🔴 CRITICAL: Move ~${Math.round(canMove / 1.5)} pallets from KLAPMUTS to OFFSITE`,
           action: `Reduces KLAPMUTS to ${Math.round((klapmutsData.projectedBinsUsed - canMove) / klapmutsData.capacity * 100)}%`
         };
       }
@@ -226,12 +226,12 @@ export class CapacityForecast {
       };
     }
 
-    // Offsite critical check
+    // OFFSITE critical check
     if (offsiteData && offsiteData.alert === 'critical') {
       return {
         type: 'critical',
         severity: 'warning',
-        message: `🔴 CRITICAL: Offsite at ${offsiteData.percentUsed}% capacity`
+        message: `🔴 CRITICAL: OFFSITE at ${offsiteData.percentUsed}% capacity`
       };
     }
 
@@ -253,12 +253,12 @@ export class CapacityForecast {
       };
     }
 
-    // Offsite warning check
+    // OFFSITE warning check
     if (offsiteData && offsiteData.alert === 'warning') {
       return {
         type: 'warning',
         severity: 'info',
-        message: `⚠️ WARNING: Offsite approaching capacity (${offsiteData.percentUsed}%)`
+        message: `⚠️ WARNING: OFFSITE approaching capacity (${offsiteData.percentUsed}%)`
       };
     }
 

@@ -162,7 +162,7 @@ function WarehouseCapacity({ shipments }) {
     const warehouseConfigs = {
       'PRETORIA': { totalBins: editableTotalCapacity['PRETORIA'] || 650, avgItemsPerBin: 1 },
       'KLAPMUTS': { totalBins: editableTotalCapacity['KLAPMUTS'] || 384, avgItemsPerBin: 1 },
-      'Offsite': { totalBins: editableTotalCapacity['Offsite'] || 384, avgItemsPerBin: 1 }
+      'OFFSITE': { totalBins: editableTotalCapacity['OFFSITE'] || 384, avgItemsPerBin: 1 }
     };
 
     // Calculate current and projected usage
@@ -202,7 +202,7 @@ function WarehouseCapacity({ shipments }) {
       const weekNumber = parseInt(shipment.weekNumber) || currentWeek;
 
       // Debug current week shipments for our target warehouses
-      if ((warehouse === 'PRETORIA' || warehouse === 'KLAPMUTS' || warehouse === 'Offsite') && weekNumber === currentWeek) {
+      if ((warehouse === 'PRETORIA' || warehouse === 'KLAPMUTS' || warehouse === 'OFFSITE') && weekNumber === currentWeek) {
         console.log(`Processing shipment for ${warehouse}, week ${weekNumber}: ${shipment.productName?.substring(0, 30)} - Status: ${shipment.latestStatus} - Pallets: ${pallets}`);
       }
 
@@ -264,8 +264,8 @@ function WarehouseCapacity({ shipments }) {
     Object.keys(warehouseStats).forEach(warehouse => {
       const stats = warehouseStats[warehouse];
 
-      // Debug log for PRETORIA, KLAPMUTS, and Offsite
-      if (warehouse === 'PRETORIA' || warehouse === 'KLAPMUTS' || warehouse === 'Offsite') {
+      // Debug log for PRETORIA, KLAPMUTS, and OFFSITE
+      if (warehouse === 'PRETORIA' || warehouse === 'KLAPMUTS' || warehouse === 'OFFSITE') {
         console.log(`WarehouseCapacity FINAL: ${warehouse} - Total Incoming: ${stats.incoming}, Current Week (${currentWeek}) Incoming: ${stats.currentWeekIncoming || 0}`);
       }
       
@@ -1641,7 +1641,7 @@ function WarehouseCapacity({ shipments }) {
       switch (warehouse) {
         case 'PRETORIA': return '#4caf50';
         case 'KLAPMUTS': return '#2196f3';
-        case 'Offsite': return '#ff9800';
+        case 'OFFSITE': return '#ff9800';
         case 'Unassigned': return '#f44336';
         default: return '#9e9e9e';
       }
@@ -2080,7 +2080,7 @@ function WarehouseCapacity({ shipments }) {
           currentBinsUsed={{
             'PRETORIA': warehouseData.warehouseStats['PRETORIA']?.usedBins || 0,
             'KLAPMUTS': warehouseData.warehouseStats['KLAPMUTS']?.usedBins || 0,
-            'Offsite': warehouseData.warehouseStats['Offsite']?.usedBins || 0
+            'OFFSITE': warehouseData.warehouseStats['OFFSITE']?.usedBins || 0
           }}
         />
       </div>

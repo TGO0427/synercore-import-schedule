@@ -77,7 +77,7 @@ function ImportValidationPreview({ errors, preview, validCount, onProceed, onCan
                 <li>Supplier and Order Reference columns are required</li>
                 <li>Quantity must be a positive number</li>
                 <li>Week Number should be between 1 and 53</li>
-                <li>Warehouse must be PRETORIA, KLAPMUTS, or Offsite</li>
+                <li>Warehouse must be PRETORIA, KLAPMUTS, or OFFSITE</li>
               </ul>
             </div>
 

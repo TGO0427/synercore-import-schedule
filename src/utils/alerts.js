@@ -68,7 +68,7 @@ export function computeShipmentAlerts(shipments) {
 
     // Info alerts - general notifications
     if (s.latestStatus === 'arrived_pta' || s.latestStatus === 'arrived_klm' || s.latestStatus === 'arrived_offsite') {
-      const arrivalLocation = s.latestStatus === 'arrived_pta' ? 'PTA' : s.latestStatus === 'arrived_klm' ? 'KLM' : 'Offsite';
+      const arrivalLocation = s.latestStatus === 'arrived_pta' ? 'PTA' : s.latestStatus === 'arrived_klm' ? 'KLM' : 'OFFSITE';
       alerts.push({
         ...base,
         severity: 'info',

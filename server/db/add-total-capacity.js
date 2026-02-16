@@ -34,7 +34,7 @@ const addTotalCapacityColumn = async () => {
     const warehouses = [
       { name: 'PRETORIA', totalCapacity: 650 },
       { name: 'KLAPMUTS', totalCapacity: 384 },
-      { name: 'Offsite', totalCapacity: 384 }
+      { name: 'OFFSITE', totalCapacity: 384 }
     ];
 
     for (const warehouse of warehouses) {

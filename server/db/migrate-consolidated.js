@@ -125,7 +125,7 @@ const migrations = [
       const warehouses = [
         { name: 'PRETORIA', bins: 650 },
         { name: 'KLAPMUTS', bins: 384 },
-        { name: 'Offsite', bins: 384 },
+        { name: 'OFFSITE', bins: 384 },
       ];
 
       for (const warehouse of warehouses) {
@@ -170,7 +170,7 @@ const migrations = [
       const warehouses = [
         { name: 'PRETORIA', capacity: 650 },
         { name: 'KLAPMUTS', capacity: 384 },
-        { name: 'Offsite', capacity: 384 },
+        { name: 'OFFSITE', capacity: 384 },
       ];
 
       for (const warehouse of warehouses) {

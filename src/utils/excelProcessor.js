@@ -162,7 +162,7 @@ export class ExcelProcessor {
 
     // Warehouse validation
     const warehouse = (row['RECEIVING WAREHOUSE'] || row['Warehouse'] || row['FINAL POD'] || '').toString().trim();
-    const validWarehouses = ['PRETORIA', 'KLAPMUTS', 'Offsite'];
+    const validWarehouses = ['PRETORIA', 'KLAPMUTS', 'OFFSITE'];
     if (warehouse && !validWarehouses.includes(warehouse)) {
       errors.push(new ExcelValidationError(rowIndex, 'RECEIVING WAREHOUSE', `Warehouse must be one of: ${validWarehouses.join(', ')}`));
     }

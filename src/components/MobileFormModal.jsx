@@ -311,7 +311,7 @@ export function FilterForm({
           <option value="">All Warehouses</option>
           <option value="PTA">PTA</option>
           <option value="KLM">KLM</option>
-          <option value="Offsite">Offsite</option>
+          <option value="OFFSITE">OFFSITE</option>
         </select>
       </div>
 
