@@ -611,24 +611,24 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
         <table>
           <thead>
             <tr>
+              <th>SUPPLIER</th>
+              <th>ORDER / REF</th>
               <th onClick={() => handleSort('productName')} style={{ cursor: 'pointer' }}>
-                PRODUCT NAME {sortConfig.key === 'productName' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-              </th>
-              <th onClick={() => handleSort('quantity')} style={{ cursor: 'pointer' }}>
-                QUANTITY {sortConfig.key === 'quantity' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-              </th>
-              <th onClick={() => handleSort('palletQty')} style={{ cursor: 'pointer' }}>
-                Pallet Qty {sortConfig.key === 'palletQty' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                PRODUCT {sortConfig.key === 'productName' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
               </th>
               <th onClick={() => handleSort('receivingWarehouse')} style={{ cursor: 'pointer' }}>
-                RECEIVING WAREHOUSE {sortConfig.key === 'receivingWarehouse' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                WAREHOUSE {sortConfig.key === 'receivingWarehouse' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
               </th>
               <th onClick={() => handleSort('weekNumber')} style={{ cursor: 'pointer' }}>
-                WEEK NUMBER ETA {sortConfig.key === 'weekNumber' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                WEEK {sortConfig.key === 'weekNumber' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
               </th>
-              <th>SUPPLIER</th>
-              <th>ORDER/REF</th>
-              <th>ACTIONS</th>
+              <th onClick={() => handleSort('palletQty')} style={{ cursor: 'pointer' }}>
+                PALLETS {sortConfig.key === 'palletQty' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+              </th>
+              <th onClick={() => handleSort('quantity')} style={{ cursor: 'pointer' }}>
+                QTY {sortConfig.key === 'quantity' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+              </th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -644,48 +644,22 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
                 const qVal = draft.quantity ?? normNum(shipment.quantity);
                 const palletQtyVal = draft.palletQty ?? (Math.round(normNum(shipment.palletQty)) || (shipment.palletQty ? 1 : 0));
                 const whVal = draft.receivingWarehouse ?? (shipment.receivingWarehouse || '');
+                const hasEdits = edits[shipment.id] && Object.keys(edits[shipment.id]).length > 0;
+                const editBorder = '2px solid var(--warning)';
+                const editBg = '#fff3e0';
+                const inputStyle = (field) => ({
+                  border: edits[shipment.id]?.[field] !== undefined ? editBorder : '1px solid var(--border)',
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  textAlign: 'center',
+                  backgroundColor: edits[shipment.id]?.[field] !== undefined ? editBg : 'white',
+                });
 
                 return (
                   <tr key={shipment.id}>
-                    <td>
-                      <strong>{shipment.productName || '-'}</strong>
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        value={qVal}
-                        onChange={(e) => setEdit(shipment.id, 'quantity', e.target.value)}
-                        onKeyDown={(e) => onFieldKeyDown(e, shipment, 'quantity')}
-                        style={{
-                          border: edits[shipment.id]?.quantity !== undefined ? '2px solid var(--warning)' : '1px solid var(--border)',
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          width: '80px',
-                          textAlign: 'center',
-                          backgroundColor: edits[shipment.id]?.quantity !== undefined ? '#fff3e0' : 'white',
-                        }}
-                        inputMode="decimal"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={palletQtyVal}
-                        onChange={(e) => setEdit(shipment.id, 'palletQty', e.target.value)}
-                        onKeyDown={(e) => onFieldKeyDown(e, shipment, 'palletQty')}
-                        placeholder="Pallet Qty"
-                        style={{
-                          border: edits[shipment.id]?.palletQty !== undefined ? '2px solid var(--warning)' : '1px solid var(--border)',
-                          padding: '4px 8px',
-                          backgroundColor: edits[shipment.id]?.palletQty !== undefined ? '#fff3e0' : 'white',
-                          borderRadius: '4px',
-                          width: '80px',
-                          textAlign: 'center',
-                        }}
-                        inputMode="decimal"
-                      />
-                    </td>
+                    <td>{shipment.supplier}</td>
+                    <td style={{ color: 'var(--accent)', fontWeight: 600 }}>{shipment.orderRef}</td>
+                    <td><strong>{shipment.productName || '-'}</strong></td>
                     <td>
                       <input
                         type="text"
@@ -693,13 +667,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
                         onChange={(e) => setEdit(shipment.id, 'receivingWarehouse', e.target.value)}
                         onKeyDown={(e) => onFieldKeyDown(e, shipment, 'receivingWarehouse')}
                         placeholder="Warehouse"
-                        style={{
-                          border: edits[shipment.id]?.receivingWarehouse !== undefined ? '2px solid var(--warning)' : '1px solid var(--border)',
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          width: '120px',
-                          backgroundColor: edits[shipment.id]?.receivingWarehouse !== undefined ? '#fff3e0' : 'white',
-                        }}
+                        style={{ ...inputStyle('receivingWarehouse'), width: '110px' }}
                       />
                     </td>
                     <td>
@@ -717,28 +685,46 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
                         selectedWeekDate={shipment.selectedWeekDate ? new Date(shipment.selectedWeekDate) : null}
                       />
                     </td>
-                    <td style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>{shipment.supplier}</td>
-                    <td style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>{shipment.orderRef}</td>
                     <td>
-                      {edits[shipment.id] && Object.keys(edits[shipment.id]).length > 0 ? (
+                      <input
+                        type="number"
+                        value={palletQtyVal}
+                        onChange={(e) => setEdit(shipment.id, 'palletQty', e.target.value)}
+                        onKeyDown={(e) => onFieldKeyDown(e, shipment, 'palletQty')}
+                        style={{ ...inputStyle('palletQty'), width: '70px' }}
+                        inputMode="decimal"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        value={qVal}
+                        onChange={(e) => setEdit(shipment.id, 'quantity', e.target.value)}
+                        onKeyDown={(e) => onFieldKeyDown(e, shipment, 'quantity')}
+                        style={{ ...inputStyle('quantity'), width: '80px' }}
+                        inputMode="decimal"
+                      />
+                    </td>
+                    <td>
+                      {hasEdits ? (
                         <button
                           onClick={() => saveShipment(shipment.id)}
                           style={{
                             padding: '4px 12px',
-                            backgroundColor: 'var(--success)',
+                            backgroundColor: 'var(--accent)',
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
                             cursor: 'pointer',
                             fontSize: '0.85rem',
-                            fontWeight: 'bold',
+                            fontWeight: '600',
                           }}
                           title="Save changes for this row"
                         >
-                          💾 Save
+                          Save
                         </button>
                       ) : (
-                        <span style={{ color: '#999', fontSize: '0.85rem' }}>✓ Saved</span>
+                        <span style={{ color: 'var(--text-500)', fontSize: '0.8rem' }}>Saved</span>
                       )}
                     </td>
                   </tr>
