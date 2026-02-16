@@ -90,6 +90,7 @@ const SimpleBinInput = ({ warehouseKey, initialValue, maxValue, onUpdate, hasUns
 
 function WarehouseCapacity({ shipments }) {
   const [selectedWarehouse, setSelectedWarehouse] = useState('all');
+  const [showSettings, setShowSettings] = useState(false);
   const [editableBinsUsed, setEditableBinsUsed] = useState({});
   const [savedBinsUsed, setSavedBinsUsed] = useState({});
   const [pendingChanges, setPendingChanges] = useState({});
@@ -1953,326 +1954,110 @@ function WarehouseCapacity({ shipments }) {
         </div>
       )}
 
-      <div className="page-header" style={{ textAlign: 'center', marginBottom: '2rem' }}>
-        <h2 style={{ color: 'var(--text-900)', marginBottom: '0.5rem' }}>
-          🏭 Warehouse Capacity Management
-          {selectedWarehouse !== 'all' && (
-            <span style={{ color: 'var(--info)', fontSize: '0.8em', marginLeft: '0.5rem' }}>
-              - {selectedWarehouse}
-            </span>
+      {/* ── Header Row ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--navy-900)' }}>
+            Warehouse Capacity
+          </h2>
+          <span style={{ fontSize: 12, color: 'var(--text-500)', fontWeight: 500 }}>
+            {Object.keys(warehouseData.warehouseStats).length} location{Object.keys(warehouseData.warehouseStats).length !== 1 ? 's' : ''}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <select value={selectedWarehouse} onChange={(e) => setSelectedWarehouse(e.target.value)}
+            className="select" style={{ fontSize: 13, minWidth: 140 }}>
+            <option value="all">All Warehouses</option>
+            {Object.keys(warehouseData.warehouseStats).map(w => (
+              <option key={w} value={w}>{w}</option>
+            ))}
+          </select>
+          {(Object.keys(pendingChanges).length > 0 || Object.keys(pendingAvailableBinsChanges).length > 0 || Object.keys(pendingTotalCapacityChanges).length > 0) && (
+            <button onClick={saveAllChanges} disabled={isSaving} className="btn"
+              style={{ background: 'var(--accent)', color: '#fff', fontSize: 13, border: 'none', fontWeight: 600 }}>
+              {isSaving ? 'Saving...' : `Save ${Object.keys(pendingChanges).length + Object.keys(pendingAvailableBinsChanges).length + Object.keys(pendingTotalCapacityChanges).length} change${(Object.keys(pendingChanges).length + Object.keys(pendingAvailableBinsChanges).length + Object.keys(pendingTotalCapacityChanges).length) !== 1 ? 's' : ''}`}
+            </button>
           )}
-        </h2>
-        <p style={{ color: '#7f8c8d' }}>
-          {selectedWarehouse === 'all'
-            ? 'Monitor warehouse utilization and capacity planning across all warehouses'
-            : `Detailed view for ${selectedWarehouse} warehouse - Click another warehouse card or select "All Warehouses" to change view`
-          }
-        </p>
-        {/* Sync Status Indicator */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          justifyContent: 'center',
-          marginTop: '0.75rem',
-          fontSize: '0.9rem',
-          color: 'var(--text-500)'
-        }}>
-          <span style={{
-            display: 'inline-block',
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            backgroundColor: lastSyncTime ? '#10b981' : '#ccc',
-            animation: lastSyncTime ? 'none' : 'pulse 2s infinite'
-          }}></span>
-          <span>Last synced: {getRelativeTime(lastSyncTime)}</span>
+          <button className="btn btn-ghost" onClick={handleExportToPDF} style={{ fontSize: 13 }}>PDF</button>
         </div>
       </div>
 
-      {/* Controls */}
-      <div style={{ 
-        marginBottom: '2rem', 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        gap: '1rem',
-        flexWrap: 'wrap'
-      }}>
-        <select
-          value={selectedWarehouse}
-          onChange={(e) => setSelectedWarehouse(e.target.value)}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '8px',
-            border: '2px solid var(--info)',
-            backgroundColor: 'white',
-            fontSize: '1rem',
-            cursor: 'pointer'
-          }}
-        >
-          <option value="all">All Warehouses</option>
-          {Object.keys(warehouseData.warehouseStats).map(warehouse => (
-            <option key={warehouse} value={warehouse}>{warehouse}</option>
-          ))}
-        </select>
-
-        {/* Save All Changes Button */}
-        {(Object.keys(pendingChanges).length > 0 || Object.keys(pendingAvailableBinsChanges).length > 0 || Object.keys(pendingTotalCapacityChanges).length > 0) && (
-          <button
-            onClick={saveAllChanges}
-            disabled={isSaving}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px 16px',
-              backgroundColor: isSaving ? '#94a3b8' : '#10b981',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: isSaving ? 'not-allowed' : 'pointer',
-              fontSize: '0.95rem',
-              fontWeight: '500',
-              transition: 'all 0.2s ease',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              animation: 'pulse 2s ease-in-out infinite'
-            }}
-            onMouseEnter={(e) => {
-              if (!isSaving) {
-                e.target.style.backgroundColor = '#059669';
-                e.target.style.transform = 'translateY(-1px)';
-                e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isSaving) {
-                e.target.style.backgroundColor = '#10b981';
-                e.target.style.transform = 'none';
-                e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-              }
-            }}
-            title={`Save ${Object.keys(pendingChanges).length + Object.keys(pendingAvailableBinsChanges).length + Object.keys(pendingTotalCapacityChanges).length} unsaved ${(Object.keys(pendingChanges).length + Object.keys(pendingAvailableBinsChanges).length + Object.keys(pendingTotalCapacityChanges).length) === 1 ? 'change' : 'changes'}`}
-          >
-            {isSaving ? '⏳ Saving...' : `💾 Save All Changes (${Object.keys(pendingChanges).length + Object.keys(pendingAvailableBinsChanges).length + Object.keys(pendingTotalCapacityChanges).length})`}
-          </button>
-        )}
-
+      {/* ── Collapsible Settings Panel ── */}
+      <div style={{ marginBottom: '1.25rem' }}>
         <button
-          onClick={handleExportToPDF}
+          onClick={() => setShowSettings(prev => !prev)}
+          type="button"
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '8px 16px',
-            backgroundColor: '#e53e3e',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '0.95rem',
-            fontWeight: '500',
-            transition: 'all 0.2s ease',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+            padding: '10px 16px', background: 'var(--surface-2)', border: 'none',
+            borderBottom: showSettings ? '1px solid var(--border)' : 'none',
+            borderRadius: showSettings ? '8px 8px 0 0' : 8,
+            cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text-700)',
+            transition: 'background 0.15s',
           }}
-          onMouseEnter={(e) => {
-            e.target.style.backgroundColor = '#c53030';
-            e.target.style.transform = 'translateY(-1px)';
-            e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.backgroundColor = '#e53e3e';
-            e.target.style.transform = 'none';
-            e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-          }}
-          title={`Export warehouse capacity report to PDF (${Object.keys(warehouseData.warehouseStats).length} warehouses)`}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--border)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'var(--surface-2)'}
         >
-          📄 Export PDF Report
+          <span style={{ transform: showSettings ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s', fontSize: 11 }}>▶</span>
+          Warehouse Settings
+          <span style={{ fontWeight: 400, color: 'var(--text-500)', fontSize: 12 }}>Edit bins used, available bins, and total capacity</span>
         </button>
-      </div>
-
-      {/* Edit Panel for Current Bins Utilized */}
-      <div className="dash-panel" style={{ marginBottom: '2rem' }}>
-        <h3 style={{ color: 'var(--text-900)', marginBottom: '1rem', fontSize: '1.1rem' }}>
-          📝 Edit Current Bins Utilized
-        </h3>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-          gap: '1rem'
-        }}>
-          {filteredWarehouses.map(([warehouse, stats]) => (
-            <div key={warehouse} style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.75rem',
-              backgroundColor: pendingChanges[warehouse] !== undefined ? '#fff3e0' : 'var(--surface-2)',
-              borderRadius: '8px',
-              border: pendingChanges[warehouse] !== undefined ? '2px solid var(--warning)' : '2px solid var(--border)'
-            }}>
-              <label style={{
-                flex: 1,
-                fontWeight: '500',
-                color: 'var(--text-900)',
-                fontSize: '0.9rem'
-              }}>
-                {warehouse}:
-              </label>
-              <input
-                type="number"
-                value={editableBinsUsed[warehouse] !== undefined ? editableBinsUsed[warehouse] : stats.usedBins}
-                onChange={(e) => {
-                  const value = Math.max(0, Math.min(parseInt(e.target.value) || 0, stats.totalBins));
-                  handleBinsUsedChange(warehouse, value);
-                }}
-                style={{
-                  width: '80px',
-                  padding: '6px 8px',
-                  border: '2px solid var(--border)',
-                  borderRadius: '6px',
-                  fontSize: '1rem',
-                  fontWeight: 'bold',
-                  textAlign: 'center'
-                }}
-                min="0"
-                max={stats.totalBins}
-              />
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-500)' }}>/ {stats.totalBins}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Edit Panel for Available Bins */}
-      <div className="dash-panel" style={{ marginBottom: '2rem' }}>
-        <h3 style={{ color: 'var(--text-900)', marginBottom: '1rem', fontSize: '1.1rem' }}>
-          📦 Adjust Available Bins
-        </h3>
-        <p style={{ color: 'var(--text-500)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-          Set the number of available bins for each warehouse. This represents bins that can be used for incoming shipments.
-        </p>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-          gap: '1rem'
-        }}>
-          {filteredWarehouses.map(([warehouse, stats]) => (
-            <div key={`available-${warehouse}`} style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.5rem',
-              padding: '0.75rem',
-              backgroundColor: pendingAvailableBinsChanges[warehouse] !== undefined ? '#e8f5e9' : 'var(--surface-2)',
-              borderRadius: '8px',
-              border: pendingAvailableBinsChanges[warehouse] !== undefined ? '2px solid var(--success)' : '2px solid var(--border)'
-            }}>
-              <label style={{
-                fontWeight: '500',
-                color: 'var(--text-900)',
-                fontSize: '0.9rem'
-              }}>
-                {warehouse}:
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input
-                  type="number"
-                  value={editableAvailableBins[warehouse] !== undefined ? editableAvailableBins[warehouse] : stats.availableBins}
-                  onChange={(e) => {
-                    const value = Math.max(0, parseInt(e.target.value) || 0);
-                    handleAvailableBinsChange(warehouse, value);
-                  }}
-                  style={{
-                    width: '80px',
-                    padding: '6px 8px',
-                    border: '2px solid var(--border)',
-                    borderRadius: '6px',
-                    fontSize: '1rem',
-                    fontWeight: 'bold',
-                    textAlign: 'center'
-                  }}
-                  min="0"
-                />
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-500)' }}>bins</span>
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-500)', marginTop: '0.25rem' }}>
-                Total capacity: {stats.totalBins} bins
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Edit Total Capacity Section */}
-      <div className="dash-panel" style={{ marginBottom: '2rem' }}>
-        <h3 style={{
-          marginTop: 0,
-          marginBottom: '0.5rem',
-          fontSize: '1.2rem',
-          color: 'var(--text-900)'
-        }}>
-          📊 Edit Total Capacity
-        </h3>
-        <p style={{ color: 'var(--text-500)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-          Set the total bin capacity for each warehouse. This is the maximum number of bins each warehouse can hold.
-        </p>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-          gap: '1rem'
-        }}>
-          {filteredWarehouses.map(([warehouse, stats]) => (
-            <div key={`capacity-${warehouse}`} style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.5rem',
-              padding: '0.75rem',
-              backgroundColor: pendingTotalCapacityChanges[warehouse] !== undefined ? '#e3f2fd' : 'var(--surface-2)',
-              borderRadius: '8px',
-              border: pendingTotalCapacityChanges[warehouse] !== undefined ? '2px solid #2196f3' : '2px solid var(--border)'
-            }}>
-              <label style={{
-                fontWeight: '500',
-                color: 'var(--text-900)',
-                fontSize: '0.9rem'
-              }}>
-                {warehouse}:
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input
-                  type="number"
-                  value={editableTotalCapacity[warehouse] !== undefined ? editableTotalCapacity[warehouse] : stats.totalBins}
-                  onChange={(e) => {
-                    const value = Math.max(0, parseInt(e.target.value) || 0);
-                    handleTotalCapacityChange(warehouse, value);
-                  }}
-                  style={{
-                    width: '80px',
-                    padding: '6px 8px',
-                    border: '2px solid var(--border)',
-                    borderRadius: '6px',
-                    fontSize: '1rem',
-                    fontWeight: 'bold',
-                    textAlign: 'center'
-                  }}
-                  min="0"
-                />
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-500)' }}>bins</span>
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-500)', marginTop: '0.25rem' }}>
-                Currently using: {stats.usedBins} bins
-              </div>
-            </div>
-          ))}
-        </div>
+        {showSettings && (
+          <div className="dash-panel" style={{ borderRadius: '0 0 8px 8px', padding: '1rem 1.25rem' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ textAlign: 'left', padding: '8px 0', fontWeight: 600, color: 'var(--text-700)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Warehouse</th>
+                  <th style={{ textAlign: 'center', padding: '8px 0', fontWeight: 600, color: 'var(--text-700)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Bins Used</th>
+                  <th style={{ textAlign: 'center', padding: '8px 0', fontWeight: 600, color: 'var(--text-700)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Available</th>
+                  <th style={{ textAlign: 'center', padding: '8px 0', fontWeight: 600, color: 'var(--text-700)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Capacity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredWarehouses.map(([warehouse, stats]) => (
+                  <tr key={warehouse} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td style={{ padding: '10px 0', fontWeight: 600, color: 'var(--text-900)' }}>{warehouse}</td>
+                    <td style={{ textAlign: 'center', padding: '10px 0' }}>
+                      <input type="number" className="input"
+                        value={editableBinsUsed[warehouse] !== undefined ? editableBinsUsed[warehouse] : stats.usedBins}
+                        onChange={(e) => handleBinsUsedChange(warehouse, Math.max(0, Math.min(parseInt(e.target.value) || 0, stats.totalBins)))}
+                        style={{ width: 70, textAlign: 'center', fontSize: 13, fontWeight: 700,
+                          border: pendingChanges[warehouse] !== undefined ? '2px solid var(--warning)' : undefined,
+                          backgroundColor: pendingChanges[warehouse] !== undefined ? '#fff3e0' : undefined }}
+                        min="0" max={stats.totalBins} />
+                    </td>
+                    <td style={{ textAlign: 'center', padding: '10px 0' }}>
+                      <input type="number" className="input"
+                        value={editableAvailableBins[warehouse] !== undefined ? editableAvailableBins[warehouse] : stats.availableBins}
+                        onChange={(e) => handleAvailableBinsChange(warehouse, Math.max(0, parseInt(e.target.value) || 0))}
+                        style={{ width: 70, textAlign: 'center', fontSize: 13, fontWeight: 700,
+                          border: pendingAvailableBinsChanges[warehouse] !== undefined ? '2px solid var(--success)' : undefined,
+                          backgroundColor: pendingAvailableBinsChanges[warehouse] !== undefined ? '#e8f5e9' : undefined }}
+                        min="0" />
+                    </td>
+                    <td style={{ textAlign: 'center', padding: '10px 0' }}>
+                      <input type="number" className="input"
+                        value={editableTotalCapacity[warehouse] !== undefined ? editableTotalCapacity[warehouse] : stats.totalBins}
+                        onChange={(e) => handleTotalCapacityChange(warehouse, Math.max(0, parseInt(e.target.value) || 0))}
+                        style={{ width: 70, textAlign: 'center', fontSize: 13, fontWeight: 700,
+                          border: pendingTotalCapacityChanges[warehouse] !== undefined ? '2px solid var(--info)' : undefined,
+                          backgroundColor: pendingTotalCapacityChanges[warehouse] !== undefined ? '#e3f2fd' : undefined }}
+                        min="0" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Capacity Cards Grid */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
-        gap: '2rem',
-        marginBottom: '2rem'
+        gap: '1.25rem',
+        marginBottom: '1.5rem'
       }}>
         {filteredWarehouses.map(([warehouse, stats]) => (
           <CapacityCard
