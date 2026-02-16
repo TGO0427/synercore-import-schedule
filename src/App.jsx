@@ -1,7 +1,6 @@
 // src/App.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import ShipmentTable from './components/ShipmentTable';
-import ProductView from './components/ProductView';
 import ArchiveView from './components/ArchiveView';
 import ReportsView from './components/ReportsView';
 import AdvancedReports from './components/AdvancedReports';
@@ -765,8 +764,6 @@ function App() {
           </div>
         );
       }
-      case 'products':
-        return <ProductView shipments={shipments} onUpdateShipment={handleUpdateShipment} loading={loading} />;
       case 'archives':
         return <ArchiveView />;
       case 'reports':
@@ -899,7 +896,6 @@ function App() {
             dashboard: { label: 'Dashboard', icon: '📊', view: 'dashboard' },
             // Master Data
             suppliers: { label: 'Suppliers', icon: '🏢', view: 'suppliers' },
-            products: { label: 'Products & Warehouses', icon: '📋', view: 'products' },
             // Operations
             shipping: { label: 'Shipping Schedule', icon: '📦', view: 'shipping' },
             workflow: { label: 'Post-Arrival Workflow', icon: '📋', view: 'workflow' },
@@ -979,7 +975,7 @@ function App() {
               {match('Dashboard') && renderItem('dashboard')}
 
               {/* Grouped sections */}
-              {renderSection('Master Data', 'masterData', ['suppliers', 'products'])}
+              {renderSection('Master Data', 'masterData', ['suppliers'])}
               {renderSection('Operations', 'operations', ['shipping', 'workflow', 'capacity', 'stored', 'archives'])}
               {renderSection('Finance', 'finance', ['rates', 'costing', 'costingRequests'])}
               {renderSection('Reports', 'reports', ['reports', 'advancedReports'])}

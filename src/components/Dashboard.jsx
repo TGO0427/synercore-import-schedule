@@ -172,6 +172,25 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
     };
   }, [stats.byWeek]);
 
+  // Products & Pallets weekly trend (replaces ProductView chart)
+  const productsPalletsTrend = useMemo(() => {
+    const weeks = {};
+    (shipments || []).forEach(s => {
+      const wk = Number(s.weekNumber) || 0;
+      if (wk === 0) return;
+      if (!weeks[wk]) weeks[wk] = { products: 0, pallets: 0 };
+      weeks[wk].products += 1;
+      weeks[wk].pallets += Math.round(Number(s.palletQty) || 0);
+    });
+    const sorted = Object.keys(weeks).map(Number).sort((a, b) => a - b).slice(-12);
+    if (sorted.length < 2) return null;
+    return {
+      labels: sorted.map(w => `W${w}`),
+      products: sorted.map(w => weeks[w].products),
+      pallets: sorted.map(w => weeks[w].pallets),
+    };
+  }, [shipments]);
+
   const getUpcomingOrders = () => {
     const currentWeek = getCurrentWeek();
     return shipments
@@ -461,6 +480,69 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Products & Pallets Trend */}
+        {productsPalletsTrend && (
+          <div className="dash-panel" style={{ gridColumn: '1 / -1' }}>
+            <PanelHeader icon="📦" title="Products & Pallets by Week" subtitle="Weekly incoming volume" />
+            <div style={{ height: 200 }}>
+              <Line
+                data={{
+                  labels: productsPalletsTrend.labels,
+                  datasets: [
+                    {
+                      label: 'Products',
+                      data: productsPalletsTrend.products,
+                      borderColor: '#3b82f6',
+                      backgroundColor: 'rgba(59,130,246,0.05)',
+                      pointBackgroundColor: '#fff',
+                      pointBorderColor: '#3b82f6',
+                      pointBorderWidth: 2,
+                      pointRadius: 5,
+                      pointHoverRadius: 7,
+                      borderWidth: 2.5,
+                      tension: 0.35,
+                      fill: false,
+                    },
+                    {
+                      label: 'Pallets',
+                      data: productsPalletsTrend.pallets,
+                      borderColor: '#059669',
+                      backgroundColor: 'rgba(5,150,105,0.05)',
+                      pointBackgroundColor: '#fff',
+                      pointBorderColor: '#059669',
+                      pointBorderWidth: 2,
+                      pointRadius: 5,
+                      pointHoverRadius: 7,
+                      borderWidth: 2.5,
+                      tension: 0.35,
+                      fill: false,
+                    },
+                  ],
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  interaction: { mode: 'index', intersect: false },
+                  plugins: {
+                    legend: {
+                      position: 'top', align: 'end',
+                      labels: { font: { size: 12 }, boxWidth: 10, padding: 16, usePointStyle: true, pointStyle: 'circle' },
+                    },
+                    tooltip: {
+                      backgroundColor: '#0f172a', titleFont: { size: 12 }, bodyFont: { size: 12 },
+                      padding: 8, cornerRadius: 6,
+                    },
+                  },
+                  scales: {
+                    x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#94a3b8' }, border: { display: false } },
+                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 11 }, color: '#94a3b8' }, border: { display: false } },
+                  },
+                }}
+              />
             </div>
           </div>
         )}
