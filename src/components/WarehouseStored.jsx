@@ -193,7 +193,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     );
   }
 
-  const totalPallets = filteredAndSortedShipments.reduce((sum, s) => sum + (Number(s.palletQty) || 0), 0);
+  const totalPallets = Math.round(filteredAndSortedShipments.reduce((sum, s) => sum + (Number(s.palletQty) || 0), 0));
 
   const thStyle = {
     padding: '8px 12px',
@@ -304,7 +304,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {groupedByWarehouse.map(({ name, shipments: warehouseShipments }) => {
             const isCollapsed = collapsedWarehouses[name];
-            const whPallets = warehouseShipments.reduce((sum, s) => sum + (Number(s.palletQty) || 0), 0);
+            const whPallets = Math.round(warehouseShipments.reduce((sum, s) => sum + (Number(s.palletQty) || 0), 0));
             const activeCount = warehouseShipments.filter(s => !s.isArchived && s.latestStatus !== 'archived').length;
             const archivedCount = warehouseShipments.length - activeCount;
 
@@ -376,7 +376,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                             <td style={{ padding: '8px 12px', fontSize: 13 }}>{shipment.supplier}</td>
                             <td style={{ padding: '8px 12px', fontSize: 13 }}>{shipment.productName || 'N/A'}</td>
                             <td style={{ padding: '8px 12px', fontSize: 13 }}>{shipment.quantity || 'N/A'}</td>
-                            <td style={{ padding: '8px 12px', fontSize: 13 }}>{shipment.palletQty || '-'}</td>
+                            <td style={{ padding: '8px 12px', fontSize: 13 }}>{shipment.palletQty ? (Math.round(shipment.palletQty) || 1) : '-'}</td>
                             <td style={{ padding: '8px 12px', fontSize: 13 }}>
                               {formatDate(shipment.receivingDate || shipment.updatedAt || shipment.estimatedArrival)}
                             </td>
