@@ -234,7 +234,7 @@ function ArchiveView() {
                       <td style={{ padding: '8px 12px', fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>{s.orderRef}</td>
                       <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.productName}</td>
                       <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.quantity?.toLocaleString()}</td>
-                      <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.palletQty ? Math.round(s.palletQty) : '-'}</td>
+                      <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.palletQty ? (Math.round(s.palletQty) || 1) : '-'}</td>
                       <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.finalPod}</td>
                       <td style={{ padding: '8px 12px', fontSize: 13 }}>
                         <span style={{
@@ -421,7 +421,7 @@ function ArchiveView() {
                       <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.supplier}</td>
                       <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.productName || s.product_name || 'N/A'}</td>
                       <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.quantity || '-'}</td>
-                      <td style={{ padding: '8px 12px', fontSize: 13 }}>{(s.palletQty || s.pallet_qty) ? Math.round(s.palletQty || s.pallet_qty) : '-'}</td>
+                      <td style={{ padding: '8px 12px', fontSize: 13 }}>{(s.palletQty || s.pallet_qty) ? (Math.round(s.palletQty || s.pallet_qty) || 1) : '-'}</td>
                       <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.receivingWarehouse || s.receiving_warehouse || 'N/A'}</td>
                       <td style={{ padding: '8px 12px', fontSize: 13 }}>{formatDate(s.updatedAt || s.updated_at)}</td>
                     </tr>
