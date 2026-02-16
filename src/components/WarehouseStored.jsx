@@ -12,6 +12,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
   const [showWeekDropdown, setShowWeekDropdown] = useState(false);
   const [archivingAll, setArchivingAll] = useState(false);
   const [collapsedWarehouses, setCollapsedWarehouses] = useState({});
+  const [editingWarehouse, setEditingWarehouse] = useState(null); // shipment id being edited
 
   // Fetch archived shipments
   useEffect(() => {
@@ -172,6 +173,16 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
 
   const toggleWarehouse = (name) => {
     setCollapsedWarehouses(prev => ({ ...prev, [name]: !prev[name] }));
+  };
+
+  const handleWarehouseChange = async (shipmentId, newWarehouse) => {
+    setEditingWarehouse(null);
+    try {
+      await onUpdateShipment(shipmentId, { receivingWarehouse: newWarehouse });
+      if (showSuccess) showSuccess(`Moved to ${newWarehouse}`);
+    } catch (err) {
+      if (showError) showError('Failed to update warehouse');
+    }
   };
 
   if (loading) {
@@ -369,12 +380,35 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                             <td style={{ padding: '8px 12px', fontSize: 13 }}>
                               {formatDate(shipment.receivingDate || shipment.updatedAt || shipment.estimatedArrival)}
                             </td>
-                            <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                              {editingWarehouse === shipment.id ? (
+                                <select
+                                  autoFocus
+                                  defaultValue={shipment.receivingWarehouse || ''}
+                                  onChange={(e) => handleWarehouseChange(shipment.id, e.target.value)}
+                                  onBlur={() => setEditingWarehouse(null)}
+                                  style={{ fontSize: 12, padding: '4px 6px', borderRadius: 4, border: '1px solid var(--border)' }}
+                                >
+                                  <option value="">Unassigned</option>
+                                  <option value="PRETORIA">PRETORIA</option>
+                                  <option value="KLAPMUTS">KLAPMUTS</option>
+                                  <option value="Offsite">Offsite</option>
+                                </select>
+                              ) : (
+                                <button
+                                  className="btn btn-ghost"
+                                  onClick={() => setEditingWarehouse(shipment.id)}
+                                  style={{ fontSize: 12, padding: '4px 10px' }}
+                                  title="Move to another warehouse"
+                                >
+                                  Move
+                                </button>
+                              )}
                               {!isArch && (
                                 <button
                                   className="btn btn-ghost"
                                   onClick={() => onArchiveShipment ? onArchiveShipment(shipment.id) : onDeleteShipment(shipment.id)}
-                                  style={{ fontSize: 12, padding: '4px 10px' }}
+                                  style={{ fontSize: 12, padding: '4px 10px', marginLeft: 4 }}
                                 >
                                   Archive
                                 </button>
