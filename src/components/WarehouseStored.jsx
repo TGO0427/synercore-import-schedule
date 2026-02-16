@@ -11,6 +11,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
   const [loadingArchives, setLoadingArchives] = useState(false);
   const [showWeekDropdown, setShowWeekDropdown] = useState(false);
   const [archivingAll, setArchivingAll] = useState(false);
+  const [collapsedWarehouses, setCollapsedWarehouses] = useState({});
 
   // Fetch archived shipments
   useEffect(() => {
@@ -23,7 +24,6 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
         const archives = await response.json();
         const allArchivedShipments = [];
 
-        // Fetch each archive and extract shipments with 'stored' status
         for (const archive of archives) {
           try {
             const archiveResponse = await authFetch(getApiUrl(`/api/shipments/archives/${archive.fileName}`));
@@ -31,17 +31,13 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
 
             const archiveData = await archiveResponse.json();
             if (archiveData && archiveData.data) {
-              // Filter archived shipments that have 'stored' status
               const storedArchivedShipments = archiveData.data.filter(shipment =>
                 shipment.latestStatus === 'stored'
               );
-
-              // Mark as archived and add source
               storedArchivedShipments.forEach(shipment => {
                 shipment.isArchived = true;
                 shipment.archiveSource = archive.fileName;
               });
-
               allArchivedShipments.push(...storedArchivedShipments);
             }
           } catch (error) {
@@ -58,21 +54,19 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     };
 
     fetchArchivedShipments();
-
-    // Refresh archived shipments every 10 seconds to pick up updates from Archive Edit
     const interval = setInterval(fetchArchivedShipments, 10000);
     return () => clearInterval(interval);
   }, []);
 
   const filteredAndSortedShipments = useMemo(() => {
-    // Combine active stored shipments and archived stored shipments
     const allStoredShipments = [...shipments, ...archivedShipments];
 
     let filtered = allStoredShipments.filter(shipment => {
       const matchesSearch = searchTerm === '' ||
         shipment.orderRef?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         shipment.supplier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        shipment.finalPod?.toLowerCase().includes(searchTerm.toLowerCase());
+        shipment.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        shipment.receivingWarehouse?.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesWeek = weekFilters.length === 0 || weekFilters.includes(shipment.weekNumber);
 
@@ -89,18 +83,31 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
           bValue = new Date(b.receivingDate || b.updatedAt || b.estimatedArrival);
         }
 
-        if (aValue < bValue) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
-        }
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       });
     }
 
     return filtered;
   }, [shipments, archivedShipments, searchTerm, weekFilters, sortConfig]);
+
+  // Group filtered shipments by warehouse
+  const groupedByWarehouse = useMemo(() => {
+    const groups = {};
+    for (const s of filteredAndSortedShipments) {
+      const wh = s.receivingWarehouse || 'Unassigned';
+      if (!groups[wh]) groups[wh] = [];
+      groups[wh].push(s);
+    }
+    // Sort warehouse keys: named warehouses first, Unassigned last
+    const keys = Object.keys(groups).sort((a, b) => {
+      if (a === 'Unassigned') return 1;
+      if (b === 'Unassigned') return -1;
+      return a.localeCompare(b);
+    });
+    return keys.map(k => ({ name: k, shipments: groups[k] }));
+  }, [filteredAndSortedShipments]);
 
   const handleSort = (key) => {
     setSortConfig(current => ({
@@ -111,9 +118,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
 
   const toggleWeekFilter = (week) => {
     setWeekFilters(prev =>
-      prev.includes(week)
-        ? prev.filter(w => w !== week)
-        : [...prev, week]
+      prev.includes(week) ? prev.filter(w => w !== week) : [...prev, week]
     );
   };
 
@@ -123,40 +128,16 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
   }, [shipments, archivedShipments]);
 
   const getSortIcon = (columnKey) => {
-    if (sortConfig.key !== columnKey) return '⚬';
-    return sortConfig.direction === 'asc' ? '↑' : '↓';
-  };
-
-  const getStatusBadge = (status) => {
-    const statusColors = {
-      stored: 'var(--success)'
-    };
-
-    return (
-      <span style={{
-        padding: '4px 8px',
-        borderRadius: '12px',
-        fontSize: '0.8rem',
-        fontWeight: 'bold',
-        color: 'white',
-        backgroundColor: statusColors[status] || 'var(--text-500)'
-      }}>
-        {status.toUpperCase()}
-      </span>
-    );
+    if (sortConfig.key !== columnKey) return '';
+    return sortConfig.direction === 'asc' ? ' ↑' : ' ↓';
   };
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-ZA', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
+    return date.toLocaleDateString('en-ZA', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
-  // Get count of non-archived shipments (active shipments that can be archived)
   const activeShipmentsCount = shipments.length;
 
   const handleArchiveAll = async () => {
@@ -165,7 +146,6 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     const confirmArchive = window.confirm(
       `Are you sure you want to archive all ${activeShipmentsCount} stored shipment(s)?\n\nThis will move them to the archive for record-keeping.`
     );
-
     if (!confirmArchive) return;
 
     setArchivingAll(true);
@@ -185,309 +165,226 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     }
 
     setArchivingAll(false);
+    if (successCount > 0 && showSuccess) showSuccess(`Successfully archived ${successCount} shipment(s)`);
+    if (failCount > 0 && showError) showError(`Failed to archive ${failCount} shipment(s)`);
+  };
 
-    if (successCount > 0 && showSuccess) {
-      showSuccess(`✅ Successfully archived ${successCount} shipment(s)`);
-    }
-    if (failCount > 0 && showError) {
-      showError(`❌ Failed to archive ${failCount} shipment(s)`);
-    }
+  const toggleWarehouse = (name) => {
+    setCollapsedWarehouses(prev => ({ ...prev, [name]: !prev[name] }));
   };
 
   if (loading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '200px'
-      }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
         <div>Loading stored shipments...</div>
       </div>
     );
   }
 
+  const totalPallets = filteredAndSortedShipments.reduce((sum, s) => sum + (Number(s.palletQty) || 0), 0);
+
+  const thStyle = {
+    padding: '8px 12px',
+    textAlign: 'left',
+    borderBottom: '1px solid var(--border)',
+    cursor: 'pointer',
+    userSelect: 'none',
+    fontSize: 12,
+    fontWeight: 600,
+    color: 'var(--text-500)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.3px',
+  };
+
+  const columns = [
+    { key: 'orderRef', label: 'Order Ref' },
+    { key: 'supplier', label: 'Supplier' },
+    { key: 'productName', label: 'Product' },
+    { key: 'quantity', label: 'Qty' },
+    { key: 'palletQty', label: 'Pallets' },
+    { key: 'storedDate', label: 'Stored Date' },
+    { key: null, label: '' },
+  ];
+
   return (
     <div className="window-content">
       <div className="brand-strip" />
-      <div style={{ marginBottom: '1rem' }}>
-        <div className="page-header">
-          <h2>Warehouse Storage Report</h2>
+
+      {/* Compact header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--navy-900)' }}>Stored Stock</h2>
+          <span style={{ fontSize: 12, color: 'var(--text-500)', fontWeight: 500 }}>
+            {filteredAndSortedShipments.length} items &middot; {groupedByWarehouse.length} warehouses &middot; {totalPallets} pallets
+          </span>
         </div>
-        <div style={{
-          display: 'flex',
-          gap: '1rem',
-          alignItems: 'center',
-          marginBottom: '1rem'
-        }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <input
             type="text"
-            placeholder="Search stored shipments..."
+            placeholder="Search..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
-              padding: '8px 12px',
-              border: '1px solid var(--border)',
-              borderRadius: '4px',
-              fontSize: '14px',
-              minWidth: '300px'
+              padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 6,
+              fontSize: 13, width: 200, background: 'var(--surface)'
             }}
           />
           <div style={{ position: 'relative' }}>
             <button
+              className="btn btn-ghost"
               onClick={() => setShowWeekDropdown(!showWeekDropdown)}
-              style={{
-                padding: '8px 12px',
-                border: '1px solid var(--border)',
-                borderRadius: '4px',
-                fontSize: '14px',
-                backgroundColor: 'white',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--surface-2)'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+              style={{ fontSize: 13, padding: '6px 10px' }}
             >
-              📅 Week {weekFilters.length > 0 ? `(${weekFilters.length})` : ''}
-              <span style={{ fontSize: '10px' }}>▼</span>
+              Week {weekFilters.length > 0 ? `(${weekFilters.length})` : ''} <span style={{ fontSize: 10 }}>▼</span>
             </button>
             {showWeekDropdown && (
               <div style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                backgroundColor: 'white',
-                border: '1px solid var(--border)',
-                borderRadius: '4px',
-                marginTop: '4px',
-                maxHeight: '200px',
-                overflowY: 'auto',
-                minWidth: '120px',
-                zIndex: 10,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                position: 'absolute', top: '100%', right: 0, backgroundColor: 'white',
+                border: '1px solid var(--border)', borderRadius: 6, marginTop: 4,
+                maxHeight: 200, overflowY: 'auto', minWidth: 120, zIndex: 10,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
               }}>
                 {availableWeeks.map(week => (
                   <label key={week} style={{
-                    display: 'block',
-                    padding: '8px 12px',
-                    cursor: 'pointer',
-                    borderBottom: '1px solid var(--border)',
-                    fontSize: '14px',
-                    userSelect: 'none'
+                    display: 'block', padding: '6px 10px', cursor: 'pointer',
+                    borderBottom: '1px solid var(--border)', fontSize: 13, userSelect: 'none'
                   }}>
                     <input
                       type="checkbox"
                       checked={weekFilters.includes(week)}
                       onChange={() => toggleWeekFilter(week)}
-                      style={{ marginRight: '8px' }}
+                      style={{ marginRight: 6 }}
                     />
                     Week {week}
                   </label>
                 ))}
                 {availableWeeks.length === 0 && (
-                  <div style={{ padding: '12px', color: 'var(--text-500)', textAlign: 'center' }}>
-                    No weeks available
+                  <div style={{ padding: 10, color: 'var(--text-500)', textAlign: 'center', fontSize: 13 }}>
+                    No weeks
                   </div>
                 )}
               </div>
             )}
           </div>
-          <div style={{ color: 'var(--text-500)', fontSize: '14px' }}>
-            {filteredAndSortedShipments.length} stored shipment(s)
-            {activeShipmentsCount > 0 && (
-              <span style={{ color: 'var(--info)', marginLeft: '8px' }}>
-                ({activeShipmentsCount} active)
-              </span>
-            )}
-          </div>
           {activeShipmentsCount > 0 && (
             <button
+              className="btn btn-ghost"
               onClick={handleArchiveAll}
               disabled={archivingAll}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: archivingAll ? 'var(--text-500)' : 'var(--info)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: archivingAll ? 'not-allowed' : 'pointer',
-                fontSize: '14px',
-                fontWeight: '500',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                marginLeft: 'auto'
-              }}
-              onMouseEnter={(e) => !archivingAll && (e.target.style.backgroundColor = 'var(--accent-600)')}
-              onMouseLeave={(e) => !archivingAll && (e.target.style.backgroundColor = 'var(--info)')}
+              style={{ fontSize: 13, padding: '6px 10px' }}
             >
-              {archivingAll ? (
-                <>⏳ Archiving...</>
-              ) : (
-                <>📦 Archive All ({activeShipmentsCount})</>
-              )}
+              {archivingAll ? 'Archiving...' : `Archive All (${activeShipmentsCount})`}
             </button>
           )}
         </div>
       </div>
 
+      {/* Warehouse groups */}
       {filteredAndSortedShipments.length === 0 ? (
         <div style={{
-          textAlign: 'center',
-          padding: '2rem',
-          color: 'var(--text-500)',
-          backgroundColor: 'var(--surface-2)',
-          borderRadius: '8px',
-          border: '1px solid var(--border)'
+          textAlign: 'center', padding: '2rem', color: 'var(--text-500)',
+          backgroundColor: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)'
         }}>
-          <h3>No stored shipments found</h3>
-          <p>Shipments that have been received and stored in the warehouse will appear here for reference.</p>
+          <h3 style={{ margin: '0 0 8px' }}>No stored shipments found</h3>
+          <p style={{ margin: 0, fontSize: 14 }}>Shipments that have been received and stored will appear here grouped by warehouse.</p>
         </div>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table className="dash-panel" style={{
-            width: '100%',
-            borderCollapse: 'collapse',
-            padding: 0,
-            overflow: 'hidden'
-          }}>
-            <thead style={{ backgroundColor: 'var(--surface-2)' }}>
-              <tr>
-                <th style={{
-                  padding: '12px',
-                  textAlign: 'left',
-                  borderBottom: '1px solid var(--border)',
-                  cursor: 'pointer',
-                  userSelect: 'none'
-                }} onClick={() => handleSort('orderRef')}>
-                  Order Ref {getSortIcon('orderRef')}
-                </th>
-                <th style={{
-                  padding: '12px',
-                  textAlign: 'left',
-                  borderBottom: '1px solid var(--border)',
-                  cursor: 'pointer',
-                  userSelect: 'none'
-                }} onClick={() => handleSort('supplier')}>
-                  Supplier {getSortIcon('supplier')}
-                </th>
-                <th style={{
-                  padding: '12px',
-                  textAlign: 'left',
-                  borderBottom: '1px solid var(--border)',
-                  cursor: 'pointer',
-                  userSelect: 'none'
-                }} onClick={() => handleSort('productName')}>
-                  Product {getSortIcon('productName')}
-                </th>
-                <th style={{
-                  padding: '12px',
-                  textAlign: 'left',
-                  borderBottom: '1px solid var(--border)',
-                  cursor: 'pointer',
-                  userSelect: 'none'
-                }} onClick={() => handleSort('quantity')}>
-                  Quantity {getSortIcon('quantity')}
-                </th>
-                <th style={{
-                  padding: '12px',
-                  textAlign: 'left',
-                  borderBottom: '1px solid var(--border)',
-                  cursor: 'pointer',
-                  userSelect: 'none'
-                }} onClick={() => handleSort('receivingWarehouse')}>
-                  Warehouse {getSortIcon('receivingWarehouse')}
-                </th>
-                <th style={{
-                  padding: '12px',
-                  textAlign: 'left',
-                  borderBottom: '1px solid var(--border)',
-                  cursor: 'pointer',
-                  userSelect: 'none'
-                }} onClick={() => handleSort('storedDate')}>
-                  Stored Date {getSortIcon('storedDate')}
-                </th>
-                <th style={{
-                  padding: '12px',
-                  textAlign: 'left',
-                  borderBottom: '1px solid var(--border)'
-                }}>
-                  Status
-                </th>
-                <th style={{
-                  padding: '12px',
-                  textAlign: 'center',
-                  borderBottom: '1px solid var(--border)'
-                }}>
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAndSortedShipments.map((shipment) => (
-                <tr key={shipment.id} style={{
-                  borderBottom: '1px solid var(--border)',
-                  transition: 'background-color 0.2s'
-                }}
-                onMouseEnter={(e) => e.target.closest('tr').style.backgroundColor = 'var(--surface-2)'}
-                onMouseLeave={(e) => e.target.closest('tr').style.backgroundColor = 'white'}>
-                  <td style={{ padding: '12px', fontWeight: 'bold' }}>
-                    {shipment.orderRef}
-                  </td>
-                  <td style={{ padding: '12px' }}>
-                    {shipment.supplier}
-                  </td>
-                  <td style={{ padding: '12px' }}>
-                    {shipment.productName || 'N/A'}
-                  </td>
-                  <td style={{ padding: '12px' }}>
-                    {shipment.quantity ? `${shipment.quantity} units` : 'N/A'}
-                  </td>
-                  <td style={{ padding: '12px' }}>
-                    {shipment.receivingWarehouse || 'N/A'}
-                  </td>
-                  <td style={{ padding: '12px' }}>
-                    {formatDate(shipment.receivingDate || shipment.updatedAt || shipment.estimatedArrival)}
-                  </td>
-                  <td style={{ padding: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    {getStatusBadge(shipment.latestStatus)}
-                    {shipment.isArchived && (
-                      <span style={{
-                        padding: '4px 8px',
-                        borderRadius: '12px',
-                        fontSize: '0.75rem',
-                        fontWeight: 'bold',
-                        color: 'white',
-                        backgroundColor: 'var(--text-500)'
-                      }}>
-                        ARCHIVED
-                      </span>
-                    )}
-                  </td>
-                  <td style={{ padding: '12px', textAlign: 'center' }}>
-                    <button
-                      onClick={() => onArchiveShipment ? onArchiveShipment(shipment.id) : onDeleteShipment(shipment.id)}
-                      style={{
-                        padding: '6px 12px',
-                        backgroundColor: 'var(--info)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '12px'
-                      }}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--accent-600)'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--info)'}
-                    >
-                      Archive
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {groupedByWarehouse.map(({ name, shipments: warehouseShipments }) => {
+            const isCollapsed = collapsedWarehouses[name];
+            const whPallets = warehouseShipments.reduce((sum, s) => sum + (Number(s.palletQty) || 0), 0);
+            const activeCount = warehouseShipments.filter(s => !s.isArchived).length;
+            const archivedCount = warehouseShipments.length - activeCount;
+
+            return (
+              <div key={name} className="dash-panel" style={{ padding: 0, overflow: 'hidden' }}>
+                {/* Warehouse header */}
+                <button
+                  onClick={() => toggleWarehouse(name)}
+                  type="button"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                    padding: '10px 16px', background: 'var(--surface-2)', border: 'none',
+                    borderBottom: isCollapsed ? 'none' : '1px solid var(--border)',
+                    cursor: 'pointer', textAlign: 'left',
+                  }}
+                >
+                  <span style={{
+                    transform: isCollapsed ? 'rotate(0deg)' : 'rotate(90deg)',
+                    transition: 'transform 0.2s', fontSize: 11, color: 'var(--text-500)'
+                  }}>▶</span>
+                  <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--navy-900)' }}>{name}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-500)', fontWeight: 500 }}>
+                    {warehouseShipments.length} item{warehouseShipments.length !== 1 ? 's' : ''}
+                    {whPallets > 0 && <> &middot; {whPallets} pallets</>}
+                    {archivedCount > 0 && <> &middot; {archivedCount} archived</>}
+                  </span>
+                </button>
+
+                {/* Table */}
+                {!isCollapsed && (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr>
+                          {columns.map((col, i) => (
+                            <th
+                              key={i}
+                              onClick={col.key ? () => handleSort(col.key) : undefined}
+                              style={{ ...thStyle, cursor: col.key ? 'pointer' : 'default' }}
+                            >
+                              {col.label}{col.key ? getSortIcon(col.key) : ''}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {warehouseShipments.map((shipment) => (
+                          <tr
+                            key={shipment.id}
+                            style={{ borderBottom: '1px solid var(--border)', transition: 'background-color 0.15s' }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-2)'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''}
+                          >
+                            <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--accent)', fontSize: 13 }}>
+                              {shipment.orderRef}
+                              {shipment.isArchived && (
+                                <span style={{
+                                  marginLeft: 6, padding: '1px 5px', borderRadius: 4,
+                                  fontSize: 10, fontWeight: 600, background: 'var(--surface-2)',
+                                  color: 'var(--text-500)'
+                                }}>
+                                  ARCHIVED
+                                </span>
+                              )}
+                            </td>
+                            <td style={{ padding: '8px 12px', fontSize: 13 }}>{shipment.supplier}</td>
+                            <td style={{ padding: '8px 12px', fontSize: 13 }}>{shipment.productName || 'N/A'}</td>
+                            <td style={{ padding: '8px 12px', fontSize: 13 }}>{shipment.quantity || 'N/A'}</td>
+                            <td style={{ padding: '8px 12px', fontSize: 13 }}>{shipment.palletQty || '-'}</td>
+                            <td style={{ padding: '8px 12px', fontSize: 13 }}>
+                              {formatDate(shipment.receivingDate || shipment.updatedAt || shipment.estimatedArrival)}
+                            </td>
+                            <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                              {!shipment.isArchived && (
+                                <button
+                                  className="btn btn-ghost"
+                                  onClick={() => onArchiveShipment ? onArchiveShipment(shipment.id) : onDeleteShipment(shipment.id)}
+                                  style={{ fontSize: 12, padding: '4px 10px' }}
+                                >
+                                  Archive
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
