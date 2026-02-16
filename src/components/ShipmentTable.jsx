@@ -345,9 +345,9 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
       shipment.forwardingAgent || '-',
       shipment.vesselName || '-',
       shipment.incoterm || '-',
-      shipment.palletQty || '-'
+      shipment.palletQty ? (Math.round(shipment.palletQty) || 1) : '-'
     ]);
-    
+
     // Add table
     doc.autoTable({
       head: [[
@@ -452,7 +452,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
         shipment.forwardingAgent || '',
         shipment.vesselName || '',
         shipment.incoterm || '',
-        shipment.palletQty || ''
+        shipment.palletQty ? (Math.round(shipment.palletQty) || 1) : ''
       ])
     ];
 
@@ -2173,7 +2173,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Pallet Qty</label>
-              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.palletQty || '—'}</span>
+              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.palletQty ? (Math.round(orderDetailsShipment.palletQty) || 1) : '—'}</span>
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>CBM</label>
