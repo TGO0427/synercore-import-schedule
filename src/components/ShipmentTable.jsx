@@ -1439,7 +1439,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   <option value="">Select Warehouse</option>
                   <option value="PRETORIA">PRETORIA</option>
                   <option value="KLAPMUTS">KLAPMUTS</option>
-                  <option value="OFFSITE">OFFSITE</option>
+                  <option value="Offsite">Offsite</option>
                 </select>
               </div>
 
@@ -1752,7 +1752,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   <option value="">Select Warehouse</option>
                   <option value="PRETORIA">PRETORIA</option>
                   <option value="KLAPMUTS">KLAPMUTS</option>
-                  <option value="OFFSITE">OFFSITE</option>
+                  <option value="Offsite">Offsite</option>
                 </select>
               </div>
 
