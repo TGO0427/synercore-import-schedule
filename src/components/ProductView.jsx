@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import WeekCalendar from './WeekCalendar';
 import IncomingProductsChart from './IncomingProductsChart';
-import CurrentWeekStoredReport from './CurrentWeekStoredReport';
 import * as XLSX from 'xlsx';
 import { ShipmentStatus } from '../types/shipment';
 
@@ -10,6 +9,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
   const [sortConfig, setSortConfig] = useState({ key: 'weekNumber', direction: 'asc' });
   const [selectedWarehouse, setSelectedWarehouse] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [showChart, setShowChart] = useState(false);
 
   // local edit buffer so we only commit on blur / Enter
   const [edits, setEdits] = useState({}); // { [id]: { quantity?, palletQty?, receivingWarehouse? } }
@@ -245,7 +245,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
       
       // Add summary statistics
       const totalQuantity = filteredAndSortedProducts.reduce((sum, p) => sum + normNum(p.quantity), 0);
-      const totalPalletQty = filteredAndSortedProducts.reduce((sum, p) => sum + normNum(p.palletQty), 0);
+      const totalPalletQty = Math.round(filteredAndSortedProducts.reduce((sum, p) => sum + normNum(p.palletQty), 0));
       const uniqueWarehouses = new Set(filteredAndSortedProducts.map(p => p.receivingWarehouse || 'Unassigned')).size;
 
       worksheetData.push([`Total Products: ${filteredAndSortedProducts.length}`, '', `Total Quantity: ${totalQuantity}`, '', `Total Pallet Qty: ${totalPalletQty}`, '', `Warehouses: ${uniqueWarehouses}`]);
@@ -286,7 +286,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
         worksheetData.push([
           shipment.productName || '',
           normNum(shipment.quantity),
-          normNum(shipment.palletQty),
+          Math.round(normNum(shipment.palletQty)) || 1,
           shipment.receivingWarehouse || 'Unassigned',
           `Week ${normNum(shipment.weekNumber)}`,
           shipment.supplier || '',
@@ -395,23 +395,11 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
 
   const warehouseTotals = useMemo(() => {
     const totals = {};
-    console.log('🔍 WAREHOUSE TOTALS - Total shipments to process:', (shipments || []).length);
-
     (shipments || []).forEach((sh) => {
-      // Only exclude STORED shipments (they're shown separately in Warehouse Stored view)
-      if (sh.latestStatus === ShipmentStatus.STORED) {
-        console.log('❌ FILTERED OUT (stored):', sh.orderRef);
-        return;
-      }
-
+      if (sh.latestStatus === ShipmentStatus.STORED) return;
       const warehouse = sh.receivingWarehouse || 'Unassigned';
-      const palletQty = normNum(sh.palletQty);
-      totals[warehouse] = (totals[warehouse] || 0) + palletQty;
-
-      console.log('✅ INCLUDED:', sh.orderRef, 'warehouse:', warehouse, 'palletQty:', palletQty, 'running total:', totals[warehouse]);
+      totals[warehouse] = (totals[warehouse] || 0) + normNum(sh.palletQty);
     });
-
-    console.log('🏁 FINAL WAREHOUSE TOTALS:', totals);
     return totals;
   }, [shipments]);
 
@@ -580,11 +568,20 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
         )}
       </div>
 
-      {/* Incoming Products Chart */}
-      <IncomingProductsChart shipments={filteredAndSortedProducts} />
-
-      {/* Current Week Stored Shipments Report */}
-      <CurrentWeekStoredReport shipments={shipments} />
+      {/* Incoming Products Chart (collapsible) */}
+      <div style={{ padding: '0 24px' }}>
+        <button onClick={() => setShowChart(!showChart)} style={{
+          display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none',
+          cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text-700)', padding: '8px 0'
+        }}>
+          <span style={{
+            display: 'inline-block', transform: showChart ? 'rotate(90deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s', fontSize: 11
+          }}>&#9654;</span>
+          Incoming Products Chart
+        </button>
+        {showChart && <IncomingProductsChart shipments={filteredAndSortedProducts} />}
+      </div>
 
       {/* Warehouse Summary */}
       <div className="warehouse-summary" style={{ marginBottom: '1rem' }}>
@@ -604,7 +601,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
                 🏭
               </div>
               <h3 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 4px', color: 'var(--navy-900)' }}>
-                {Number(total).toLocaleString()}
+                {Math.round(Number(total)).toLocaleString()}
               </h3>
               <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>
                 {warehouse}
