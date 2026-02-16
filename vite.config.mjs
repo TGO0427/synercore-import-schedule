@@ -54,7 +54,10 @@ export default defineConfig({
             if (id.includes('react')) {
               return 'react-vendor';
             }
-            if (id.includes('chart') || id.includes('jspdf')) {
+            if (id.includes('recharts') || id.includes('d3-') || id.includes('victory') || id.includes('react-smooth')) {
+              return 'recharts-vendor';
+            }
+            if (id.includes('chart.js') || id.includes('react-chartjs') || id.includes('jspdf')) {
               return 'chart-vendor';
             }
             if (id.includes('zustand') || id.includes('socket.io')) {
