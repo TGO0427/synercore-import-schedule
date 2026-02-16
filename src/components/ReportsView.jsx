@@ -344,7 +344,7 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
         };
       }
       forwardingAgentStats[forwardingAgent].total++;
-      forwardingAgentStats[forwardingAgent].totalPalletQty += shipment.cbm || 0;
+      forwardingAgentStats[forwardingAgent].totalPalletQty += shipment.palletQty || 0;
       if (status === ShipmentStatus.ARRIVED_PTA || status === ShipmentStatus.ARRIVED_KLM) {
         forwardingAgentStats[forwardingAgent].delivered++;
       } else if (status === ShipmentStatus.DELAYED) {
@@ -563,7 +563,7 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
                     <td className="status-arrived">{stats.delivered}</td>
                     <td className="status-transit">{stats.inTransit}</td>
                     <td className="status-delayed">{stats.delayed}</td>
-                    <td>{Math.round(stats.totalPalletQty)}</td>
+                    <td>{Math.round(stats.totalPalletQty) || '-'}</td>
                     <td>
                       <div className="performance-bar">
                         <div
