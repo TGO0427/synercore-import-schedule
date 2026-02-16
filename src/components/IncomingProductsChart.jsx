@@ -20,82 +20,57 @@ ChartJS.register(
 );
 
 function IncomingProductsChart({ shipments }) {
-  const chartData = useMemo(() => {
-    if (!shipments || shipments.length === 0) {
-      return null;
-    }
+  const warehouseData = useMemo(() => {
+    if (!shipments || shipments.length === 0) return null;
 
-    // Group data by warehouse
-    const warehouseData = {};
-
-    shipments.forEach(shipment => {
-      const warehouse = shipment.receivingWarehouse || 'Unassigned';
-
-      if (!warehouseData[warehouse]) {
-        warehouseData[warehouse] = {
-          productCount: 0,
-          totalQuantity: 0,
-          totalPallets: 0,
-          products: new Set()
-        };
-      }
-
-      warehouseData[warehouse].productCount += 1;
-      warehouseData[warehouse].totalQuantity += Number(shipment.quantity) || 0;
-      warehouseData[warehouse].totalPallets += Number(shipment.palletQty) || 0;
-      warehouseData[warehouse].products.add(shipment.productName || 'Unknown');
+    const groups = {};
+    shipments.forEach(s => {
+      const wh = s.receivingWarehouse || 'Unassigned';
+      if (!groups[wh]) groups[wh] = { products: 0, quantity: 0, pallets: 0 };
+      groups[wh].products += 1;
+      groups[wh].quantity += Number(s.quantity) || 0;
+      groups[wh].pallets += Number(s.palletQty) || 0;
     });
 
-    // Convert to arrays for Chart.js
-    const warehouses = Object.keys(warehouseData).sort();
-    const productCounts = warehouses.map(w => warehouseData[w].productCount);
-    const quantities = warehouses.map(w => warehouseData[w].totalQuantity);
-    const pallets = warehouses.map(w => Math.round(warehouseData[w].totalPallets));
-
-    // Generate colors for warehouses
-    const colors = [
-      'rgba(54, 162, 235, 0.8)',   // Blue
-      'rgba(255, 99, 132, 0.8)',   // Red
-      'rgba(255, 205, 86, 0.8)',   // Yellow
-      'rgba(75, 192, 192, 0.8)',   // Teal
-      'rgba(153, 102, 255, 0.8)',  // Purple
-      'rgba(255, 159, 64, 0.8)',   // Orange
-      'rgba(199, 199, 199, 0.8)',  // Grey
-      'rgba(83, 102, 255, 0.8)',   // Indigo
-    ];
-
-    const borderColors = colors.map(color => color.replace('0.8', '1'));
-
+    const warehouses = Object.keys(groups).sort();
     return {
-      labels: warehouses,
-      datasets: [
-        {
-          label: 'Number of Products',
-          data: productCounts,
-          backgroundColor: colors[0],
-          borderColor: borderColors[0],
-          borderWidth: 1,
-          yAxisID: 'y',
-        },
-        {
-          label: 'Total Quantity',
-          data: quantities,
-          backgroundColor: colors[1],
-          borderColor: borderColors[1],
-          borderWidth: 1,
-          yAxisID: 'y1',
-        },
-        {
-          label: 'Total Pallets',
-          data: pallets,
-          backgroundColor: colors[2],
-          borderColor: borderColors[2],
-          borderWidth: 1,
-          yAxisID: 'y2',
-        },
-      ],
+      warehouses,
+      products: warehouses.map(w => groups[w].products),
+      pallets: warehouses.map(w => Math.round(groups[w].pallets)),
     };
   }, [shipments]);
+
+  if (!warehouseData) {
+    return (
+      <div style={{ padding: 16, textAlign: 'center', color: 'var(--text-500)', fontSize: 13 }}>
+        No data available
+      </div>
+    );
+  }
+
+  const chartData = {
+    labels: warehouseData.warehouses,
+    datasets: [
+      {
+        label: 'Products',
+        data: warehouseData.products,
+        backgroundColor: 'rgba(5, 150, 105, 0.7)',
+        borderColor: 'rgba(5, 150, 105, 1)',
+        borderWidth: 1,
+        borderRadius: 4,
+        yAxisID: 'y',
+      },
+      {
+        label: 'Pallets',
+        data: warehouseData.pallets,
+        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+        borderColor: 'rgba(59, 130, 246, 1)',
+        borderWidth: 1,
+        borderRadius: 4,
+        yAxisID: 'y',
+      },
+    ],
+  };
 
   const options = {
     responsive: true,
@@ -103,166 +78,33 @@ function IncomingProductsChart({ shipments }) {
     plugins: {
       legend: {
         position: 'top',
-        labels: {
-          font: {
-            size: 12
-          }
-        }
+        align: 'end',
+        labels: { font: { size: 11 }, boxWidth: 12, padding: 12 },
       },
-      title: {
-        display: true,
-        text: 'Incoming Products by Receiving Warehouse',
-        font: {
-          size: 16,
-          weight: 'bold'
-        }
-      },
+      title: { display: false },
       tooltip: {
         callbacks: {
-          label: function(context) {
-            const label = context.dataset.label || '';
-            const value = context.parsed.y;
-
-            if (label === 'Number of Products') {
-              return `${label}: ${value} products`;
-            } else if (label === 'Total Quantity') {
-              return `${label}: ${value.toLocaleString()} units`;
-            } else if (label === 'Total Pallets') {
-              return `${label}: ${value} pallets`;
-            }
-            return `${label}: ${value}`;
-          }
-        }
-      }
+          label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}`,
+        },
+      },
     },
     scales: {
       x: {
-        title: {
-          display: true,
-          text: 'Receiving Warehouse',
-          font: {
-            size: 14,
-            weight: 'bold'
-          }
-        },
-        ticks: {
-          maxRotation: 45,
-          minRotation: 0
-        }
+        grid: { display: false },
+        ticks: { font: { size: 12, weight: '600' } },
       },
       y: {
-        type: 'linear',
-        display: true,
-        position: 'left',
-        title: {
-          display: true,
-          text: 'Number of Products',
-          color: 'rgba(54, 162, 235, 1)',
-          font: {
-            size: 12,
-            weight: 'bold'
-          }
-        },
-        ticks: {
-          color: 'rgba(54, 162, 235, 1)',
-        },
-        grid: {
-          drawOnChartArea: false,
-        },
-      },
-      y1: {
-        type: 'linear',
-        display: true,
-        position: 'right',
-        title: {
-          display: true,
-          text: 'Total Quantity',
-          color: 'rgba(255, 99, 132, 1)',
-          font: {
-            size: 12,
-            weight: 'bold'
-          }
-        },
-        ticks: {
-          color: 'rgba(255, 99, 132, 1)',
-          callback: function(value) {
-            return value.toLocaleString();
-          }
-        },
-        grid: {
-          drawOnChartArea: false,
-        },
-      },
-      y2: {
-        type: 'linear',
-        display: false, // Hide this axis to avoid clutter
-        position: 'right',
+        beginAtZero: true,
+        grid: { color: 'var(--border)' },
+        ticks: { font: { size: 11 } },
       },
     },
   };
 
-  if (!chartData) {
-    return (
-      <div style={{
-        padding: '2rem',
-        textAlign: 'center',
-        backgroundColor: '#f8f9fa',
-        borderRadius: '8px',
-        border: '1px solid #dee2e6'
-      }}>
-        <p style={{ margin: 0, color: '#6c757d' }}>No data available for chart</p>
-      </div>
-    );
-  }
-
   return (
-    <div style={{
-      backgroundColor: 'white',
-      padding: '1.5rem',
-      borderRadius: '8px',
-      border: '1px solid #dee2e6',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      marginBottom: '2rem'
-    }}>
-      <div style={{ height: '400px' }}>
+    <div className="dash-panel" style={{ padding: 16, marginBottom: 0 }}>
+      <div style={{ height: 180 }}>
         <Bar data={chartData} options={options} />
-      </div>
-
-      {/* Summary stats below chart */}
-      <div style={{
-        marginTop: '1rem',
-        padding: '1rem',
-        backgroundColor: '#f8f9fa',
-        borderRadius: '6px',
-        display: 'flex',
-        justifyContent: 'space-around',
-        flexWrap: 'wrap',
-        gap: '1rem'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#007bff' }}>
-            {chartData.labels.length}
-          </div>
-          <div style={{ fontSize: '0.9rem', color: '#6c757d' }}>Warehouses</div>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#28a745' }}>
-            {chartData.datasets[0].data.reduce((sum, val) => sum + val, 0)}
-          </div>
-          <div style={{ fontSize: '0.9rem', color: '#6c757d' }}>Total Products</div>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#dc3545' }}>
-            {chartData.datasets[1].data.reduce((sum, val) => sum + val, 0).toLocaleString()}
-          </div>
-          <div style={{ fontSize: '0.9rem', color: '#6c757d' }}>Total Quantity</div>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ffc107' }}>
-            {chartData.datasets[2].data.reduce((sum, val) => sum + val, 0)}
-          </div>
-          <div style={{ fontSize: '0.9rem', color: '#6c757d' }}>Total Pallets</div>
-        </div>
       </div>
     </div>
   );

@@ -583,32 +583,28 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
         {showChart && <IncomingProductsChart shipments={filteredAndSortedProducts} />}
       </div>
 
-      {/* Warehouse Summary */}
-      <div className="warehouse-summary" style={{ marginBottom: '1rem' }}>
-        <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-900)' }}>Warehouse Summary - Total Pallets by Warehouse</h3>
-        <div className="stats-grid">
-          {Object.entries(warehouseTotals).map(([warehouse, total]) => (
-            <div
-              key={warehouse}
-              className={`stat-card ring-info clickable ${selectedWarehouse === warehouse ? 'active' : ''}`}
-              onClick={() => handleWarehouseCardClick(warehouse)}
-            >
-              <div style={{
-                width: 36, height: 36, borderRadius: '50%', display: 'flex',
-                alignItems: 'center', justifyContent: 'center', fontSize: 16,
-                backgroundColor: 'rgba(59,130,246,0.1)', marginBottom: 8,
-              }}>
-                🏭
-              </div>
-              <h3 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 4px', color: 'var(--navy-900)' }}>
-                {Math.round(Number(total)).toLocaleString()}
-              </h3>
-              <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>
-                {warehouse}
-              </p>
-            </div>
-          ))}
-        </div>
+      {/* Warehouse Pallet Summary — compact inline */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 24px', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-500)', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+          Pallets by Warehouse:
+        </span>
+        {Object.entries(warehouseTotals).map(([warehouse, total]) => (
+          <button
+            key={warehouse}
+            onClick={() => handleWarehouseCardClick(warehouse)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '5px 12px', borderRadius: 6, fontSize: 13, cursor: 'pointer',
+              border: selectedWarehouse === warehouse ? '2px solid var(--accent)' : '1px solid var(--border)',
+              background: selectedWarehouse === warehouse ? 'rgba(5,150,105,0.08)' : 'var(--surface-2)',
+              fontWeight: 600, color: 'var(--navy-900)',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <span style={{ fontSize: 15, fontWeight: 800 }}>{Math.round(Number(total)).toLocaleString()}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-500)', textTransform: 'uppercase' }}>{warehouse}</span>
+          </button>
+        ))}
       </div>
 
       <div style={{ overflowX: 'auto' }}>
