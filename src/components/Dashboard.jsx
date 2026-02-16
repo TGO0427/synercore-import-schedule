@@ -174,10 +174,12 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
 
   // Products & Pallets weekly trend (replaces ProductView chart)
   const productsPalletsTrend = useMemo(() => {
+    const currentWeek = getCurrentWeek();
+    const maxWeek = currentWeek + 2;
     const weeks = {};
     (shipments || []).forEach(s => {
       const wk = Number(s.weekNumber) || 0;
-      if (wk === 0) return;
+      if (wk === 0 || wk > maxWeek) return;
       if (!weeks[wk]) weeks[wk] = { products: 0, pallets: 0 };
       weeks[wk].products += 1;
       weeks[wk].pallets += Math.round(Number(s.palletQty) || 0);
@@ -415,7 +417,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
 
         {/* Warehouse Distribution */}
         {warehouseChartData.length > 0 && (
-          <div className="dash-panel">
+          <div className="dash-panel" style={{ alignSelf: 'start' }}>
             <PanelHeader icon="🏭" title="By Warehouse" subtitle={`${warehouseChartData.length} location${warehouseChartData.length !== 1 ? 's' : ''}`} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {warehouseChartData.map((warehouse, idx) => (
