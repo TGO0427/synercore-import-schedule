@@ -5,6 +5,7 @@ import ImportValidationPreview from './ImportValidationPreview';
 import './FileUpload.css'; // ← add this
 
 function FileUpload({ onFileUpload, loading }) {
+  const [isOpen, setIsOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [validationData, setValidationData] = useState(null);
   const [validationLoading, setValidationLoading] = useState(false);
@@ -67,60 +68,81 @@ function FileUpload({ onFileUpload, loading }) {
 
   return (
     <>
-      <div className="fu-section">
-        <h3 className="fu-title">Import Excel File</h3>
-        <p className="fu-subtitle">Upload your existing shipment schedule Excel file to import all shipments at once.</p>
-
-        <div className="fu-actions">
-          <button className="btn btn-secondary" onClick={handleDownloadTemplate} type="button">
-            📥 Download Template
-          </button>
-          <span className="fu-actions-hint">Download a properly formatted Excel template</span>
-        </div>
-
-        <div
-          className={`fu-dropzone ${isDragOver ? 'is-dragover' : ''} ${validationLoading || loading ? 'is-loading' : ''}`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={handleUploadClick}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e)=> (e.key === 'Enter' || e.key === ' ') && handleUploadClick()}
-          aria-busy={validationLoading || loading ? 'true' : 'false'}
+      <div className="fu-section" style={{ padding: isOpen ? undefined : 0 }}>
+        {/* Toggle bar */}
+        <button
+          onClick={() => setIsOpen(prev => !prev)}
+          type="button"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+            padding: '10px 16px', background: 'var(--surface-2)', border: 'none',
+            borderBottom: isOpen ? '1px solid var(--border)' : 'none',
+            borderRadius: isOpen ? '8px 8px 0 0' : 8,
+            cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text-700)',
+            transition: 'background 0.15s',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--border)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'var(--surface-2)'}
         >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls"
-            onChange={handleFileInputChange}
-            className="fu-input"
-            disabled={validationLoading || loading}
-          />
+          <span style={{ transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s', fontSize: 11 }}>▶</span>
+          Import Excel File
+          <span style={{ fontWeight: 400, color: 'var(--text-500)', fontSize: 12 }}>Upload a shipment schedule spreadsheet</span>
+        </button>
 
-          {validationLoading || loading ? (
-            <div className="fu-state fu-state--loading">
-              <div className="fu-emoji" aria-hidden>⏳</div>
-              <p>{validationLoading ? 'Validating file...' : 'Processing file...'}</p>
+        {isOpen && (
+          <div style={{ padding: '1rem 1.25rem' }}>
+            <div className="fu-actions">
+              <button className="btn btn-secondary" onClick={handleDownloadTemplate} type="button">
+                Download Template
+              </button>
+              <span className="fu-actions-hint">Download a properly formatted Excel template</span>
             </div>
-          ) : (
-            <div className="fu-state">
-              <div className="fu-emoji fu-emoji--accent" aria-hidden>📊</div>
-              <h4 className="fu-headline">Drag and drop your Excel file here</h4>
-              <p className="fu-hint">or click to browse</p>
-              <button className="btn" type="button">Choose File</button>
-            </div>
-          )}
-        </div>
 
-        <div className="fu-help">
-          <p><strong>Supported formats:</strong> .xlsx, .xls</p>
-          <p><strong>Maximum file size:</strong> 10MB</p>
-          <p>
-            <strong>Expected columns:</strong> SUPPLIER, ORDER/REF, FINAL POD, LATEST STATUS, WEEK NUMBER, PRODUCT NAME,
-            QUANTITY, PALLET QTY, RECEIVING WAREHOUSE, FORWARDING AGENT
-          </p>
-        </div>
+            <div
+              className={`fu-dropzone ${isDragOver ? 'is-dragover' : ''} ${validationLoading || loading ? 'is-loading' : ''}`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={handleUploadClick}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e)=> (e.key === 'Enter' || e.key === ' ') && handleUploadClick()}
+              aria-busy={validationLoading || loading ? 'true' : 'false'}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleFileInputChange}
+                className="fu-input"
+                disabled={validationLoading || loading}
+              />
+
+              {validationLoading || loading ? (
+                <div className="fu-state fu-state--loading">
+                  <div className="fu-emoji" aria-hidden>⏳</div>
+                  <p>{validationLoading ? 'Validating file...' : 'Processing file...'}</p>
+                </div>
+              ) : (
+                <div className="fu-state">
+                  <div className="fu-emoji fu-emoji--accent" aria-hidden>📊</div>
+                  <h4 className="fu-headline">Drag and drop your Excel file here</h4>
+                  <p className="fu-hint">or click to browse</p>
+                  <button className="btn" type="button">Choose File</button>
+                </div>
+              )}
+            </div>
+
+            <div className="fu-help">
+              <p><strong>Supported formats:</strong> .xlsx, .xls</p>
+              <p><strong>Maximum file size:</strong> 10MB</p>
+              <p>
+                <strong>Expected columns:</strong> SUPPLIER, ORDER/REF, FINAL POD, LATEST STATUS, WEEK NUMBER, PRODUCT NAME,
+                QUANTITY, PALLET QTY, RECEIVING WAREHOUSE, FORWARDING AGENT
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {validationData && (
