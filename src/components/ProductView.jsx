@@ -646,7 +646,7 @@ function ProductView({ shipments, onUpdateShipment, loading }) {
               filteredAndSortedProducts.map((shipment) => {
                 const draft = edits[shipment.id] || {};
                 const qVal = draft.quantity ?? normNum(shipment.quantity);
-                const palletQtyVal = draft.palletQty ?? normNum(shipment.palletQty);
+                const palletQtyVal = draft.palletQty ?? (Math.round(normNum(shipment.palletQty)) || (shipment.palletQty ? 1 : 0));
                 const whVal = draft.receivingWarehouse ?? (shipment.receivingWarehouse || '');
 
                 return (
