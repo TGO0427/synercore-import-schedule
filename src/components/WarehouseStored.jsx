@@ -222,16 +222,16 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     letterSpacing: '0.3px',
   };
 
-  const baseColumns = [
-    { key: 'orderRef', label: 'Order Ref' },
-    { key: 'supplier', label: 'Supplier' },
-    { key: 'productName', label: 'Product' },
-    { key: 'quantity', label: 'Qty' },
-    { key: 'palletQty', label: 'Pallets' },
-    { key: 'storedDate', label: 'Stored Date' },
+  const columns = [
+    { key: 'orderRef', label: 'Order Ref', width: '15%' },
+    { key: 'supplier', label: 'Supplier', width: '18%' },
+    { key: 'productName', label: 'Product', width: '22%' },
+    { key: 'quantity', label: 'Qty', width: '8%' },
+    { key: 'palletQty', label: 'Pallets', width: '8%' },
+    { key: 'storedDate', label: 'Stored Date', width: '12%' },
+    { key: 'daysInStorage', label: 'Days', width: '6%' },
+    { key: null, label: '', width: '11%' },
   ];
-
-  const columns = [...baseColumns, { key: 'daysInStorage', label: 'Days' }, { key: null, label: '' }];
 
   const getDaysInStorage = (shipment) => {
     const storedDate = shipment.receivingDate || shipment.updatedAt || shipment.estimatedArrival;
@@ -360,14 +360,14 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                   const isOffsite = name.toUpperCase() === 'OFFSITE';
                   return (
                   <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                       <thead>
                         <tr>
                           {columns.map((col, i) => (
                             <th
                               key={i}
                               onClick={col.key ? () => handleSort(col.key) : undefined}
-                              style={{ ...thStyle, cursor: col.key ? 'pointer' : 'default' }}
+                              style={{ ...thStyle, width: col.width, cursor: col.key ? 'pointer' : 'default' }}
                             >
                               {col.label}{col.key ? getSortIcon(col.key) : ''}
                             </th>
@@ -403,8 +403,8 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                                 </span>
                               )}
                             </td>
-                            <td style={{ padding: '8px 12px', fontSize: 13 }}>{shipment.supplier}</td>
-                            <td style={{ padding: '8px 12px', fontSize: 13 }}>{shipment.productName || 'N/A'}</td>
+                            <td style={{ padding: '8px 12px', fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={shipment.supplier}>{shipment.supplier}</td>
+                            <td style={{ padding: '8px 12px', fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={shipment.productName}>{shipment.productName || 'N/A'}</td>
                             <td style={{ padding: '8px 12px', fontSize: 13 }}>{shipment.quantity || 'N/A'}</td>
                             <td style={{ padding: '8px 12px', fontSize: 13 }}>{shipment.palletQty ? (Math.round(shipment.palletQty) || 1) : '-'}</td>
                             <td style={{ padding: '8px 12px', fontSize: 13 }}>
