@@ -14,6 +14,7 @@ function ArchiveView() {
   const [editingShipment, setEditingShipment] = useState(null);
   const [editFormData, setEditFormData] = useState(null);
   const [showFileArchives, setShowFileArchives] = useState(false);
+  const [detailShipment, setDetailShipment] = useState(null);
 
   useEffect(() => {
     fetchArchives();
@@ -231,7 +232,13 @@ function ArchiveView() {
                       onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--surface-2)'}
                       onMouseLeave={e => e.currentTarget.style.backgroundColor = ''}>
                       <td style={{ padding: '8px 12px', fontSize: 13, fontWeight: 500 }}>{s.supplier}</td>
-                      <td style={{ padding: '8px 12px', fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>{s.orderRef}</td>
+                      <td style={{ padding: '8px 12px', fontSize: 13, fontWeight: 600 }}>
+                        <span
+                          onClick={() => setDetailShipment(s)}
+                          style={{ color: 'var(--accent)', cursor: 'pointer', borderBottom: '1px dashed var(--accent)' }}
+                          title="View order details"
+                        >{s.orderRef}</span>
+                      </td>
                       <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.productName}</td>
                       <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.quantity?.toLocaleString()}</td>
                       <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.palletQty ? (Math.round(s.palletQty) || 1) : '-'}</td>
@@ -415,8 +422,12 @@ function ArchiveView() {
                     <tr key={s.id} style={{ borderBottom: '1px solid var(--border)' }}
                       onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--surface-2)'}
                       onMouseLeave={e => e.currentTarget.style.backgroundColor = ''}>
-                      <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--accent)', fontSize: 13 }}>
-                        {s.orderRef || s.order_ref}
+                      <td style={{ padding: '8px 12px', fontWeight: 600, fontSize: 13 }}>
+                        <span
+                          onClick={() => setDetailShipment(s)}
+                          style={{ color: 'var(--accent)', cursor: 'pointer', borderBottom: '1px dashed var(--accent)' }}
+                          title="View order details"
+                        >{s.orderRef || s.order_ref}</span>
                       </td>
                       <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.supplier}</td>
                       <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.productName || s.product_name || 'N/A'}</td>
@@ -524,6 +535,77 @@ function ArchiveView() {
           </div>
         )}
       </div>
+      {/* Order Detail Card */}
+      {detailShipment && (
+        <div
+          onClick={() => setDetailShipment(null)}
+          style={{
+            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--surface)', borderRadius: 12, padding: '1.5rem',
+              width: '90%', maxWidth: 520, maxHeight: '80vh', overflowY: 'auto',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.2)', border: '1px solid var(--border)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--navy-900)' }}>
+                {detailShipment.orderRef || detailShipment.order_ref}
+              </h3>
+              <button
+                onClick={() => setDetailShipment(null)}
+                style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-500)', lineHeight: 1 }}
+              >
+                x
+              </button>
+            </div>
+            {(() => {
+              const s = detailShipment;
+              const rows = [
+                ['Supplier', s.supplier],
+                ['Product', s.productName || s.product_name],
+                ['Quantity', s.quantity != null ? Number(s.quantity).toLocaleString() : '-'],
+                ['Pallets', (s.palletQty || s.pallet_qty) ? (Math.round(s.palletQty || s.pallet_qty) || 1) : '-'],
+                ['CBM', s.cbm || '-'],
+                ['Week', s.weekNumber || s.week_number ? `Week ${s.weekNumber || s.week_number}` : '-'],
+                ['Status', ((s.latestStatus || s.latest_status || '').replace(/_/g, ' ')) || '-'],
+                ['Final POD', s.finalPod || s.final_pod || '-'],
+                ['Warehouse', s.receivingWarehouse || s.receiving_warehouse || '-'],
+                ['Freight Type', s.freightType || s.freight_type || '-'],
+                ['Incoterm', s.incoterm || '-'],
+                ['Forwarding Agent', s.forwardingAgent || s.forwarding_agent || '-'],
+                ['Vessel', s.vesselName || s.vessel_name || '-'],
+                ['Archived', formatDate(s.updatedAt || s.updated_at)],
+              ];
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 0 }}>
+                  {rows.map(([label, value]) => (
+                    <React.Fragment key={label}>
+                      <div style={{
+                        padding: '6px 8px', fontSize: 12, fontWeight: 600,
+                        color: 'var(--text-500)', borderBottom: '1px solid var(--border)'
+                      }}>
+                        {label}
+                      </div>
+                      <div style={{
+                        padding: '6px 8px', fontSize: 13,
+                        color: 'var(--text-700)', borderBottom: '1px solid var(--border)',
+                        wordBreak: 'break-word'
+                      }}>
+                        {value || '-'}
+                      </div>
+                    </React.Fragment>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
