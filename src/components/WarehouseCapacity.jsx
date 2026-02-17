@@ -201,11 +201,6 @@ function WarehouseCapacity({ shipments }) {
       const pallets = shipment.palletQty || 0;
       const weekNumber = parseInt(shipment.weekNumber) || currentWeek;
 
-      // Debug current week shipments for our target warehouses
-      if ((warehouse === 'PRETORIA' || warehouse === 'KLAPMUTS' || warehouse === 'OFFSITE') && weekNumber === currentWeek) {
-        console.log(`Processing shipment for ${warehouse}, week ${weekNumber}: ${shipment.productName?.substring(0, 30)} - Status: ${shipment.latestStatus} - Pallets: ${pallets}`);
-      }
-
 
       if (!warehouseStats[warehouse]) {
         const config = warehouseConfigs[warehouse] || { totalBins: 384, avgItemsPerBin: 1 };
@@ -264,11 +259,6 @@ function WarehouseCapacity({ shipments }) {
     Object.keys(warehouseStats).forEach(warehouse => {
       const stats = warehouseStats[warehouse];
 
-      // Debug log for PRETORIA, KLAPMUTS, and OFFSITE
-      if (warehouse === 'PRETORIA' || warehouse === 'KLAPMUTS' || warehouse === 'OFFSITE') {
-        console.log(`WarehouseCapacity FINAL: ${warehouse} - Total Incoming: ${stats.incoming}, Current Week (${currentWeek}) Incoming: ${stats.currentWeekIncoming || 0}`);
-      }
-      
       // Use editable bins used if available, otherwise calculate from current stock
       const currentBinsUsed = editableBinsUsed[warehouse] !== undefined 
         ? editableBinsUsed[warehouse] 
@@ -384,8 +374,6 @@ function WarehouseCapacity({ shipments }) {
     for (const [warehouse, newValue] of Object.entries(pendingChanges)) {
       try {
         const url = `${apiUrl}/api/warehouse-capacity/${encodeURIComponent(warehouse)}`;
-        console.log(`📤 Sending: PUT ${url}`, { binsUsed: newValue });
-
         const response = await fetch(url, {
           method: 'PUT',
           headers: {
@@ -395,8 +383,6 @@ function WarehouseCapacity({ shipments }) {
           body: JSON.stringify({ binsUsed: newValue }),
         });
 
-        console.log(`📥 Response status for ${warehouse}:`, response.status);
-
         if (response.status === 401 || response.status === 403) {
           alert('Your session has expired. Please log in again.');
           authUtils.clearAuth();
@@ -407,15 +393,13 @@ function WarehouseCapacity({ shipments }) {
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error(`❌ Error response from server for ${warehouse}:`, response.status, errorText);
           throw new Error(`Failed to save warehouse capacity: ${response.status} ${errorText}`);
         }
 
-        const result = await response.json();
-        console.log(`✅ Saved ${warehouse} bins used: ${newValue}`, result);
+        await response.json();
         successCount++;
       } catch (error) {
-        console.error(`❌ Failed to save ${warehouse}:`, error.message);
+        console.error(`Failed to save ${warehouse}:`, error.message);
         failCount++;
       }
     }
@@ -424,8 +408,6 @@ function WarehouseCapacity({ shipments }) {
     for (const [warehouse, newValue] of Object.entries(pendingAvailableBinsChanges)) {
       try {
         const url = `${apiUrl}/api/warehouse-capacity/${encodeURIComponent(warehouse)}/available-bins`;
-        console.log(`📤 Sending: PUT ${url}`, { availableBins: newValue });
-
         const response = await fetch(url, {
           method: 'PUT',
           headers: {
@@ -435,8 +417,6 @@ function WarehouseCapacity({ shipments }) {
           body: JSON.stringify({ availableBins: newValue }),
         });
 
-        console.log(`📥 Response status for ${warehouse}:`, response.status);
-
         if (response.status === 401 || response.status === 403) {
           alert('Your session has expired. Please log in again.');
           authUtils.clearAuth();
@@ -447,15 +427,13 @@ function WarehouseCapacity({ shipments }) {
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error(`❌ Error response from server for ${warehouse}:`, response.status, errorText);
           throw new Error(`Failed to save available bins: ${response.status} ${errorText}`);
         }
 
-        const result = await response.json();
-        console.log(`✅ Saved ${warehouse} available bins: ${newValue}`, result);
+        await response.json();
         successCount++;
       } catch (error) {
-        console.error(`❌ Failed to save ${warehouse} available bins:`, error.message);
+        console.error(`Failed to save ${warehouse} available bins:`, error.message);
         failCount++;
       }
     }
@@ -464,8 +442,6 @@ function WarehouseCapacity({ shipments }) {
     for (const [warehouse, newValue] of Object.entries(pendingTotalCapacityChanges)) {
       try {
         const url = `${apiUrl}/api/warehouse-capacity/${encodeURIComponent(warehouse)}/total-capacity`;
-        console.log(`📤 Sending: PUT ${url}`, { totalCapacity: newValue });
-
         const response = await fetch(url, {
           method: 'PUT',
           headers: {
@@ -475,8 +451,6 @@ function WarehouseCapacity({ shipments }) {
           body: JSON.stringify({ totalCapacity: newValue }),
         });
 
-        console.log(`📥 Response status for ${warehouse}:`, response.status);
-
         if (response.status === 401 || response.status === 403) {
           alert('Your session has expired. Please log in again.');
           authUtils.clearAuth();
@@ -487,15 +461,13 @@ function WarehouseCapacity({ shipments }) {
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error(`❌ Error response from server for ${warehouse}:`, response.status, errorText);
           throw new Error(`Failed to save total capacity: ${response.status} ${errorText}`);
         }
 
-        const result = await response.json();
-        console.log(`✅ Saved ${warehouse} total capacity: ${newValue}`, result);
+        await response.json();
         successCount++;
       } catch (error) {
-        console.error(`❌ Failed to save ${warehouse} total capacity:`, error.message);
+        console.error(`Failed to save ${warehouse} total capacity:`, error.message);
         failCount++;
       }
     }
@@ -515,13 +487,10 @@ function WarehouseCapacity({ shipments }) {
       alert(`✓ Successfully saved ${successCount} ${successCount === 1 ? 'change' : 'changes'}!`);
 
       // Reload warehouse capacity data from server to get fresh values
-      console.log('🔄 Reloading warehouse capacity data from server...');
       try {
         const response = await fetch(`${apiUrl}/api/warehouse-capacity`);
         if (response.ok) {
           const data = await response.json();
-          console.log('📥 Reloaded warehouse capacity data:', data);
-
           if (data.binsUsed && data.availableBins) {
             setEditableBinsUsed(data.binsUsed);
             setSavedBinsUsed(data.binsUsed);
@@ -531,13 +500,11 @@ function WarehouseCapacity({ shipments }) {
               setEditableTotalCapacity(data.totalCapacity);
               setSavedTotalCapacity(data.totalCapacity);
             }
-            // Update sync time after successful reload
             setLastSyncTime(new Date());
-            console.log('✅ Successfully reloaded all warehouse data');
           }
         }
       } catch (error) {
-        console.warn('⚠️ Failed to reload warehouse capacity data:', error);
+        // Silently fail - data will refresh on next load
       }
     }
   }, [pendingChanges, pendingAvailableBinsChanges, pendingTotalCapacityChanges, editableBinsUsed, editableAvailableBins, editableTotalCapacity]);
@@ -705,10 +672,6 @@ function WarehouseCapacity({ shipments }) {
         doc.setFontSize(11);
         doc.setTextColor(76, 175, 80);
         doc.text(`${stats.totalBins}`, 25 + colWidth * 2, yPosition + 5);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        doc.setTextColor(136, 136, 136);
-        doc.text(`(Max: ${stats.maxCapacity.toLocaleString()} pallets)`, 25 + colWidth * 2, yPosition + 10);
 
         // Available Bins
         doc.setFont('helvetica', 'normal');
@@ -1011,8 +974,6 @@ function WarehouseCapacity({ shipments }) {
       // Save the PDF
       doc.save(filename);
       
-      console.log(`Warehouse capacity data exported: ${filename}`);
-      console.log(`Contains data for: ${selectedWarehouse === 'all' ? warehouses.length + ' warehouses' : selectedWarehouse}`);
     } catch (error) {
       console.error('Error exporting warehouse capacity data:', error);
       alert('Failed to export warehouse capacity data. Please try again.');
@@ -1149,9 +1110,6 @@ function WarehouseCapacity({ shipments }) {
             <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--success)' }}>
               {stats.totalBins}
             </div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-500)' }}>
-              (Max: {stats.maxCapacity.toLocaleString()} pallets)
-            </div>
           </div>
           <div>
             <div style={{ color: 'var(--text-500)', marginBottom: '0.25rem' }}>Available Bins</div>
@@ -1242,69 +1200,12 @@ function WarehouseCapacity({ shipments }) {
     );
   };
 
-  const CapacityUtilizationChart = ({ warehouseStats }) => {
-    const warehouses = Object.entries(warehouseStats).sort((a, b) => b[1].binUtilizationPercent - a[1].binUtilizationPercent);
-    const maxUtil = Math.max(...warehouses.map(([_, stats]) => stats.binUtilizationPercent));
-    
-    return (
-      <div className="dash-panel" style={{ marginTop: '2rem' }}>
-        <h3 style={{ color: 'var(--text-900)', marginBottom: '1.5rem' }}>📊 Bin Utilization Overview</h3>
-        
-        <div style={{ display: 'grid', gap: '1rem' }}>
-          {warehouses.map(([warehouse, stats]) => {
-            const percentage = stats.binUtilizationPercent;
-            const getColor = () => {
-              if (percentage >= 95) return '#f44336';
-              if (percentage >= 80) return '#ff9800';
-              if (percentage >= 60) return '#4caf50';
-              return '#2196f3';
-            };
-            
-            return (
-              <div key={warehouse} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{ minWidth: '140px', fontSize: '0.9rem', fontWeight: '500' }}>
-                  {warehouse}
-                </div>
-                <div style={{ flex: 1, position: 'relative', height: '30px', backgroundColor: '#f0f0f0', borderRadius: '15px', overflow: 'hidden' }}>
-                  <div style={{
-                    width: `${Math.min(percentage, 100)}%`,
-                    height: '100%',
-                    background: `linear-gradient(90deg, ${getColor()}22, ${getColor()})`,
-                    borderRadius: '15px',
-                    transition: 'width 0.8s ease'
-                  }}></div>
-                  <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    fontSize: '0.8rem',
-                    fontWeight: 'bold',
-                    color: percentage > 50 ? 'white' : 'var(--text-900)'
-                  }}>
-                    {percentage.toFixed(1)}%
-                  </div>
-                </div>
-                <div style={{ minWidth: '100px', fontSize: '0.8rem', textAlign: 'right', color: 'var(--text-500)' }}>
-                  {stats.projectedBinsUsed}/{stats.totalBins} bins
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
   const ProductETAChart = ({ shipments }) => {
     const currentWeek = getCurrentWeekNumber();
     const currentMonthWeeks = getCurrentMonthWeeks();
 
-    // Create individual product entries with their ETA week
-
     const productData = shipments
       .filter(shipment => {
-        // Show products with product names and within current month weeks, excluding stored shipments
         const hasProduct = shipment.productName && shipment.productName.trim() !== '';
         const weekNumber = parseInt(shipment.weekNumber) || currentWeek;
         const isCurrentMonth = currentMonthWeeks.includes(weekNumber);
@@ -1317,534 +1218,87 @@ function WarehouseCapacity({ shipments }) {
         palletQty: shipment.palletQty || 0,
         warehouse: shipment.receivingWarehouse || shipment.finalPod || 'Unassigned',
         weekNumber: shipment.weekNumber || currentWeek,
+        status: shipment.latestStatus,
         id: shipment.id
       }))
       .sort((a, b) => {
-        // Sort by week first, then by quantity descending
         if (a.weekNumber !== b.weekNumber) return a.weekNumber - b.weekNumber;
-        return b.quantity - a.quantity;
+        return b.palletQty - a.palletQty;
       })
-      .slice(0, 15); // Show top 15 products
-    
-    const maxQuantity = Math.max(...productData.map(product => product.quantity));
-    
+      .slice(0, 20);
+
     const getWarehouseColor = (warehouse) => {
       const warehouseLower = warehouse.toLowerCase();
-      if (warehouseLower.includes('pretoria')) return '#2196f3'; // Blue for Pretoria
-      if (warehouseLower.includes('klapmuts')) return '#4caf50'; // Green for Klapmuts
-      return '#ff9800'; // Orange for other/unassigned warehouses
+      if (warehouseLower.includes('pretoria')) return '#2196f3';
+      if (warehouseLower.includes('klapmuts')) return '#4caf50';
+      return '#ff9800';
     };
-    
+
+    const totalPallets = productData.reduce((sum, p) => sum + p.palletQty, 0);
+    const totalQty = productData.reduce((sum, p) => sum + p.quantity, 0);
+
     return (
-      <div className="dash-panel" style={{ marginTop: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h3 style={{ color: 'var(--text-900)', margin: 0 }}>📦 Products by ETA Week</h3>
-          
-          {/* Color Legend */}
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ 
-                width: '16px', 
-                height: '16px', 
-                backgroundColor: '#2196f3', 
-                borderRadius: '3px',
-                border: '1px solid var(--border)'
-              }}></div>
-              <span style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>Pretoria</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{
-                width: '16px',
-                height: '16px',
-                backgroundColor: '#4caf50',
-                borderRadius: '3px',
-                border: '1px solid var(--border)'
-              }}></div>
-              <span style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>Klapmuts</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{
-                width: '16px',
-                height: '16px',
-                backgroundColor: '#ff9800',
-                borderRadius: '3px',
-                border: '1px solid var(--border)'
-              }}></div>
-              <span style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>Other</span>
-            </div>
+      <div className="dash-panel" style={{ marginTop: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h3 style={{ color: 'var(--text-900)', margin: 0, fontSize: '1rem' }}>Incoming Products by ETA Week</h3>
+          <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem', color: 'var(--text-500)' }}>
+            <span><strong style={{ color: 'var(--text-900)' }}>{productData.length}</strong> products</span>
+            <span><strong style={{ color: 'var(--text-900)' }}>{totalPallets.toLocaleString()}</strong> pallets</span>
+            <span><strong style={{ color: 'var(--text-900)' }}>{totalQty.toLocaleString()}</strong> tonnage</span>
           </div>
         </div>
-        
+
         {productData.length === 0 ? (
-          <div style={{ 
-            textAlign: 'center',
-            padding: '3rem',
-            color: 'var(--text-500)',
-            fontStyle: 'italic',
-            fontSize: '1.1rem'
-          }}>
-            No products with ETA found
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-500)', fontStyle: 'italic' }}>
+            No incoming products found
           </div>
         ) : (
-          <div>
-            {/* Bar Chart */}
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'flex-end', 
-              gap: '8px', 
-              height: '300px',
-              marginBottom: '2rem',
-              padding: '0 20px',
-              overflowX: 'auto'
-            }}>
-              {productData.map((product, index) => {
-                const barHeight = maxQuantity > 0 ? (product.quantity / maxQuantity) * 260 : 0;
-                const isCurrentWeek = product.weekNumber === currentWeek;
-                const warehouseColor = getWarehouseColor(product.warehouse);
-                
-                return (
-                  <div 
-                    key={`${product.id}-${index}`}
-                    style={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      alignItems: 'center',
-                      minWidth: '100px',
-                      flex: '0 0 auto'
-                    }}
-                  >
-                    {/* Bar */}
-                    <div style={{ 
-                      position: 'relative',
-                      display: 'flex',
-                      alignItems: 'flex-end',
-                      height: '260px',
-                      width: '100%'
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ backgroundColor: 'var(--surface-2)' }}>
+                  <th style={{ padding: '10px 12px', textAlign: 'left', border: '1px solid var(--border)', fontSize: '0.8rem' }}>Product</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'center', border: '1px solid var(--border)', fontSize: '0.8rem' }}>Week</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'center', border: '1px solid var(--border)', fontSize: '0.8rem' }}>Pallets</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'center', border: '1px solid var(--border)', fontSize: '0.8rem' }}>Qty</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'left', border: '1px solid var(--border)', fontSize: '0.8rem' }}>Warehouse</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'left', border: '1px solid var(--border)', fontSize: '0.8rem' }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {productData.map((product, index) => {
+                  const isCurrentWeek = product.weekNumber === currentWeek;
+                  const warehouseColor = getWarehouseColor(product.warehouse);
+
+                  return (
+                    <tr key={`${product.id}-${index}`} style={{
+                      backgroundColor: isCurrentWeek ? '#f0f8f0' : (index % 2 === 0 ? 'white' : '#fafbfc')
                     }}>
-                      <div style={{
-                        width: '100%',
-                        height: `${barHeight}px`,
-                        background: `linear-gradient(180deg, ${warehouseColor}22, ${warehouseColor})`,
-                        borderRadius: '8px 8px 4px 4px',
-                        border: `2px solid ${warehouseColor}`,
-                        position: 'relative',
-                        transition: 'all 0.3s ease',
-                        cursor: 'pointer'
-                      }}>
-                        {/* Quantity label on bar */}
-                        <div style={{
-                          position: 'absolute',
-                          top: '-35px',
-                          left: '50%',
-                          transform: 'translateX(-50%)',
-                          fontSize: '0.85rem',
-                          fontWeight: 'bold',
-                          color: warehouseColor,
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {product.quantity.toLocaleString()}
-                        </div>
-                        
-                        {/* Week number indicator */}
-                        <div style={{
-                          position: 'absolute',
-                          top: '4px',
-                          left: '50%',
-                          transform: 'translateX(-50%)',
-                          fontSize: '0.7rem',
-                          fontWeight: 'bold',
-                          color: 'white',
-                          backgroundColor: 'rgba(0,0,0,0.4)',
-                          padding: '2px 6px',
-                          borderRadius: '8px',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          W{product.weekNumber}
-                        </div>
-                        
-                        {/* Pallet Qty indicator */}
-                        {product.palletQty > 0 && (
-                          <div style={{
-                            position: 'absolute',
-                            bottom: '4px',
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            fontSize: '0.6rem',
-                            fontWeight: 'bold',
-                            color: 'white',
-                            backgroundColor: 'rgba(0,0,0,0.3)',
-                            padding: '1px 4px',
-                            borderRadius: '6px'
-                          }}>
-                            {product.palletQty} pallets
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Product name label */}
-                    <div style={{
-                      marginTop: '8px',
-                      fontSize: '0.8rem',
-                      fontWeight: '500',
-                      color: 'var(--text-900)',
-                      textAlign: 'center',
-                      maxWidth: '100px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      lineHeight: '1.2'
-                    }} title={product.name}>
-                      {product.name}
-                    </div>
-                    
-                    {/* Warehouse label */}
-                    <div style={{
-                      fontSize: '0.7rem',
-                      color: 'var(--text-500)',
-                      textAlign: 'center',
-                      marginTop: '2px'
-                    }}>
-                      {product.warehouse}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            
-            {/* Product Details Table */}
-            <div style={{ 
-              maxHeight: '400px', 
-              overflowY: 'auto',
-              border: '1px solid var(--border)',
-              borderRadius: '8px'
-            }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead style={{ backgroundColor: 'var(--surface-2)', position: 'sticky', top: 0 }}>
-                  <tr>
-                    <th style={{ padding: '12px', textAlign: 'left', border: '1px solid var(--border)' }}>Product Name</th>
-                    <th style={{ padding: '12px', textAlign: 'center', border: '1px solid var(--border)' }}>ETA Week</th>
-                    <th style={{ padding: '12px', textAlign: 'center', border: '1px solid var(--border)' }}>Quantity</th>
-                    <th style={{ padding: '12px', textAlign: 'center', border: '1px solid var(--border)' }}>Pallet Qty</th>
-                    <th style={{ padding: '12px', textAlign: 'left', border: '1px solid var(--border)' }}>Warehouse</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {productData.map((product, index) => {
-                    const isCurrentWeek = product.weekNumber === currentWeek;
-                    const warehouseColor = getWarehouseColor(product.warehouse);
-                    
-                    return (
-                      <tr key={`${product.id}-${index}`} style={{ 
-                        backgroundColor: isCurrentWeek ? '#f0f8f0' : 'white'
-                      }}>
-                        <td style={{
-                          padding: '10px 12px',
-                          border: '1px solid var(--border)',
-                          fontWeight: '500'
-                        }}>
-                          {product.name}
-                        </td>
-                        <td style={{
-                          padding: '10px 12px',
-                          border: '1px solid var(--border)',
-                          textAlign: 'center',
-                          fontWeight: isCurrentWeek ? 'bold' : 'normal',
-                          color: 'var(--text-900)'
-                        }}>
-                          {isCurrentWeek ? `${product.weekNumber} (Current)` : product.weekNumber}
-                        </td>
-                        <td style={{
-                          padding: '10px 12px',
-                          border: '1px solid var(--border)',
-                          textAlign: 'center',
-                          fontWeight: '500'
-                        }}>
-                          {product.quantity.toLocaleString()}
-                        </td>
-                        <td style={{
-                          padding: '10px 12px',
-                          border: '1px solid var(--border)',
-                          textAlign: 'center',
-                          color: 'var(--text-500)'
-                        }}>
-                          {product.palletQty > 0 ? product.palletQty : '-'}
-                        </td>
-                        <td style={{
-                          padding: '10px 12px',
-                          border: '1px solid var(--border)',
-                          fontSize: '0.9rem',
-                          color: warehouseColor,
-                          fontWeight: '500'
-                        }}>
-                          {product.warehouse}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                      <td style={{ padding: '8px 12px', border: '1px solid var(--border)', fontWeight: '500', fontSize: '0.85rem' }}>
+                        {product.name}
+                      </td>
+                      <td style={{ padding: '8px 12px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: isCurrentWeek ? 'bold' : 'normal', fontSize: '0.85rem' }}>
+                        {isCurrentWeek ? `W${product.weekNumber} *` : `W${product.weekNumber}`}
+                      </td>
+                      <td style={{ padding: '8px 12px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: '600', fontSize: '0.85rem' }}>
+                        {product.palletQty > 0 ? product.palletQty : '-'}
+                      </td>
+                      <td style={{ padding: '8px 12px', border: '1px solid var(--border)', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-500)' }}>
+                        {product.quantity > 0 ? product.quantity.toLocaleString() : '-'}
+                      </td>
+                      <td style={{ padding: '8px 12px', border: '1px solid var(--border)', fontSize: '0.85rem', color: warehouseColor, fontWeight: '500' }}>
+                        {product.warehouse}
+                      </td>
+                      <td style={{ padding: '8px 12px', border: '1px solid var(--border)', fontSize: '0.8rem', color: 'var(--text-500)' }}>
+                        {(product.status || '').replace(/_/g, ' ')}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
-      </div>
-    );
-  };
-
-  const ProductBreakdownChart = ({ shipments }) => {
-    const currentWeek = getCurrentWeekNumber();
-    const currentMonthWeeks = getCurrentMonthWeeks();
-
-    // Filter to show only planned and in-transit shipments (incoming) within current month, excluding stored shipments
-    const incomingShipments = shipments.filter(shipment => {
-      const isIncoming = shipment.latestStatus === 'planned_airfreight' || shipment.latestStatus === 'planned_seafreight' ||
-        shipment.latestStatus === 'in_transit_airfreight' || shipment.latestStatus === 'air_customs_clearance' ||
-        shipment.latestStatus === 'in_transit_roadway' || shipment.latestStatus === 'in_transit_seaway';
-
-      const weekNumber = parseInt(shipment.weekNumber) || currentWeek;
-      const isCurrentMonth = currentMonthWeeks.includes(weekNumber);
-      const notStored = shipment.latestStatus !== ShipmentStatus.STORED;
-
-      return isIncoming && isCurrentMonth && notStored;
-    });
-    
-    // Group by warehouse and aggregate data
-    const warehouseData = incomingShipments.reduce((acc, shipment) => {
-      const warehouse = shipment.receivingWarehouse || shipment.finalPod || 'Unassigned';
-      const quantity = shipment.quantity || 0;
-      const pallets = shipment.palletQty || 0;
-      
-      if (!acc[warehouse]) {
-        acc[warehouse] = { palletQty: 0, quantity: 0, pallets: 0, products: [] };
-      }
-
-      acc[warehouse].palletQty += shipment.palletQty || 0;
-      acc[warehouse].quantity += quantity;
-      acc[warehouse].pallets += pallets;
-      acc[warehouse].products.push({
-        name: shipment.productName || 'Unknown Product',
-        palletQty: shipment.palletQty || 0,
-        quantity: quantity,
-        pallets: pallets,
-        status: shipment.latestStatus
-      });
-      
-      return acc;
-    }, {});
-    
-    const warehouses = Object.entries(warehouseData);
-    const maxPalletQty = Math.max(...warehouses.map(([_, data]) => data.palletQty));
-    const maxQuantity = Math.max(...warehouses.map(([_, data]) => data.quantity));
-    const maxPallets = Math.max(...warehouses.map(([_, data]) => data.pallets));
-    
-    const getWarehouseColor = (warehouse) => {
-      switch (warehouse) {
-        case 'PRETORIA': return '#4caf50';
-        case 'KLAPMUTS': return '#2196f3';
-        case 'OFFSITE': return '#ff9800';
-        case 'Unassigned': return '#f44336';
-        default: return '#9e9e9e';
-      }
-    };
-    
-    return (
-      <div className="dash-panel" style={{ marginTop: '2rem' }}>
-        <h3 style={{ color: 'var(--text-900)', marginBottom: '1.5rem' }}>📋 Incoming Products by Warehouse</h3>
-        
-        {warehouses.length === 0 ? (
-          <div style={{ 
-            textAlign: 'center',
-            padding: '3rem',
-            color: 'var(--text-500)',
-            fontStyle: 'italic',
-            fontSize: '1.1rem'
-          }}>
-            No incoming shipments found
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gap: '2rem' }}>
-            {/* Quantity Chart */}
-            <div>
-              <h4 style={{ color: 'var(--text-900)', marginBottom: '1rem', fontSize: '1.1rem' }}>📊 Quantity by Warehouse</h4>
-              <div style={{ display: 'grid', gap: '1rem' }}>
-                {warehouses.map(([warehouse, data]) => (
-                  <div key={`qty-${warehouse}`} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <div style={{ minWidth: '120px', fontWeight: '500', fontSize: '0.9rem' }}>
-                      {warehouse}
-                    </div>
-                    <div style={{ flex: 1, position: 'relative', height: '35px', backgroundColor: '#f0f0f0', borderRadius: '8px', overflow: 'hidden' }}>
-                      <div style={{
-                        width: `${maxQuantity > 0 ? (data.quantity / maxQuantity) * 100 : 0}%`,
-                        height: '100%',
-                        background: `linear-gradient(90deg, #ff980022, #ff9800)`,
-                        borderRadius: '8px',
-                        transition: 'width 0.8s ease',
-                        position: 'relative'
-                      }}>
-                        <div style={{
-                          position: 'absolute',
-                          right: '8px',
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          fontSize: '0.8rem',
-                          fontWeight: '600',
-                          color: data.quantity > maxQuantity * 0.5 ? 'white' : '#ff9800'
-                        }}>
-                          {data.quantity.toLocaleString()}
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{ minWidth: '80px', fontSize: '0.8rem', color: 'var(--text-500)' }}>
-                      tonnage
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            {/* Pallets Chart */}
-            <div>
-              <h4 style={{ color: 'var(--text-900)', marginBottom: '1rem', fontSize: '1.1rem' }}>🚛 Pallets by Warehouse</h4>
-              <div style={{ display: 'grid', gap: '1rem' }}>
-                {warehouses.map(([warehouse, data]) => (
-                  <div key={`pallets-${warehouse}`} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <div style={{ minWidth: '120px', fontWeight: '500', fontSize: '0.9rem' }}>
-                      {warehouse}
-                    </div>
-                    <div style={{ flex: 1, position: 'relative', height: '35px', backgroundColor: '#f0f0f0', borderRadius: '8px', overflow: 'hidden' }}>
-                      <div style={{
-                        width: `${maxPallets > 0 ? (data.pallets / maxPallets) * 100 : 0}%`,
-                        height: '100%',
-                        background: `linear-gradient(90deg, #9c27b022, #9c27b0)`,
-                        borderRadius: '8px',
-                        transition: 'width 0.8s ease',
-                        position: 'relative'
-                      }}>
-                        <div style={{
-                          position: 'absolute',
-                          right: '8px',
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          fontSize: '0.8rem',
-                          fontWeight: 'bold',
-                          color: 'white',
-                          textShadow: '1px 1px 2px rgba(0,0,0,0.7)'
-                        }}>
-                          {data.pallets.toLocaleString()}
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{ minWidth: '80px', fontSize: '0.8rem', color: 'var(--text-500)' }}>
-                      pallets
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            {/* Summary Stats */}
-            <div style={{ 
-              padding: '1.5rem', 
-              backgroundColor: 'var(--surface-2)',
-              borderRadius: '12px',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '1rem',
-              marginTop: '1rem'
-            }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#2196f3', marginBottom: '0.5rem' }}>
-                  {incomingShipments.length}
-                </div>
-                <div style={{ fontSize: '0.9rem', color: 'var(--text-500)', fontWeight: '500' }}>
-                  Total Products
-                </div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--success)', marginBottom: '0.5rem' }}>
-                  {incomingShipments.reduce((sum, s) => sum + (s.palletQty || 0), 0).toLocaleString()}
-                </div>
-                <div style={{ fontSize: '0.9rem', color: 'var(--text-500)', fontWeight: '500' }}>
-                  Total Pallet Qty
-                </div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--warning)', marginBottom: '0.5rem' }}>
-                  {incomingShipments.reduce((sum, s) => sum + (s.quantity || 0), 0).toLocaleString()}
-                </div>
-                <div style={{ fontSize: '0.9rem', color: 'var(--text-500)', fontWeight: '500' }}>
-                  Total Tonnage
-                </div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#9c27b0', marginBottom: '0.5rem' }}>
-                  {incomingShipments.reduce((sum, s) => {
-                    return sum + (s.palletQty || 0);
-                  }, 0).toLocaleString()}
-                </div>
-                <div style={{ fontSize: '0.9rem', color: 'var(--text-500)', fontWeight: '500' }}>
-                  Total Pallets
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const CapacityStatusOverview = ({ warehouseStats }) => {
-    const statusCounts = Object.values(warehouseStats).reduce((acc, stats) => {
-      acc[stats.status] = (acc[stats.status] || 0) + 1;
-      return acc;
-    }, {});
-    
-    const statusData = [
-      { status: 'critical', label: 'Over Capacity', color: '#f44336', count: statusCounts.critical || 0 },
-      { status: 'warning', label: 'Near Capacity', color: '#ff9800', count: statusCounts.warning || 0 },
-      { status: 'good', label: 'Good Utilization', color: '#4caf50', count: statusCounts.good || 0 },
-      { status: 'low', label: 'Under Utilized', color: '#2196f3', count: statusCounts.low || 0 }
-    ];
-    
-    const totalWarehouses = Object.keys(warehouseStats).length;
-    
-    return (
-      <div className="dash-panel" style={{ marginTop: '2rem' }}>
-        <h3 style={{ color: 'var(--text-900)', marginBottom: '1.5rem' }}>🎯 Capacity Status Distribution</h3>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-          {statusData.map(({ status, label, color, count }) => {
-            const percentage = totalWarehouses > 0 ? (count / totalWarehouses) * 100 : 0;
-            
-            return (
-              <div key={status} style={{ 
-                textAlign: 'center', 
-                padding: '1.5rem',
-                borderRadius: '12px',
-                backgroundColor: `${color}11`,
-                border: `2px solid ${color}33`
-              }}>
-                <div style={{ 
-                  width: '80px', 
-                  height: '80px', 
-                  borderRadius: '50%', 
-                  backgroundColor: color,
-                  margin: '0 auto 1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '2rem',
-                  color: 'white',
-                  fontWeight: 'bold'
-                }}>
-                  {count}
-                </div>
-                <div style={{ fontWeight: '600', marginBottom: '0.5rem', color: 'var(--text-900)' }}>{label}</div>
-                <div style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>{percentage.toFixed(1)}% of warehouses</div>
-              </div>
-            );
-          })}
-        </div>
       </div>
     );
   };
@@ -2086,11 +1540,8 @@ function WarehouseCapacity({ shipments }) {
       </div>
 
       {/* Analytics Charts - Filtered by Selected Warehouse */}
-      <CapacityStatusOverview warehouseStats={filteredWarehouseStats} />
-      <CapacityUtilizationChart warehouseStats={filteredWarehouseStats} />
-      <ProductETAChart shipments={filteredShipments} />
-      <ProductBreakdownChart shipments={filteredShipments} />
       <WeeklyInflowChart warehouseStats={filteredWarehouseStats} />
+      <ProductETAChart shipments={filteredShipments} />
     </div>
   );
 }
