@@ -277,7 +277,6 @@ body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI
 .sidebar-footer {
   padding: 8px 12px;
   border-top: 1px solid rgba(255,255,255,0.1);
-  margin-top: auto;
 }
 .sidebar-footer .nav-item {
   position: relative;

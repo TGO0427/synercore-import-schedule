@@ -1010,7 +1010,7 @@ function App() {
 
         {/* Quick Stats */}
         <div className="sidebar-quick-stats" style={{
-          margin: '0 12px 8px', padding: '10px 12px',
+          margin: '0 12px 8px', marginTop: 'auto', padding: '10px 12px',
           backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '8px',
           border: '1px solid rgba(255,255,255,0.08)',
           fontSize: '12px', color: '#94a3b8'
