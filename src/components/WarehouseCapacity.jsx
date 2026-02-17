@@ -1281,7 +1281,7 @@ function WarehouseCapacity({ shipments }) {
                         {isCurrentWeek ? `W${product.weekNumber} *` : `W${product.weekNumber}`}
                       </td>
                       <td style={{ padding: '8px 12px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: '600', fontSize: '0.85rem' }}>
-                        {product.palletQty > 0 ? Math.round(product.palletQty) : '-'}
+                        {product.palletQty > 0 ? (Math.round(product.palletQty) || 1) : '-'}
                       </td>
                       <td style={{ padding: '8px 12px', border: '1px solid var(--border)', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-500)' }}>
                         {product.quantity > 0 ? product.quantity.toLocaleString() : '-'}

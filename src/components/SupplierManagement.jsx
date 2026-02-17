@@ -1789,7 +1789,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
                               {Number(shipment.quantity).toLocaleString()}
                             </td>
                             <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: '500' }}>
-                              {Math.round(Number(shipment.palletQty || 0))}
+                              {Math.round(Number(shipment.palletQty || 0)) || 1}
                             </td>
                             <td style={{ padding: '0.75rem' }}>{shipment.finalPod}</td>
                             <td style={{ padding: '0.75rem' }}>

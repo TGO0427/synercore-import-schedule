@@ -145,7 +145,7 @@ export function MobileShipmentDetail({
                 </div>
                 <div className="detail-row">
                   <span className="detail-label">Pallets</span>
-                  <span className="detail-value">{shipment.palletQty ? Math.round(shipment.palletQty) : '-'}</span>
+                  <span className="detail-value">{shipment.palletQty ? (Math.round(shipment.palletQty) || 1) : '-'}</span>
                 </div>
               </div>
             </div>

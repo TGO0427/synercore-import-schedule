@@ -267,7 +267,7 @@ function SupplierDashboard({ onLogout }) {
                           Product: {shipment.productName}
                         </p>
                         <p style={{ margin: '0.25rem 0', color: '#666' }}>
-                          Quantity: {shipment.quantity} units ({Math.round(shipment.palletQty || 0)} pallets)
+                          Quantity: {shipment.quantity} units ({Math.round(shipment.palletQty || 0) || 1} pallets)
                         </p>
                       </div>
                       <span style={{
@@ -385,7 +385,7 @@ function SupplierDashboard({ onLogout }) {
               {[
                 { label: 'Product', value: selectedShipment.shipment.productName },
                 { label: 'Quantity', value: `${selectedShipment.shipment.quantity} units` },
-                { label: 'Pallets', value: Math.round(selectedShipment.shipment.palletQty || 0) },
+                { label: 'Pallets', value: Math.round(selectedShipment.shipment.palletQty || 0) || 1 },
                 { label: 'Status', value: formatStatus(selectedShipment.shipment.latestStatus) },
                 { label: 'Expected Arrival', value: new Date(selectedShipment.shipment.expectedArrivalDate).toLocaleDateString() },
                 { label: 'Destination', value: selectedShipment.shipment.finalPod || 'TBD' }

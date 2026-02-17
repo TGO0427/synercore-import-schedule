@@ -396,7 +396,7 @@ function AdvancedReports() {
           s.productName || '',
           s.weekNumber || '-',
           s.quantity || 0,
-          Math.round(s.palletQty || 0),
+          Math.round(s.palletQty || 0) || 1,
           s.latestStatus || '',
           s.receivingWarehouse || ''
         ]),
@@ -895,7 +895,7 @@ function AdvancedReports() {
                         {shipment.weekNumber || '-'}
                       </td>
                       <td style={{ padding: '10px', textAlign: 'right' }}>{(shipment.quantity || 0).toLocaleString()}</td>
-                      <td style={{ padding: '10px', textAlign: 'right' }}>{Math.round(shipment.palletQty || 0).toLocaleString()}</td>
+                      <td style={{ padding: '10px', textAlign: 'right' }}>{(Math.round(shipment.palletQty || 0) || 1).toLocaleString()}</td>
                       <td style={{ padding: '10px' }}>
                         <span style={{
                           padding: '4px 8px',
