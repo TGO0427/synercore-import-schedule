@@ -221,15 +221,28 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     letterSpacing: '0.3px',
   };
 
-  const columns = [
+  const baseColumns = [
     { key: 'orderRef', label: 'Order Ref' },
     { key: 'supplier', label: 'Supplier' },
     { key: 'productName', label: 'Product' },
     { key: 'quantity', label: 'Qty' },
     { key: 'palletQty', label: 'Pallets' },
     { key: 'storedDate', label: 'Stored Date' },
-    { key: null, label: '' },
   ];
+
+  const getColumnsForWarehouse = (warehouseName) => {
+    const isOffsite = warehouseName.toUpperCase() === 'OFFSITE';
+    return isOffsite
+      ? [...baseColumns, { key: 'daysInStorage', label: 'Days' }, { key: null, label: '' }]
+      : [...baseColumns, { key: null, label: '' }];
+  };
+
+  const getDaysInStorage = (shipment) => {
+    const storedDate = shipment.receivingDate || shipment.updatedAt || shipment.estimatedArrival;
+    if (!storedDate) return '-';
+    const diff = Math.floor((new Date() - new Date(storedDate)) / (1000 * 60 * 60 * 24));
+    return diff >= 0 ? diff : 0;
+  };
 
   return (
     <div className="window-content">
@@ -347,12 +360,15 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                 </button>
 
                 {/* Table */}
-                {!isCollapsed && (
+                {!isCollapsed && (() => {
+                  const cols = getColumnsForWarehouse(name);
+                  const isOffsite = name.toUpperCase() === 'OFFSITE';
+                  return (
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <thead>
                         <tr>
-                          {columns.map((col, i) => (
+                          {cols.map((col, i) => (
                             <th
                               key={i}
                               onClick={col.key ? () => handleSort(col.key) : undefined}
@@ -433,6 +449,15 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                                 </span>
                               )}
                             </td>
+                            {isOffsite && (() => {
+                              const days = getDaysInStorage(shipment);
+                              const isLong = typeof days === 'number' && days > 30;
+                              return (
+                                <td style={{ padding: '8px 12px', fontSize: 13, fontWeight: 600, color: isLong ? 'var(--danger)' : 'var(--text-700)' }}>
+                                  {days}{typeof days === 'number' ? 'd' : ''}
+                                </td>
+                              );
+                            })()}
                             <td style={{ padding: '8px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                               {editingWarehouse === shipment.id ? (
                                 <select
@@ -474,7 +499,8 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                       </tbody>
                     </table>
                   </div>
-                )}
+                  );
+                })()}
               </div>
             );
           })}
