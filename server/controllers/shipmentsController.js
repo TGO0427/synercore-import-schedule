@@ -179,8 +179,9 @@ export class ShipmentsController {
           incoterm = COALESCE($13, incoterm),
           vessel_name = COALESCE($14, vessel_name),
           selected_week_date = COALESCE($15, selected_week_date),
+          receiving_date = COALESCE($16, receiving_date),
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = $16`,
+        WHERE id = $17`,
         [
           data.supplier,
           data.orderRef,
@@ -197,6 +198,7 @@ export class ShipmentsController {
           data.incoterm,
           data.vesselName,
           data.selectedWeekDate,
+          data.receivingDate,
           id
         ]
       );

@@ -13,6 +13,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
   const [archivingAll, setArchivingAll] = useState(false);
   const [collapsedWarehouses, setCollapsedWarehouses] = useState({});
   const [editingWarehouse, setEditingWarehouse] = useState(null); // shipment id being edited
+  const [editingDate, setEditingDate] = useState(null); // shipment id being date-edited
 
   // Fetch archived shipments
   useEffect(() => {
@@ -182,6 +183,17 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
       if (showSuccess) showSuccess(`Moved to ${newWarehouse}`);
     } catch (err) {
       if (showError) showError('Failed to update warehouse');
+    }
+  };
+
+  const handleStoredDateChange = async (shipmentId, newDate) => {
+    setEditingDate(null);
+    if (!newDate) return;
+    try {
+      await onUpdateShipment(shipmentId, { receivingDate: newDate });
+      if (showSuccess) showSuccess('Stored date updated');
+    } catch (err) {
+      if (showError) showError('Failed to update stored date');
     }
   };
 
@@ -378,7 +390,28 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                             <td style={{ padding: '8px 12px', fontSize: 13 }}>{shipment.quantity || 'N/A'}</td>
                             <td style={{ padding: '8px 12px', fontSize: 13 }}>{shipment.palletQty ? (Math.round(shipment.palletQty) || 1) : '-'}</td>
                             <td style={{ padding: '8px 12px', fontSize: 13 }}>
-                              {formatDate(shipment.receivingDate || shipment.updatedAt || shipment.estimatedArrival)}
+                              {editingDate === shipment.id ? (
+                                <input
+                                  type="date"
+                                  autoFocus
+                                  defaultValue={(() => {
+                                    const d = shipment.receivingDate || shipment.updatedAt || shipment.estimatedArrival;
+                                    if (!d) return '';
+                                    return new Date(d).toISOString().split('T')[0];
+                                  })()}
+                                  onChange={(e) => handleStoredDateChange(shipment.id, e.target.value)}
+                                  onBlur={() => setEditingDate(null)}
+                                  style={{ fontSize: 12, padding: '4px 6px', borderRadius: 4, border: '1px solid var(--border)' }}
+                                />
+                              ) : (
+                                <span
+                                  onClick={() => !isArch && setEditingDate(shipment.id)}
+                                  style={{ cursor: isArch ? 'default' : 'pointer', borderBottom: isArch ? 'none' : '1px dashed var(--text-500)' }}
+                                  title={isArch ? '' : 'Click to edit date'}
+                                >
+                                  {formatDate(shipment.receivingDate || shipment.updatedAt || shipment.estimatedArrival)}
+                                </span>
+                              )}
                             </td>
                             <td style={{ padding: '8px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                               {editingWarehouse === shipment.id ? (
