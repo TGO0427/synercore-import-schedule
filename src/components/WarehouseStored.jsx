@@ -2,9 +2,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { ShipmentStatus } from '../types/shipment';
 import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
-import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell,
-} from 'recharts';
 
 function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArchiveShipment, loading, showSuccess, showError }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -114,21 +111,6 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     });
     return keys.map(k => ({ name: k, shipments: groups[k] }));
   }, [filteredAndSortedShipments]);
-
-  // Offsite storage chart data
-  const offsiteChartData = useMemo(() => {
-    const offsiteGroup = groupedByWarehouse.find(g => g.name.toUpperCase() === 'OFFSITE');
-    if (!offsiteGroup || offsiteGroup.shipments.length === 0) return [];
-    const now = new Date();
-    return offsiteGroup.shipments
-      .map(s => {
-        const storedDate = s.receivingDate || s.updatedAt || s.estimatedArrival;
-        const days = storedDate ? Math.max(0, Math.floor((now - new Date(storedDate)) / (1000 * 60 * 60 * 24))) : 0;
-        const label = `${s.orderRef || 'N/A'} — ${(s.productName || 'Unknown').slice(0, 25)}`;
-        return { label, days, pallets: Math.round(Number(s.palletQty) || 0) || 1 };
-      })
-      .sort((a, b) => b.days - a.days);
-  }, [groupedByWarehouse]);
 
   const handleSort = (key) => {
     setSortConfig(current => ({
@@ -334,44 +316,6 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
           )}
         </div>
       </div>
-
-      {/* Offsite Storage Chart */}
-      {offsiteChartData.length > 0 && (
-        <div className="dash-panel" style={{ padding: 16, marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 16 }}>
-            <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-900)' }}>Offsite Storage Duration</h4>
-            <span style={{ fontSize: 11, color: 'var(--text-500)' }}>{offsiteChartData.length} items &middot; Days in storage</span>
-          </div>
-          <ResponsiveContainer width="100%" height={offsiteChartData.length * 40 + 30}>
-            <BarChart data={offsiteChartData} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-              <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} label={{ value: 'Days', position: 'insideBottomRight', offset: -5, fontSize: 11, fill: '#94a3b8' }} />
-              <YAxis type="category" dataKey="label" tick={{ fontSize: 11, fontWeight: 500 }} width={220} />
-              <Tooltip
-                formatter={(value, name) => [`${value} days`, 'Storage']}
-                labelFormatter={(label) => label}
-                contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid var(--border)' }}
-              />
-              <Bar dataKey="days" radius={[0, 4, 4, 0]} barSize={22}>
-                {offsiteChartData.map((entry, idx) => (
-                  <Cell key={idx} fill={entry.days > 30 ? '#ef4444' : entry.days > 14 ? '#f59e0b' : '#10b981'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          <div style={{ display: 'flex', gap: 16, marginTop: 8, justifyContent: 'flex-end' }}>
-            <span style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#10b981', display: 'inline-block' }} /> 0–14 days
-            </span>
-            <span style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#f59e0b', display: 'inline-block' }} /> 15–30 days
-            </span>
-            <span style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#ef4444', display: 'inline-block' }} /> 30+ days
-            </span>
-          </div>
-        </div>
-      )}
 
       {/* Warehouse groups */}
       {filteredAndSortedShipments.length === 0 ? (
