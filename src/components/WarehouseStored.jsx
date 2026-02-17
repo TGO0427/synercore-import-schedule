@@ -14,6 +14,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
   const [collapsedWarehouses, setCollapsedWarehouses] = useState({});
   const [editingWarehouse, setEditingWarehouse] = useState(null); // shipment id being edited
   const [editingDate, setEditingDate] = useState(null); // shipment id being date-edited
+  const [editingDateValue, setEditingDateValue] = useState(''); // temp date value while editing
 
   // Fetch archived shipments
   useEffect(() => {
@@ -394,18 +395,24 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                                 <input
                                   type="date"
                                   autoFocus
-                                  defaultValue={(() => {
-                                    const d = shipment.receivingDate || shipment.updatedAt || shipment.estimatedArrival;
-                                    if (!d) return '';
-                                    return new Date(d).toISOString().split('T')[0];
-                                  })()}
-                                  onChange={(e) => handleStoredDateChange(shipment.id, e.target.value)}
-                                  onBlur={() => setEditingDate(null)}
+                                  value={editingDateValue}
+                                  onChange={(e) => setEditingDateValue(e.target.value)}
+                                  onBlur={() => {
+                                    handleStoredDateChange(shipment.id, editingDateValue);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleStoredDateChange(shipment.id, editingDateValue);
+                                    if (e.key === 'Escape') setEditingDate(null);
+                                  }}
                                   style={{ fontSize: 12, padding: '4px 6px', borderRadius: 4, border: '1px solid var(--border)' }}
                                 />
                               ) : (
                                 <span
-                                  onClick={() => setEditingDate(shipment.id)}
+                                  onClick={() => {
+                                    const d = shipment.receivingDate || shipment.updatedAt || shipment.estimatedArrival;
+                                    setEditingDateValue(d ? new Date(d).toISOString().split('T')[0] : '');
+                                    setEditingDate(shipment.id);
+                                  }}
                                   style={{ cursor: 'pointer', borderBottom: '1px dashed var(--text-500)' }}
                                   title="Click to edit date"
                                 >
