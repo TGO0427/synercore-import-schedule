@@ -405,9 +405,9 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                                 />
                               ) : (
                                 <span
-                                  onClick={() => !isArch && setEditingDate(shipment.id)}
-                                  style={{ cursor: isArch ? 'default' : 'pointer', borderBottom: isArch ? 'none' : '1px dashed var(--text-500)' }}
-                                  title={isArch ? '' : 'Click to edit date'}
+                                  onClick={() => setEditingDate(shipment.id)}
+                                  style={{ cursor: 'pointer', borderBottom: '1px dashed var(--text-500)' }}
+                                  title="Click to edit date"
                                 >
                                   {formatDate(shipment.receivingDate || shipment.updatedAt || shipment.estimatedArrival)}
                                 </span>
