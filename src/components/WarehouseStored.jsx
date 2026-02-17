@@ -16,6 +16,8 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
   const [editingDate, setEditingDate] = useState(null); // shipment id being date-edited
   const [editingDateValue, setEditingDateValue] = useState(''); // temp date value while editing
   const [selectedShipment, setSelectedShipment] = useState(null); // shipment detail card
+  const [editShipment, setEditShipment] = useState(null); // shipment being edited
+  const [editForm, setEditForm] = useState({});
 
   // Fetch archived shipments
   useEffect(() => {
@@ -185,6 +187,51 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
       if (showSuccess) showSuccess(`Moved to ${newWarehouse}`);
     } catch (err) {
       if (showError) showError('Failed to update warehouse');
+    }
+  };
+
+  const openEditModal = (shipment) => {
+    setEditShipment(shipment);
+    setEditForm({
+      orderRef: shipment.orderRef || '',
+      supplier: shipment.supplier || '',
+      productName: shipment.productName || '',
+      quantity: shipment.quantity || '',
+      palletQty: shipment.palletQty || '',
+      cbm: shipment.cbm || '',
+      weekNumber: shipment.weekNumber || '',
+      receivingWarehouse: shipment.receivingWarehouse || '',
+      finalPod: shipment.finalPod || '',
+      freightType: shipment.freightType || '',
+      receivingDate: shipment.receivingDate ? new Date(shipment.receivingDate).toISOString().split('T')[0] : '',
+    });
+  };
+
+  const handleEditSave = async () => {
+    if (!editShipment) return;
+    try {
+      const updates = {};
+      if (editForm.orderRef !== (editShipment.orderRef || '')) updates.orderRef = editForm.orderRef;
+      if (editForm.supplier !== (editShipment.supplier || '')) updates.supplier = editForm.supplier;
+      if (editForm.productName !== (editShipment.productName || '')) updates.productName = editForm.productName;
+      if (editForm.quantity !== (editShipment.quantity || '')) updates.quantity = editForm.quantity;
+      if (editForm.palletQty !== (editShipment.palletQty || '')) updates.palletQty = editForm.palletQty;
+      if (editForm.cbm !== (editShipment.cbm || '')) updates.cbm = editForm.cbm;
+      if (editForm.weekNumber !== (editShipment.weekNumber || '')) updates.weekNumber = editForm.weekNumber;
+      if (editForm.receivingWarehouse !== (editShipment.receivingWarehouse || '')) updates.receivingWarehouse = editForm.receivingWarehouse;
+      if (editForm.finalPod !== (editShipment.finalPod || '')) updates.finalPod = editForm.finalPod;
+      if (editForm.freightType !== (editShipment.freightType || '')) updates.freightType = editForm.freightType;
+      if (editForm.receivingDate !== (editShipment.receivingDate ? new Date(editShipment.receivingDate).toISOString().split('T')[0] : '')) updates.receivingDate = editForm.receivingDate;
+
+      if (Object.keys(updates).length === 0) {
+        setEditShipment(null);
+        return;
+      }
+      await onUpdateShipment(editShipment.id, updates);
+      if (showSuccess) showSuccess('Shipment updated successfully');
+      setEditShipment(null);
+    } catch (err) {
+      if (showError) showError('Failed to update shipment');
     }
   };
 
@@ -461,6 +508,14 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                               );
                             })()}
                             <td style={{ padding: '8px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                              <button
+                                className="btn btn-ghost"
+                                onClick={() => openEditModal(shipment)}
+                                style={{ fontSize: 12, padding: '4px 10px' }}
+                                title="Edit shipment details"
+                              >
+                                Edit
+                              </button>
                               {editingWarehouse === shipment.id ? (
                                 <select
                                   autoFocus
@@ -578,6 +633,116 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                       </div>
                     </React.Fragment>
                   ))}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+      {/* Edit Shipment Modal */}
+      {editShipment && (
+        <div
+          onClick={() => setEditShipment(null)}
+          style={{
+            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--surface)', borderRadius: 12, padding: '1.5rem',
+              width: '90%', maxWidth: 520, maxHeight: '85vh', overflowY: 'auto',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.2)', border: '1px solid var(--border)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--navy-900)' }}>
+                Edit Shipment
+              </h3>
+              <button
+                onClick={() => setEditShipment(null)}
+                style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-500)', lineHeight: 1 }}
+              >
+                x
+              </button>
+            </div>
+            {(() => {
+              const fieldStyle = {
+                width: '100%', padding: '8px 10px', border: '1px solid var(--border)',
+                borderRadius: 6, fontSize: 13, background: 'var(--surface)'
+              };
+              const labelStyle = { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-500)', marginBottom: 4 };
+              const rowStyle = { marginBottom: 12 };
+              return (
+                <div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
+                    <div style={rowStyle}>
+                      <label style={labelStyle}>Order Ref</label>
+                      <input style={fieldStyle} value={editForm.orderRef} onChange={e => setEditForm({ ...editForm, orderRef: e.target.value })} />
+                    </div>
+                    <div style={rowStyle}>
+                      <label style={labelStyle}>Supplier</label>
+                      <input style={fieldStyle} value={editForm.supplier} onChange={e => setEditForm({ ...editForm, supplier: e.target.value })} />
+                    </div>
+                    <div style={{ ...rowStyle, gridColumn: '1 / -1' }}>
+                      <label style={labelStyle}>Product Name</label>
+                      <input style={fieldStyle} value={editForm.productName} onChange={e => setEditForm({ ...editForm, productName: e.target.value })} />
+                    </div>
+                    <div style={rowStyle}>
+                      <label style={labelStyle}>Quantity</label>
+                      <input style={fieldStyle} type="number" value={editForm.quantity} onChange={e => setEditForm({ ...editForm, quantity: e.target.value })} />
+                    </div>
+                    <div style={rowStyle}>
+                      <label style={labelStyle}>Pallet Qty</label>
+                      <input style={fieldStyle} type="number" value={editForm.palletQty} onChange={e => setEditForm({ ...editForm, palletQty: e.target.value })} />
+                    </div>
+                    <div style={rowStyle}>
+                      <label style={labelStyle}>CBM</label>
+                      <input style={fieldStyle} type="number" value={editForm.cbm} onChange={e => setEditForm({ ...editForm, cbm: e.target.value })} />
+                    </div>
+                    <div style={rowStyle}>
+                      <label style={labelStyle}>Week</label>
+                      <input style={fieldStyle} value={editForm.weekNumber} onChange={e => setEditForm({ ...editForm, weekNumber: e.target.value })} />
+                    </div>
+                    <div style={rowStyle}>
+                      <label style={labelStyle}>Warehouse</label>
+                      <select style={fieldStyle} value={editForm.receivingWarehouse} onChange={e => setEditForm({ ...editForm, receivingWarehouse: e.target.value })}>
+                        <option value="">Unassigned</option>
+                        <option value="PRETORIA">PRETORIA</option>
+                        <option value="KLAPMUTS">KLAPMUTS</option>
+                        <option value="OFFSITE">OFFSITE</option>
+                      </select>
+                    </div>
+                    <div style={rowStyle}>
+                      <label style={labelStyle}>Final POD</label>
+                      <input style={fieldStyle} value={editForm.finalPod} onChange={e => setEditForm({ ...editForm, finalPod: e.target.value })} />
+                    </div>
+                    <div style={rowStyle}>
+                      <label style={labelStyle}>Freight Type</label>
+                      <input style={fieldStyle} value={editForm.freightType} onChange={e => setEditForm({ ...editForm, freightType: e.target.value })} />
+                    </div>
+                    <div style={{ ...rowStyle, gridColumn: '1 / -1' }}>
+                      <label style={labelStyle}>Stored Date</label>
+                      <input style={fieldStyle} type="date" value={editForm.receivingDate} onChange={e => setEditForm({ ...editForm, receivingDate: e.target.value })} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+                    <button
+                      className="btn btn-ghost"
+                      onClick={() => setEditShipment(null)}
+                      style={{ fontSize: 13, padding: '8px 16px' }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="btn btn-primary"
+                      onClick={handleEditSave}
+                      style={{ fontSize: 13, padding: '8px 16px' }}
+                    >
+                      Save Changes
+                    </button>
+                  </div>
                 </div>
               );
             })()}
