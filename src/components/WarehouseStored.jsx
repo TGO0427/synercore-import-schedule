@@ -15,6 +15,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
   const [editingWarehouse, setEditingWarehouse] = useState(null); // shipment id being edited
   const [editingDate, setEditingDate] = useState(null); // shipment id being date-edited
   const [editingDateValue, setEditingDateValue] = useState(''); // temp date value while editing
+  const [selectedShipment, setSelectedShipment] = useState(null); // shipment detail card
 
   // Fetch archived shipments
   useEffect(() => {
@@ -390,8 +391,14 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                             {(() => {
                               const isArch = shipment.isArchived || shipment.latestStatus === 'archived';
                               return (<>
-                            <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--accent)', fontSize: 13 }}>
-                              {shipment.orderRef}
+                            <td style={{ padding: '8px 12px', fontWeight: 600, fontSize: 13 }}>
+                              <span
+                                onClick={() => setSelectedShipment(shipment)}
+                                style={{ color: 'var(--accent)', cursor: 'pointer', borderBottom: '1px dashed var(--accent)' }}
+                                title="View order details"
+                              >
+                                {shipment.orderRef}
+                              </span>
                               {isArch && (
                                 <span style={{
                                   marginLeft: 6, padding: '1px 5px', borderRadius: 4,
@@ -504,6 +511,82 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
               </div>
             );
           })}
+        </div>
+      )}
+      {/* Order detail card */}
+      {selectedShipment && (
+        <div
+          onClick={() => setSelectedShipment(null)}
+          style={{
+            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--surface)', borderRadius: 12, padding: '1.5rem',
+              width: '90%', maxWidth: 520, maxHeight: '80vh', overflowY: 'auto',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.2)', border: '1px solid var(--border)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--navy-900)' }}>
+                {selectedShipment.orderRef}
+              </h3>
+              <button
+                onClick={() => setSelectedShipment(null)}
+                style={{
+                  background: 'none', border: 'none', fontSize: 20, cursor: 'pointer',
+                  color: 'var(--text-500)', lineHeight: 1
+                }}
+              >
+                x
+              </button>
+            </div>
+
+            {(() => {
+              const s = selectedShipment;
+              const rows = [
+                ['Supplier', s.supplier],
+                ['Product', s.productName],
+                ['Quantity', s.quantity],
+                ['Pallets', s.palletQty ? (Math.round(s.palletQty) || 1) : '-'],
+                ['CBM', s.cbm || '-'],
+                ['Week', s.weekNumber ? `Week ${s.weekNumber}` : '-'],
+                ['Warehouse', s.receivingWarehouse || 'Unassigned'],
+                ['Freight Type', s.freightType || '-'],
+                ['Final POD', s.finalPod || '-'],
+                ['Stored Date', formatDate(s.receivingDate || s.updatedAt || s.estimatedArrival)],
+                ['Inspection Status', s.inspectionStatus || s.inspection_status || '-'],
+                ['Inspected By', s.inspectedBy || s.inspected_by || '-'],
+                ['Inspection Notes', s.inspectionNotes || s.inspection_notes || '-'],
+                ['Received By', s.receivedBy || s.received_by || '-'],
+                ['Received Qty', s.receivedQuantity || s.received_quantity || '-'],
+              ];
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 0 }}>
+                  {rows.map(([label, value]) => (
+                    <React.Fragment key={label}>
+                      <div style={{
+                        padding: '6px 8px', fontSize: 12, fontWeight: 600,
+                        color: 'var(--text-500)', borderBottom: '1px solid var(--border)'
+                      }}>
+                        {label}
+                      </div>
+                      <div style={{
+                        padding: '6px 8px', fontSize: 13,
+                        color: 'var(--text-700)', borderBottom: '1px solid var(--border)',
+                        wordBreak: 'break-word'
+                      }}>
+                        {value || '-'}
+                      </div>
+                    </React.Fragment>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
         </div>
       )}
     </div>
