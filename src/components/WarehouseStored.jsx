@@ -231,12 +231,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     { key: 'storedDate', label: 'Stored Date' },
   ];
 
-  const getColumnsForWarehouse = (warehouseName) => {
-    const isOffsite = warehouseName.toUpperCase() === 'OFFSITE';
-    return isOffsite
-      ? [...baseColumns, { key: 'daysInStorage', label: 'Days' }, { key: null, label: '' }]
-      : [...baseColumns, { key: null, label: '' }];
-  };
+  const columns = [...baseColumns, { key: 'daysInStorage', label: 'Days' }, { key: null, label: '' }];
 
   const getDaysInStorage = (shipment) => {
     const storedDate = shipment.receivingDate || shipment.updatedAt || shipment.estimatedArrival;
@@ -362,14 +357,13 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
 
                 {/* Table */}
                 {!isCollapsed && (() => {
-                  const cols = getColumnsForWarehouse(name);
                   const isOffsite = name.toUpperCase() === 'OFFSITE';
                   return (
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <thead>
                         <tr>
-                          {cols.map((col, i) => (
+                          {columns.map((col, i) => (
                             <th
                               key={i}
                               onClick={col.key ? () => handleSort(col.key) : undefined}
@@ -456,7 +450,8 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                                 </span>
                               )}
                             </td>
-                            {isOffsite && (() => {
+                            {(() => {
+                              if (!isOffsite) return <td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-500)' }}>-</td>;
                               const days = getDaysInStorage(shipment);
                               const isLong = typeof days === 'number' && days > 30;
                               return (
