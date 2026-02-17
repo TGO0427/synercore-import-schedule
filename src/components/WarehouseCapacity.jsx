@@ -914,11 +914,11 @@ function WarehouseCapacity({ shipments }) {
 
         // Summary stats like in UI
         const totalProducts = incomingShipments.length;
-        const totalPalletsFromQty = incomingShipments.reduce((sum, s) => sum + (s.palletQty || 0), 0);
+        const totalPalletsFromQty = Math.round(incomingShipments.reduce((sum, s) => sum + (s.palletQty || 0), 0));
         const totalQuantity = incomingShipments.reduce((sum, s) => sum + (s.quantity || 0), 0);
-        const totalPallets = incomingShipments.reduce((sum, s) => {
+        const totalPallets = Math.round(incomingShipments.reduce((sum, s) => {
           return sum + (s.palletQty || 0);
-        }, 0);
+        }, 0));
 
         // Summary boxes (4 across)
         const boxWidth = (pageWidth - 50) / 4;
@@ -1234,7 +1234,7 @@ function WarehouseCapacity({ shipments }) {
       return '#ff9800';
     };
 
-    const totalPallets = productData.reduce((sum, p) => sum + p.palletQty, 0);
+    const totalPallets = Math.round(productData.reduce((sum, p) => sum + p.palletQty, 0));
     const totalQty = productData.reduce((sum, p) => sum + p.quantity, 0);
 
     return (
@@ -1281,7 +1281,7 @@ function WarehouseCapacity({ shipments }) {
                         {isCurrentWeek ? `W${product.weekNumber} *` : `W${product.weekNumber}`}
                       </td>
                       <td style={{ padding: '8px 12px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: '600', fontSize: '0.85rem' }}>
-                        {product.palletQty > 0 ? product.palletQty : '-'}
+                        {product.palletQty > 0 ? Math.round(product.palletQty) : '-'}
                       </td>
                       <td style={{ padding: '8px 12px', border: '1px solid var(--border)', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-500)' }}>
                         {product.quantity > 0 ? product.quantity.toLocaleString() : '-'}

@@ -157,7 +157,7 @@ export function computeShipmentAlerts(shipments) {
           id: `ship-${s.id}-high-value`,
           severity: 'info',
           title: 'High Volume Shipment',
-          description: `Large shipment (${palletQty} pallets) from ${s.supplier} requires tracking.`
+          description: `Large shipment (${Math.round(palletQty)} pallets) from ${s.supplier} requires tracking.`
         });
       }
     }

@@ -1789,7 +1789,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
                               {Number(shipment.quantity).toLocaleString()}
                             </td>
                             <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: '500' }}>
-                              {Number(shipment.palletQty || 0)}
+                              {Math.round(Number(shipment.palletQty || 0))}
                             </td>
                             <td style={{ padding: '0.75rem' }}>{shipment.finalPod}</td>
                             <td style={{ padding: '0.75rem' }}>
@@ -1825,7 +1825,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
                     </div>
                     <div style={{ textAlign: 'center' }}>
                       <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#d69e2e' }}>
-                        {supplierShipments.reduce((sum, s) => sum + Number(s.palletQty || 0), 0)}
+                        {Math.round(supplierShipments.reduce((sum, s) => sum + Number(s.palletQty || 0), 0))}
                       </div>
                       <div style={{ fontSize: '0.8rem', color: '#718096' }}>Total Pallets</div>
                     </div>

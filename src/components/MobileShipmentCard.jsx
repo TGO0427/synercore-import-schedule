@@ -109,7 +109,7 @@ export function MobileShipmentCard({
           {/* Pallets */}
           <div className="info-item">
             <span className="info-label">📍 Pallets</span>
-            <span className="info-value">{shipment.palletQty || '-'}</span>
+            <span className="info-value">{shipment.palletQty ? Math.round(shipment.palletQty) : '-'}</span>
           </div>
 
           {/* Warehouse */}

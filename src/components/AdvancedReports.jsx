@@ -381,7 +381,7 @@ function AdvancedReports() {
     yPos += 5;
     doc.text(`Total Quantity: ${filteredShipments.reduce((sum, s) => sum + (s.quantity || 0), 0).toLocaleString()}`, 25, yPos);
     yPos += 5;
-    doc.text(`Total Pallets: ${filteredShipments.reduce((sum, s) => sum + (s.palletQty || 0), 0).toLocaleString()}`, 25, yPos);
+    doc.text(`Total Pallets: ${Math.round(filteredShipments.reduce((sum, s) => sum + (s.palletQty || 0), 0)).toLocaleString()}`, 25, yPos);
     yPos += 10;
 
     // Data table
@@ -396,7 +396,7 @@ function AdvancedReports() {
           s.productName || '',
           s.weekNumber || '-',
           s.quantity || 0,
-          s.palletQty || 0,
+          Math.round(s.palletQty || 0),
           s.latestStatus || '',
           s.receivingWarehouse || ''
         ]),
@@ -840,7 +840,7 @@ function AdvancedReports() {
               textAlign: 'center'
             }}>
               <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--success)' }}>
-                {filteredShipments.reduce((sum, s) => sum + (s.palletQty || 0), 0).toLocaleString()}
+                {Math.round(filteredShipments.reduce((sum, s) => sum + (s.palletQty || 0), 0)).toLocaleString()}
               </div>
               <div style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>Total Pallets</div>
             </div>
@@ -895,7 +895,7 @@ function AdvancedReports() {
                         {shipment.weekNumber || '-'}
                       </td>
                       <td style={{ padding: '10px', textAlign: 'right' }}>{(shipment.quantity || 0).toLocaleString()}</td>
-                      <td style={{ padding: '10px', textAlign: 'right' }}>{(shipment.palletQty || 0).toLocaleString()}</td>
+                      <td style={{ padding: '10px', textAlign: 'right' }}>{Math.round(shipment.palletQty || 0).toLocaleString()}</td>
                       <td style={{ padding: '10px' }}>
                         <span style={{
                           padding: '4px 8px',
