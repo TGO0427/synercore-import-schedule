@@ -9,6 +9,7 @@ function AdvancedReports() {
   const [shipments, setShipments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedReport, setSelectedReport] = useState('custom');
+  const [detailShipment, setDetailShipment] = useState(null);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -889,7 +890,15 @@ function AdvancedReports() {
                       backgroundColor: index % 2 === 0 ? 'white' : '#fafafa'
                     }}>
                       <td style={{ padding: '10px' }}>{shipment.supplier || '-'}</td>
-                      <td style={{ padding: '10px' }}>{shipment.orderRef || '-'}</td>
+                      <td style={{ padding: '10px' }}>
+                        <span
+                          onClick={() => setDetailShipment(shipment)}
+                          style={{ color: 'var(--accent)', cursor: 'pointer', fontWeight: 600, borderBottom: '1px dashed var(--accent)' }}
+                          title="View order details"
+                        >
+                          {shipment.orderRef || '-'}
+                        </span>
+                      </td>
                       <td style={{ padding: '10px' }}>{shipment.productName || '-'}</td>
                       <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold', color: 'var(--info)' }}>
                         {shipment.weekNumber || '-'}
@@ -943,6 +952,81 @@ function AdvancedReports() {
           </div>
         </div>
       </div>
+      {/* Order Detail Card */}
+      {detailShipment && (
+        <div
+          onClick={() => setDetailShipment(null)}
+          style={{
+            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--surface)', borderRadius: 12, padding: '1.5rem',
+              width: '90%', maxWidth: 520, maxHeight: '80vh', overflowY: 'auto',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.2)', border: '1px solid var(--border)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--navy-900)' }}>
+                {detailShipment.orderRef}
+              </h3>
+              <button
+                onClick={() => setDetailShipment(null)}
+                style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-500)', lineHeight: 1 }}
+              >
+                x
+              </button>
+            </div>
+            {(() => {
+              const s = detailShipment;
+              const fmt = (d) => d ? new Date(d).toLocaleDateString('en-ZA', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
+              const rows = [
+                ['Supplier', s.supplier],
+                ['Product', s.productName],
+                ['Quantity', s.quantity != null ? Number(s.quantity).toLocaleString() : '-'],
+                ['Pallets', s.palletQty ? (Math.round(s.palletQty) || 1) : '-'],
+                ['CBM', s.cbm || '-'],
+                ['Week', s.weekNumber ? `Week ${s.weekNumber}` : '-'],
+                ['Status', s.latestStatus?.replace(/_/g, ' ') || '-'],
+                ['Warehouse', s.receivingWarehouse || '-'],
+                ['Freight Type', s.freightType || '-'],
+                ['Final POD', s.finalPod || '-'],
+                ['Incoterm', s.incoterm || '-'],
+                ['Forwarding Agent', s.forwardingAgent || '-'],
+                ['Vessel', s.vesselName || '-'],
+                ['Inspection Status', s.inspectionStatus || '-'],
+                ['Inspected By', s.inspectedBy || '-'],
+                ['Received By', s.receivedBy || '-'],
+                ['Created', fmt(s.createdAt)],
+              ];
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 0 }}>
+                  {rows.map(([label, value]) => (
+                    <React.Fragment key={label}>
+                      <div style={{
+                        padding: '6px 8px', fontSize: 12, fontWeight: 600,
+                        color: 'var(--text-500)', borderBottom: '1px solid var(--border)'
+                      }}>
+                        {label}
+                      </div>
+                      <div style={{
+                        padding: '6px 8px', fontSize: 13,
+                        color: 'var(--text-700)', borderBottom: '1px solid var(--border)',
+                        wordBreak: 'break-word'
+                      }}>
+                        {value || '-'}
+                      </div>
+                    </React.Fragment>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
