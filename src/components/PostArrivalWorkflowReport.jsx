@@ -69,8 +69,17 @@ function PostArrivalWorkflowReport({ shipments }) {
             ...s,
             latest_status: s.latest_status || s.latestStatus,
             supplier: s.supplier,
+            productName: s.product_name || s.productName,
             product_name: s.product_name || s.productName,
-            receiving_warehouse: s.receiving_warehouse || s.receivingWarehouse
+            orderRef: s.order_ref || s.orderRef,
+            receiving_warehouse: s.receiving_warehouse || s.receivingWarehouse,
+            receivingWarehouse: s.receiving_warehouse || s.receivingWarehouse,
+            updatedAt: s.updated_at || s.updatedAt,
+            createdAt: s.created_at || s.createdAt,
+            receivingDate: s.receiving_date || s.receivingDate,
+            unloadingStartDate: s.unloading_start_date || s.unloadingStartDate,
+            unloadingCompletedDate: s.unloading_completed_date || s.unloadingCompletedDate,
+            inspectionDate: s.inspection_date || s.inspectionDate,
           }));
 
           // Filter for post-arrival statuses (including archived for historical data)
@@ -133,36 +142,39 @@ function PostArrivalWorkflowReport({ shipments }) {
         statusCounts[status]++;
       }
 
-      // Time calculations
+      // Time calculations - use actual date fields
       const now = new Date();
       const lastUpdated = new Date(shipment.updatedAt || now);
 
-      // Calculate time since last status change (simulated for demo)
-      const timeInCurrentStatus = Math.floor((now - lastUpdated) / (1000 * 60 * 60)); // hours
+      // Use actual arrival date: unloadingStartDate (when processing began) or createdAt as fallback
+      const arrivedTime = shipment.unloadingStartDate
+        ? new Date(shipment.unloadingStartDate)
+        : shipment.createdAt
+          ? new Date(shipment.createdAt)
+          : lastUpdated;
 
-      // For demo purposes, simulate arrival timestamp based on updatedAt
-      // In production, this would come from statusHistory
-      let arrivedTime = lastUpdated;
-      if (!['arrived_pta', 'arrived_klm', 'arrived_offsite'].includes(status)) {
-        // Simulate that arrived was some time before current status
-        arrivedTime = new Date(lastUpdated.getTime() - (timeInCurrentStatus * 1000 * 60 * 60));
-      }
+      // Use actual stored/receiving date
+      const storedTime = shipment.receivingDate
+        ? new Date(shipment.receivingDate)
+        : lastUpdated;
+
+      const timeInCurrentStatus = Math.floor((now - lastUpdated) / (1000 * 60 * 60)); // hours
 
       // Calculate total workflow time for completed shipments (stored or archived)
       if (status === 'stored' || status === 'archived') {
-        const totalWorkflowTime = Math.floor((lastUpdated - arrivedTime) / (1000 * 60 * 60)); // hours
+        const totalWorkflowTime = Math.max(0, Math.floor((storedTime - arrivedTime) / (1000 * 60 * 60))); // hours
         timeAnalysis.completedShipments.push({
           id: shipment.id,
           supplier: shipment.supplier,
           productName: shipment.productName || shipment.orderRef,
           arrivedAt: arrivedTime,
-          storedAt: lastUpdated,
+          storedAt: storedTime,
           totalTime: totalWorkflowTime
         });
         timeAnalysis.totalProcessingTime += totalWorkflowTime;
       } else {
         // Track current processing times
-        const currentProcessingTime = Math.floor((now - arrivedTime) / (1000 * 60 * 60)); // hours
+        const currentProcessingTime = Math.max(0, Math.floor((now - arrivedTime) / (1000 * 60 * 60))); // hours
         timeAnalysis.currentProcessingTimes.push({
           id: shipment.id,
           supplier: shipment.supplier,
