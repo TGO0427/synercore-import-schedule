@@ -13,6 +13,7 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 function LiveBoard({ shipments, onClose, onRefresh }) {
   const [clock, setClock] = useState(new Date());
   const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [detailShipment, setDetailShipment] = useState(null);
   const [refreshPulse, setRefreshPulse] = useState(false);
 
   // Clock tick every second
@@ -232,7 +233,13 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
                 borderRadius: '8px', borderLeft: '3px solid rgba(5,150,105,0.5)',
               }}>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{s.orderRef}</div>
+                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>
+                    <span
+                      onClick={() => setDetailShipment(s)}
+                      style={{ cursor: 'pointer', borderBottom: '1px dashed rgba(255,255,255,0.5)' }}
+                      title="View order details"
+                    >{s.orderRef}</span>
+                  </div>
                   <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)' }}>{s.supplier}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
@@ -259,6 +266,79 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
           </div>
         </div>
       </div>
+      {/* Order Detail Card */}
+      {detailShipment && (
+        <div
+          onClick={() => setDetailShipment(null)}
+          style={{
+            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#1a1a2e', borderRadius: 12, padding: '1.5rem',
+              width: '90%', maxWidth: 520, maxHeight: '80vh', overflowY: 'auto',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)',
+              color: '#e0e0e0'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#fff' }}>
+                {detailShipment.orderRef}
+              </h3>
+              <button
+                onClick={() => setDetailShipment(null)}
+                style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'rgba(255,255,255,0.5)', lineHeight: 1 }}
+              >
+                x
+              </button>
+            </div>
+            {(() => {
+              const s = detailShipment;
+              const fmt = (d) => d ? new Date(d).toLocaleDateString('en-ZA', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
+              const rows = [
+                ['Supplier', s.supplier],
+                ['Product', s.productName],
+                ['Quantity', s.quantity != null ? Number(s.quantity).toLocaleString() : '-'],
+                ['Pallets', s.palletQty ? (Math.round(s.palletQty) || 1) : '-'],
+                ['CBM', s.cbm || '-'],
+                ['Week', s.weekNumber ? `Week ${s.weekNumber}` : '-'],
+                ['Status', (s.latestStatus || '').replace(/_/g, ' ') || '-'],
+                ['Final POD', s.finalPod || '-'],
+                ['Warehouse', s.receivingWarehouse || '-'],
+                ['Freight Type', s.freightType || '-'],
+                ['Incoterm', s.incoterm || '-'],
+                ['Forwarding Agent', s.forwardingAgent || '-'],
+                ['Vessel', s.vesselName || '-'],
+                ['Last Updated', fmt(s.updatedAt)],
+              ];
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 0 }}>
+                  {rows.map(([label, value]) => (
+                    <React.Fragment key={label}>
+                      <div style={{
+                        padding: '6px 8px', fontSize: 12, fontWeight: 600,
+                        color: 'rgba(255,255,255,0.5)', borderBottom: '1px solid rgba(255,255,255,0.08)'
+                      }}>
+                        {label}
+                      </div>
+                      <div style={{
+                        padding: '6px 8px', fontSize: 13,
+                        color: 'rgba(255,255,255,0.85)', borderBottom: '1px solid rgba(255,255,255,0.08)',
+                        wordBreak: 'break-word'
+                      }}>
+                        {value || '-'}
+                      </div>
+                    </React.Fragment>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
