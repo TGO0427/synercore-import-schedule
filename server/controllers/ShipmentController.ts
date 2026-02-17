@@ -511,6 +511,42 @@ export class ShipmentController {
 
     return updated;
   }
+
+  /**
+   * Admin: complete entire workflow in one step
+   */
+  static async adminCompleteWorkflow(id: string, adminName: string): Promise<Shipment> {
+    const shipment = await this.getShipment(id);
+
+    // Must be in a post-arrival status (not already stored/cancelled)
+    const validStates = [
+      'arrived_pta', 'arrived_klm', 'arrived_offsite',
+      'unloading', 'inspection_pending', 'inspecting',
+      'inspection_passed', 'inspection_failed',
+      'receiving', 'received'
+    ];
+    if (!validStates.includes(shipment.latest_status)) {
+      throw AppError.conflict('Shipment must be in a post-arrival workflow state');
+    }
+
+    const now = new Date();
+    const updated = await shipmentRepository.update(id, {
+      latest_status: 'stored' as ShipmentStatus,
+      unloading_start_date: shipment.unloading_start_date || now,
+      unloading_completed_date: shipment.unloading_completed_date || now,
+      inspection_status: 'passed',
+      inspection_date: shipment.inspection_date || now,
+      inspected_by: shipment.inspected_by || adminName,
+      inspection_notes: shipment.inspection_notes || 'Admin skip — all steps completed',
+      receiving_status: 'completed',
+      receiving_date: shipment.receiving_date || now,
+      received_by: shipment.received_by || adminName,
+      received_quantity: shipment.received_quantity || shipment.quantity,
+      updated_at: now
+    } as Partial<Shipment>);
+
+    return updated;
+  }
 }
 
 export default ShipmentController;

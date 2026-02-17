@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { authFetch } from '../utils/authFetch';
+import { authUtils } from '../utils/auth';
 import { ShipmentStatus, InspectionStatus, ReceivingStatus } from '../types/shipment';
 import { getApiUrl } from '../config/api';
 import PostArrivalWizard from './PostArrivalWizard';
@@ -28,6 +29,8 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
     receivedQuantity: '',
     discrepancies: []
   });
+
+  const isAdmin = authUtils.getUser()?.role === 'admin';
 
   const [showRejectionDialog, setShowRejectionDialog] = useState(false);
   const [rejectionData, setRejectionData] = useState({
@@ -137,6 +140,11 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
       actions.push({ key: 'mark-stored', label: 'Mark as Stored', icon: '🏪', color: 'var(--text-500)' });
     }
 
+    // Admin-only: skip entire workflow
+    if (isAdmin) {
+      actions.push({ key: 'admin-complete', label: 'Skip to Stored', icon: '⚡', color: 'var(--danger)' });
+    }
+
     // Always add the ability to amend status (revert to shipping schedule)
     actions.push({ key: 'amend-status', label: 'Amend Status', icon: '🔄', color: 'var(--danger)' });
 
@@ -204,6 +212,40 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
       } finally {
         setActionLoading(false);
       }
+      return;
+    }
+
+    if (action === 'admin-complete') {
+      setConfirmationModal({
+        title: 'Admin: Skip to Stored',
+        message: `Skip all remaining workflow steps for ${shipment.orderRef}?\n\nThis will mark unloading, inspection (passed), and receiving as complete, then set status to Stored.`,
+        confirmText: 'Skip to Stored',
+        cancelText: 'Cancel',
+        type: 'warning',
+        onConfirm: async () => {
+          try {
+            setActionLoading(true);
+            const response = await authFetch(getApiUrl(`/api/shipments/${shipment.id}/admin-complete`), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({})
+            });
+            if (response.ok) {
+              showSuccess(`Shipment ${shipment.orderRef} workflow completed and stored.`);
+              await fetchPostArrivalShipments();
+            } else {
+              const error = await response.json();
+              showError(`Error: ${error.error}`);
+            }
+          } catch (error) {
+            showError('Error completing workflow. Please try again.');
+          } finally {
+            setActionLoading(false);
+            setConfirmationModal(null);
+          }
+        },
+        onCancel: () => setConfirmationModal(null),
+      });
       return;
     }
 

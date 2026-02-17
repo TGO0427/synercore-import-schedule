@@ -540,4 +540,27 @@ router.post(
   })
 );
 
+/**
+ * POST /api/shipments/:id/admin-complete
+ * Admin: complete entire workflow in one step
+ */
+router.post(
+  '/:id/admin-complete',
+  asyncHandler(async (req: Request, res: Response) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const shipment = await ShipmentController.adminCompleteWorkflow(
+      req.params.id!,
+      req.user.username || req.user.email || 'Admin'
+    );
+
+    res.status(200).json({
+      data: shipment,
+      message: 'Workflow completed by admin'
+    });
+  })
+);
+
 export default router;
