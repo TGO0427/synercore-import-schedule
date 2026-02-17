@@ -226,6 +226,9 @@ export class ShipmentController {
     if (data.selectedWeekDate !== undefined) {
       dbData.selected_week_date = data.selectedWeekDate;
     }
+    if ((data as any).receivingDate !== undefined) {
+      dbData.receiving_date = (data as any).receivingDate;
+    }
 
     // Update shipment
     const shipment = await shipmentRepository.update(id, dbData as Partial<Shipment>);

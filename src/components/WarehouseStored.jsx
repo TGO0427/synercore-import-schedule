@@ -392,20 +392,33 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                             <td style={{ padding: '8px 12px', fontSize: 13 }}>{shipment.palletQty ? (Math.round(shipment.palletQty) || 1) : '-'}</td>
                             <td style={{ padding: '8px 12px', fontSize: 13 }}>
                               {editingDate === shipment.id ? (
-                                <input
-                                  type="date"
-                                  autoFocus
-                                  value={editingDateValue}
-                                  onChange={(e) => setEditingDateValue(e.target.value)}
-                                  onBlur={() => {
-                                    handleStoredDateChange(shipment.id, editingDateValue);
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleStoredDateChange(shipment.id, editingDateValue);
-                                    if (e.key === 'Escape') setEditingDate(null);
-                                  }}
-                                  style={{ fontSize: 12, padding: '4px 6px', borderRadius: 4, border: '1px solid var(--border)' }}
-                                />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  <input
+                                    type="date"
+                                    autoFocus
+                                    value={editingDateValue}
+                                    onChange={(e) => setEditingDateValue(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') handleStoredDateChange(shipment.id, editingDateValue);
+                                      if (e.key === 'Escape') setEditingDate(null);
+                                    }}
+                                    style={{ fontSize: 12, padding: '4px 6px', borderRadius: 4, border: '1px solid var(--border)' }}
+                                  />
+                                  <button
+                                    className="btn btn-primary"
+                                    onClick={() => handleStoredDateChange(shipment.id, editingDateValue)}
+                                    style={{ fontSize: 11, padding: '4px 8px', minWidth: 0 }}
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    className="btn btn-ghost"
+                                    onClick={() => setEditingDate(null)}
+                                    style={{ fontSize: 11, padding: '4px 8px', minWidth: 0 }}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
                               ) : (
                                 <span
                                   onClick={() => {
