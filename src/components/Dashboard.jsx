@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ShipmentStatus } from '../types/shipment';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -26,6 +26,8 @@ const WAREHOUSE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
 const RANK_COLORS = ['#f59e0b', '#94a3b8', '#cd7f32', '#64748b', '#64748b'];
 
 function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
+  const [detailShipment, setDetailShipment] = useState(null);
+
   const getCurrentWeek = () => {
     const now = new Date();
     const yearStart = new Date(now.getFullYear(), 0, 1);
@@ -432,7 +434,11 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-2)'}
               >
                 <div>
-                  <strong style={{ color: 'var(--text-900)', fontSize: 13 }}>{shipment.orderRef}</strong>
+                  <strong
+                    onClick={(e) => { e.stopPropagation(); setDetailShipment(shipment); }}
+                    style={{ color: 'var(--accent)', fontSize: 13, cursor: 'pointer', borderBottom: '1px dashed var(--accent)' }}
+                    title="View order details"
+                  >{shipment.orderRef}</strong>
                   <span style={{ color: 'var(--text-500)', fontSize: 13 }}> — {shipment.finalPod}</span>
                   <div style={{ fontSize: 12, color: 'var(--text-500)', marginTop: 2 }}>{shipment.supplier}</div>
                 </div>
@@ -475,6 +481,78 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
               Live Board
             </button>
           )}
+        </div>
+      )}
+      {/* Order Detail Card */}
+      {detailShipment && (
+        <div
+          onClick={() => setDetailShipment(null)}
+          style={{
+            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--surface)', borderRadius: 12, padding: '1.5rem',
+              width: '90%', maxWidth: 520, maxHeight: '80vh', overflowY: 'auto',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.2)', border: '1px solid var(--border)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--navy-900)' }}>
+                {detailShipment.orderRef}
+              </h3>
+              <button
+                onClick={() => setDetailShipment(null)}
+                style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-500)', lineHeight: 1 }}
+              >
+                x
+              </button>
+            </div>
+            {(() => {
+              const s = detailShipment;
+              const fmt = (d) => d ? new Date(d).toLocaleDateString('en-ZA', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
+              const rows = [
+                ['Supplier', s.supplier],
+                ['Product', s.productName],
+                ['Quantity', s.quantity != null ? Number(s.quantity).toLocaleString() : '-'],
+                ['Pallets', s.palletQty ? (Math.round(s.palletQty) || 1) : '-'],
+                ['CBM', s.cbm || '-'],
+                ['Week', s.weekNumber ? `Week ${s.weekNumber}` : '-'],
+                ['Status', (s.latestStatus || '').replace(/_/g, ' ') || '-'],
+                ['Final POD', s.finalPod || '-'],
+                ['Warehouse', s.receivingWarehouse || '-'],
+                ['Freight Type', s.freightType || '-'],
+                ['Incoterm', s.incoterm || '-'],
+                ['Forwarding Agent', s.forwardingAgent || '-'],
+                ['Vessel', s.vesselName || '-'],
+                ['Created', fmt(s.createdAt)],
+              ];
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 0 }}>
+                  {rows.map(([label, value]) => (
+                    <React.Fragment key={label}>
+                      <div style={{
+                        padding: '6px 8px', fontSize: 12, fontWeight: 600,
+                        color: 'var(--text-500)', borderBottom: '1px solid var(--border)'
+                      }}>
+                        {label}
+                      </div>
+                      <div style={{
+                        padding: '6px 8px', fontSize: 13,
+                        color: 'var(--text-700)', borderBottom: '1px solid var(--border)',
+                        wordBreak: 'break-word'
+                      }}>
+                        {value || '-'}
+                      </div>
+                    </React.Fragment>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
         </div>
       )}
     </div>
