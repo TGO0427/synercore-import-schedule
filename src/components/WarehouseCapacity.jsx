@@ -104,6 +104,7 @@ function WarehouseCapacity({ shipments }) {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState(null);
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(null);
+  const [detailProduct, setDetailProduct] = useState(null);
 
   // Load warehouse capacity data from database on mount
   useEffect(() => {
@@ -1219,7 +1220,15 @@ function WarehouseCapacity({ shipments }) {
         warehouse: shipment.receivingWarehouse || shipment.finalPod || 'Unassigned',
         weekNumber: shipment.weekNumber || currentWeek,
         status: shipment.latestStatus,
-        id: shipment.id
+        id: shipment.id,
+        orderRef: shipment.orderRef,
+        supplier: shipment.supplier,
+        cbm: shipment.cbm,
+        freightType: shipment.freightType,
+        finalPod: shipment.finalPod,
+        incoterm: shipment.incoterm,
+        forwardingAgent: shipment.forwardingAgent,
+        vesselName: shipment.vesselName,
       }))
       .sort((a, b) => {
         if (a.weekNumber !== b.weekNumber) return a.weekNumber - b.weekNumber;
@@ -1275,7 +1284,13 @@ function WarehouseCapacity({ shipments }) {
                       backgroundColor: isCurrentWeek ? '#f0f8f0' : (index % 2 === 0 ? 'white' : '#fafbfc')
                     }}>
                       <td style={{ padding: '8px 12px', border: '1px solid var(--border)', fontWeight: '500', fontSize: '0.85rem' }}>
-                        {product.name}
+                        <span
+                          onClick={() => setDetailProduct(product)}
+                          style={{ color: 'var(--accent)', cursor: 'pointer', borderBottom: '1px dashed var(--accent)' }}
+                          title="View order details"
+                        >
+                          {product.name}
+                        </span>
                       </td>
                       <td style={{ padding: '8px 12px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: isCurrentWeek ? 'bold' : 'normal', fontSize: '0.85rem' }}>
                         {isCurrentWeek ? `W${product.weekNumber} *` : `W${product.weekNumber}`}
@@ -1542,6 +1557,78 @@ function WarehouseCapacity({ shipments }) {
       {/* Analytics Charts - Filtered by Selected Warehouse */}
       <WeeklyInflowChart warehouseStats={filteredWarehouseStats} />
       <ProductETAChart shipments={filteredShipments} />
+
+      {/* Order Detail Card */}
+      {detailProduct && (
+        <div
+          onClick={() => setDetailProduct(null)}
+          style={{
+            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--surface)', borderRadius: 12, padding: '1.5rem',
+              width: '90%', maxWidth: 520, maxHeight: '80vh', overflowY: 'auto',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.2)', border: '1px solid var(--border)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--navy-900)' }}>
+                {detailProduct.orderRef || detailProduct.name}
+              </h3>
+              <button
+                onClick={() => setDetailProduct(null)}
+                style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-500)', lineHeight: 1 }}
+              >
+                x
+              </button>
+            </div>
+            {(() => {
+              const p = detailProduct;
+              const rows = [
+                ['Product', p.name],
+                ['Supplier', p.supplier || '-'],
+                ['Order Ref', p.orderRef || '-'],
+                ['Quantity', p.quantity > 0 ? p.quantity.toLocaleString() : '-'],
+                ['Pallets', p.palletQty > 0 ? (Math.round(p.palletQty) || 1) : '-'],
+                ['CBM', p.cbm || '-'],
+                ['Week', p.weekNumber ? `Week ${p.weekNumber}` : '-'],
+                ['Warehouse', p.warehouse || '-'],
+                ['Status', (p.status || '').replace(/_/g, ' ') || '-'],
+                ['Freight Type', p.freightType || '-'],
+                ['Final POD', p.finalPod || '-'],
+                ['Incoterm', p.incoterm || '-'],
+                ['Forwarding Agent', p.forwardingAgent || '-'],
+                ['Vessel', p.vesselName || '-'],
+              ];
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 0 }}>
+                  {rows.map(([label, value]) => (
+                    <React.Fragment key={label}>
+                      <div style={{
+                        padding: '6px 8px', fontSize: 12, fontWeight: 600,
+                        color: 'var(--text-500)', borderBottom: '1px solid var(--border)'
+                      }}>
+                        {label}
+                      </div>
+                      <div style={{
+                        padding: '6px 8px', fontSize: 13,
+                        color: 'var(--text-700)', borderBottom: '1px solid var(--border)',
+                        wordBreak: 'break-word'
+                      }}>
+                        {value || '-'}
+                      </div>
+                    </React.Fragment>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
