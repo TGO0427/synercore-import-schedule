@@ -807,7 +807,7 @@ function App() {
           </div>
         );
       case 'workflow':
-        return <PostArrivalWorkflow showSuccess={showSuccess} showError={showError} showWarning={showWarning} />;
+        return <PostArrivalWorkflow showSuccess={showSuccess} showError={showError} showWarning={showWarning} globalSearchTerm={globalSearchTerm} onClearGlobalSearch={() => setGlobalSearchTerm('')} />;
       case 'stored': {
         const storedShipments = shipments.filter(s => s.latestStatus === 'stored' || s.latestStatus === 'archived');
         return (
@@ -819,6 +819,8 @@ function App() {
             loading={loading}
             showSuccess={showSuccess}
             showError={showError}
+            globalSearchTerm={globalSearchTerm}
+            onClearGlobalSearch={() => setGlobalSearchTerm('')}
           />
         );
       }

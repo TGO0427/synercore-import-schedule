@@ -87,7 +87,7 @@ export default function AlertHub({
             onClick={() => {
               if (a.meta?.orderRef && onNavigate) {
                 onMarkRead?.(a.id);
-                onNavigate('shipping', { searchTerm: a.meta.orderRef });
+                onNavigate(viewForStatus(a.meta?.status), { searchTerm: a.meta.orderRef });
                 onClose();
               }
             }}
@@ -118,13 +118,20 @@ export default function AlertHub({
               </div>
             )}
             <div style={{ display: 'flex', gap: 8 }} onClick={e => e.stopPropagation()}>
-              {a.meta?.orderRef && onNavigate && (
-                <button onClick={() => {
-                  onMarkRead?.(a.id);
-                  onNavigate('shipping', { searchTerm: a.meta.orderRef });
-                  onClose();
-                }} style={btnStyle('#059669')}>View Shipment</button>
-              )}
+              {a.meta?.orderRef && onNavigate && (() => {
+                const dest = viewForStatus(a.meta?.status);
+                const label = dest === 'stored' ? 'View in Stored Stock'
+                  : dest === 'workflow' ? 'View in Workflow'
+                  : dest === 'archives' ? 'View in Archives'
+                  : 'View in Shipping';
+                return (
+                  <button onClick={() => {
+                    onMarkRead?.(a.id);
+                    onNavigate(dest, { searchTerm: a.meta.orderRef });
+                    onClose();
+                  }} style={btnStyle('#059669')}>{label}</button>
+                );
+              })()}
               {!a.read && (
                 <button onClick={() => onMarkRead?.(a.id)} style={btnStyle('#0ea5e9')}>Mark read</button>
               )}
@@ -135,6 +142,20 @@ export default function AlertHub({
       </div>
     </aside>
   );
+}
+
+function viewForStatus(status) {
+  if (!status) return 'shipping';
+  const postArrival = [
+    'arrived_pta', 'arrived_klm', 'arrived_offsite',
+    'unloading', 'inspection_pending', 'inspecting',
+    'inspection_failed', 'inspection_passed',
+    'receiving', 'received',
+  ];
+  if (status === 'stored') return 'stored';
+  if (status === 'archived') return 'archives';
+  if (postArrival.includes(status)) return 'workflow';
+  return 'shipping';
 }
 
 function colorFor(sev) {

@@ -6,7 +6,7 @@ import { getApiUrl } from '../config/api';
 import PostArrivalWizard from './PostArrivalWizard';
 import ConfirmationModal from './ConfirmationModal';
 
-function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
+function PostArrivalWorkflow({ showSuccess, showError, showWarning, globalSearchTerm, onClearGlobalSearch }) {
   const [postArrivalShipments, setPostArrivalShipments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedShipment, setSelectedShipment] = useState(null);
@@ -16,6 +16,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
   const [actionLoading, setActionLoading] = useState(false);
   const [confirmationModal, setConfirmationModal] = useState(null);
   const [detailShipment, setDetailShipment] = useState(null);
+  const [searchTerm, setSearchTerm] = useState(globalSearchTerm || '');
 
   const [workflowData, setWorkflowData] = useState({
     inspectedBy: '',
@@ -43,6 +44,13 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
   useEffect(() => {
     fetchPostArrivalShipments();
   }, []);
+
+  useEffect(() => {
+    if (globalSearchTerm) {
+      setSearchTerm(globalSearchTerm);
+      onClearGlobalSearch?.();
+    }
+  }, [globalSearchTerm]);
 
   const fetchPostArrivalShipments = async () => {
     try {
@@ -466,7 +474,22 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
         </p>
       </div>
 
-      {postArrivalShipments.length === 0 ? (
+      {searchTerm && (
+        <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 13, color: 'var(--text-500)' }}>Filtered by: <strong>{searchTerm}</strong></span>
+          <button onClick={() => setSearchTerm('')} className="btn btn-ghost" style={{ fontSize: 12, padding: '4px 10px' }}>Clear</button>
+        </div>
+      )}
+
+      {(() => {
+        const displayed = searchTerm
+          ? postArrivalShipments.filter(s =>
+              (s.orderRef || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+              (s.supplier || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+              (s.productName || '').toLowerCase().includes(searchTerm.toLowerCase())
+            )
+          : postArrivalShipments;
+        return displayed.length === 0 ? (
         <div style={{
           textAlign: 'center',
           padding: '3rem',
@@ -482,7 +505,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
         </div>
       ) : (
         <div style={{ display: 'grid', gap: '1rem' }}>
-          {postArrivalShipments.map((shipment) => {
+          {displayed.map((shipment) => {
             const progress = getWorkflowProgress(shipment);
             const actions = getAvailableActions(shipment);
 
@@ -624,7 +647,8 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning }) {
             );
           })}
         </div>
-      )}
+      );
+      })()}
 
       {/* Workflow Wizard - New Step-by-Step UI */}
       {showWizard && selectedShipment && (

@@ -3,8 +3,8 @@ import { ShipmentStatus } from '../types/shipment';
 import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
 
-function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArchiveShipment, loading, showSuccess, showError }) {
-  const [searchTerm, setSearchTerm] = useState('');
+function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArchiveShipment, loading, showSuccess, showError, globalSearchTerm, onClearGlobalSearch }) {
+  const [searchTerm, setSearchTerm] = useState(globalSearchTerm || '');
   const [weekFilters, setWeekFilters] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: 'storedDate', direction: 'desc' });
   const [archivedShipments, setArchivedShipments] = useState([]);
@@ -18,6 +18,14 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
   const [selectedShipment, setSelectedShipment] = useState(null); // shipment detail card
   const [editShipment, setEditShipment] = useState(null); // shipment being edited
   const [editForm, setEditForm] = useState({});
+
+  // Sync global search term
+  useEffect(() => {
+    if (globalSearchTerm) {
+      setSearchTerm(globalSearchTerm);
+      onClearGlobalSearch?.();
+    }
+  }, [globalSearchTerm]);
 
   // Fetch archived shipments
   useEffect(() => {
