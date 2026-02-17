@@ -8,6 +8,7 @@ export default function AlertHub({
   alerts = [],
   onDismiss,
   onMarkRead,
+  onNavigate,
 }) {
   const [query, setQuery] = useState('');
   const [severity, setSeverity] = useState('all'); // all | critical | warning | info
@@ -75,7 +76,24 @@ export default function AlertHub({
           </div>
         )}
         {filtered.map(a => (
-          <article key={a.id} style={{ border: '1px solid #eee', borderLeft: `4px solid ${colorFor(a.severity)}`, borderRadius: 8, padding: 12, background: a.read ? '#fafafa' : '#fff' }}>
+          <article
+            key={a.id}
+            style={{
+              border: '1px solid #eee', borderLeft: `4px solid ${colorFor(a.severity)}`,
+              borderRadius: 8, padding: 12, background: a.read ? '#fafafa' : '#fff',
+              cursor: a.meta?.orderRef && onNavigate ? 'pointer' : 'default',
+              transition: 'background 0.15s',
+            }}
+            onClick={() => {
+              if (a.meta?.orderRef && onNavigate) {
+                onMarkRead?.(a.id);
+                onNavigate('shipping', { searchTerm: a.meta.orderRef });
+                onClose();
+              }
+            }}
+            onMouseEnter={e => { if (a.meta?.orderRef && onNavigate) e.currentTarget.style.background = '#f0f7ff'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = a.read ? '#fafafa' : '#fff'; }}
+          >
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <span style={{
                 display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
@@ -90,11 +108,23 @@ export default function AlertHub({
               <p style={{ margin: '6px 0 8px 0', fontSize: 13, color: '#444' }}>{a.description}</p>
             )}
             {a.meta && (
-              <pre style={{ margin: '0 0 8px 0', fontSize: 12, color: '#555', background: '#f7f7f7', padding: 8, borderRadius: 6, overflowX: 'auto' }}>
-                {JSON.stringify(a.meta, null, 2)}
-              </pre>
+              <div style={{ margin: '0 0 8px 0', fontSize: 12, color: '#555', background: '#f7f7f7', padding: 8, borderRadius: 6, display: 'flex', flexWrap: 'wrap', gap: '4px 12px' }}>
+                {a.meta.orderRef && <span><strong>Ref:</strong> {a.meta.orderRef}</span>}
+                {a.meta.supplier && <span><strong>Supplier:</strong> {a.meta.supplier}</span>}
+                {a.meta.product && <span><strong>Product:</strong> {a.meta.product}</span>}
+                {a.meta.week && <span><strong>Week:</strong> {a.meta.week}</span>}
+                {a.meta.status && <span><strong>Status:</strong> {a.meta.status.replace(/_/g, ' ')}</span>}
+                {a.meta.finalPod && <span><strong>POD:</strong> {a.meta.finalPod}</span>}
+              </div>
             )}
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8 }} onClick={e => e.stopPropagation()}>
+              {a.meta?.orderRef && onNavigate && (
+                <button onClick={() => {
+                  onMarkRead?.(a.id);
+                  onNavigate('shipping', { searchTerm: a.meta.orderRef });
+                  onClose();
+                }} style={btnStyle('#059669')}>View Shipment</button>
+              )}
               {!a.read && (
                 <button onClick={() => onMarkRead?.(a.id)} style={btnStyle('#0ea5e9')}>Mark read</button>
               )}

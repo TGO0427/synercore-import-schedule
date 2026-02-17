@@ -1151,6 +1151,7 @@ function App() {
         alerts={alerts}
         onDismiss={handleAlertDismiss}
         onMarkRead={handleAlertMarkRead}
+        onNavigate={handleDashboardNavigate}
       />
       {settingsOpen && (
         <UserSettings
