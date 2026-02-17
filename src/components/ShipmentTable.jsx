@@ -1311,13 +1311,19 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   <option value="planned_seafreight">Planned Seafreight</option>
                   <option value="in_transit_airfreight">In Transit Airfreight</option>
                   <option value="air_customs_clearance">Air Customs Clearance Event</option>
-                  <option value="in_transit">In Transit</option>
-                  <option value="arrived">Arrived</option>
+                  <option value="in_transit_roadway">In Transit Roadway</option>
+                  <option value="in_transit_seaway">In Transit Seaway</option>
+                  <option value="moored">Moored</option>
+                  <option value="berth_working">Berth Working</option>
+                  <option value="berth_complete">Berth Complete</option>
+                  <option value="arrived_pta">Arrived PTA</option>
+                  <option value="arrived_klm">Arrived KLM</option>
+                  <option value="arrived_offsite">Arrived OffSite</option>
                   <option value="delayed">Delayed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
-              
+
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Week Number
@@ -1668,8 +1674,14 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   <option value="planned_seafreight">Planned Seafreight</option>
                   <option value="in_transit_airfreight">In Transit Airfreight</option>
                   <option value="air_customs_clearance">Air Customs Clearance Event</option>
-                  <option value="in_transit">In Transit</option>
-                  <option value="arrived">Arrived</option>
+                  <option value="in_transit_roadway">In Transit Roadway</option>
+                  <option value="in_transit_seaway">In Transit Seaway</option>
+                  <option value="moored">Moored</option>
+                  <option value="berth_working">Berth Working</option>
+                  <option value="berth_complete">Berth Complete</option>
+                  <option value="arrived_pta">Arrived PTA</option>
+                  <option value="arrived_klm">Arrived KLM</option>
+                  <option value="arrived_offsite">Arrived OffSite</option>
                   <option value="delayed">Delayed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
