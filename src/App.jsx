@@ -211,18 +211,33 @@ function App() {
   const showLight   = (m, o = {}) => { addNotification('light', m, o); };
 
   // ---------- alerts ----------
+  const [dismissedAlertIds, setDismissedAlertIds] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('dismissedAlerts') || '[]')); }
+    catch { return new Set(); }
+  });
+
   // Whenever shipments change, recompute alerts
   useEffect(() => {
     setAlerts(prev => {
       const computed = computeShipmentAlerts(shipments);
-      // preserve "read" state across recomputes
+      // preserve "read" state across recomputes, filter out dismissed
       const readSet = new Set(prev.filter(a => a.read).map(a => a.id));
-      return computed.map(a => ({ ...a, read: readSet.has(a.id) ? true : a.read || false }));
+      return computed
+        .filter(a => !dismissedAlertIds.has(a.id))
+        .map(a => ({ ...a, read: readSet.has(a.id) ? true : a.read || false }));
     });
-  }, [shipments]);
+  }, [shipments, dismissedAlertIds]);
 
   // Alert handlers
-  const handleAlertDismiss = (id) => setAlerts(prev => prev.filter(a => a.id !== id));
+  const handleAlertDismiss = (id) => {
+    setDismissedAlertIds(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      localStorage.setItem('dismissedAlerts', JSON.stringify([...next]));
+      return next;
+    });
+    setAlerts(prev => prev.filter(a => a.id !== id));
+  };
   const handleAlertMarkRead = (id) => setAlerts(prev => prev.map(a => a.id === id ? { ...a, read: true } : a));
 
   // Helper function to push custom alerts
