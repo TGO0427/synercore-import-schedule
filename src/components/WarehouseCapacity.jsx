@@ -1205,13 +1205,20 @@ function WarehouseCapacity({ shipments }) {
     const currentWeek = getCurrentWeekNumber();
     const currentMonthWeeks = getCurrentMonthWeeks();
 
+    const inTransitStatuses = [
+      ShipmentStatus.PLANNED_AIRFREIGHT, ShipmentStatus.PLANNED_SEAFREIGHT,
+      ShipmentStatus.IN_TRANSIT_AIRFREIGHT, ShipmentStatus.IN_TRANSIT_SEAWAY,
+      ShipmentStatus.IN_TRANSIT_ROADWAY, ShipmentStatus.AIR_CUSTOMS_CLEARANCE,
+      ShipmentStatus.MOORED, ShipmentStatus.BERTH_WORKING, ShipmentStatus.BERTH_COMPLETE,
+      ShipmentStatus.DELAYED,
+    ];
     const productData = shipments
       .filter(shipment => {
         const hasProduct = shipment.productName && shipment.productName.trim() !== '';
         const weekNumber = parseInt(shipment.weekNumber) || currentWeek;
         const isCurrentMonth = currentMonthWeeks.includes(weekNumber);
-        const notStored = shipment.latestStatus !== ShipmentStatus.STORED;
-        return hasProduct && isCurrentMonth && notStored;
+        const isInTransit = inTransitStatuses.includes(shipment.latestStatus);
+        return hasProduct && isCurrentMonth && isInTransit;
       })
       .map(shipment => ({
         name: shipment.productName || 'Unknown Product',
