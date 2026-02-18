@@ -27,7 +27,7 @@ function ResetPassword({ onBack }) {
   }, []);
 
   const validatePassword = (pwd) => {
-    return pwd.length >= 8 && /[A-Z]/.test(pwd) && /[a-z]/.test(pwd) && /\d/.test(pwd);
+    return pwd.length >= 6 && /[A-Z]/.test(pwd) && /[a-z]/.test(pwd) && /\d/.test(pwd);
   };
 
   const handlePasswordChange = (e) => {
@@ -55,7 +55,7 @@ function ResetPassword({ onBack }) {
       setPasswordError('Password is required');
       hasError = true;
     } else if (!validatePassword(password)) {
-      setPasswordError('Password must be 8+ chars with uppercase, lowercase, and number');
+      setPasswordError('Password must be 6+ chars with uppercase, lowercase, and number');
       hasError = true;
     }
 
@@ -139,10 +139,10 @@ function ResetPassword({ onBack }) {
               <div className="password-requirements">
                 <div className="requirement-title">Password must contain:</div>
                 <div className="requirement">
-                  <span className={`requirement-check ${password.length >= 8 ? 'met' : ''}`}>
-                    {password.length >= 8 ? '✓' : '○'}
+                  <span className={`requirement-check ${password.length >= 6 ? 'met' : ''}`}>
+                    {password.length >= 6 ? '✓' : '○'}
                   </span>
-                  <span>At least 8 characters</span>
+                  <span>At least 6 characters</span>
                 </div>
                 <div className="requirement">
                   <span className={`requirement-check ${/[A-Z]/.test(password) ? 'met' : ''}`}>

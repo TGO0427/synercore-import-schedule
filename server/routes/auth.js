@@ -61,12 +61,7 @@ export const authenticateToken = (req, res, next) => {
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
-      console.error('JWT verification failed:', {
-        error: err.message,
-        tokenLength: token?.length,
-        hasJWTSecret: !!JWT_SECRET
-      });
-      return res.status(403).json({ error: 'Invalid or expired token', detail: process.env.NODE_ENV === 'development' ? err.message : undefined });
+      return res.status(403).json({ error: 'Invalid or expired token' });
     }
     req.user = user;
     next();
@@ -84,11 +79,6 @@ export const authenticateTokenLenient = (req, res, next) => {
 
   jwt.verify(token, JWT_SECRET, { ignoreExpiration: true }, (err, user) => {
     if (err && err.name !== 'TokenExpiredError') {
-      console.error('JWT verification failed:', {
-        error: err.message,
-        tokenLength: token?.length,
-        hasJWTSecret: !!JWT_SECRET
-      });
       return res.status(403).json({ error: 'Invalid token' });
     }
     req.user = user;
@@ -758,9 +748,12 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ error: 'Email, token, and password are required' });
     }
 
-    // Validate password strength
+    // Validate password strength (must match registration requirements)
     if (password.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+      return res.status(400).json({ error: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' });
     }
 
     // Find user by email

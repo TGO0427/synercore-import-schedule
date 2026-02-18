@@ -20,7 +20,7 @@ export const REGEX_PATTERNS = {
 export const VALIDATION_MESSAGES = {
   REQUIRED: 'This field is required',
   EMAIL_INVALID: 'Please enter a valid email address',
-  PASSWORD_MIN_LENGTH: 'Password must be at least 8 characters',
+  PASSWORD_MIN_LENGTH: 'Password must be at least 6 characters',
   PASSWORD_UPPERCASE: 'Password must contain at least one uppercase letter',
   PASSWORD_LOWERCASE: 'Password must contain at least one lowercase letter',
   PASSWORD_NUMBER: 'Password must contain at least one number',
@@ -47,7 +47,7 @@ export function validatePassword(password) {
     return { isValid: false, errors: [VALIDATION_MESSAGES.REQUIRED] };
   }
 
-  if (password.length < 8) {
+  if (password.length < 6) {
     errors.push(VALIDATION_MESSAGES.PASSWORD_MIN_LENGTH);
   }
 
@@ -67,7 +67,7 @@ export function validatePassword(password) {
     isValid: errors.length === 0,
     errors,
     requirements: {
-      minLength: { met: password.length >= 8, label: 'At least 8 characters' },
+      minLength: { met: password.length >= 6, label: 'At least 6 characters' },
       uppercase: { met: REGEX_PATTERNS.PASSWORD_UPPERCASE.test(password), label: 'One uppercase letter' },
       lowercase: { met: REGEX_PATTERNS.PASSWORD_LOWERCASE.test(password), label: 'One lowercase letter' },
       number: { met: REGEX_PATTERNS.PASSWORD_NUMBER.test(password), label: 'One number' }

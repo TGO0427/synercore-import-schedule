@@ -1,6 +1,6 @@
 import express from 'express';
 import pool from '../db/connection.js';
-import { authenticateToken } from '../middleware/auth.ts';
+import { authenticateToken, requireAdmin } from '../middleware/auth.ts';
 import { validateWarehouseCapacity, validateWarehouseCapacityUpdate } from '../middleware/validation.js';
 
 const router = express.Router();
@@ -9,12 +9,8 @@ const router = express.Router();
 // This avoids /:warehouseName matching /history/all or /available-bins
 
 // GET all history (admin only) - MUST be before /:warehouseName
-router.get('/history/all', authenticateToken, async (req, res) => {
+router.get('/history/all', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    // Check if user is admin
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
 
     const limit = parseInt(req.query.limit) || 100;
 

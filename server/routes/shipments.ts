@@ -7,6 +7,7 @@ import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { AppError } from '../utils/AppError.ts';
 import { asyncHandler } from '../middleware/errorHandler.ts';
+import { requireAdmin } from '../middleware/auth.ts';
 import ShipmentController, {
   type CreateShipmentRequest,
   type UpdateShipmentRequest,
@@ -546,11 +547,8 @@ router.post(
  */
 router.post(
   '/:id/admin-complete',
+  requireAdmin,
   asyncHandler(async (req: Request, res: Response) => {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
     const shipment = await ShipmentController.adminCompleteWorkflow(
       req.params.id!,
       req.user.username || req.user.email || 'Admin'

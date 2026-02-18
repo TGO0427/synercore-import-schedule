@@ -188,8 +188,12 @@ router.get('/:forwarder/:filename', async (req, res) => {
       return res.status(400).json({ error: 'Invalid forwarder' });
     }
     
-    const filePath = path.join(QUOTES_DIR, forwarder, filename);
-    
+    const baseDir = path.resolve(QUOTES_DIR, forwarder);
+    const filePath = path.resolve(baseDir, filename);
+    if (!filePath.startsWith(baseDir)) {
+      return res.status(400).json({ error: 'Invalid file path' });
+    }
+
     try {
       await fs.access(filePath);
       res.download(filePath);
@@ -211,8 +215,12 @@ router.delete('/:forwarder/:filename', async (req, res) => {
       return res.status(400).json({ error: 'Invalid forwarder' });
     }
     
-    const filePath = path.join(QUOTES_DIR, forwarder, filename);
-    
+    const baseDir = path.resolve(QUOTES_DIR, forwarder);
+    const filePath = path.resolve(baseDir, filename);
+    if (!filePath.startsWith(baseDir)) {
+      return res.status(400).json({ error: 'Invalid file path' });
+    }
+
     try {
       await fs.access(filePath);
       await fs.unlink(filePath);
@@ -326,7 +334,11 @@ router.post('/:forwarder/:filename/analyze', async (req, res) => {
       return res.status(400).json({ error: 'Invalid forwarder' });
     }
 
-    const filePath = path.join(QUOTES_DIR, forwarder, filename);
+    const baseDir = path.resolve(QUOTES_DIR, forwarder);
+    const filePath = path.resolve(baseDir, filename);
+    if (!filePath.startsWith(baseDir)) {
+      return res.status(400).json({ error: 'Invalid file path' });
+    }
 
     try {
       await fs.access(filePath);
@@ -380,7 +392,12 @@ router.post('/compare', async (req, res) => {
         continue;
       }
 
-      const filePath = path.join(QUOTES_DIR, forwarder, filename);
+      const baseDir = path.resolve(QUOTES_DIR, forwarder);
+      const filePath = path.resolve(baseDir, filename);
+      if (!filePath.startsWith(baseDir)) {
+        console.warn(`Skipping invalid file path: ${filename}`);
+        continue;
+      }
 
       try {
         await fs.access(filePath);

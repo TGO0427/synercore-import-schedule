@@ -243,7 +243,11 @@ router.get('/:id/documents', async (req, res) => {
 router.get('/:id/documents/:filename', async (req, res) => {
   try {
     const { id: supplierId, filename } = req.params;
-    const filePath = path.join(DOCUMENTS_DIR, supplierId, filename);
+    const baseDir = path.resolve(DOCUMENTS_DIR, supplierId);
+    const filePath = path.resolve(baseDir, filename);
+    if (!filePath.startsWith(baseDir)) {
+      return res.status(400).json({ error: 'Invalid file path' });
+    }
 
     try {
       await fs.access(filePath);
@@ -261,7 +265,11 @@ router.get('/:id/documents/:filename', async (req, res) => {
 router.delete('/:id/documents/:filename', async (req, res) => {
   try {
     const { id: supplierId, filename } = req.params;
-    const filePath = path.join(DOCUMENTS_DIR, supplierId, filename);
+    const baseDir = path.resolve(DOCUMENTS_DIR, supplierId);
+    const filePath = path.resolve(baseDir, filename);
+    if (!filePath.startsWith(baseDir)) {
+      return res.status(400).json({ error: 'Invalid file path' });
+    }
 
     try {
       await fs.access(filePath);
@@ -286,7 +294,6 @@ router.put('/:id/documents/:filename/rename', async (req, res) => {
     const { id: supplierId, filename } = req.params;
     const { newName } = req.body;
 
-    console.log('Rename request:', { supplierId, filename, newName, body: req.body });
 
     if (!newName || !newName.trim()) {
       return res.status(400).json({ error: 'New name is required' });
@@ -298,9 +305,12 @@ router.put('/:id/documents/:filename/rename', async (req, res) => {
       return res.status(400).json({ error: 'Filename contains invalid characters. Cannot use: < > : " / \\ | ? *' });
     }
 
-    const supplierDocsDir = path.join(DOCUMENTS_DIR, supplierId);
-    const oldFilePath = path.join(supplierDocsDir, filename);
-    const newFilePath = path.join(supplierDocsDir, newName.trim());
+    const supplierDocsDir = path.resolve(DOCUMENTS_DIR, supplierId);
+    const oldFilePath = path.resolve(supplierDocsDir, filename);
+    const newFilePath = path.resolve(supplierDocsDir, newName.trim());
+    if (!oldFilePath.startsWith(supplierDocsDir) || !newFilePath.startsWith(supplierDocsDir)) {
+      return res.status(400).json({ error: 'Invalid file path' });
+    }
 
     try {
       // Check if old file exists
@@ -341,23 +351,36 @@ router.put('/:id/documents/:filename/rename', async (req, res) => {
  */
 router.get('/metrics/all', async (req, res) => {
   try {
-    // Fetch all suppliers and shipments
-    const suppliersResult = await db.query('SELECT * FROM suppliers ORDER BY name');
-    const shipmentsResult = await db.query('SELECT * FROM shipments');
+    // Single aggregation query instead of loading all shipments into memory
+    const result = await db.query(`
+      SELECT
+        s.id as supplier_id,
+        s.name as supplier_name,
+        COUNT(sh.id) as total_shipments,
+        COUNT(CASE WHEN LOWER(sh.latest_status) IN ('arrived_pta', 'arrived_klm', 'arrived_offsite', 'stored', 'received') THEN 1 END) as arrived_count,
+        COUNT(CASE WHEN sh.inspection_date IS NOT NULL THEN 1 END) as inspected_count,
+        COUNT(CASE WHEN sh.inspection_date IS NOT NULL AND LOWER(sh.inspection_status) = 'passed' THEN 1 END) as passed_count,
+        ROUND(AVG(
+          CASE WHEN sh.receiving_date IS NOT NULL AND sh.week_number IS NOT NULL
+          THEN EXTRACT(EPOCH FROM (sh.receiving_date::timestamp - COALESCE(sh.selected_week_date::timestamp, DATE_TRUNC('year', CURRENT_DATE)))) / 86400
+          END
+        )) as avg_lead_time
+      FROM suppliers s
+      LEFT JOIN shipments sh ON LOWER(TRIM(s.name)) = LOWER(TRIM(sh.supplier))
+      GROUP BY s.id, s.name
+      ORDER BY s.name
+    `);
 
-    const suppliers = suppliersResult.rows.map(dbRowToSupplier);
-    const shipments = shipmentsResult.rows;
+    const metricsData = result.rows.map(row => {
+      const total = parseInt(row.total_shipments) || 0;
+      const arrived = parseInt(row.arrived_count) || 0;
+      const inspected = parseInt(row.inspected_count) || 0;
+      const passed = parseInt(row.passed_count) || 0;
 
-    // Calculate metrics for each supplier
-    const metricsData = suppliers.map(supplier => {
-      const supplierShipments = shipments.filter(s =>
-        s.supplier?.toLowerCase().trim() === supplier.name?.toLowerCase().trim()
-      );
-
-      if (supplierShipments.length === 0) {
+      if (total === 0) {
         return {
-          supplierName: supplier.name,
-          supplierId: supplier.id,
+          supplierName: row.supplier_name,
+          supplierId: row.supplier_id,
           onTimePercent: 0,
           passRatePercent: null,
           avgLeadTime: null,
@@ -366,34 +389,9 @@ router.get('/metrics/all', async (req, res) => {
         };
       }
 
-      // Calculate on-time delivery %
-      const arrivedShipments = supplierShipments.filter(s => {
-        const isArrived = ['ARRIVED_PTA', 'ARRIVED_KLM', 'ARRIVED_OFFSITE', 'STORED', 'RECEIVED']
-          .includes(s.latest_status);
-        return isArrived;
-      });
-      const onTimePercent = arrivedShipments.length > 0
-        ? Math.round((arrivedShipments.length / supplierShipments.length) * 100)
-        : 0;
-
-      // Calculate inspection pass rate %
-      const inspectedShipments = supplierShipments.filter(s => s.inspection_date);
-      const passRatePercent = inspectedShipments.length > 0
-        ? Math.round((inspectedShipments.filter(s =>
-            s.inspection_status === 'PASSED' || s.inspection_status === 'passed'
-          ).length / inspectedShipments.length) * 100)
-        : null;
-
-      // Calculate average lead time
-      const shippedWithReceiving = supplierShipments.filter(s => s.receiving_date && s.week_number);
-      const avgLeadTime = shippedWithReceiving.length > 0
-        ? Math.round(shippedWithReceiving.reduce((sum, s) => {
-            const scheduled = new Date(s.selected_week_date || `${new Date().getFullYear()}-01-01`);
-            const actual = new Date(s.receiving_date);
-            const diffMs = actual - scheduled;
-            return sum + Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-          }, 0) / shippedWithReceiving.length)
-        : null;
+      const onTimePercent = arrived > 0 ? Math.round((arrived / total) * 100) : 0;
+      const passRatePercent = inspected > 0 ? Math.round((passed / inspected) * 100) : null;
+      const avgLeadTime = row.avg_lead_time != null ? Math.round(parseFloat(row.avg_lead_time)) : null;
 
       // Determine grade
       let grade = { grade: 'C', label: 'Needs Improvement', color: '#dc3545' };
@@ -404,12 +402,12 @@ router.get('/metrics/all', async (req, res) => {
       }
 
       return {
-        supplierName: supplier.name,
-        supplierId: supplier.id,
+        supplierName: row.supplier_name,
+        supplierId: row.supplier_id,
         onTimePercent,
         passRatePercent,
         avgLeadTime,
-        totalShipments: supplierShipments.length,
+        totalShipments: total,
         grade
       };
     });

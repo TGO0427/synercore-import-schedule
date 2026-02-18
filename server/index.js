@@ -51,7 +51,7 @@ import supplierPortalRouter from './routes/supplierPortal.ts';
 import costingRouter from './routes/costing.ts';
 import costingRequestsRouter from './routes/costingRequests.ts';
 
-import { helmetConfig, apiRateLimiter, authRateLimiter, authenticateToken } from './middleware/security.js';
+import { helmetConfig, apiRateLimiter, authRateLimiter, createRateLimiter, authenticateToken } from './middleware/security.js';
 import { createSingleFileUpload, createMultipleFileUpload, handleUploadError, validateFilesPresent, verifyUploadPermission, generateSafeFilename } from './middleware/fileUpload.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
 import { logInfo, logServerStart } from './utils/logger.js';
@@ -176,6 +176,7 @@ app.use('/api/costing-requests', costingRequestsRouter); // Costing request rout
 // Create upload instances
 const multipleFileUpload = createMultipleFileUpload(10);
 const singleFileUpload = createSingleFileUpload();
+const uploadRateLimiter = createRateLimiter(60 * 60 * 1000, 50); // 50 uploads per hour per IP
 
 /**
  * POST /api/documents/upload - Upload multiple documents for a supplier
@@ -183,6 +184,7 @@ const singleFileUpload = createSingleFileUpload();
  * Validates: File type, MIME type, file size, permissions
  */
 app.post('/api/documents/upload',
+  uploadRateLimiter,
   authenticateToken,
   verifyUploadPermission,
   multipleFileUpload.array('documents', 10),
@@ -221,6 +223,7 @@ app.post('/api/documents/upload',
  * Validates: File type (Excel only), MIME type, file size
  */
 app.post('/api/upload-excel',
+  uploadRateLimiter,
   authenticateToken,
   singleFileUpload.single('file'),
   validateFilesPresent,

@@ -81,8 +81,8 @@ function SupplierLogin({ onClose }) {
         throw new Error('Passwords do not match');
       }
 
-      if (registerForm.password.length < 8) {
-        throw new Error('Password must be at least 8 characters');
+      if (registerForm.password.length < 6) {
+        throw new Error('Password must be at least 6 characters');
       }
 
       const res = await fetch(getApiUrl('/api/supplier/register'), {
@@ -392,7 +392,7 @@ function SupplierLogin({ onClose }) {
                   fontWeight: 'bold',
                   color: '#333'
                 }}>
-                  Password (min 8 characters)
+                  Password (min 6 characters)
                 </label>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <input

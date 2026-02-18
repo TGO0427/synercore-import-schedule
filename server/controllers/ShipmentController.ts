@@ -339,12 +339,7 @@ export class ShipmentController {
       'received'
     ] as ShipmentStatus[];
 
-    const shipments: Shipment[] = [];
-    for (const status of postArrivalStates) {
-      const statusShipments = await shipmentRepository.findByStatus(status);
-      shipments.push(...statusShipments);
-    }
-    return shipments;
+    return shipmentRepository.findByStatuses(postArrivalStates);
   }
 
   /**

@@ -74,6 +74,21 @@ export class ShipmentRepository extends BaseRepository<Shipment> {
   }
 
   /**
+   * Find shipments matching any of the given statuses
+   */
+  async findByStatuses(statuses: ShipmentStatus[]): Promise<Shipment[]> {
+    const placeholders = statuses.map((_, i) => `$${i + 1}`).join(', ');
+    const sql = `
+      SELECT ${this.columns.join(', ')}
+      FROM ${this.tableName}
+      WHERE latest_status IN (${placeholders})
+      ORDER BY created_at DESC
+    `;
+
+    return queryAll<Shipment>(sql, statuses);
+  }
+
+  /**
    * Find shipments by supplier
    */
   async findBySupplier(supplier: string): Promise<Shipment[]> {

@@ -147,7 +147,10 @@ router.get('/', async (req, res) => {
 router.get('/:reportId', async (req, res) => {
   try {
     const { reportId } = req.params;
-    const filepath = path.join(REPORTS_DIR, `${reportId}.json`);
+    const filepath = path.resolve(REPORTS_DIR, `${reportId}.json`);
+    if (!filepath.startsWith(path.resolve(REPORTS_DIR))) {
+      return res.status(400).json({ error: 'Invalid report ID' });
+    }
 
     const content = await fs.readFile(filepath, 'utf-8');
     const report = JSON.parse(content);
@@ -167,7 +170,10 @@ router.get('/:reportId', async (req, res) => {
 router.delete('/:reportId', async (req, res) => {
   try {
     const { reportId } = req.params;
-    const filepath = path.join(REPORTS_DIR, `${reportId}.json`);
+    const filepath = path.resolve(REPORTS_DIR, `${reportId}.json`);
+    if (!filepath.startsWith(path.resolve(REPORTS_DIR))) {
+      return res.status(400).json({ error: 'Invalid report ID' });
+    }
 
     await fs.unlink(filepath);
 
