@@ -76,6 +76,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
         case ShipmentStatus.BERTH_COMPLETE:
           statusOrderRefs.inTransit.add(orderRef); statusKey = 'inTransit'; break;
         case ShipmentStatus.STORED:
+        case ShipmentStatus.ARCHIVED:
           statusOrderRefs.stored.add(orderRef); statusKey = 'stored'; break;
         case ShipmentStatus.DELAYED:
           statusOrderRefs.delayed.add(orderRef); statusKey = 'delayed'; break;
