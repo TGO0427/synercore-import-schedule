@@ -1,6 +1,6 @@
 import express from 'express';
 import pool from '../db/connection.js';
-import { authenticateToken } from './auth.js';
+import { authenticateToken } from '../middleware/auth.ts';
 import { validateWarehouseCapacity, validateWarehouseCapacityUpdate } from '../middleware/validation.js';
 
 const router = express.Router();

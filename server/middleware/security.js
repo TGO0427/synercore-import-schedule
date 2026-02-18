@@ -1,7 +1,7 @@
 // server/middleware/security.js
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
-import { authenticateToken } from '../routes/auth.js';
+import { authenticateToken, optionalAuth, requireAdmin } from './auth.ts';
 
 // Rate limiting configuration
 export const createRateLimiter = (windowMs = 15 * 60 * 1000, max = 100) => {
@@ -44,33 +44,5 @@ export const helmetConfig = helmet({
   crossOriginResourcePolicy: false, // Disable to allow our custom CORS headers
 });
 
-// Export authenticateToken for convenience
-export { authenticateToken };
-
-// Optional authentication middleware (allows requests without token for public endpoints)
-export const optionalAuth = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    // No token provided, continue without user context
-    req.user = null;
-    return next();
-  }
-
-  // Token provided, verify it
-  authenticateToken(req, res, next);
-};
-
-// Admin-only middleware (requires authentication and admin role)
-export const requireAdmin = (req, res, next) => {
-  if (!req.user) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Admin access required' });
-  }
-
-  next();
-};
+// Re-export auth middleware for convenience
+export { authenticateToken, optionalAuth, requireAdmin };

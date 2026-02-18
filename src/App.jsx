@@ -1,29 +1,31 @@
 // src/App.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import ShipmentTable from './components/ShipmentTable';
-import ArchiveView from './components/ArchiveView';
-import ReportsView from './components/ReportsView';
-import AdvancedReports from './components/AdvancedReports';
-import WarehouseCapacity from './components/WarehouseCapacity';
-import SupplierManagement from './components/SupplierManagement';
-import RatesQuotes from './components/RatesQuotes';
-import PostArrivalWorkflow from './components/PostArrivalWorkflow';
-import WarehouseStored from './components/WarehouseStored';
 import Dashboard from './components/Dashboard';
-import FileUpload from './components/FileUpload';
 import LoginPage from './components/LoginPage';
 import NotificationContainer from './components/NotificationContainer';
 import SynercoreLogo from './components/SynercoreLogo';
-import AlertHub from './components/AlertHub';
-import UserSettings from './components/UserSettings';
-import HelpGuide from './components/HelpGuide';
-import UserManagement from './components/UserManagement';
-import NotificationPreferences from './components/NotificationPreferences';
 import OfflineIndicator from './components/OfflineIndicator';
-import ImportCosting from './components/ImportCosting';
-import CostingRequests from './components/CostingRequests';
-import GlobalSearch from './components/GlobalSearch';
-import LiveBoard from './components/LiveBoard';
+
+// Lazy-loaded pages (code-split for faster initial load)
+const ArchiveView = lazy(() => import('./components/ArchiveView'));
+const ReportsView = lazy(() => import('./components/ReportsView'));
+const AdvancedReports = lazy(() => import('./components/AdvancedReports'));
+const WarehouseCapacity = lazy(() => import('./components/WarehouseCapacity'));
+const SupplierManagement = lazy(() => import('./components/SupplierManagement'));
+const RatesQuotes = lazy(() => import('./components/RatesQuotes'));
+const PostArrivalWorkflow = lazy(() => import('./components/PostArrivalWorkflow'));
+const WarehouseStored = lazy(() => import('./components/WarehouseStored'));
+const FileUpload = lazy(() => import('./components/FileUpload'));
+const AlertHub = lazy(() => import('./components/AlertHub'));
+const UserSettings = lazy(() => import('./components/UserSettings'));
+const HelpGuide = lazy(() => import('./components/HelpGuide'));
+const UserManagement = lazy(() => import('./components/UserManagement'));
+const NotificationPreferences = lazy(() => import('./components/NotificationPreferences'));
+const ImportCosting = lazy(() => import('./components/ImportCosting'));
+const CostingRequests = lazy(() => import('./components/CostingRequests'));
+const GlobalSearch = lazy(() => import('./components/GlobalSearch'));
+const LiveBoard = lazy(() => import('./components/LiveBoard'));
 import SupplierLogin from './pages/SupplierLogin';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -1151,7 +1153,9 @@ function App() {
           </div>
         </div>
 
-        {renderMainContent()}
+        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', color: 'var(--text-secondary)' }}>Loading...</div>}>
+          {renderMainContent()}
+        </Suspense>
       </div>
 
       {liveBoardOpen && (

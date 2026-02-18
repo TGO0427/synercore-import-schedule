@@ -65,15 +65,8 @@ export default defineConfig({
             }
             return 'vendor';
           }
-          // Split components
-          if (id.includes('components')) {
-            return 'components';
-          }
-          // Split pages/routes
-          if (id.includes('pages') || id.includes('app')) {
-            return 'pages';
-          }
-          // Split utils
+          // Let React.lazy() handle component code-splitting automatically
+          // Only group shared utilities together
           if (id.includes('utils') || id.includes('services')) {
             return 'utils';
           }

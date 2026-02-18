@@ -7,7 +7,10 @@ const performanceIndexes = [
   'CREATE INDEX IF NOT EXISTS idx_shipments_order_ref ON shipments(order_ref)',
   'CREATE INDEX IF NOT EXISTS idx_shipments_created_at ON shipments(created_at)',
   'CREATE INDEX IF NOT EXISTS idx_shipments_inspection_status ON shipments(inspection_status)',
-  'CREATE INDEX IF NOT EXISTS idx_shipments_receiving_status ON shipments(receiving_status)'
+  'CREATE INDEX IF NOT EXISTS idx_shipments_receiving_status ON shipments(receiving_status)',
+  'CREATE INDEX IF NOT EXISTS idx_shipments_supplier ON shipments(supplier)',
+  'CREATE INDEX IF NOT EXISTS idx_shipments_week_number ON shipments(week_number)',
+  'CREATE INDEX IF NOT EXISTS idx_shipments_updated_at ON shipments(updated_at)',
 ];
 
 export async function addPerformanceIndexes() {

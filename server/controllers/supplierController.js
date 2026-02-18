@@ -5,7 +5,11 @@ import pool from '../db/connection.js';
 import path from 'path';
 import fs from 'fs/promises';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is not set');
+  process.exit(1);
+}
 const ACCESS_TOKEN_EXPIRY = '15m';
 
 export class SupplierController {

@@ -88,9 +88,8 @@ const corsOptions = {
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.warn(`CORS request from unlisted origin: ${origin} - allowing anyway`);
-      // Allow anyway to prevent blocking legitimate requests - log for debugging
-      callback(null, true);
+      console.warn(`CORS request blocked from unlisted origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -346,6 +345,13 @@ async function start() {
     } catch (error) {
       console.warn('⚠️  Costing requests migration warning:', error.message);
       // Don't fail startup if migration has issues, but log them
+    }
+
+    try {
+      const { addPerformanceIndexes } = await import('./db/add-performance-indexes.js');
+      await addPerformanceIndexes();
+    } catch (error) {
+      console.warn('⚠️  Performance indexes warning:', error.message);
     }
 
     // Initialize notification scheduler
