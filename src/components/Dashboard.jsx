@@ -283,7 +283,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
                     backgroundColor: 'rgba(5,150,105,0.08)',
                     borderWidth: 2,
                     pointRadius: 0,
-                    hoverRadius: 4,
+                    pointHoverRadius: 4,
                     tension: 0.3,
                     fill: true,
                   }],
@@ -400,8 +400,8 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
                 data={{
                   labels: productsPalletsTrend.map(d => d.week),
                   datasets: [
-                    { label: 'Products', data: productsPalletsTrend.map(d => d.products), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.08)', borderWidth: 2, pointRadius: 0, hoverRadius: 4, tension: 0.3, fill: true },
-                    { label: 'Pallets', data: productsPalletsTrend.map(d => d.pallets), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)', borderWidth: 2, pointRadius: 0, hoverRadius: 4, tension: 0.3, fill: true },
+                    { label: 'Products', data: productsPalletsTrend.map(d => d.products), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.08)', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.3, fill: true },
+                    { label: 'Pallets', data: productsPalletsTrend.map(d => d.pallets), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.3, fill: true },
                   ],
                 }}
                 options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 6, font: { size: 11 } } } }, scales: { x: { grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false }, ticks: { font: { size: 12 } } }, y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false }, ticks: { precision: 0, font: { size: 11 } } } } }}
