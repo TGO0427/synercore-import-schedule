@@ -297,7 +297,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
                     fill: true,
                   }],
                 }}
-                options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, scales: { x: { grid: { color: 'rgba(0,0,0,0.06)' }, border: { display: false }, ticks: { font: { size: 12 } } }, y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, border: { display: false }, ticks: { precision: 0, font: { size: 11 } } } } }}
+                options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false }, ticks: { font: { size: 12 } } }, y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false }, ticks: { precision: 0, font: { size: 11 } } } } }}
               />
             </div>
           ) : (
@@ -319,6 +319,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
                       borderWidth: 2,
                       borderColor: '#fff',
                       hoverBorderWidth: 0,
+                      hoverOffset: 4,
                     }],
                   }}
                   options={{ responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw}` } } } }}
@@ -357,7 +358,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
                     barThickness: 20,
                   }],
                 }}
-                options={{ indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.raw} orders` } } }, scales: { x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, border: { display: false }, ticks: { precision: 0, font: { size: 11 } } }, y: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 12, weight: 600 } } } } }}
+                options={{ indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.raw} orders` } } }, scales: { x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false }, ticks: { precision: 0, font: { size: 11 } } }, y: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 12, weight: 600 } } } } }}
               />
             </div>
           ) : (
@@ -412,7 +413,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
                     { label: 'Pallets', data: productsPalletsTrend.map(d => d.pallets), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)', borderWidth: 2, pointRadius: 0, hoverRadius: 4, tension: 0.3, fill: true },
                   ],
                 }}
-                options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, scales: { x: { grid: { color: 'rgba(0,0,0,0.06)' }, border: { display: false }, ticks: { font: { size: 12 } } }, y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, border: { display: false }, ticks: { precision: 0, font: { size: 11 } } } } }}
+                options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 6, font: { size: 11 } } } }, scales: { x: { grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false }, ticks: { font: { size: 12 } } }, y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false }, ticks: { precision: 0, font: { size: 11 } } } } }}
               />
             </div>
           ) : (
@@ -434,7 +435,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
                     barThickness: 22,
                   }],
                 }}
-                options={{ indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.raw} days` } } }, scales: { x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, border: { display: false }, ticks: { precision: 0, font: { size: 11 } }, title: { display: true, text: 'Days', font: { size: 11 }, color: '#94a3b8' } }, y: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 11, weight: 500 } } } } }}
+                options={{ indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.raw} days` } } }, scales: { x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false }, ticks: { precision: 0, font: { size: 11 } }, title: { display: true, text: 'Days', font: { size: 11 }, color: '#94a3b8' } }, y: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 11, weight: 500 } } } } }}
               />
             </div>
             <div style={{ display: 'flex', gap: 16, marginTop: 8, justifyContent: 'flex-end' }}>
