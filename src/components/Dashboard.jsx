@@ -55,6 +55,11 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
 
     const statusOrderRefs = { planned: new Set(), inTransit: new Set(), arrived: new Set(), delayed: new Set(), cancelled: new Set() };
 
+    // DEBUG: log status distribution
+    const statusCounts = {};
+    shipments.forEach(s => { statusCounts[s.latestStatus] = (statusCounts[s.latestStatus] || 0) + 1; });
+    console.log('[Dashboard] Status distribution:', statusCounts, '| Total shipments:', shipments.length);
+
     shipments.forEach(shipment => {
       const orderRef = shipment.orderRef;
       if (!orderRef) return;
