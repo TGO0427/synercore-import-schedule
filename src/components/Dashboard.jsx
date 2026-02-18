@@ -229,7 +229,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
   const kpiCards = [
     { key: 'total', value: stats.total, label: 'Total Shipments', icon: '📦', ring: 'ring-accent', tint: 'rgba(5,150,105,0.1)', filter: null, delta: stats.deltas.total },
     { key: 'transit', value: stats.inTransit, label: 'In Transit', icon: '🚢', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)', filter: 'in_transit', delta: stats.deltas.inTransit },
-    { key: 'stored', value: stats.stored, label: 'Stored', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)', filter: 'stored', delta: stats.deltas.stored },
+    { key: 'stored', value: stats.stored, label: 'Stored', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)', filter: 'stored', view: 'stored', delta: stats.deltas.stored },
     { key: 'delayed', value: stats.delayed, label: 'Delayed', icon: '⚠️', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)', filter: 'delayed', delta: stats.deltas.delayed },
     { key: 'planned', value: stats.planned, label: 'Planned', icon: '📅', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)', filter: 'planned', delta: stats.deltas.planned },
   ];
@@ -250,8 +250,8 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
           <div key={card.key} className={`stat-card ${card.ring} clickable`}
             role="button" tabIndex={0}
             aria-label={`${card.value} ${card.label} — click to view`}
-            onClick={() => onNavigate('shipping', { statusFilter: card.filter })}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigate('shipping', { statusFilter: card.filter }); } }}>
+            onClick={() => onNavigate(card.view || 'shipping', { statusFilter: card.filter })}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigate(card.view || 'shipping', { statusFilter: card.filter }); } }}>
             <div style={{
               width: 40, height: 40, borderRadius: '50%', display: 'flex',
               alignItems: 'center', justifyContent: 'center', fontSize: 18,
