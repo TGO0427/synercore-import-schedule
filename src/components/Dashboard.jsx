@@ -195,12 +195,17 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
 
   const getUpcomingOrders = () => {
     const currentWeek = getCurrentWeek();
+    const activeStatuses = [
+      ShipmentStatus.PLANNED_AIRFREIGHT, ShipmentStatus.PLANNED_SEAFREIGHT,
+      ShipmentStatus.IN_TRANSIT_AIRFREIGHT, ShipmentStatus.IN_TRANSIT_SEAWAY,
+      ShipmentStatus.IN_TRANSIT_ROADWAY, ShipmentStatus.AIR_CUSTOMS_CLEARANCE,
+      ShipmentStatus.MOORED, ShipmentStatus.BERTH_WORKING, ShipmentStatus.BERTH_COMPLETE,
+      ShipmentStatus.DELAYED,
+    ];
     return shipments
       .filter(s =>
         s.weekNumber && s.weekNumber >= currentWeek &&
-        s.latestStatus !== ShipmentStatus.ARRIVED_PTA &&
-        s.latestStatus !== ShipmentStatus.ARRIVED_KLM &&
-        s.latestStatus !== ShipmentStatus.CANCELLED
+        activeStatuses.includes(s.latestStatus)
       )
       .sort((a, b) => (a.weekNumber || 0) - (b.weekNumber || 0))
       .slice(0, 5);
