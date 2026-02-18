@@ -57,8 +57,7 @@ body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI
   border-right: 1px solid rgba(255,255,255,0.08);
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
   transition: width 0.2s ease;
 }
 .sidebar h2 { margin: 0 0 var(--sp-4); font-size: 18px; font-weight: 700; letter-spacing: .2px; }
@@ -135,7 +134,7 @@ body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI
 }
 
 /* Sidebar nav sections */
-.sidebar-nav { list-style: none; padding: 6px 12px; margin: 0; }
+.sidebar-nav { list-style: none; padding: 6px 12px; margin: 0; flex: 1; overflow-y: auto; }
 .sidebar-nav .nav-section { margin-bottom: 0; }
 .sidebar-nav .nav-section:not(:first-child) { margin-top: 24px; }
 .sidebar-nav .nav-section-header {
