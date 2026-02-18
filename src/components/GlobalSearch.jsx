@@ -81,6 +81,11 @@ function GlobalSearch({ shipments, onNavigate }) {
         onFocus={() => query.length >= 2 && setOpen(true)}
         onKeyDown={handleKeyDown}
         placeholder="Search orders, suppliers, vessels..."
+        aria-label="Search shipments"
+        aria-expanded={open && results.length > 0}
+        aria-controls="global-search-results"
+        aria-autocomplete="list"
+        role="combobox"
         className="input"
         style={{
           width: '100%',
@@ -99,7 +104,7 @@ function GlobalSearch({ shipments, onNavigate }) {
       </span>
 
       {open && results.length > 0 && (
-        <div style={{
+        <div id="global-search-results" role="listbox" style={{
           position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
           background: 'var(--surface)', border: '1px solid var(--border)',
           borderRadius: '10px', boxShadow: 'var(--shadow-2)', zIndex: 100,
@@ -110,6 +115,8 @@ function GlobalSearch({ shipments, onNavigate }) {
             return (
               <div
                 key={shipment.id}
+                role="option"
+                aria-selected={idx === selectedIndex}
                 onClick={() => handleSelect(shipment)}
                 onMouseEnter={() => setSelectedIndex(idx)}
                 style={{

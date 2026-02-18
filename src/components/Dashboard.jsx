@@ -244,7 +244,10 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
       <div className="stats-grid">
         {kpiCards.map(card => (
           <div key={card.key} className={`stat-card ${card.ring} clickable`}
-            onClick={() => onNavigate('shipping', { statusFilter: card.filter })}>
+            role="button" tabIndex={0}
+            aria-label={`${card.value} ${card.label} — click to view`}
+            onClick={() => onNavigate('shipping', { statusFilter: card.filter })}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigate('shipping', { statusFilter: card.filter }); } }}>
             <div style={{
               width: 40, height: 40, borderRadius: '50%', display: 'flex',
               alignItems: 'center', justifyContent: 'center', fontSize: 18,
@@ -443,13 +446,14 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {upcomingOrders.map(shipment => (
-              <div key={shipment.id} style={{
+              <div key={shipment.id} role="button" tabIndex={0} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '10px 12px', backgroundColor: 'var(--surface-2)',
                 borderRadius: 8, borderLeft: '3px solid var(--info)',
                 cursor: 'pointer', transition: 'background 0.15s',
               }}
                 onClick={() => onNavigate('shipping', { statusFilter: shipment.latestStatus })}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigate('shipping', { statusFilter: shipment.latestStatus }); } }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface)'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-2)'}
               >

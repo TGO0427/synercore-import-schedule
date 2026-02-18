@@ -27,13 +27,20 @@ const ConfirmationModal = ({
 
     playSound();
 
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') handleCancel();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+
     if (autoClose) {
       const timer = setTimeout(() => {
         handleCancel();
       }, duration);
 
-      return () => clearTimeout(timer);
+      return () => { clearTimeout(timer); document.removeEventListener('keydown', handleKeyDown); };
     }
+
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [autoClose, duration]);
 
   const handleConfirm = () => {
@@ -149,7 +156,7 @@ const ConfirmationModal = ({
   };
 
   return (
-    <div style={getModalStyles()}>
+    <div style={getModalStyles()} role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
       <div style={getContentStyles()}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', marginBottom: '1.5rem' }}>
           <div
@@ -170,6 +177,7 @@ const ConfirmationModal = ({
 
           <div style={{ flex: 1 }}>
             <h2
+              id="confirm-modal-title"
               style={{
                 margin: '0 0 0.5rem 0',
                 fontSize: '20px',

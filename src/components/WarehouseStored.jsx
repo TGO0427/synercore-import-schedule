@@ -311,6 +311,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
           <input
             type="text"
             placeholder="Search..."
+            aria-label="Search stored stock"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{

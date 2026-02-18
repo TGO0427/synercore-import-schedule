@@ -479,6 +479,7 @@ function AdvancedReports() {
               value={filters.searchTerm}
               onChange={(e) => updateFilter('searchTerm', e.target.value)}
               placeholder="Search all fields..."
+              aria-label="Search report fields"
               style={{
                 width: '100%',
                 padding: '8px',

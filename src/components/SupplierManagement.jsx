@@ -616,6 +616,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
           <input
             type="text"
             placeholder="Search suppliers..."
+            aria-label="Search suppliers"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
@@ -1255,6 +1256,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
                 <input
                   type="text"
                   placeholder="Search documents by name or type (pdf, excel, image, word, csv)..."
+                  aria-label="Search supplier documents"
                   value={documentSearchTerm}
                   onChange={(e) => setDocumentSearchTerm(e.target.value)}
                   style={{

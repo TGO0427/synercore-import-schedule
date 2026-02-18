@@ -35,12 +35,20 @@ function ArchiveView() {
     }
   };
 
-  const fetchDbArchived = async () => {
+  const [dbPage, setDbPage] = useState(1);
+  const [dbPagination, setDbPagination] = useState(null);
+  const DB_PAGE_SIZE = 50;
+
+  const fetchDbArchived = async (page = 1) => {
     try {
-      const response = await authFetch(getApiUrl('/api/shipments?status=archived'));
+      const response = await authFetch(getApiUrl(`/api/shipments?status=archived&page=${page}&limit=${DB_PAGE_SIZE}`));
       if (!response.ok) return;
       const result = await response.json();
       setDbArchived(result.data || result);
+      if (result.pagination) {
+        setDbPagination(result.pagination);
+        setDbPage(page);
+      }
     } catch (error) {
       console.error('Error fetching DB archived shipments:', error);
     }
@@ -200,6 +208,7 @@ function ArchiveView() {
         <div style={{ padding: '16px 24px' }}>
           <input
             type="text" placeholder="Search shipments..." value={searchTerm}
+            aria-label="Search archived shipments"
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
               padding: '7px 12px', border: '1px solid var(--border)', borderRadius: 6,
@@ -384,13 +393,14 @@ function ArchiveView() {
             Shipment Archives
           </h2>
           <span style={{ fontSize: 12, color: 'var(--text-500)' }}>
-            {filteredDbArchived.length} archived shipment{filteredDbArchived.length !== 1 ? 's' : ''}
+            {dbPagination?.total || filteredDbArchived.length} archived shipment{(dbPagination?.total || filteredDbArchived.length) !== 1 ? 's' : ''}
             {filteredFileArchives.length > 0 && ` · ${filteredFileArchives.length} file archive${filteredFileArchives.length !== 1 ? 's' : ''}`}
           </span>
         </div>
 
         <input
           type="text" placeholder="Search..." value={searchTerm}
+          aria-label="Search archives"
           onChange={(e) => setSearchTerm(e.target.value)}
           style={{
             padding: '7px 12px', border: '1px solid var(--border)', borderRadius: 6,
@@ -440,6 +450,25 @@ function ArchiveView() {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {/* Pagination controls */}
+        {dbPagination && dbPagination.pages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, padding: '12px 0', marginBottom: 16 }}>
+            <button
+              onClick={() => fetchDbArchived(dbPage - 1)}
+              disabled={dbPage <= 1}
+              style={{ padding: '6px 14px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: dbPage <= 1 ? 'not-allowed' : 'pointer', fontSize: 12, opacity: dbPage <= 1 ? 0.5 : 1 }}
+            >Previous</button>
+            <span style={{ fontSize: 12, color: 'var(--text-500)' }}>
+              Page {dbPage} of {dbPagination.pages} ({dbPagination.total} total)
+            </span>
+            <button
+              onClick={() => fetchDbArchived(dbPage + 1)}
+              disabled={dbPage >= dbPagination.pages}
+              style={{ padding: '6px 14px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: dbPage >= dbPagination.pages ? 'not-allowed' : 'pointer', fontSize: 12, opacity: dbPage >= dbPagination.pages ? 0.5 : 1 }}
+            >Next</button>
           </div>
         )}
 

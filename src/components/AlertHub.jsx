@@ -14,6 +14,13 @@ export default function AlertHub({
   const [severity, setSeverity] = useState('all'); // all | critical | warning | info
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
 
+  React.useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e) => { if (e.key === 'Escape') onClose?.(); };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
+
   const filtered = useMemo(() => {
     return alerts
       .filter(a => (severity === 'all' ? true : a.severity === severity))
@@ -30,6 +37,9 @@ export default function AlertHub({
 
   return (
     <aside
+      role="dialog"
+      aria-modal="true"
+      aria-label="Alert Hub"
       style={{
         position: 'fixed',
         top: 0, right: 0, height: '100vh', width: 420, maxWidth: '95vw',
@@ -50,6 +60,7 @@ export default function AlertHub({
       <div style={{ padding: 12, borderBottom: '1px solid #eee', display: 'grid', gap: 8 }}>
         <input
           placeholder="Search alerts…"
+          aria-label="Search alerts"
           value={query}
           onChange={e => setQuery(e.target.value)}
           style={{ padding: '8px 10px', border: '1px solid #ddd', borderRadius: 6 }}

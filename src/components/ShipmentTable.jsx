@@ -808,6 +808,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
         <input
           type="text"
           placeholder="Search orders, suppliers..."
+          aria-label="Search shipments"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="input"
