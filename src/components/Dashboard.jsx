@@ -29,7 +29,7 @@ const ChartEmpty = ({ label }) => (
   <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-500)', fontSize: 13 }}>{label}</div>
 );
 
-const STATUS_COLORS = { Planned: '#f59e0b', 'In Transit': '#3b82f6', Arrived: '#10b981', Delayed: '#ef4444', Cancelled: '#6b7280' };
+const STATUS_COLORS = { Planned: '#f59e0b', 'In Transit': '#3b82f6', Stored: '#10b981', Delayed: '#ef4444', Cancelled: '#6b7280' };
 const WAREHOUSE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 const RANK_COLORS = ['#f59e0b', '#94a3b8', '#cd7f32', '#64748b', '#64748b'];
 
@@ -49,16 +49,11 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
     const currentWeek = getCurrentWeek();
 
     const weekStatusRefs = {
-      curr: { total: new Set(), planned: new Set(), inTransit: new Set(), arrived: new Set(), delayed: new Set() },
-      prev: { total: new Set(), planned: new Set(), inTransit: new Set(), arrived: new Set(), delayed: new Set() },
+      curr: { total: new Set(), planned: new Set(), inTransit: new Set(), stored: new Set(), delayed: new Set() },
+      prev: { total: new Set(), planned: new Set(), inTransit: new Set(), stored: new Set(), delayed: new Set() },
     };
 
-    const statusOrderRefs = { planned: new Set(), inTransit: new Set(), arrived: new Set(), delayed: new Set(), cancelled: new Set() };
-
-    // DEBUG: log status distribution
-    const statusCounts = {};
-    shipments.forEach(s => { statusCounts[s.latestStatus] = (statusCounts[s.latestStatus] || 0) + 1; });
-    console.log('[Dashboard] Status distribution:', statusCounts, '| Total shipments:', shipments.length);
+    const statusOrderRefs = { planned: new Set(), inTransit: new Set(), stored: new Set(), delayed: new Set(), cancelled: new Set() };
 
     shipments.forEach(shipment => {
       const orderRef = shipment.orderRef;
@@ -80,18 +75,8 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
         case ShipmentStatus.BERTH_WORKING:
         case ShipmentStatus.BERTH_COMPLETE:
           statusOrderRefs.inTransit.add(orderRef); statusKey = 'inTransit'; break;
-        case ShipmentStatus.ARRIVED_PTA:
-        case ShipmentStatus.ARRIVED_KLM:
-        case ShipmentStatus.ARRIVED_OFFSITE:
-        case ShipmentStatus.UNLOADING:
-        case ShipmentStatus.INSPECTION_PENDING:
-        case ShipmentStatus.INSPECTING:
-        case ShipmentStatus.INSPECTION_PASSED:
-        case ShipmentStatus.INSPECTION_FAILED:
-        case ShipmentStatus.RECEIVING:
-        case ShipmentStatus.RECEIVED:
         case ShipmentStatus.STORED:
-          statusOrderRefs.arrived.add(orderRef); statusKey = 'arrived'; break;
+          statusOrderRefs.stored.add(orderRef); statusKey = 'stored'; break;
         case ShipmentStatus.DELAYED:
           statusOrderRefs.delayed.add(orderRef); statusKey = 'delayed'; break;
         case ShipmentStatus.CANCELLED:
@@ -123,7 +108,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
       total: uniqueOrderRefs.size,
       planned: statusOrderRefs.planned.size,
       inTransit: statusOrderRefs.inTransit.size,
-      arrived: statusOrderRefs.arrived.size,
+      stored: statusOrderRefs.stored.size,
       delayed: statusOrderRefs.delayed.size,
       cancelled: statusOrderRefs.cancelled.size,
       byWarehouse: {},
@@ -133,7 +118,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
         total: weekStatusRefs.curr.total.size - weekStatusRefs.prev.total.size,
         planned: weekStatusRefs.curr.planned.size - weekStatusRefs.prev.planned.size,
         inTransit: weekStatusRefs.curr.inTransit.size - weekStatusRefs.prev.inTransit.size,
-        arrived: weekStatusRefs.curr.arrived.size - weekStatusRefs.prev.arrived.size,
+        stored: weekStatusRefs.curr.stored.size - weekStatusRefs.prev.stored.size,
         delayed: weekStatusRefs.curr.delayed.size - weekStatusRefs.prev.delayed.size,
       },
     };
@@ -151,7 +136,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
   const statusChartData = useMemo(() => [
     { name: 'Planned', value: stats.planned },
     { name: 'In Transit', value: stats.inTransit },
-    { name: 'Arrived', value: stats.arrived },
+    { name: 'Stored', value: stats.stored },
     { name: 'Delayed', value: stats.delayed },
     { name: 'Cancelled', value: stats.cancelled },
   ].filter(item => item.value > 0), [stats]);
@@ -243,7 +228,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
   const kpiCards = [
     { key: 'total', value: stats.total, label: 'Total Shipments', icon: '📦', ring: 'ring-accent', tint: 'rgba(5,150,105,0.1)', filter: null, delta: stats.deltas.total },
     { key: 'transit', value: stats.inTransit, label: 'In Transit', icon: '🚢', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)', filter: 'in_transit', delta: stats.deltas.inTransit },
-    { key: 'arrived', value: stats.arrived, label: 'Arrived', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)', filter: 'arrived', delta: stats.deltas.arrived },
+    { key: 'stored', value: stats.stored, label: 'Stored', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)', filter: 'stored', delta: stats.deltas.stored },
     { key: 'delayed', value: stats.delayed, label: 'Delayed', icon: '⚠️', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)', filter: 'delayed', delta: stats.deltas.delayed },
     { key: 'planned', value: stats.planned, label: 'Planned', icon: '📅', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)', filter: 'planned', delta: stats.deltas.planned },
   ];
