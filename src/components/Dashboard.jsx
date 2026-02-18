@@ -68,11 +68,24 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
         case ShipmentStatus.PLANNED_SEAFREIGHT:
           statusOrderRefs.planned.add(orderRef); statusKey = 'planned'; break;
         case ShipmentStatus.IN_TRANSIT_AIRFREIGHT:
+        case ShipmentStatus.AIR_CUSTOMS_CLEARANCE:
         case ShipmentStatus.IN_TRANSIT_ROADWAY:
         case ShipmentStatus.IN_TRANSIT_SEAWAY:
+        case ShipmentStatus.MOORED:
+        case ShipmentStatus.BERTH_WORKING:
+        case ShipmentStatus.BERTH_COMPLETE:
           statusOrderRefs.inTransit.add(orderRef); statusKey = 'inTransit'; break;
         case ShipmentStatus.ARRIVED_PTA:
         case ShipmentStatus.ARRIVED_KLM:
+        case ShipmentStatus.ARRIVED_OFFSITE:
+        case ShipmentStatus.UNLOADING:
+        case ShipmentStatus.INSPECTION_PENDING:
+        case ShipmentStatus.INSPECTING:
+        case ShipmentStatus.INSPECTION_PASSED:
+        case ShipmentStatus.INSPECTION_FAILED:
+        case ShipmentStatus.RECEIVING:
+        case ShipmentStatus.RECEIVED:
+        case ShipmentStatus.STORED:
           statusOrderRefs.arrived.add(orderRef); statusKey = 'arrived'; break;
         case ShipmentStatus.DELAYED:
           statusOrderRefs.delayed.add(orderRef); statusKey = 'delayed'; break;
