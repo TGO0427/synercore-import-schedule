@@ -1,51 +1,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
+import { ShipmentStatus, POST_ARRIVAL_STATUSES, STATUS_LABELS, STATUS_COLORS } from '../types/shipment';
 
-const POST_ARRIVAL_STATUSES = [
-  'arrived_pta',
-  'arrived_klm',
-  'arrived_offsite',
-  'unloading',
-  'inspection_pending',
-  'inspecting',
-  'inspection_passed',
-  'inspection_failed',
-  'receiving',
-  'received',
-  'stored',
-  'archived'  // Include archived for historical data
-];
-
-const STATUS_DISPLAY_NAMES = {
-  'arrived_pta': 'Arrived PTA',
-  'arrived_klm': 'Arrived KLM',
-  'arrived_offsite': 'Arrived Offsite',
-  'unloading': 'Unloading',
-  'inspection_pending': 'Inspection Pending',
-  'inspecting': 'Inspecting',
-  'inspection_passed': 'Inspection Passed',
-  'inspection_failed': 'Inspection Failed',
-  'receiving': 'Receiving',
-  'received': 'Received',
-  'stored': 'Stored',
-  'archived': 'Archived'
-};
-
-const STATUS_COLORS = {
-  'arrived_pta': '#28a745',
-  'arrived_klm': '#28a745',
-  'arrived_offsite': '#28a745',
-  'unloading': '#FF9800',
-  'inspection_pending': '#9C27B0',
-  'inspecting': '#673AB7',
-  'inspection_passed': '#4CAF50',
-  'inspection_failed': '#dc3545',
-  'receiving': '#00BCD4',
-  'received': '#8BC34A',
-  'stored': '#4CAF50',
-  'archived': '#6c757d'
-};
+// Include stored + archived for historical report data
+const REPORT_STATUSES = [...POST_ARRIVAL_STATUSES, ShipmentStatus.STORED, ShipmentStatus.ARCHIVED];
 
 function PostArrivalWorkflowReport({ shipments }) {
   const [postArrivalShipments, setPostArrivalShipments] = useState([]);
@@ -266,7 +225,7 @@ function PostArrivalWorkflowReport({ shipments }) {
                     className="status-indicator"
                     style={{ backgroundColor: STATUS_COLORS[status] }}
                   ></div>
-                  <span className="status-name">{STATUS_DISPLAY_NAMES[status]}</span>
+                  <span className="status-name">{STATUS_LABELS[status]}</span>
                 </div>
                 <div className="status-stats">
                   <span className="count">{count}</span>
@@ -537,7 +496,7 @@ function PostArrivalWorkflowReport({ shipments }) {
                     </td>
                     <td className="current-status">
                       <span className={`status-badge ${shipment.status}`}>
-                        {STATUS_DISPLAY_NAMES[shipment.status]}
+                        {STATUS_LABELS[shipment.status]}
                       </span>
                     </td>
                     <td className="timestamp">

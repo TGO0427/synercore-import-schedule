@@ -6,6 +6,7 @@ import LoginPage from './components/LoginPage';
 import NotificationContainer from './components/NotificationContainer';
 import SynercoreLogo from './components/SynercoreLogo';
 import OfflineIndicator from './components/OfflineIndicator';
+import { SHIPPING_EXCLUDED_STATUSES } from './types/shipment';
 import ErrorBoundary from './components/ErrorBoundary';
 
 // Lazy-loaded pages (code-split for faster initial load)
@@ -625,17 +626,9 @@ function App() {
   const renderMainContent = () => {
     switch (activeView) {
       case 'shipping': {
-        // Hide items that are fully arrived/received/stored or in PAW
-        // Post-arrival workflow statuses and archived to exclude from shipping schedule
-        const postArrivalStatuses = [
-          'arrived_pta', 'arrived_klm', 'arrived_offsite',
-          'unloading', 'inspection_pending', 'inspecting',
-          'inspection_failed', 'inspection_passed',
-          'receiving', 'received', 'stored', 'archived'
-        ];
-
+        // Hide items that are in post-arrival workflow, stored, or archived
         let shippingShipments = shipments.filter(s =>
-          !postArrivalStatuses.includes(s.latestStatus)
+          !SHIPPING_EXCLUDED_STATUSES.includes(s.latestStatus)
         );
 
         if (statusFilter) {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { authFetch } from '../utils/authFetch';
 import { authUtils } from '../utils/auth';
-import { ShipmentStatus, InspectionStatus, ReceivingStatus } from '../types/shipment';
+import { ShipmentStatus, InspectionStatus, ReceivingStatus, STATUS_LABELS } from '../types/shipment';
 import { getApiUrl } from '../config/api';
 import PostArrivalWizard from './PostArrivalWizard';
 import ConfirmationModal from './ConfirmationModal';
@@ -103,22 +103,7 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning, globalSearch
     return icons[status] || '📄';
   };
 
-  const getStatusLabel = (status) => {
-    const labels = {
-      'arrived_pta': 'Arrived PTA',
-      'arrived_klm': 'Arrived KLM',
-      'arrived_offsite': 'Arrived OffSite',
-      'unloading': 'Unloading',
-      'inspection_pending': 'Inspection Pending',
-      'inspecting': 'Inspecting',
-      'inspection_failed': 'Inspection Failed',
-      'inspection_passed': 'Inspection Passed',
-      'receiving': 'Receiving',
-      'received': 'Received',
-      'stored': 'Stored'
-    };
-    return labels[status] || status;
-  };
+  const getStatusLabel = (status) => STATUS_LABELS[status] || status;
 
   const getAvailableActions = (shipment) => {
     const actions = [];

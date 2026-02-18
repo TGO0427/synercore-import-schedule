@@ -48,6 +48,110 @@ export const ShipmentPriority = {
   URGENT: 'urgent'
 };
 
+// ========== Centralized Status Groups ==========
+// Use these instead of defining ad-hoc status arrays in components.
+
+/** Statuses for shipments in the post-arrival workflow */
+export const POST_ARRIVAL_STATUSES = [
+  ShipmentStatus.ARRIVED_PTA,
+  ShipmentStatus.ARRIVED_KLM,
+  ShipmentStatus.ARRIVED_OFFSITE,
+  ShipmentStatus.UNLOADING,
+  ShipmentStatus.INSPECTION_PENDING,
+  ShipmentStatus.INSPECTING,
+  ShipmentStatus.INSPECTION_PASSED,
+  ShipmentStatus.INSPECTION_FAILED,
+  ShipmentStatus.RECEIVING,
+  ShipmentStatus.RECEIVED,
+];
+
+/** Statuses that are actively in-transit (shown in shipping schedule) */
+export const IN_TRANSIT_STATUSES = [
+  ShipmentStatus.PLANNED_AIRFREIGHT,
+  ShipmentStatus.PLANNED_SEAFREIGHT,
+  ShipmentStatus.IN_TRANSIT_AIRFREIGHT,
+  ShipmentStatus.AIR_CUSTOMS_CLEARANCE,
+  ShipmentStatus.IN_TRANSIT_ROADWAY,
+  ShipmentStatus.IN_TRANSIT_SEAWAY,
+  ShipmentStatus.MOORED,
+  ShipmentStatus.BERTH_WORKING,
+  ShipmentStatus.BERTH_COMPLETE,
+  ShipmentStatus.DELAYED,
+];
+
+/** Arrival statuses only (subset of post-arrival) */
+export const ARRIVAL_STATUSES = [
+  ShipmentStatus.ARRIVED_PTA,
+  ShipmentStatus.ARRIVED_KLM,
+  ShipmentStatus.ARRIVED_OFFSITE,
+];
+
+/** Statuses hidden from the shipping schedule */
+export const SHIPPING_EXCLUDED_STATUSES = [
+  ...POST_ARRIVAL_STATUSES,
+  ShipmentStatus.STORED,
+  ShipmentStatus.ARCHIVED,
+];
+
+/** All valid status values (for validation) */
+export const ALL_STATUSES = Object.values(ShipmentStatus);
+
+// ========== Centralized Status Labels ==========
+
+export const STATUS_LABELS = {
+  [ShipmentStatus.PLANNED_AIRFREIGHT]: 'Planned Airfreight',
+  [ShipmentStatus.PLANNED_SEAFREIGHT]: 'Planned Seafreight',
+  [ShipmentStatus.IN_TRANSIT_AIRFREIGHT]: 'In Transit Air',
+  [ShipmentStatus.AIR_CUSTOMS_CLEARANCE]: 'Air Customs Clearance',
+  [ShipmentStatus.IN_TRANSIT_ROADWAY]: 'In Transit Road',
+  [ShipmentStatus.IN_TRANSIT_SEAWAY]: 'In Transit Sea',
+  [ShipmentStatus.MOORED]: 'Moored',
+  [ShipmentStatus.BERTH_WORKING]: 'Berth Working',
+  [ShipmentStatus.BERTH_COMPLETE]: 'Berth Complete',
+  [ShipmentStatus.ARRIVED_PTA]: 'Arrived PTA',
+  [ShipmentStatus.ARRIVED_KLM]: 'Arrived KLM',
+  [ShipmentStatus.ARRIVED_OFFSITE]: 'Arrived Offsite',
+  [ShipmentStatus.DELAYED]: 'Delayed',
+  [ShipmentStatus.CANCELLED]: 'Cancelled',
+  [ShipmentStatus.UNLOADING]: 'Unloading',
+  [ShipmentStatus.INSPECTION_PENDING]: 'Inspection Pending',
+  [ShipmentStatus.INSPECTING]: 'Inspecting',
+  [ShipmentStatus.INSPECTION_PASSED]: 'Inspection Passed',
+  [ShipmentStatus.INSPECTION_FAILED]: 'Inspection Failed',
+  [ShipmentStatus.RECEIVING]: 'Receiving',
+  [ShipmentStatus.RECEIVED]: 'Received',
+  [ShipmentStatus.STORED]: 'Stored',
+  [ShipmentStatus.ARCHIVED]: 'Archived',
+};
+
+// ========== Centralized Status Colors ==========
+
+export const STATUS_COLORS = {
+  [ShipmentStatus.PLANNED_AIRFREIGHT]: '#6c757d',
+  [ShipmentStatus.PLANNED_SEAFREIGHT]: '#6c757d',
+  [ShipmentStatus.IN_TRANSIT_AIRFREIGHT]: '#ffc107',
+  [ShipmentStatus.AIR_CUSTOMS_CLEARANCE]: '#fd7e14',
+  [ShipmentStatus.IN_TRANSIT_ROADWAY]: '#ffc107',
+  [ShipmentStatus.IN_TRANSIT_SEAWAY]: '#ffc107',
+  [ShipmentStatus.MOORED]: '#AB47BC',
+  [ShipmentStatus.BERTH_WORKING]: '#8E24AA',
+  [ShipmentStatus.BERTH_COMPLETE]: '#17a2b8',
+  [ShipmentStatus.ARRIVED_PTA]: '#28a745',
+  [ShipmentStatus.ARRIVED_KLM]: '#28a745',
+  [ShipmentStatus.ARRIVED_OFFSITE]: '#28a745',
+  [ShipmentStatus.DELAYED]: '#dc3545',
+  [ShipmentStatus.CANCELLED]: '#9E9E9E',
+  [ShipmentStatus.UNLOADING]: '#FF9800',
+  [ShipmentStatus.INSPECTION_PENDING]: '#9C27B0',
+  [ShipmentStatus.INSPECTING]: '#673AB7',
+  [ShipmentStatus.INSPECTION_PASSED]: '#4CAF50',
+  [ShipmentStatus.INSPECTION_FAILED]: '#dc3545',
+  [ShipmentStatus.RECEIVING]: '#00BCD4',
+  [ShipmentStatus.RECEIVED]: '#8BC34A',
+  [ShipmentStatus.STORED]: '#007bff',
+  [ShipmentStatus.ARCHIVED]: '#6c757d',
+};
+
 export const Incoterms = {
   EXW: 'EXW', // Ex Works
   FCA: 'FCA', // Free Carrier

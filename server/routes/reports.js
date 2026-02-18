@@ -203,15 +203,10 @@ router.get('/analytics/workflow', async (req, res) => {
     }
 
     const POST_ARRIVAL_STATUSES = [
-      'arrived_pta',
-      'arrived_klm',
-      'unloading',
-      'inspection_pending',
-      'inspecting',
-      'inspection_passed',
-      'receiving',
-      'received',
-      'stored'
+      'arrived_pta', 'arrived_klm', 'arrived_offsite',
+      'unloading', 'inspection_pending', 'inspecting',
+      'inspection_passed', 'inspection_failed',
+      'receiving', 'received', 'stored'
     ];
 
     // Filter shipments that are in post-arrival workflow

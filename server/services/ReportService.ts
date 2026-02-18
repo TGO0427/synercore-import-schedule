@@ -255,16 +255,10 @@ export class ReportService {
    */
   static async getWorkflowAnalytics(): Promise<any> {
     const POST_ARRIVAL_STATUSES = [
-      'arrived_pta',
-      'arrived_klm',
-      'unloading',
-      'inspection_pending',
-      'inspection_in_progress',
-      'inspection_passed',
-      'inspection_failed',
-      'receiving_goods',
-      'stored',
-      'archived'
+      'arrived_pta', 'arrived_klm', 'arrived_offsite',
+      'unloading', 'inspection_pending', 'inspecting',
+      'inspection_passed', 'inspection_failed',
+      'receiving', 'received', 'stored', 'archived'
     ];
 
     // Initialize status counts
