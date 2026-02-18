@@ -1,4 +1,9 @@
-import express from 'express';
+/**
+ * Auth Routes
+ * Handles user authentication, registration, password management, and admin user operations
+ */
+
+import { Router, Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
@@ -13,11 +18,11 @@ import {
   validateChangePassword
 } from '../middleware/validation.js';
 
-const router = express.Router();
+const router = Router();
 
 // JWT secrets (MUST be set in environment variables)
-const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || JWT_SECRET + '_refresh';
+const JWT_SECRET: string = process.env.JWT_SECRET as string;
+const JWT_REFRESH_SECRET: string = process.env.JWT_REFRESH_SECRET || JWT_SECRET + '_refresh';
 
 // Validate JWT_SECRET is configured
 if (!JWT_SECRET) {
@@ -25,13 +30,26 @@ if (!JWT_SECRET) {
 }
 
 // Token expiry times
-const ACCESS_TOKEN_EXPIRY = '15m'; // 15 minutes
-const REFRESH_TOKEN_EXPIRY = 7 * 24 * 60 * 60; // 7 days in seconds
+const ACCESS_TOKEN_EXPIRY: string = '15m'; // 15 minutes
+const REFRESH_TOKEN_EXPIRY: number = 7 * 24 * 60 * 60; // 7 days in seconds
+
+// JWT payload interface
+interface JwtTokenPayload {
+  id: string;
+  username: string;
+  role: string;
+  iat?: number;
+  exp?: number;
+}
 
 // Helper function to create and store refresh token
-async function createRefreshToken(userId, ipAddress = null, userAgent = null) {
-  const refreshToken = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY * 1000);
+async function createRefreshToken(
+  userId: string,
+  ipAddress: string | null = null,
+  userAgent: string | null = null
+): Promise<string> {
+  const refreshToken: string = crypto.randomBytes(32).toString('hex');
+  const expiresAt: Date = new Date(Date.now() + REFRESH_TOKEN_EXPIRY * 1000);
 
   try {
     await pool.query(
@@ -40,10 +58,10 @@ async function createRefreshToken(userId, ipAddress = null, userAgent = null) {
       [userId, refreshToken, expiresAt, ipAddress, userAgent]
     );
     return refreshToken;
-  } catch (error) {
+  } catch (error: unknown) {
     // If table doesn't exist yet, skip storing but still return token
     // (for backward compatibility during migration)
-    if (error.code === '42P01') {
+    if ((error as any).code === '42P01') {
       return refreshToken;
     }
     throw error;
@@ -51,43 +69,47 @@ async function createRefreshToken(userId, ipAddress = null, userAgent = null) {
 }
 
 // Middleware to verify JWT token
-export const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
+  const authHeader: string | undefined = req.headers['authorization'];
+  const token: string | undefined = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
+    res.status(401).json({ error: 'Access token required' });
+    return;
   }
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
+  jwt.verify(token, JWT_SECRET, (err: jwt.VerifyErrors | null, user: string | jwt.JwtPayload | undefined) => {
     if (err) {
-      return res.status(403).json({ error: 'Invalid or expired token' });
+      res.status(403).json({ error: 'Invalid or expired token' });
+      return;
     }
-    req.user = user;
+    (req as any).user = user;
     next();
   });
 };
 
 // Lenient authentication - allows expired tokens (for logout/cleanup endpoints)
-export const authenticateTokenLenient = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+export const authenticateTokenLenient = (req: Request, res: Response, next: NextFunction): void => {
+  const authHeader: string | undefined = req.headers['authorization'];
+  const token: string | undefined = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
+    res.status(401).json({ error: 'Access token required' });
+    return;
   }
 
-  jwt.verify(token, JWT_SECRET, { ignoreExpiration: true }, (err, user) => {
+  jwt.verify(token, JWT_SECRET, { ignoreExpiration: true }, (err: jwt.VerifyErrors | null, user: string | jwt.JwtPayload | undefined) => {
     if (err && err.name !== 'TokenExpiredError') {
-      return res.status(403).json({ error: 'Invalid token' });
+      res.status(403).json({ error: 'Invalid token' });
+      return;
     }
-    req.user = user;
+    (req as any).user = user;
     next();
   });
 };
 
 // POST /api/auth/setup - Initial admin setup (only works when no users exist)
-router.post('/setup', async (req, res) => {
+router.post('/setup', async (req: Request, res: Response) => {
   try {
     const { username, email, password, fullName } = req.body;
 
@@ -103,10 +125,10 @@ router.post('/setup', async (req, res) => {
     }
 
     // Hash password
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash: string = await bcrypt.hash(password, 10);
 
     // Create admin user
-    const id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const id: string = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const result = await pool.query(
       `INSERT INTO users (id, username, email, password_hash, full_name, role, is_active)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -117,17 +139,17 @@ router.post('/setup', async (req, res) => {
     const user = result.rows[0];
 
     // Generate access token (short-lived)
-    const accessToken = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
+    const accessToken: string = jwt.sign(
+      { id: user.id, username: user.username, role: user.role } as JwtTokenPayload,
       JWT_SECRET,
       { expiresIn: ACCESS_TOKEN_EXPIRY }
     );
 
     // Create and store refresh token
-    const refreshToken = await createRefreshToken(
+    const refreshToken: string = await createRefreshToken(
       user.id,
-      req.ip || req.connection.remoteAddress,
-      req.headers['user-agent']
+      req.ip || (req as any).connection?.remoteAddress || null,
+      req.headers['user-agent'] || null
     );
 
     res.status(201).json({
@@ -144,14 +166,14 @@ router.post('/setup', async (req, res) => {
       refreshToken,
       expiresIn: 900 // 15 minutes in seconds
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in setup:', error);
     res.status(500).json({ error: 'Failed to create admin user' });
   }
 });
 
 // POST /api/auth/register - Register new user
-router.post('/register', validateRegister, async (req, res) => {
+router.post('/register', validateRegister, async (req: Request, res: Response) => {
   try {
     const { username, email, password, fullName } = req.body;
 
@@ -170,10 +192,10 @@ router.post('/register', validateRegister, async (req, res) => {
     }
 
     // Hash password
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash: string = await bcrypt.hash(password, 10);
 
     // Create user
-    const id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const id: string = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const result = await pool.query(
       `INSERT INTO users (id, username, email, password_hash, full_name, role, is_active)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -184,17 +206,17 @@ router.post('/register', validateRegister, async (req, res) => {
     const user = result.rows[0];
 
     // Generate access token (short-lived)
-    const accessToken = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
+    const accessToken: string = jwt.sign(
+      { id: user.id, username: user.username, role: user.role } as JwtTokenPayload,
       JWT_SECRET,
       { expiresIn: ACCESS_TOKEN_EXPIRY }
     );
 
     // Create and store refresh token
-    const refreshToken = await createRefreshToken(
+    const refreshToken: string = await createRefreshToken(
       user.id,
-      req.ip || req.connection.remoteAddress,
-      req.headers['user-agent']
+      req.ip || (req as any).connection?.remoteAddress || null,
+      req.headers['user-agent'] || null
     );
 
     res.status(201).json({
@@ -211,14 +233,14 @@ router.post('/register', validateRegister, async (req, res) => {
       refreshToken,
       expiresIn: 900 // 15 minutes in seconds
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in register:', error);
     res.status(500).json({ error: 'Failed to register user' });
   }
 });
 
 // POST /api/auth/login - Login user
-router.post('/login', validateLogin, async (req, res) => {
+router.post('/login', validateLogin, async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
 
@@ -244,24 +266,24 @@ router.post('/login', validateLogin, async (req, res) => {
     }
 
     // Verify password
-    const validPassword = await bcrypt.compare(password, user.password_hash);
+    const validPassword: boolean = await bcrypt.compare(password, user.password_hash);
 
     if (!validPassword) {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
     // Generate access token (short-lived)
-    const accessToken = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
+    const accessToken: string = jwt.sign(
+      { id: user.id, username: user.username, role: user.role } as JwtTokenPayload,
       JWT_SECRET,
       { expiresIn: ACCESS_TOKEN_EXPIRY }
     );
 
     // Create and store refresh token
-    const refreshToken = await createRefreshToken(
+    const refreshToken: string = await createRefreshToken(
       user.id,
-      req.ip || req.connection.remoteAddress,
-      req.headers['user-agent']
+      req.ip || (req as any).connection?.remoteAddress || null,
+      req.headers['user-agent'] || null
     );
 
     console.log('[AUTH] Login successful for user:', user.username, {
@@ -284,18 +306,18 @@ router.post('/login', validateLogin, async (req, res) => {
       refreshToken,
       expiresIn: 900 // 15 minutes in seconds
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in login:', error);
     res.status(500).json({ error: 'Failed to login' });
   }
 });
 
 // GET /api/auth/me - Get current user
-router.get('/me', authenticateToken, async (req, res) => {
+router.get('/me', authenticateToken, async (req: Request, res: Response) => {
   try {
     const result = await pool.query(
       'SELECT id, username, email, full_name, role, is_active, created_at FROM users WHERE id = $1',
-      [req.user.id]
+      [(req as any).user.id]
     );
 
     if (result.rows.length === 0) {
@@ -313,17 +335,17 @@ router.get('/me', authenticateToken, async (req, res) => {
       isActive: user.is_active,
       createdAt: user.created_at
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in get current user:', error);
     res.status(500).json({ error: 'Failed to get user' });
   }
 });
 
 // POST /api/auth/admin/create-user - Create user (admin only)
-router.post('/admin/create-user', authenticateToken, validateRegister, async (req, res) => {
+router.post('/admin/create-user', authenticateToken, validateRegister, async (req: Request, res: Response) => {
   try {
     // Check if requester is admin
-    if (req.user.role !== 'admin') {
+    if ((req as any).user.role !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -344,10 +366,10 @@ router.post('/admin/create-user', authenticateToken, validateRegister, async (re
     }
 
     // Hash password
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash: string = await bcrypt.hash(password, 10);
 
     // Create user
-    const id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const id: string = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const result = await pool.query(
       `INSERT INTO users (id, username, email, password_hash, full_name, role, is_active)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -368,17 +390,17 @@ router.post('/admin/create-user', authenticateToken, validateRegister, async (re
         isActive: user.is_active
       }
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error creating user:', error);
     res.status(500).json({ error: 'Failed to create user' });
   }
 });
 
 // GET /api/auth/admin/users - List all users (admin only)
-router.get('/admin/users', authenticateToken, async (req, res) => {
+router.get('/admin/users', authenticateToken, async (req: Request, res: Response) => {
   try {
     // Check if requester is admin
-    if (req.user.role !== 'admin') {
+    if ((req as any).user.role !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -386,7 +408,7 @@ router.get('/admin/users', authenticateToken, async (req, res) => {
       'SELECT id, username, email, full_name, role, is_active, created_at FROM users ORDER BY created_at DESC'
     );
 
-    res.json(result.rows.map(user => ({
+    res.json(result.rows.map((user: any) => ({
       id: user.id,
       username: user.username,
       email: user.email,
@@ -395,17 +417,17 @@ router.get('/admin/users', authenticateToken, async (req, res) => {
       isActive: user.is_active,
       createdAt: user.created_at
     })));
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error listing users:', error);
     res.status(500).json({ error: 'Failed to list users' });
   }
 });
 
 // PUT /api/auth/admin/users/:id - Update user (admin only)
-router.put('/admin/users/:id', authenticateToken, validateUserUpdate, async (req, res) => {
+router.put('/admin/users/:id', authenticateToken, validateUserUpdate, async (req: Request, res: Response) => {
   try {
     // Check if requester is admin
-    if (req.user.role !== 'admin') {
+    if ((req as any).user.role !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -460,17 +482,17 @@ router.put('/admin/users/:id', authenticateToken, validateUserUpdate, async (req
         createdAt: user.created_at
       }
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error updating user:', error);
     res.status(500).json({ error: 'Failed to update user' });
   }
 });
 
 // POST /api/auth/admin/users/:id/reset-password - Reset user password (admin only)
-router.post('/admin/users/:id/reset-password', authenticateToken, validateResetPassword, async (req, res) => {
+router.post('/admin/users/:id/reset-password', authenticateToken, validateResetPassword, async (req: Request, res: Response) => {
   try {
     // Check if requester is admin
-    if (req.user.role !== 'admin') {
+    if ((req as any).user.role !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -492,7 +514,7 @@ router.post('/admin/users/:id/reset-password', authenticateToken, validateResetP
     }
 
     // Hash new password
-    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const passwordHash: string = await bcrypt.hash(newPassword, 10);
 
     // Update password
     await pool.query(
@@ -501,24 +523,24 @@ router.post('/admin/users/:id/reset-password', authenticateToken, validateResetP
     );
 
     res.json({ message: 'Password reset successfully' });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error resetting password:', error);
     res.status(500).json({ error: 'Failed to reset password' });
   }
 });
 
 // DELETE /api/auth/admin/users/:id - Delete user (admin only)
-router.delete('/admin/users/:id', authenticateToken, validateId, async (req, res) => {
+router.delete('/admin/users/:id', authenticateToken, validateId, async (req: Request, res: Response) => {
   try {
     // Check if requester is admin
-    if (req.user.role !== 'admin') {
+    if ((req as any).user.role !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
     const { id } = req.params;
 
     // Prevent admin from deleting themselves
-    if (id === req.user.id) {
+    if (id === (req as any).user.id) {
       return res.status(400).json({ error: 'Cannot delete your own account' });
     }
 
@@ -532,14 +554,14 @@ router.delete('/admin/users/:id', authenticateToken, validateId, async (req, res
     await pool.query('DELETE FROM users WHERE id = $1', [id]);
 
     res.json({ message: 'User deleted successfully' });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error deleting user:', error);
     res.status(500).json({ error: 'Failed to delete user' });
   }
 });
 
 // POST /api/auth/refresh - Refresh access token using refresh token
-router.post('/refresh', async (req, res) => {
+router.post('/refresh', async (req: Request, res: Response) => {
   try {
     const { refreshToken } = req.body;
 
@@ -559,7 +581,7 @@ router.post('/refresh', async (req, res) => {
         return res.status(401).json({ error: 'Invalid or expired refresh token' });
       }
 
-      const userId = tokenResult.rows[0].user_id;
+      const userId: string = tokenResult.rows[0].user_id;
 
       // Get user data
       const userResult = await pool.query(
@@ -574,8 +596,8 @@ router.post('/refresh', async (req, res) => {
       const user = userResult.rows[0];
 
       // Generate new access token
-      const newAccessToken = jwt.sign(
-        { id: user.id, username: user.username, role: user.role },
+      const newAccessToken: string = jwt.sign(
+        { id: user.id, username: user.username, role: user.role } as JwtTokenPayload,
         JWT_SECRET,
         { expiresIn: ACCESS_TOKEN_EXPIRY }
       );
@@ -584,14 +606,14 @@ router.post('/refresh', async (req, res) => {
         accessToken: newAccessToken,
         expiresIn: 900 // 15 minutes in seconds
       });
-    } catch (error) {
+    } catch (error: unknown) {
       // If refresh_tokens table doesn't exist, allow legacy token refresh
-      if (error.code === '42P01') {
+      if ((error as any).code === '42P01') {
         return res.status(501).json({ error: 'Token refresh not yet available. Please log in again.' });
       }
       throw error;
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error refreshing token:', error);
     res.status(500).json({ error: 'Failed to refresh token' });
   }
@@ -599,12 +621,12 @@ router.post('/refresh', async (req, res) => {
 
 // POST /api/auth/logout - Revoke refresh token
 // Uses lenient auth to allow expired tokens (user trying to logout)
-router.post('/logout', authenticateTokenLenient, async (req, res) => {
+router.post('/logout', authenticateTokenLenient, async (req: Request, res: Response) => {
   try {
     const { refreshToken } = req.body;
 
     // If user is not found in token (expired or invalid), still allow logout
-    if (!req.user || !req.user.id) {
+    if (!(req as any).user || !(req as any).user.id) {
       return res.json({ message: 'Logged out successfully' });
     }
 
@@ -617,24 +639,24 @@ router.post('/logout', authenticateTokenLenient, async (req, res) => {
       await pool.query(
         `UPDATE refresh_tokens SET revoked_at = CURRENT_TIMESTAMP
          WHERE token = $1 AND user_id = $2`,
-        [refreshToken, req.user.id]
+        [refreshToken, (req as any).user.id]
       );
-    } catch (error) {
+    } catch (error: unknown) {
       // Gracefully handle refresh token revocation errors
       // (table might not exist or other DB issues - not critical for logout)
-      console.warn('Warning: Could not revoke refresh token:', error.message);
+      console.warn('Warning: Could not revoke refresh token:', (error as any).message);
       // Don't re-throw - logout should still succeed even if token revocation fails
     }
 
     res.json({ message: 'Logged out successfully' });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error logging out:', error);
     res.status(500).json({ error: 'Failed to logout' });
   }
 });
 
 // POST /api/auth/change-password - Change own password
-router.post('/change-password', authenticateToken, validateChangePassword, async (req, res) => {
+router.post('/change-password', authenticateToken, validateChangePassword, async (req: Request, res: Response) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
@@ -649,7 +671,7 @@ router.post('/change-password', authenticateToken, validateChangePassword, async
     // Get user from database
     const result = await pool.query(
       'SELECT id, password_hash FROM users WHERE id = $1',
-      [req.user.id]
+      [(req as any).user.id]
     );
 
     if (result.rows.length === 0) {
@@ -659,30 +681,30 @@ router.post('/change-password', authenticateToken, validateChangePassword, async
     const user = result.rows[0];
 
     // Verify current password
-    const validPassword = await bcrypt.compare(currentPassword, user.password_hash);
+    const validPassword: boolean = await bcrypt.compare(currentPassword, user.password_hash);
 
     if (!validPassword) {
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
 
     // Hash new password
-    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+    const newPasswordHash: string = await bcrypt.hash(newPassword, 10);
 
     // Update password
     await pool.query(
       'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-      [newPasswordHash, req.user.id]
+      [newPasswordHash, (req as any).user.id]
     );
 
     res.json({ message: 'Password changed successfully' });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error changing password:', error);
     res.status(500).json({ error: 'Failed to change password' });
   }
 });
 
 // POST /api/auth/forgot-password - Request password reset email
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
 
@@ -691,7 +713,7 @@ router.post('/forgot-password', async (req, res) => {
     }
 
     // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex: RegExp = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({ error: 'Invalid email format' });
     }
@@ -710,9 +732,9 @@ router.post('/forgot-password', async (req, res) => {
     const user = result.rows[0];
 
     // Generate reset token (valid for 1 hour)
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
-    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const resetToken: string = crypto.randomBytes(32).toString('hex');
+    const resetTokenHash: string = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const resetTokenExpiry: Date = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     // Store reset token in database
     await pool.query(
@@ -722,25 +744,25 @@ router.post('/forgot-password', async (req, res) => {
     );
 
     // Send password reset email
-    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+    const resetLink: string = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
     const emailResult = await EmailService.sendPasswordResetEmail(email, user.username, resetLink);
 
     if (emailResult.success) {
-      console.log(`✅ Password reset email sent to ${email}`);
+      console.log(`Password reset email sent to ${email}`);
     } else {
-      console.error(`❌ Failed to send password reset email to ${email}:`, emailResult.error);
+      console.error(`Failed to send password reset email to ${email}:`, emailResult.error);
       // Still return success message for security (don't reveal if email exists)
     }
 
     res.json({ message: 'If an account exists with this email, a password reset link has been sent.' });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Auth] Error requesting password reset:', error);
     res.status(500).json({ error: 'Failed to process password reset request' });
   }
 });
 
 // POST /api/auth/reset-password - Complete password reset with token
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', async (req: Request, res: Response) => {
   try {
     const { email, token, password } = req.body;
 
@@ -769,7 +791,7 @@ router.post('/reset-password', async (req, res) => {
     const user = result.rows[0];
 
     // Verify reset token
-    const resetTokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const resetTokenHash: string = crypto.createHash('sha256').update(token).digest('hex');
 
     if (!user.reset_token || user.reset_token !== resetTokenHash) {
       return res.status(400).json({ error: 'Invalid reset token' });
@@ -780,7 +802,7 @@ router.post('/reset-password', async (req, res) => {
     }
 
     // Hash new password
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash: string = await bcrypt.hash(password, 10);
 
     // Update password and clear reset token
     await pool.query(
@@ -792,7 +814,7 @@ router.post('/reset-password', async (req, res) => {
     console.log(`[Auth] Password reset completed for ${email}`);
 
     res.json({ message: 'Password has been reset successfully. You can now login with your new password.' });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Auth] Error resetting password:', error);
     res.status(500).json({ error: 'Failed to reset password' });
   }

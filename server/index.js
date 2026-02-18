@@ -38,13 +38,13 @@ import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger.js';
 
 import shipmentsRouter from './routes/shipments.ts';
-import suppliersRouter from './routes/suppliers.js';
-import quotesRouter from './routes/quotes.js';
-import reportsRouter from './routes/reports.js';
+import suppliersRouter from './routes/suppliers.ts';
+import quotesRouter from './routes/quotes.ts';
+import reportsRouter from './routes/reports.ts';
 import emailImportRouter from './routes/emailImport.ts';
 import adminRouter from './routes/admin.ts';
-import warehouseCapacityRouter from './routes/warehouseCapacity.js';
-import authRouter from './routes/auth.js';
+import warehouseCapacityRouter from './routes/warehouseCapacity.ts';
+import authRouter from './routes/auth.ts';
 import notificationsRouter from './routes/notifications.ts';
 import schedulerAdminRouter from './routes/schedulerAdmin.ts';
 import supplierPortalRouter from './routes/supplierPortal.ts';

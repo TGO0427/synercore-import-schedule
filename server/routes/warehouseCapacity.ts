@@ -1,18 +1,48 @@
-import express from 'express';
+/**
+ * Warehouse Capacity Routes
+ * Handles CRUD operations for warehouse capacity data including
+ * bins used, available bins, total capacity, and history tracking.
+ */
+
+import { Router, Request, Response } from 'express';
 import pool from '../db/connection.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.ts';
 import { validateWarehouseCapacity, validateWarehouseCapacityUpdate } from '../middleware/validation.js';
 
-const router = express.Router();
+const router = Router();
 
 // NOTE: More specific routes must be defined before less specific ones
 // This avoids /:warehouseName matching /history/all or /available-bins
 
-// GET all history (admin only) - MUST be before /:warehouseName
-router.get('/history/all', authenticateToken, requireAdmin, async (req, res) => {
-  try {
+interface CapacityHistoryRow {
+  id: number;
+  warehouse_name: string;
+  bins_used: number;
+  previous_value: number;
+  changed_at: string;
+  username: string;
+  full_name: string;
+}
 
-    const limit = parseInt(req.query.limit) || 100;
+interface CapacityRow {
+  warehouse_name: string;
+  total_capacity: number;
+  bins_used: number;
+  available_bins: number;
+  updated_by: string | null;
+  updated_at: string;
+}
+
+interface CapacityData {
+  totalCapacity: Record<string, number>;
+  binsUsed: Record<string, number>;
+  availableBins: Record<string, number>;
+}
+
+// GET all history (admin only) - MUST be before /:warehouseName
+router.get('/history/all', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const limit: number = parseInt(req.query.limit as string) || 100;
 
     const result = await pool.query(
       `SELECT
@@ -30,7 +60,7 @@ router.get('/history/all', authenticateToken, requireAdmin, async (req, res) => 
       [limit]
     );
 
-    res.json(result.rows.map(row => ({
+    res.json(result.rows.map((row: CapacityHistoryRow) => ({
       id: row.id,
       warehouseName: row.warehouse_name,
       binsUsed: row.bins_used,
@@ -41,33 +71,33 @@ router.get('/history/all', authenticateToken, requireAdmin, async (req, res) => 
         fullName: row.full_name
       }
     })));
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching all warehouse capacity history:', error);
     res.status(500).json({ error: 'Failed to fetch history' });
   }
 });
 
 // GET all warehouse capacity data
-router.get('/', async (req, res) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
     const result = await pool.query(
       'SELECT warehouse_name, total_capacity, bins_used, available_bins, updated_by, updated_at FROM warehouse_capacity'
     );
 
     // Convert to object format with total_capacity, bins_used and available_bins
-    const capacityData = {
+    const capacityData: CapacityData = {
       totalCapacity: {},
       binsUsed: {},
       availableBins: {}
     };
-    result.rows.forEach(row => {
+    result.rows.forEach((row: CapacityRow) => {
       capacityData.totalCapacity[row.warehouse_name] = row.total_capacity || 0;
       capacityData.binsUsed[row.warehouse_name] = row.bins_used || 0;
       capacityData.availableBins[row.warehouse_name] = row.available_bins || 0;
     });
 
     res.json(capacityData);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching warehouse capacity:', error);
     res.status(500).json({ error: 'Failed to fetch warehouse capacity data' });
   }
@@ -75,12 +105,12 @@ router.get('/', async (req, res) => {
 
 // PUT/UPDATE total capacity for a specific warehouse
 // MUST be before /:warehouseName to match correctly
-router.put('/:warehouseName/total-capacity', validateWarehouseCapacity, (req, res) => {
+router.put('/:warehouseName/total-capacity', validateWarehouseCapacity, (req: Request, res: Response) => {
   // Wrap in explicit error handler
   (async () => {
     try {
       const { warehouseName } = req.params;
-      const { totalCapacity } = req.body;
+      const { totalCapacity } = req.body as { totalCapacity: number };
 
       if (typeof totalCapacity !== 'number' || totalCapacity < 0) {
         return res.status(400).json({ error: 'Invalid totalCapacity value' });
@@ -104,7 +134,7 @@ router.put('/:warehouseName/total-capacity', validateWarehouseCapacity, (req, re
         success: true,
         data: result.rows[0]
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating total capacity:', error);
       return res.status(500).json({
         error: 'Failed to update total capacity',
@@ -112,7 +142,7 @@ router.put('/:warehouseName/total-capacity', validateWarehouseCapacity, (req, re
         code: error.code
       });
     }
-  })().catch(err => {
+  })().catch((err: any) => {
     console.error('Unhandled error in PUT route:', err);
     if (!res.headersSent) {
       res.status(500).json({ error: 'Internal server error' });
@@ -122,12 +152,12 @@ router.put('/:warehouseName/total-capacity', validateWarehouseCapacity, (req, re
 
 // PUT/UPDATE available bins for a specific warehouse
 // MUST be before /:warehouseName to match correctly
-router.put('/:warehouseName/available-bins', validateWarehouseCapacityUpdate, (req, res) => {
+router.put('/:warehouseName/available-bins', validateWarehouseCapacityUpdate, (req: Request, res: Response) => {
   // Wrap in explicit error handler
   (async () => {
     try {
       const { warehouseName } = req.params;
-      const { availableBins } = req.body;
+      const { availableBins } = req.body as { availableBins: number };
 
       if (typeof availableBins !== 'number' || availableBins < 0) {
         return res.status(400).json({ error: 'Invalid availableBins value' });
@@ -152,7 +182,7 @@ router.put('/:warehouseName/available-bins', validateWarehouseCapacityUpdate, (r
         success: true,
         data: result.rows[0]
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating available bins:', error);
       return res.status(500).json({
         error: 'Failed to update available bins',
@@ -160,7 +190,7 @@ router.put('/:warehouseName/available-bins', validateWarehouseCapacityUpdate, (r
         code: error.code
       });
     }
-  })().catch(err => {
+  })().catch((err: any) => {
     console.error('Unhandled error in PUT route:', err);
     if (!res.headersSent) {
       res.status(500).json({ error: 'Internal server error' });
@@ -170,10 +200,10 @@ router.put('/:warehouseName/available-bins', validateWarehouseCapacityUpdate, (r
 
 // GET history for a specific warehouse
 // MUST be before /:warehouseName to match correctly
-router.get('/:warehouseName/history', authenticateToken, async (req, res) => {
+router.get('/:warehouseName/history', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { warehouseName } = req.params;
-    const limit = parseInt(req.query.limit) || 50;
+    const limit: number = parseInt(req.query.limit as string) || 50;
 
     const result = await pool.query(
       `SELECT
@@ -192,7 +222,7 @@ router.get('/:warehouseName/history', authenticateToken, async (req, res) => {
       [warehouseName, limit]
     );
 
-    res.json(result.rows.map(row => ({
+    res.json(result.rows.map((row: CapacityHistoryRow) => ({
       id: row.id,
       warehouseName: row.warehouse_name,
       binsUsed: row.bins_used,
@@ -203,7 +233,7 @@ router.get('/:warehouseName/history', authenticateToken, async (req, res) => {
         fullName: row.full_name
       }
     })));
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching warehouse capacity history:', error);
     res.status(500).json({ error: 'Failed to fetch history' });
   }
@@ -211,10 +241,10 @@ router.get('/:warehouseName/history', authenticateToken, async (req, res) => {
 
 // PUT/UPDATE warehouse capacity for a specific warehouse (bins used)
 // MUST be last to avoid conflicting with more specific routes
-router.put('/:warehouseName', validateWarehouseCapacityUpdate, async (req, res) => {
+router.put('/:warehouseName', validateWarehouseCapacityUpdate, async (req: Request, res: Response) => {
   try {
     const { warehouseName } = req.params;
-    const { binsUsed } = req.body;
+    const { binsUsed } = req.body as { binsUsed: number };
 
     if (typeof binsUsed !== 'number' || binsUsed < 0) {
       return res.status(400).json({ error: 'Invalid binsUsed value' });
@@ -238,7 +268,7 @@ router.put('/:warehouseName', validateWarehouseCapacityUpdate, async (req, res) 
       success: true,
       data: result.rows[0]
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating bins used:', error);
     res.status(500).json({
       error: 'Failed to update warehouse capacity',
