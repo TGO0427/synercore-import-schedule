@@ -76,7 +76,6 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
             cbm: Number(s.cbm) || 0
           }));
 
-          console.log('[ReportsView] Fetched shipments:', normalized.length, 'statuses:', [...new Set(normalized.map(s => s.latestStatus))]);
           setAllShipments(normalized);
         }
       } catch (error) {

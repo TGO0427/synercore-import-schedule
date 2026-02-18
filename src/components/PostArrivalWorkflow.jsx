@@ -58,11 +58,6 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning, globalSearch
       const response = await authFetch(getApiUrl('/api/shipments/post-arrival'));
       if (response.ok) {
         const shipments = await response.json();
-        console.log('Post-Arrival Shipments:', shipments);
-        console.log('Sample shipment:', shipments[0], {
-          latestStatus: shipments[0]?.latest_status,
-          latestStatusField: shipments[0]?.latestStatus
-        });
         setPostArrivalShipments(shipments);
       } else {
         console.error('Failed to fetch post-arrival shipments');
@@ -663,14 +658,10 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning, globalSearch
               // Determine which workflow endpoints to call based on the action being performed
               const currentStatus = selectedShipment.latest_status;
               const workflowAction = workflowData.workflowAction;
-              console.log('Wizard completion - Current shipment status:', currentStatus);
-              console.log('Wizard completion - Workflow action:', workflowAction);
-              console.log('Wizard completion - Form data:', formData);
               let apiCalls = [];
 
               // Handle start-inspection
               if (workflowAction === 'start-inspection') {
-                console.log('Calling start-inspection endpoint');
                 apiCalls.push(
                   authFetch(getApiUrl(`/api/shipments/${selectedShipment.id}/start-inspection`), {
                     method: 'POST',
@@ -684,7 +675,6 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning, globalSearch
 
               // Handle complete-inspection
               if (workflowAction === 'complete-inspection') {
-                console.log('Calling complete-inspection endpoint');
                 apiCalls.push(
                   authFetch(getApiUrl(`/api/shipments/${selectedShipment.id}/complete-inspection`), {
                     method: 'POST',
@@ -700,7 +690,6 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning, globalSearch
 
               // Handle start-receiving
               if (workflowAction === 'start-receiving') {
-                console.log('Calling start-receiving endpoint');
                 apiCalls.push(
                   authFetch(getApiUrl(`/api/shipments/${selectedShipment.id}/start-receiving`), {
                     method: 'POST',
@@ -714,7 +703,6 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning, globalSearch
 
               // Handle complete-receiving
               if (workflowAction === 'complete-receiving') {
-                console.log('Calling complete-receiving endpoint');
                 apiCalls.push(
                   authFetch(getApiUrl(`/api/shipments/${selectedShipment.id}/complete-receiving`), {
                     method: 'POST',
@@ -736,7 +724,6 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning, globalSearch
               if (allSuccess || responses.length === 0) {
                 // If mark as stored was checked, make another call to mark as stored
                 if (formData.markAsStored && (workflowAction === 'complete-receiving' || workflowAction === 'start-receiving')) {
-                  console.log('Marking shipment as stored');
                   const storedResponse = await authFetch(getApiUrl(`/api/shipments/${selectedShipment.id}`), {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },

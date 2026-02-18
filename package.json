@@ -74,7 +74,6 @@
     "pdf-parse": "^1.1.1",
     "pg": "^8.16.3",
     "react-chartjs-2": "^5.3.0",
-    "recharts": "^2.15.4",
     "socket.io": "^4.7.2",
     "socket.io-client": "^4.7.2",
     "swagger-jsdoc": "^6.2.8",

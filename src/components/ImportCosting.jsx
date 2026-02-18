@@ -574,8 +574,6 @@ function ImportCosting({ showSuccess, showError }) {
         }
       });
       const dataToSend = { ...cleanedData, ...dbTotals };
-      console.log('Submitting costing data:', dataToSend);
-
       const url = editingId
         ? getApiUrl(`/api/costing/${editingId}`)
         : getApiUrl('/api/costing');

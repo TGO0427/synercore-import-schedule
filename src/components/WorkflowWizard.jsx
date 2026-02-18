@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 /**
  * WorkflowWizard Component
@@ -29,18 +29,6 @@ function WorkflowWizard({
   const isFirstStep = currentStep === 0;
   const isLastStep = step && currentStep === steps.length - 1;
   const stepPercentage = steps && steps.length > 0 ? ((currentStep + 1) / steps.length) * 100 : 0;
-
-  // Debug logging
-  useEffect(() => {
-    console.log('WorkflowWizard Debug:', {
-      stepsCount: steps?.length,
-      currentStep,
-      stepExists: !!step,
-      stepLabel: step?.label,
-      hasComponent: !!step?.component,
-      componentType: typeof step?.component
-    });
-  }, [step, steps, currentStep]);
 
   // If no steps available, show error
   if (!step) {

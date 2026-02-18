@@ -6,6 +6,7 @@ import LoginPage from './components/LoginPage';
 import NotificationContainer from './components/NotificationContainer';
 import SynercoreLogo from './components/SynercoreLogo';
 import OfflineIndicator from './components/OfflineIndicator';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Lazy-loaded pages (code-split for faster initial load)
 const ArchiveView = lazy(() => import('./components/ArchiveView'));
@@ -360,10 +361,6 @@ function App() {
       // Always replace array to force downstream children (WeekCalendar) to re-render with fresh values
       setShipments(normalized);
       setLastSyncTime(new Date());
-      console.log('[App] Shipments loaded:', {
-        count: normalized.length,
-        suppliers: [...new Set(normalized.map(s => s.supplier))].sort()
-      });
     } catch (err) {
       console.error('App: Error fetching shipments:', err);
       if (!isBackgroundSync) showError(`Failed to load shipments: ${err.message}`);
@@ -394,10 +391,6 @@ function App() {
         if (prev.length === normalized.length && prev.length > 0) {
           if (prev[0]?.id === normalized[0]?.id) return prev;
         }
-        console.log('[App] Suppliers loaded:', {
-          count: normalized.length,
-          names: normalized.map(s => s.name).sort()
-        });
         return normalized;
       });
     } catch (err) {
@@ -1153,9 +1146,11 @@ function App() {
           </div>
         </div>
 
-        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', color: 'var(--text-secondary)' }}>Loading...</div>}>
-          {renderMainContent()}
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', color: 'var(--text-secondary)' }}>Loading...</div>}>
+            {renderMainContent()}
+          </Suspense>
+        </ErrorBoundary>
       </div>
 
       {liveBoardOpen && (

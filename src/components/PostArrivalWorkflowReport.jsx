@@ -87,7 +87,6 @@ function PostArrivalWorkflowReport({ shipments }) {
             POST_ARRIVAL_STATUSES.includes(shipment.latest_status)
           );
 
-          console.log('[PostArrivalWorkflowReport] Fetched shipments:', postArrival.length, 'statuses:', [...new Set(postArrival.map(s => s.latest_status))]);
           setPostArrivalShipments(postArrival);
         }
       } catch (error) {

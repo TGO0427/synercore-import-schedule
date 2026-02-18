@@ -6,14 +6,6 @@ import React, { useMemo } from 'react';
  */
 function MetricsDebugPanel({ suppliers = [], shipments = [] }) {
   const diagnostics = useMemo(() => {
-    // Log to console for debugging
-    console.log('[MetricsDebugPanel] Received data:', {
-      suppliersCount: suppliers.length,
-      shipmentsCount: shipments.length,
-      suppliers: suppliers.map(s => ({ id: s.id, name: s.name })),
-      shipmentsSample: shipments.slice(0, 3).map(s => ({ supplier: s.supplier, status: s.latestStatus }))
-    });
-
     const results = {
       totalSuppliers: suppliers.length,
       totalShipments: shipments.length,

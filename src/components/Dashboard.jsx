@@ -1,10 +1,18 @@
 import React, { useMemo, useState } from 'react';
 import { ShipmentStatus } from '../types/shipment';
 import {
-  ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  PieChart, Pie, Cell,
-  BarChart, Bar,
-} from 'recharts';
+  Chart as ChartJS,
+  CategoryScale, LinearScale, PointElement, LineElement,
+  BarElement, ArcElement,
+  Title, Tooltip, Legend, Filler,
+} from 'chart.js';
+import { Line as LineChart, Doughnut, Bar as BarChart } from 'react-chartjs-2';
+
+ChartJS.register(
+  CategoryScale, LinearScale, PointElement, LineElement,
+  BarElement, ArcElement,
+  Title, Tooltip, Legend, Filler,
+);
 
 // Reusable chart wrapper
 const ChartCard = ({ title, subtitle, children, style }) => (
@@ -257,16 +265,24 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
         {/* Weekly Trend — Orders vs Shipments */}
         <ChartCard title="Weekly Trend" subtitle="Orders per week">
           {weeklyTrend && weeklyTrend.length > 1 ? (
-            <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={weeklyTrend} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="week" tick={{ fontSize: 12 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="orders" stroke="#059669" strokeWidth={2} dot={{ r: 4 }} name="Orders" />
-              </LineChart>
-            </ResponsiveContainer>
+            <div style={{ height: 220 }}>
+              <LineChart
+                data={{
+                  labels: weeklyTrend.map(d => d.week),
+                  datasets: [{
+                    label: 'Orders',
+                    data: weeklyTrend.map(d => d.orders),
+                    borderColor: '#059669',
+                    backgroundColor: 'rgba(5,150,105,0.1)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    tension: 0.3,
+                    fill: true,
+                  }],
+                }}
+                options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, scales: { x: { ticks: { font: { size: 12 } } }, y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } } } } }}
+              />
+            </div>
           ) : (
             <ChartEmpty label="No trend data yet" />
           )}
@@ -276,21 +292,20 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
         <ChartCard title="Status Distribution" subtitle="By current status">
           {statusChartData.length > 0 ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-              <ResponsiveContainer width={160} height={160}>
-                <PieChart>
-                  <Pie
-                    data={statusChartData}
-                    cx="50%" cy="50%"
-                    innerRadius={40} outerRadius={70}
-                    paddingAngle={2} dataKey="value"
-                  >
-                    {statusChartData.map((entry) => (
-                      <Cell key={entry.name} fill={STATUS_COLORS[entry.name] || '#6b7280'} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value, name) => [`${value}`, name]} />
-                </PieChart>
-              </ResponsiveContainer>
+              <div style={{ width: 160, height: 160 }}>
+                <Doughnut
+                  data={{
+                    labels: statusChartData.map(d => d.name),
+                    datasets: [{
+                      data: statusChartData.map(d => d.value),
+                      backgroundColor: statusChartData.map(d => STATUS_COLORS[d.name] || '#6b7280'),
+                      borderWidth: 1,
+                      borderColor: 'var(--surface)',
+                    }],
+                  }}
+                  options={{ responsive: true, maintainAspectRatio: false, cutout: '55%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw}` } } } }}
+                />
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {statusChartData.map(item => {
                   const pct = statusTotal > 0 ? Math.round((item.value / statusTotal) * 100) : 0;
@@ -313,19 +328,20 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
         {/* Warehouse Distribution — Bar */}
         <ChartCard title="By Warehouse" subtitle={`${warehouseChartData.length} locations`} style={{ alignSelf: 'start' }}>
           {warehouseChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={warehouseChartData.length * 50 + 20}>
-              <BarChart data={warehouseChartData} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fontWeight: 600 }} width={90} />
-                <Tooltip formatter={(value) => [`${value} orders`]} />
-                <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={20}>
-                  {warehouseChartData.map((_, idx) => (
-                    <Cell key={idx} fill={WAREHOUSE_COLORS[idx % WAREHOUSE_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <div style={{ height: warehouseChartData.length * 50 + 20 }}>
+              <BarChart
+                data={{
+                  labels: warehouseChartData.map(d => d.name),
+                  datasets: [{
+                    data: warehouseChartData.map(d => d.count),
+                    backgroundColor: warehouseChartData.map((_, idx) => WAREHOUSE_COLORS[idx % WAREHOUSE_COLORS.length]),
+                    borderRadius: 4,
+                    barThickness: 20,
+                  }],
+                }}
+                options={{ indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.raw} orders` } } }, scales: { x: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } } }, y: { ticks: { font: { size: 12, weight: 600 } } } } }}
+              />
+            </div>
           ) : (
             <ChartEmpty label="No warehouse data" />
           )}
@@ -369,17 +385,18 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
         {/* Products & Pallets by Week */}
         <ChartCard title="Products & Pallets by Week" subtitle="Weekly incoming volume" style={{ gridColumn: '1 / -1' }}>
           {productsPalletsTrend && productsPalletsTrend.length > 0 ? (
-            <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={productsPalletsTrend} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="week" tick={{ fontSize: 12 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="products" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} name="Products" />
-                <Line type="monotone" dataKey="pallets" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} name="Pallets" />
-              </LineChart>
-            </ResponsiveContainer>
+            <div style={{ height: 260 }}>
+              <LineChart
+                data={{
+                  labels: productsPalletsTrend.map(d => d.week),
+                  datasets: [
+                    { label: 'Products', data: productsPalletsTrend.map(d => d.products), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 2, pointRadius: 4, tension: 0.3, fill: true },
+                    { label: 'Pallets', data: productsPalletsTrend.map(d => d.pallets), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', borderWidth: 2, pointRadius: 4, tension: 0.3, fill: true },
+                  ],
+                }}
+                options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, scales: { x: { ticks: { font: { size: 12 } } }, y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } } } } }}
+              />
+            </div>
           ) : (
             <ChartEmpty label="No trend data yet" />
           )}
@@ -388,22 +405,20 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
         {/* Offsite Storage Duration */}
         {offsiteChartData.length > 0 && (
           <ChartCard title="Offsite Storage Duration" subtitle={`${offsiteChartData.length} items · Days in storage`} style={{ gridColumn: '1 / -1' }}>
-            <ResponsiveContainer width="100%" height={offsiteChartData.length * 40 + 30}>
-              <BarChart data={offsiteChartData} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} label={{ value: 'Days', position: 'insideBottomRight', offset: -5, fontSize: 11, fill: '#94a3b8' }} />
-                <YAxis type="category" dataKey="label" tick={{ fontSize: 11, fontWeight: 500 }} width={220} />
-                <Tooltip
-                  formatter={(value) => [`${value} days`, 'Storage']}
-                  contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid var(--border)' }}
-                />
-                <Bar dataKey="days" radius={[0, 4, 4, 0]} barSize={22}>
-                  {offsiteChartData.map((entry, idx) => (
-                    <Cell key={idx} fill={entry.days > 30 ? '#ef4444' : entry.days > 14 ? '#f59e0b' : '#10b981'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <div style={{ height: offsiteChartData.length * 40 + 30 }}>
+              <BarChart
+                data={{
+                  labels: offsiteChartData.map(d => d.label),
+                  datasets: [{
+                    data: offsiteChartData.map(d => d.days),
+                    backgroundColor: offsiteChartData.map(d => d.days > 30 ? '#ef4444' : d.days > 14 ? '#f59e0b' : '#10b981'),
+                    borderRadius: 4,
+                    barThickness: 22,
+                  }],
+                }}
+                options={{ indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.raw} days` } } }, scales: { x: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, title: { display: true, text: 'Days', font: { size: 11 }, color: '#94a3b8' } }, y: { ticks: { font: { size: 11, weight: 500 } } } } }}
+              />
+            </div>
             <div style={{ display: 'flex', gap: 16, marginTop: 8, justifyContent: 'flex-end' }}>
               <span style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#10b981', display: 'inline-block' }} /> 0–14 days

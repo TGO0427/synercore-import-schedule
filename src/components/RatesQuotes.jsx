@@ -266,7 +266,6 @@ function RatesQuotes({ showSuccess, showError, loading }) {
       );
 
       // Optional: setShowAnalysisView(true); store result if you want to show details
-      console.log("PDF Analysis Results:", result?.analysis);
     } catch (error) {
       console.error("Error analyzing quote:", error);
       showError?.(`Failed to analyze PDF: ${error.message}`);
