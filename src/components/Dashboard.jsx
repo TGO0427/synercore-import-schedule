@@ -276,14 +276,15 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
                     label: 'Orders',
                     data: weeklyTrend.map(d => d.orders),
                     borderColor: '#059669',
-                    backgroundColor: 'rgba(5,150,105,0.1)',
+                    backgroundColor: 'rgba(5,150,105,0.08)',
                     borderWidth: 2,
-                    pointRadius: 4,
+                    pointRadius: 0,
+                    hoverRadius: 4,
                     tension: 0.3,
                     fill: true,
                   }],
                 }}
-                options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, scales: { x: { ticks: { font: { size: 12 } } }, y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } } } } }}
+                options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, scales: { x: { grid: { color: 'rgba(0,0,0,0.06)' }, border: { display: false }, ticks: { font: { size: 12 } } }, y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, border: { display: false }, ticks: { precision: 0, font: { size: 11 } } } } }}
               />
             </div>
           ) : (
@@ -302,11 +303,12 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
                     datasets: [{
                       data: statusChartData.map(d => d.value),
                       backgroundColor: statusChartData.map(d => STATUS_COLORS[d.name] || '#6b7280'),
-                      borderWidth: 1,
-                      borderColor: 'var(--surface)',
+                      borderWidth: 2,
+                      borderColor: '#fff',
+                      hoverBorderWidth: 0,
                     }],
                   }}
-                  options={{ responsive: true, maintainAspectRatio: false, cutout: '55%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw}` } } } }}
+                  options={{ responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw}` } } } }}
                 />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -342,7 +344,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
                     barThickness: 20,
                   }],
                 }}
-                options={{ indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.raw} orders` } } }, scales: { x: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } } }, y: { ticks: { font: { size: 12, weight: 600 } } } } }}
+                options={{ indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.raw} orders` } } }, scales: { x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, border: { display: false }, ticks: { precision: 0, font: { size: 11 } } }, y: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 12, weight: 600 } } } } }}
               />
             </div>
           ) : (
@@ -393,11 +395,11 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
                 data={{
                   labels: productsPalletsTrend.map(d => d.week),
                   datasets: [
-                    { label: 'Products', data: productsPalletsTrend.map(d => d.products), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 2, pointRadius: 4, tension: 0.3, fill: true },
-                    { label: 'Pallets', data: productsPalletsTrend.map(d => d.pallets), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', borderWidth: 2, pointRadius: 4, tension: 0.3, fill: true },
+                    { label: 'Products', data: productsPalletsTrend.map(d => d.products), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.08)', borderWidth: 2, pointRadius: 0, hoverRadius: 4, tension: 0.3, fill: true },
+                    { label: 'Pallets', data: productsPalletsTrend.map(d => d.pallets), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)', borderWidth: 2, pointRadius: 0, hoverRadius: 4, tension: 0.3, fill: true },
                   ],
                 }}
-                options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, scales: { x: { ticks: { font: { size: 12 } } }, y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } } } } }}
+                options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, scales: { x: { grid: { color: 'rgba(0,0,0,0.06)' }, border: { display: false }, ticks: { font: { size: 12 } } }, y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, border: { display: false }, ticks: { precision: 0, font: { size: 11 } } } } }}
               />
             </div>
           ) : (
@@ -419,7 +421,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
                     barThickness: 22,
                   }],
                 }}
-                options={{ indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.raw} days` } } }, scales: { x: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, title: { display: true, text: 'Days', font: { size: 11 }, color: '#94a3b8' } }, y: { ticks: { font: { size: 11, weight: 500 } } } } }}
+                options={{ indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.raw} days` } } }, scales: { x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, border: { display: false }, ticks: { precision: 0, font: { size: 11 } }, title: { display: true, text: 'Days', font: { size: 11 }, color: '#94a3b8' } }, y: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 11, weight: 500 } } } } }}
               />
             </div>
             <div style={{ display: 'flex', gap: 16, marginTop: 8, justifyContent: 'flex-end' }}>
