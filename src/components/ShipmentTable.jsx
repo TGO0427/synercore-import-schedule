@@ -81,6 +81,8 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
   const [showCustomSupplier, setShowCustomSupplier] = useState(false);
   const [newShipmentSelectedWeekDate, setNewShipmentSelectedWeekDate] = useState(null);
   const [amendShipmentSelectedWeekDate, setAmendShipmentSelectedWeekDate] = useState(null);
+  const [productLines, setProductLines] = useState([{ name: '', qty: '' }]);
+  const [amendProductLines, setAmendProductLines] = useState([{ name: '', qty: '' }]);
   const [showAutoArchiveDialog, setShowAutoArchiveDialog] = useState(false);
   const [autoArchiveStats, setAutoArchiveStats] = useState(null);
   const [autoArchiveLoading, setAutoArchiveLoading] = useState(false);
@@ -504,9 +506,15 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
     }
 
     try {
+      // Combine product lines into productName and total quantity
+      const filledLines = productLines.filter(l => l.name.trim());
+      const combinedProductName = filledLines.map(l => l.name.trim()).join('; ');
+      const totalQuantity = productLines.reduce((sum, l) => sum + (Number(l.qty) || 0), 0);
+
       const shipmentData = {
         ...newShipment,
-        quantity: newShipment.quantity ? Number(newShipment.quantity) : null,
+        productName: combinedProductName || null,
+        quantity: totalQuantity || null,
         cbm: newShipment.cbm ? Number(newShipment.cbm) : null,
         palletQty: newShipment.palletQty ? Number(newShipment.palletQty) : null,
         weekNumber: newShipment.weekNumber ? Number(newShipment.weekNumber) : null,
@@ -538,6 +546,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
         incoterm: '',
         notes: ''
       });
+      setProductLines([{ name: '', qty: '' }]);
       setShowCustomSupplier(false);
       setNewShipmentSelectedWeekDate(null);
       setShowAddShipmentDialog(false);
@@ -573,6 +582,13 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
 
   const handleAmendShipment = (shipment) => {
     setAmendingShipment({ ...shipment });
+    // Parse existing product name into lines (semicolon-separated)
+    if (shipment.productName && shipment.productName.includes(';')) {
+      const names = shipment.productName.split(';').map(n => n.trim());
+      setAmendProductLines(names.map(n => ({ name: n, qty: '' })));
+    } else {
+      setAmendProductLines([{ name: shipment.productName || '', qty: shipment.quantity != null ? String(shipment.quantity) : '' }]);
+    }
     setAmendShipmentSelectedWeekDate(shipment.selectedWeekDate ? new Date(shipment.selectedWeekDate) : null);
     setShowAmendShipmentDialog(true);
   };
@@ -588,9 +604,15 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
     }
 
     try {
+      // Combine amend product lines
+      const filledLines = amendProductLines.filter(l => l.name.trim());
+      const combinedProductName = filledLines.map(l => l.name.trim()).join('; ');
+      const totalQuantity = amendProductLines.reduce((sum, l) => sum + (Number(l.qty) || 0), 0);
+
       const updatedShipment = {
         ...amendingShipment,
-        quantity: amendingShipment.quantity ? Number(amendingShipment.quantity) : null,
+        productName: combinedProductName || null,
+        quantity: totalQuantity || null,
         cbm: amendingShipment.cbm ? Number(amendingShipment.cbm) : null,
         palletQty: amendingShipment.palletQty ? Number(amendingShipment.palletQty) : null,
         weekNumber: amendingShipment.weekNumber ? Number(amendingShipment.weekNumber) : null,
@@ -1362,37 +1384,75 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
-                  Product Name
-                </label>
-                <input
-                  type="text"
-                  value={newShipment.productName}
-                  onChange={(e) => handleInputChange('productName', e.target.value)}
-                  className="input"
-                  style={{
-                    width: '100%'
-                  }}
-                  placeholder="Product name"
-                />
-              </div>
-              
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
-                  Quantity
-                </label>
-                <input
-                  type="number"
-                  value={newShipment.quantity}
-                  onChange={(e) => handleInputChange('quantity', e.target.value)}
-                  className="input"
-                  style={{
-                    width: '100%'
-                  }}
-                  placeholder="Quantity"
-                  min="0"
-                />
+              <div style={{ gridColumn: '1 / -1' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <label style={{ fontWeight: '500', color: 'var(--text-900)' }}>
+                    Products
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setProductLines(prev => [...prev, { name: '', qty: '' }])}
+                    style={{
+                      background: 'none',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      padding: '2px 10px',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      color: 'var(--primary)',
+                      fontWeight: '600'
+                    }}
+                  >
+                    + Add Product
+                  </button>
+                </div>
+                {productLines.map((line, idx) => (
+                  <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      value={line.name}
+                      onChange={(e) => {
+                        const updated = [...productLines];
+                        updated[idx] = { ...updated[idx], name: e.target.value };
+                        setProductLines(updated);
+                      }}
+                      className="input"
+                      style={{ flex: 2 }}
+                      placeholder="Product name"
+                    />
+                    <input
+                      type="number"
+                      value={line.qty}
+                      onChange={(e) => {
+                        const updated = [...productLines];
+                        updated[idx] = { ...updated[idx], qty: e.target.value };
+                        setProductLines(updated);
+                      }}
+                      className="input"
+                      style={{ flex: 1 }}
+                      placeholder="Qty"
+                      min="0"
+                    />
+                    {productLines.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setProductLines(prev => prev.filter((_, i) => i !== idx))}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: '#d32f2f',
+                          fontSize: '1.2rem',
+                          padding: '0 4px',
+                          lineHeight: 1
+                        }}
+                        title="Remove product"
+                      >
+                        &times;
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
               
               <div>
@@ -1699,37 +1759,75 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
-                  Product Name
-                </label>
-                <input
-                  type="text"
-                  value={amendingShipment.productName || ''}
-                  onChange={(e) => handleAmendInputChange('productName', e.target.value)}
-                  className="input"
-                  style={{
-                    width: '100%'
-                  }}
-                  placeholder="Product name"
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
-                  Quantity
-                </label>
-                <input
-                  type="number"
-                  value={amendingShipment.quantity || ''}
-                  onChange={(e) => handleAmendInputChange('quantity', e.target.value)}
-                  className="input"
-                  style={{
-                    width: '100%'
-                  }}
-                  placeholder="Quantity"
-                  min="0"
-                />
+              <div style={{ gridColumn: '1 / -1' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <label style={{ fontWeight: '500', color: 'var(--text-900)' }}>
+                    Products
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setAmendProductLines(prev => [...prev, { name: '', qty: '' }])}
+                    style={{
+                      background: 'none',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      padding: '2px 10px',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      color: 'var(--primary)',
+                      fontWeight: '600'
+                    }}
+                  >
+                    + Add Product
+                  </button>
+                </div>
+                {amendProductLines.map((line, idx) => (
+                  <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      value={line.name}
+                      onChange={(e) => {
+                        const updated = [...amendProductLines];
+                        updated[idx] = { ...updated[idx], name: e.target.value };
+                        setAmendProductLines(updated);
+                      }}
+                      className="input"
+                      style={{ flex: 2 }}
+                      placeholder="Product name"
+                    />
+                    <input
+                      type="number"
+                      value={line.qty}
+                      onChange={(e) => {
+                        const updated = [...amendProductLines];
+                        updated[idx] = { ...updated[idx], qty: e.target.value };
+                        setAmendProductLines(updated);
+                      }}
+                      className="input"
+                      style={{ flex: 1 }}
+                      placeholder="Qty"
+                      min="0"
+                    />
+                    {amendProductLines.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setAmendProductLines(prev => prev.filter((_, i) => i !== idx))}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: '#d32f2f',
+                          fontSize: '1.2rem',
+                          padding: '0 4px',
+                          lineHeight: 1
+                        }}
+                        title="Remove product"
+                      >
+                        &times;
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
 
               <div>
@@ -2166,7 +2264,13 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Product Name</label>
-              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.productName || '—'}</span>
+              <span style={{ fontSize: '1rem', color: '#222' }}>
+                {orderDetailsShipment.productName
+                  ? orderDetailsShipment.productName.split(';').map((p, i) => (
+                      <span key={i}>{p.trim()}{i < orderDetailsShipment.productName.split(';').length - 1 && <br />}</span>
+                    ))
+                  : '—'}
+              </span>
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Status</label>
