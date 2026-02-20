@@ -46,6 +46,13 @@ const SEAFREIGHT_AGENTS = [
   { value: 'OOCL', label: 'OOCL' },
 ];
 
+const AIRFREIGHT_STATUSES = [
+  ShipmentStatus.PLANNED_AIRFREIGHT,
+  ShipmentStatus.IN_TRANSIT_AIRFREIGHT,
+  ShipmentStatus.AIR_CUSTOMS_CLEARANCE,
+];
+const isAirfreight = (status) => AIRFREIGHT_STATUSES.includes(status);
+
 const getShippingProgress = (status) => {
   const stages = {
     planned_airfreight: 1, planned_seafreight: 1,
@@ -958,7 +965,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 { key: null, label: 'Progress', style: { minWidth: 90 } },
                 { key: 'weekNumber', label: 'Week' },
                 { key: 'palletQty', label: 'Pallets' },
-                { key: 'vesselName', label: 'Vessel' },
+                { key: 'vesselName', label: 'Vessel / AWB' },
                 { key: 'incoterm', label: 'Incoterm' },
                 { key: 'forwardingAgent', label: 'Agent' },
                 { key: null, label: '' },
@@ -1112,7 +1119,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                         type="text"
                         value={(localTextValues[`${shipment.id}-vesselName`] ?? shipment.vesselName) || ''}
                         onChange={(e) => handleTextInputChange(shipment.id, 'vesselName', e.target.value)}
-                        placeholder="Vessel Name"
+                        placeholder={isAirfreight(shipment.latestStatus) ? 'AWB Number' : 'Vessel Name'}
                         className="input"
                         style={{
                           minWidth: '120px',
@@ -1123,10 +1130,13 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                       />
                       {shipment.vesselName && (
                         <a
-                          href={`https://www.vesselfinder.com/vessels?name=${encodeURIComponent(shipment.vesselName)}`}
+                          href={isAirfreight(shipment.latestStatus)
+                            ? `https://www.track-trace.com/aircargo?awb=${encodeURIComponent(shipment.vesselName.replace(/\D/g, ''))}`
+                            : `https://www.vesselfinder.com/vessels?name=${encodeURIComponent(shipment.vesselName)}`
+                          }
                           target="_blank"
                           rel="noopener noreferrer"
-                          title="Track vessel on VesselFinder"
+                          title={isAirfreight(shipment.latestStatus) ? 'Track AWB' : 'Track vessel on VesselFinder'}
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -1534,7 +1544,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
 
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
-                  Vessel Name
+                  {isAirfreight(newShipment.latestStatus) ? 'AWB Number' : 'Vessel Name'}
                 </label>
                 <input
                   type="text"
@@ -1544,7 +1554,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   style={{
                     width: '100%'
                   }}
-                  placeholder="Vessel name"
+                  placeholder={isAirfreight(newShipment.latestStatus) ? 'AWB number' : 'Vessel name'}
                 />
               </div>
 
@@ -1891,7 +1901,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
 
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
-                  Vessel Name
+                  {isAirfreight(amendingShipment.latestStatus) ? 'AWB Number' : 'Vessel Name'}
                 </label>
                 <input
                   type="text"
@@ -1901,7 +1911,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   style={{
                     width: '100%'
                   }}
-                  placeholder="Vessel name"
+                  placeholder={isAirfreight(amendingShipment.latestStatus) ? 'AWB number' : 'Vessel name'}
                 />
               </div>
 
@@ -2320,7 +2330,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.forwardingAgent || '—'}</span>
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Vessel Name</label>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>{isAirfreight(orderDetailsShipment.latestStatus) ? 'AWB Number' : 'Vessel Name'}</label>
               <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.vesselName || '—'}</span>
             </div>
             <div>
