@@ -264,6 +264,102 @@ export const CONTAINER_TYPES = [
 ];
 
 /**
+ * Ports of Loading options
+ */
+export const PORTS_OF_LOADING = [
+  { value: 'Port Kelang', label: 'Port Kelang - Malaysia' },
+  { value: 'Qingdao', label: 'Qingdao - China' },
+  { value: 'Shanghai', label: 'Shanghai - China' },
+  { value: 'Tianjin / Xingang', label: 'Tianjin / Xingang - China' },
+  { value: 'Dalian', label: 'Dalian - China' },
+  { value: 'Jakarta', label: 'Jakarta - Indonesia' },
+  { value: 'Gebze', label: 'Gebze - Turkey' },
+  { value: 'Istanbul', label: 'Istanbul - Turkey' },
+];
+
+/**
+ * Shipping line options
+ */
+export const SHIPPING_LINES = [
+  { value: 'CMA-CGM', label: 'CMA-CGM' },
+  { value: 'EVERGREEN', label: 'EVERGREEN' },
+  { value: 'MSC', label: 'MSC' },
+  { value: 'MSC Special', label: 'MSC Special' },
+  { value: 'MSC Standard', label: 'MSC Standard' },
+  { value: 'ONE', label: 'ONE' },
+];
+
+/**
+ * Container type mapping for rate lookup
+ */
+const CONTAINER_RATE_KEY = {
+  "20' Dry Container": '20GP',
+  "40' Dry Container": '40GP',
+  "40' High Cube": '40HC',
+};
+
+/**
+ * Ocean freight rates (USD) by Port of Loading → Shipping Line → Container Size
+ * Source: Synercore January 2026 Rates
+ */
+export const OCEAN_FREIGHT_RATES = {
+  'Port Kelang': {
+    'MSC Special':  { '20GP': 2150, '40GP': 2550, '40HC': 2550 },
+    'ONE':          { '20GP': 2350, '40GP': 2550, '40HC': 2550 },
+    'MSC Standard': { '20GP': 3100, '40GP': 4250, '40HC': 4250 },
+  },
+  'Qingdao': {
+    'ONE':          { '20GP': 2350, '40GP': 2550, '40HC': 2550 },
+    'CMA-CGM':      { '20GP': 2400, '40GP': 2750, '40HC': 2750 },
+    'EVERGREEN':    { '20GP': 2009, '40GP': 2568, '40HC': 2568 },
+    'MSC Special':  { '20GP': 2300, '40GP': 2650, '40HC': 2650 },
+    'MSC Standard': { '20GP': 3050, '40GP': 4150, '40HC': 4150 },
+  },
+  'Tianjin / Xingang': {
+    'CMA-CGM':      { '20GP': 2625, '40GP': 3200, '40HC': 3200 },
+    'MSC Special':  { '20GP': 2300, '40GP': 2650, '40HC': 2650 },
+    'ONE':          { '20GP': 2450, '40GP': 2750, '40HC': 2750 },
+    'MSC Standard': { '20GP': 3100, '40GP': 4250, '40HC': 4250 },
+  },
+  'Dalian': {
+    'MSC Special':  { '20GP': 2300, '40GP': 2650, '40HC': 2650 },
+    'MSC Standard': { '20GP': 3100, '40GP': 4250, '40HC': 4250 },
+    'ONE':          { '20GP': 2450, '40GP': 2750, '40HC': 2750 },
+    'EVERGREEN':    { '20GP': 2100, '40GP': 2900, '40HC': 2900 },
+  },
+  'Jakarta': {
+    'ONE':          { '20GP': 2350, '40GP': 2550, '40HC': 2550 },
+    'MSC Standard': { '20GP': 3100, '40GP': 4250, '40HC': 4250 },
+    'CMA-CGM':      { '20GP': 2500, '40GP': 3250, '40HC': 3250 },
+    'MSC Special':  { '20GP': 2150, '40GP': 2550, '40HC': 2550 },
+  },
+  'Shanghai': {
+    'ONE':          { '20GP': 2350, '40GP': 2550, '40HC': 2550 },
+    'CMA-CGM':      { '20GP': 2400, '40GP': 2750, '40HC': 2750 },
+    'EVERGREEN':    { '20GP': 2009, '40GP': 2550, '40HC': 2450 },
+    'MSC Special':  { '20GP': 2200, '40GP': 2450, '40HC': 2450 },
+    'MSC Standard': { '20GP': 3050, '40GP': 4150, '40HC': 4150 },
+  },
+  'Gebze': {
+    'MSC':          { '20GP': 1050, '40GP': 0, '40HC': 1000 },
+  },
+  'Istanbul': {
+    'MSC':          { '20GP': 1050, '40GP': 0, '40HC': 1000 },
+  },
+};
+
+/**
+ * Look up ocean freight rate based on port, shipping line, and container type.
+ * Returns the rate in USD, or null if no matching rate found.
+ */
+export function lookupOceanFreightRate(portOfLoading, shippingLine, containerType) {
+  const sizeKey = CONTAINER_RATE_KEY[containerType];
+  if (!sizeKey) return null;
+  const rate = OCEAN_FREIGHT_RATES[portOfLoading]?.[shippingLine]?.[sizeKey];
+  return rate !== undefined ? rate : null;
+}
+
+/**
  * INCO terms options
  */
 export const INCO_TERMS = [
@@ -380,4 +476,8 @@ export default {
   SA_PORTS,
   AFRICAN_PORTS,
   LOAD_TYPES,
+  PORTS_OF_LOADING,
+  SHIPPING_LINES,
+  OCEAN_FREIGHT_RATES,
+  lookupOceanFreightRate,
 };

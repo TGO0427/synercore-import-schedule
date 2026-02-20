@@ -10,6 +10,9 @@ import {
   INCO_TERMS,
   AFRICAN_PORTS,
   LOAD_TYPES,
+  PORTS_OF_LOADING,
+  SHIPPING_LINES,
+  lookupOceanFreightRate,
 } from '../utils/costingCalculations';
 import { generateEstimatePDF, generateEstimatePDFBase64, generateReportPDF as generateReportPDFUtil } from '../utils/costingPdf';
 import {
@@ -417,7 +420,21 @@ function ImportCosting({ showSuccess, showError }) {
   };
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value };
+      // Auto-fill ocean freight when port, shipping line, or container type changes
+      if (field === 'port_of_loading' || field === 'shipping_line' || field === 'container_type') {
+        const rate = lookupOceanFreightRate(
+          field === 'port_of_loading' ? value : updated.port_of_loading,
+          field === 'shipping_line' ? value : updated.shipping_line,
+          field === 'container_type' ? value : updated.container_type
+        );
+        if (rate !== null) {
+          updated.ocean_freight_usd = rate;
+        }
+      }
+      return updated;
+    });
   };
 
   // Product helpers
@@ -1103,14 +1120,14 @@ function ImportCosting({ showSuccess, showError }) {
                     )}
                   </div>
                   {renderInput('Country of Origin', 'country_of_origin')}
-                  {renderInput('Port of Loading', 'port_of_loading')}
+                  {renderSelect('Port of Loading', 'port_of_loading', PORTS_OF_LOADING)}
                   {renderSelect('Port of Discharge', 'port_of_discharge', AFRICAN_PORTS)}
                   {renderSelect('Load Type', 'load_type', LOAD_TYPES)}
                   {renderSelect('Container Type', 'container_type', CONTAINER_TYPES)}
                   {renderSelect('INCO Terms', 'inco_terms', INCO_TERMS)}
                   {renderInput('INCO Term Place', 'inco_term_place')}
                   {renderInput('Transit Time (days)', 'transit_time_days', 'number')}
-                  {renderInput('Shipping Line', 'shipping_line')}
+                  {renderSelect('Shipping Line', 'shipping_line', SHIPPING_LINES)}
                   {renderInput('No. of Containers', 'quantity', 'number')}
                   {renderInput('Costing Date', 'costing_date', 'date')}
                   {renderInput('Validity Date', 'validity_date', 'date')}
