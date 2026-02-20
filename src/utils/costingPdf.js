@@ -79,6 +79,7 @@ const buildEstimateHeader = (doc, estimate, productTotals) => {
     ['Port of Discharge', estimate.port_of_discharge || '-'],
     ['Load Type', estimate.load_type || '-'],
     ['Container Type', estimate.container_type || '-'],
+    ['Shipping Line', estimate.shipping_line || '-'],
     ['INCO Terms', estimate.inco_terms || '-'],
     ['Transit Time', estimate.transit_time_days ? `${estimate.transit_time_days} days` : '-'],
     ['Total Weight', `${formatNumber(productTotals.totalWeight || estimate.total_gross_weight_kg)} kg`],
