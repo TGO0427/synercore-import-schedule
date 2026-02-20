@@ -8,7 +8,8 @@ import {
   formatNumber,
   CONTAINER_TYPES,
   INCO_TERMS,
-  SA_PORTS,
+  AFRICAN_PORTS,
+  LOAD_TYPES,
 } from '../utils/costingCalculations';
 import { generateEstimatePDF, generateEstimatePDFBase64, generateReportPDF as generateReportPDFUtil } from '../utils/costingPdf';
 import {
@@ -63,6 +64,7 @@ const INITIAL_FORM_STATE = {
   // Destination details
   country_of_destination: 'South Africa',
   port_of_discharge: 'CPT',
+  load_type: 'FCL',
   shipping_line: '',
   routing: '',
   frequency: '',
@@ -1102,7 +1104,8 @@ function ImportCosting({ showSuccess, showError }) {
                   </div>
                   {renderInput('Country of Origin', 'country_of_origin')}
                   {renderInput('Port of Loading', 'port_of_loading')}
-                  {renderSelect('Port of Discharge', 'port_of_discharge', SA_PORTS)}
+                  {renderSelect('Port of Discharge', 'port_of_discharge', AFRICAN_PORTS)}
+                  {renderSelect('Load Type', 'load_type', LOAD_TYPES)}
                   {renderSelect('Container Type', 'container_type', CONTAINER_TYPES)}
                   {renderSelect('INCO Terms', 'inco_terms', INCO_TERMS)}
                   {renderInput('INCO Term Place', 'inco_term_place')}

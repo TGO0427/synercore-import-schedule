@@ -77,6 +77,7 @@ const buildEstimateHeader = (doc, estimate, productTotals) => {
     ['Country of Origin', estimate.country_of_origin || '-'],
     ['Port of Loading', estimate.port_of_loading || '-'],
     ['Port of Discharge', estimate.port_of_discharge || '-'],
+    ['Load Type', estimate.load_type || '-'],
     ['Container Type', estimate.container_type || '-'],
     ['INCO Terms', estimate.inco_terms || '-'],
     ['Transit Time', estimate.transit_time_days ? `${estimate.transit_time_days} days` : '-'],

@@ -281,15 +281,88 @@ export const INCO_TERMS = [
 ];
 
 /**
- * Port options (South Africa)
+ * Port options (Africa)
  */
-export const SA_PORTS = [
-  { value: 'CPT', label: 'Cape Town (CPT)' },
-  { value: 'DBN', label: 'Durban (DBN)' },
-  { value: 'PLZ', label: 'Port Elizabeth (PLZ)' },
-  { value: 'ELS', label: 'East London (ELS)' },
-  { value: 'RCB', label: 'Richards Bay (RCB)' },
-  { value: 'JNB', label: 'Johannesburg (JNB) - Inland' },
+export const AFRICAN_PORTS = [
+  // South Africa
+  { value: 'CPT', label: 'Cape Town (CPT) - South Africa' },
+  { value: 'DBN', label: 'Durban (DBN) - South Africa' },
+  { value: 'PLZ', label: 'Port Elizabeth (PLZ) - South Africa' },
+  { value: 'ELS', label: 'East London (ELS) - South Africa' },
+  { value: 'RCB', label: 'Richards Bay (RCB) - South Africa' },
+  { value: 'JNB', label: 'Johannesburg (JNB) - South Africa (Inland)' },
+  { value: 'NGQ', label: 'Ngqura/Coega (NGQ) - South Africa' },
+  { value: 'SDB', label: 'Saldanha Bay (SDB) - South Africa' },
+  // East Africa
+  { value: 'MBA', label: 'Mombasa (MBA) - Kenya' },
+  { value: 'DAR', label: 'Dar es Salaam (DAR) - Tanzania' },
+  { value: 'MPS', label: 'Maputo (MPS) - Mozambique' },
+  { value: 'BEW', label: 'Beira (BEW) - Mozambique' },
+  { value: 'NCL', label: 'Nacala (NCL) - Mozambique' },
+  { value: 'DIJ', label: 'Djibouti (DIJ) - Djibouti' },
+  { value: 'PTL', label: 'Port Louis (PTL) - Mauritius' },
+  { value: 'MGN', label: 'Mogadishu (MGN) - Somalia' },
+  { value: 'BRB', label: 'Berbera (BRB) - Somalia' },
+  { value: 'MSW', label: 'Massawa (MSW) - Eritrea' },
+  { value: 'TNR', label: 'Toamasina (TNR) - Madagascar' },
+  // Southern Africa
+  { value: 'WDH', label: 'Walvis Bay (WDH) - Namibia' },
+  { value: 'LLW', label: 'Lilongwe (LLW) - Malawi (Inland)' },
+  { value: 'LUN', label: 'Lusaka (LUN) - Zambia (Inland)' },
+  { value: 'HRE', label: 'Harare (HRE) - Zimbabwe (Inland)' },
+  { value: 'GBE', label: 'Gaborone (GBE) - Botswana (Inland)' },
+  { value: 'MTS', label: 'Matsapha (MTS) - Eswatini (Inland)' },
+  { value: 'MSU', label: 'Maseru (MSU) - Lesotho (Inland)' },
+  // West Africa
+  { value: 'LOS', label: 'Lagos/Apapa (LOS) - Nigeria' },
+  { value: 'TIN', label: 'Tin Can Island (TIN) - Nigeria' },
+  { value: 'ONN', label: 'Onne (ONN) - Nigeria' },
+  { value: 'ACC', label: 'Tema (ACC) - Ghana' },
+  { value: 'TKD', label: 'Takoradi (TKD) - Ghana' },
+  { value: 'ABJ', label: 'Abidjan (ABJ) - Ivory Coast' },
+  { value: 'DKR', label: 'Dakar (DKR) - Senegal' },
+  { value: 'COO', label: 'Cotonou (COO) - Benin' },
+  { value: 'LME', label: 'Lomé (LME) - Togo' },
+  { value: 'CNK', label: 'Conakry (CNK) - Guinea' },
+  { value: 'FNA', label: 'Freetown (FNA) - Sierra Leone' },
+  { value: 'MLW', label: 'Monrovia (MLW) - Liberia' },
+  { value: 'BJL', label: 'Banjul (BJL) - Gambia' },
+  { value: 'NKC', label: 'Nouakchott (NKC) - Mauritania' },
+  { value: 'BSU', label: 'Bissau (BSU) - Guinea-Bissau' },
+  { value: 'PRY', label: 'Praia (PRY) - Cape Verde' },
+  // Central Africa
+  { value: 'DLA', label: 'Douala (DLA) - Cameroon' },
+  { value: 'LBV', label: 'Libreville (LBV) - Gabon' },
+  { value: 'POG', label: 'Port-Gentil (POG) - Gabon' },
+  { value: 'PNR', label: 'Pointe-Noire (PNR) - Congo' },
+  { value: 'LUA', label: 'Luanda (LUA) - Angola' },
+  { value: 'LOB', label: 'Lobito (LOB) - Angola' },
+  { value: 'MAT', label: 'Matadi (MAT) - DRC' },
+  { value: 'MLA', label: 'Malabo (MLA) - Equatorial Guinea' },
+  { value: 'STP', label: 'São Tomé (STP) - São Tomé and Príncipe' },
+  // North Africa
+  { value: 'TNG', label: 'Tanger Med (TNG) - Morocco' },
+  { value: 'CAS', label: 'Casablanca (CAS) - Morocco' },
+  { value: 'ALG', label: 'Algiers (ALG) - Algeria' },
+  { value: 'TUN', label: 'Tunis (TUN) - Tunisia' },
+  { value: 'TIP', label: 'Tripoli (TIP) - Libya' },
+  { value: 'ALY', label: 'Alexandria (ALY) - Egypt' },
+  { value: 'PSD', label: 'Port Said (PSD) - Egypt' },
+  { value: 'DAM', label: 'Damietta (DAM) - Egypt' },
+  { value: 'SKH', label: 'Sokhna (SKH) - Egypt' },
+  { value: 'SUZ', label: 'Suez (SUZ) - Egypt' },
+  { value: 'PTS', label: 'Port Sudan (PTS) - Sudan' },
+];
+
+// Keep backward-compatible alias
+export const SA_PORTS = AFRICAN_PORTS;
+
+/**
+ * Load type options (LCL / FCL)
+ */
+export const LOAD_TYPES = [
+  { value: 'FCL', label: 'FCL - Full Container Load' },
+  { value: 'LCL', label: 'LCL - Less than Container Load' },
 ];
 
 export default {
@@ -305,4 +378,6 @@ export default {
   CONTAINER_TYPES,
   INCO_TERMS,
   SA_PORTS,
+  AFRICAN_PORTS,
+  LOAD_TYPES,
 };
