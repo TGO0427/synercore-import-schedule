@@ -509,12 +509,14 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
       // Combine product lines into productName and total quantity
       const filledLines = productLines.filter(l => l.name.trim());
       const combinedProductName = filledLines.map(l => l.name.trim()).join('; ');
-      const totalQuantity = productLines.reduce((sum, l) => sum + (Number(l.qty) || 0), 0);
+      const totalQuantity = Math.round(productLines.reduce((sum, l) => sum + (Number(l.qty) || 0), 0));
 
+      // Destructure out productName/quantity from newShipment so they don't override our computed values
+      const { productName: _pn, quantity: _qty, ...restNewShipment } = newShipment;
       const shipmentData = {
-        ...newShipment,
+        ...restNewShipment,
         productName: combinedProductName || null,
-        quantity: totalQuantity || null,
+        quantity: totalQuantity > 0 ? totalQuantity : null,
         cbm: newShipment.cbm ? Number(newShipment.cbm) : null,
         palletQty: newShipment.palletQty ? Number(newShipment.palletQty) : null,
         weekNumber: newShipment.weekNumber ? Number(newShipment.weekNumber) : null,
@@ -607,12 +609,13 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
       // Combine amend product lines
       const filledLines = amendProductLines.filter(l => l.name.trim());
       const combinedProductName = filledLines.map(l => l.name.trim()).join('; ');
-      const totalQuantity = amendProductLines.reduce((sum, l) => sum + (Number(l.qty) || 0), 0);
+      const totalQuantity = Math.round(amendProductLines.reduce((sum, l) => sum + (Number(l.qty) || 0), 0));
 
+      const { productName: _pn, quantity: _qty, ...restAmending } = amendingShipment;
       const updatedShipment = {
-        ...amendingShipment,
+        ...restAmending,
         productName: combinedProductName || null,
-        quantity: totalQuantity || null,
+        quantity: totalQuantity > 0 ? totalQuantity : null,
         cbm: amendingShipment.cbm ? Number(amendingShipment.cbm) : null,
         palletQty: amendingShipment.palletQty ? Number(amendingShipment.palletQty) : null,
         weekNumber: amendingShipment.weekNumber ? Number(amendingShipment.weekNumber) : null,
