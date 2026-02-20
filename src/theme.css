@@ -38,7 +38,7 @@
 
 /* ----------- Global reset-ish ----------- */
 html, body, #root { height: 100%; background: var(--bg); }
-body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial; color: var(--text-900); }
+body { margin: 0; font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif; color: var(--text-900); }
 
 /* ----------- App Layout ----------- */
 .container {
@@ -59,7 +59,6 @@ body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI
   flex-direction: column;
   overflow: hidden;
   transition: width 0.2s ease;
-  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 .sidebar h2 { margin: 0 0 var(--sp-4); font-size: 18px; font-weight: 700; letter-spacing: .2px; }
 
