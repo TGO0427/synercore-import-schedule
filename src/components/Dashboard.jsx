@@ -253,12 +253,12 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
             onClick={() => onNavigate(card.view || 'shipping', { statusFilter: card.filter })}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigate(card.view || 'shipping', { statusFilter: card.filter }); } }}>
             <div style={{
-              width: 32, height: 32, borderRadius: '50%', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', fontSize: 15,
-              backgroundColor: card.tint, marginBottom: 8,
+              width: 24, height: 24, borderRadius: '50%', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', fontSize: 12,
+              backgroundColor: card.tint, marginBottom: 6,
             }}>{card.icon}</div>
-            <h3 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 2px', color: 'var(--navy-900)' }}>{card.value}</h3>
-            <p style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--text-500)', margin: '0 0 2px' }}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 1px', color: 'var(--navy-900)' }}>{card.value}</h3>
+            <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600, color: 'var(--text-500)', margin: '0 0 1px' }}>
               {card.label}
             </p>
             {renderDelta(card.delta)}
