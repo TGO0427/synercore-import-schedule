@@ -8,6 +8,7 @@ import SynercoreLogo from './components/SynercoreLogo';
 import OfflineIndicator from './components/OfflineIndicator';
 import { SHIPPING_EXCLUDED_STATUSES } from './types/shipment';
 import ErrorBoundary from './components/ErrorBoundary';
+import ConnectionOverlay from './components/ConnectionOverlay';
 
 // Lazy-loaded pages (code-split for faster initial load)
 const ArchiveView = lazy(() => import('./components/ArchiveView'));
@@ -866,6 +867,7 @@ function App() {
   return (
     <div className={`container ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <OfflineIndicator />
+      <ConnectionOverlay />
       {/* ===== SIDEBAR ===== */}
       <div className="sidebar">
         {/* Header */}

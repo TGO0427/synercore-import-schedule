@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import useFormDraft from '../hooks/useFormDraft';
 import { getApiUrl } from '../config/api';
 import { authFetch } from '../utils/authFetch';
 import { authUtils } from '../utils/auth';
@@ -135,6 +136,9 @@ function ImportCosting({ showSuccess, showError }) {
   const [formExpanded, setFormExpanded] = useState(false);
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
   const [editingId, setEditingId] = useState(null);
+  const { clearDraft: clearCostingDraft } = useFormDraft(
+    `costing_${editingId || 'new'}`, formData, setFormData, { enabled: showForm }
+  );
   const [calculatedTotals, setCalculatedTotals] = useState({});
   const [exchangeRate, setExchangeRate] = useState(null);
   const [rateLoading, setRateLoading] = useState(false);
@@ -280,6 +284,14 @@ function ImportCosting({ showSuccess, showError }) {
       }
       return refB.localeCompare(refA);
     });
+
+  // Warn before leaving with unsaved form data
+  useEffect(() => {
+    if (!showForm) return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [showForm]);
 
   // Fetch estimates on mount
   useEffect(() => {
@@ -604,6 +616,7 @@ function ImportCosting({ showSuccess, showError }) {
       });
 
       if (response.ok) {
+        clearCostingDraft();
         setShowForm(false);
         setEditingId(null);
         setFormData(INITIAL_FORM_STATE);

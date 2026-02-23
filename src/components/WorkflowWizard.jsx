@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import useFormDraft from '../hooks/useFormDraft';
 
 /**
  * WorkflowWizard Component
@@ -10,19 +11,30 @@ import React, { useState } from 'react';
  * - onComplete: function - Callback when wizard is completed
  * - onCancel: function - Callback when wizard is cancelled
  * - initialData: object - Pre-filled data
+ * - draftKey: string (optional) - If provided, auto-saves form to localStorage
  */
 function WorkflowWizard({
   title,
   steps,
   onComplete,
   onCancel,
-  initialData = {}
+  initialData = {},
+  draftKey
 }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState(initialData);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { clearDraft } = useFormDraft(draftKey || 'wizard', formData, setFormData, { enabled: !!draftKey });
+
+  // Warn before closing tab with unsaved wizard data
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, []);
 
   // Get current step config
   const step = steps && steps.length > 0 ? steps[currentStep] : null;
@@ -113,6 +125,7 @@ function WorkflowWizard({
     setIsSubmitting(true);
     try {
       await onComplete?.(formData);
+      clearDraft();
     } finally {
       setIsSubmitting(false);
     }

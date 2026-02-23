@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import useFormDraft from '../hooks/useFormDraft';
 import { ShipmentStatus } from '../types/shipment';
 import { getCurrentWeekNumber } from '../utils/dateUtils';
 import WeekCalendar from './WeekCalendar';
@@ -118,6 +119,24 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
     incoterm: '',
     notes: ''
   });
+
+  // Auto-save add shipment form
+  const { clearDraft: clearNewShipmentDraft } = useFormDraft(
+    'shipment_new', newShipment, setNewShipment, { enabled: showAddShipmentDialog }
+  );
+  // Auto-save amend shipment form
+  const { clearDraft: clearAmendShipmentDraft } = useFormDraft(
+    `shipment_${amendingShipment?.id || 'none'}`, amendingShipment, setAmendingShipment,
+    { enabled: showAmendShipmentDialog && !!amendingShipment }
+  );
+
+  // Warn before leaving with unsaved form data
+  useEffect(() => {
+    if (!showAddShipmentDialog && !showAmendShipmentDialog) return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [showAddShipmentDialog, showAmendShipmentDialog]);
 
   // Pick up search term from global search
   useEffect(() => {
@@ -537,7 +556,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
       }
 
       await onCreateShipment(shipmentData);
-      
+      clearNewShipmentDraft();
       // Reset form
       setNewShipment({
         supplier: '',
@@ -635,7 +654,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
       }
 
       await onUpdateShipment(amendingShipment.id, updatedShipment);
-
+      clearAmendShipmentDraft();
       setShowAmendShipmentDialog(false);
       setAmendingShipment(null);
       setAmendShipmentSelectedWeekDate(null);

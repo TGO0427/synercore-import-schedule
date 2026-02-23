@@ -446,6 +446,7 @@ function PostArrivalWizard({
       initialData={initialData}
       onComplete={onComplete}
       onCancel={onCancel}
+      draftKey={`wizard_${shipment?.id || 'new'}`}
     />
   );
 }

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import useFormDraft from '../hooks/useFormDraft';
 import { Supplier, ImportFormat, DocumentType } from '../types/supplier';
 import * as XLSX from 'xlsx';
 import SupplierCharts from './SupplierCharts';
@@ -61,6 +62,19 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
     isActive: true,
     notes: ''
   });
+
+  // Auto-save supplier form
+  const { clearDraft: clearSupplierDraft } = useFormDraft(
+    `supplier_${editingSupplier?.id || 'new'}`, formData, setFormData, { enabled: showAddForm }
+  );
+
+  // Warn before leaving with unsaved form data
+  useEffect(() => {
+    if (!showAddForm) return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [showAddForm]);
 
   // Memoize shipment counts per supplier for signals + sorting
   const supplierShipmentCounts = useMemo(() => {
@@ -181,6 +195,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
       onAddSupplier(newSupplier);
     }
     
+    clearSupplierDraft();
     setShowAddForm(false);
     setFormData({
       name: '',
@@ -198,7 +213,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
       isActive: true,
       notes: ''
     });
-  }, [editingSupplier, formData, onAddSupplier, onUpdateSupplier]);
+  }, [editingSupplier, formData, onAddSupplier, onUpdateSupplier, clearSupplierDraft]);
 
   const handleEdit = useCallback((supplier) => {
     setEditingSupplier(supplier);
