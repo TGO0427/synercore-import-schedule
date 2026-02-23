@@ -38,7 +38,7 @@
 
 /* ----------- Global reset-ish ----------- */
 html, body, #root { height: 100%; background: var(--bg); }
-body { margin: 0; font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif; color: var(--text-900); }
+body { margin: 0; font-family: 'Poppins', ui-sans-serif, system-ui, -apple-system, sans-serif; color: var(--text-900); }
 
 /* ----------- App Layout ----------- */
 .container {
