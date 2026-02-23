@@ -24,6 +24,7 @@ export interface ImportCostEstimate {
   country_of_destination: string;
   country_of_origin?: string;
   port_of_loading?: string;
+  load_type?: string;
   port_of_discharge?: string;
   shipping_line?: string;
   routing?: string;
@@ -119,7 +120,7 @@ export interface ExchangeRate {
 
 const COST_ESTIMATE_COLUMNS = [
   'id', 'shipment_id', 'supplier_id', 'reference_number', 'country_of_destination',
-  'country_of_origin', 'port_of_loading', 'port_of_discharge', 'shipping_line', 'routing', 'frequency', 'transit_time_days',
+  'country_of_origin', 'port_of_loading', 'load_type', 'port_of_discharge', 'shipping_line', 'routing', 'frequency', 'transit_time_days',
   'inco_terms', 'inco_term_place', 'container_type', 'quantity', 'hs_code',
   'gross_weight_kg', 'total_gross_weight_kg', 'origin_rate_usd', 'ocean_freight_rate_usd',
   'ocean_freight_usd', 'ocean_freight_eur', 'ocean_freight_zar', 'total_ocean_freight_zar',

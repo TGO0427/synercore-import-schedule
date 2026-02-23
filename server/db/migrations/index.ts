@@ -895,6 +895,56 @@ export const migrations: Migration[] = [
       }
     },
   },
+
+  // Phase 8: Add missing columns for ocean freight, origin details, customs, and products
+  {
+    name: 'add-missing-costing-columns',
+    version: '016',
+    description: 'Add missing columns: country_of_origin, port_of_loading, load_type, ocean freight fields, roe_customs, products, total_duties_zar, import_vat_zar',
+    depends_on: ['update-import-costing-schema'],
+    execute: async () => {
+      const client = await getPool().connect();
+      try {
+        await client.query('BEGIN');
+
+        const missingColumns = [
+          'country_of_origin VARCHAR(255)',
+          'port_of_loading VARCHAR(255)',
+          'load_type VARCHAR(100)',
+          'ocean_freight_usd NUMERIC(12,2) DEFAULT 0',
+          'ocean_freight_eur NUMERIC(12,2) DEFAULT 0',
+          'ocean_freight_zar NUMERIC(14,2) DEFAULT 0',
+          'total_ocean_freight_zar NUMERIC(14,2) DEFAULT 0',
+          'roe_customs NUMERIC(12,6) DEFAULT 0',
+          'products JSONB DEFAULT \'[]\'',
+          'total_duties_zar NUMERIC(14,2) DEFAULT 0',
+          'import_vat_zar NUMERIC(14,2) DEFAULT 0',
+        ];
+
+        for (const colDef of missingColumns) {
+          const colName = colDef.split(' ')[0];
+          const checkResult = await client.query(
+            `SELECT column_name FROM information_schema.columns
+             WHERE table_name='import_cost_estimates' AND column_name=$1`,
+            [colName]
+          );
+          if (checkResult.rows.length === 0) {
+            await client.query(`ALTER TABLE import_cost_estimates ADD COLUMN ${colDef}`);
+            logInfo(`Added column ${colName} to import_cost_estimates`);
+          }
+        }
+
+        await client.query('COMMIT');
+        logInfo('Added missing costing columns: origin details, ocean freight, customs, products');
+        return true;
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+  },
 ];
 
 /**
