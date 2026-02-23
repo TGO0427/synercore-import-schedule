@@ -708,16 +708,16 @@ function App() {
                     onClick={() => card.status === null ? setStatusFilter(null) : handleStatusCardClick(card.status)}
                   >
                     <div style={{
-                      width: 40, height: 40, borderRadius: '50%', display: 'flex',
-                      alignItems: 'center', justifyContent: 'center', fontSize: 18,
-                      backgroundColor: card.tint, marginBottom: 10,
+                      width: 24, height: 24, borderRadius: '50%', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center', fontSize: 12,
+                      backgroundColor: card.tint, marginBottom: 6,
                     }}>
                       {card.icon}
                     </div>
-                    <h3 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 4px', color: 'var(--navy-900)' }}>
+                    <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 1px', color: 'var(--navy-900)' }}>
                       {card.value}
                     </h3>
-                    <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>
+                    <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>
                       {card.label}
                     </p>
                   </div>

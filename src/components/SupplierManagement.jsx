@@ -641,25 +641,25 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
               key={supplier.id}
               className={`stat-card ${isActive ? 'ring-accent' : 'ring-danger'} clickable`}
               onClick={(e) => handleSupplierCardClick(supplier, e)}
-              style={{ display: 'flex', flexDirection: 'column', padding: 14 }}
+              style={{ display: 'flex', flexDirection: 'column', padding: 10 }}
             >
               {/* Header: initials badge + name + status pill */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                 <div style={{
-                  width: 42, height: 42, borderRadius: '50%', display: 'flex', flexShrink: 0,
+                  width: 32, height: 32, borderRadius: '50%', display: 'flex', flexShrink: 0,
                   alignItems: 'center', justifyContent: 'center',
-                  fontSize: 15, fontWeight: 700, color: '#fff', backgroundColor: avatarColor,
+                  fontSize: 12, fontWeight: 700, color: '#fff', backgroundColor: avatarColor,
                 }}>
                   {getInitials(supplier.name)}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <h3 style={{
-                    fontSize: 17, fontWeight: 800, margin: 0, color: 'var(--navy-900)',
+                    fontSize: 14, fontWeight: 700, margin: 0, color: 'var(--navy-900)',
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                   }} title={supplier.name}>
                     {supplier.name}
                   </h3>
-                  <div style={{ fontSize: 12, color: 'var(--text-500)', marginTop: 1 }}>{meta}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-500)', marginTop: 1 }}>{meta}</div>
                 </div>
                 <span className={`pill ${isActive ? 'pill-ok' : 'pill-bad'}`} style={{ flexShrink: 0, fontSize: 11 }}>
                   {isActive ? 'Active' : 'Inactive'}
@@ -667,7 +667,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
               </div>
 
               {/* Signals row */}
-              <div style={{ fontSize: 12, color: 'var(--text-500)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-500)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <span style={{ color: shipCount > 0 ? 'var(--text-700)' : 'var(--text-500)' }}>
                   📦 {shipCount > 0 ? `${shipCount} shipment${shipCount !== 1 ? 's' : ''}` : 'No shipments'}
                 </span>
@@ -681,7 +681,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
               </div>
 
               {/* Action toolbar */}
-              <div style={{ display: 'flex', gap: 6, borderTop: '1px solid var(--border)', paddingTop: 8, marginTop: 'auto', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 4, borderTop: '1px solid var(--border)', paddingTop: 6, marginTop: 'auto', alignItems: 'center' }}>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleSupplierCardClick(supplier, e); }}
                   style={{ fontSize: 12, fontWeight: 600, padding: '5px 12px', borderRadius: 6, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', transition: 'background 0.15s' }}

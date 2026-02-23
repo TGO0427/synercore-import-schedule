@@ -76,7 +76,7 @@ const SimpleBinInput = ({ warehouseKey, initialValue, maxValue, onUpdate, hasUns
         padding: '4px 8px',
         borderRadius: '4px',
         border: hasUnsavedChanges ? '2px solid var(--warning)' : '2px solid var(--border)',
-        fontSize: '1.1rem',
+        fontSize: '0.85rem',
         fontWeight: 'bold',
         color: 'var(--text-900)',
         width: '70px',
@@ -1020,16 +1020,16 @@ function WarehouseCapacity({ shipments }) {
       <div
         className={`stat-card ${getStatusRing(stats.status)} ${onCardClick ? 'clickable' : ''} ${isSelected ? 'active' : ''}`}
         onClick={() => onCardClick && onCardClick(warehouse)}
-        style={{ padding: '1.5rem' }}
+        style={{ padding: 10 }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-          <h3 style={{ color: 'var(--text-900)', fontSize: '1.2rem', margin: 0 }}>{warehouse}</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+          <h3 style={{ color: 'var(--text-900)', fontSize: '0.9rem', margin: 0 }}>{warehouse}</h3>
           <span style={{
             backgroundColor: getStatusColor(stats.status),
             color: 'white',
-            padding: '4px 8px',
-            borderRadius: '12px',
-            fontSize: '0.75rem',
+            padding: '2px 6px',
+            borderRadius: '10px',
+            fontSize: '0.65rem',
             fontWeight: 'bold'
           }}>
             {getStatusText(stats.status)}
@@ -1037,16 +1037,16 @@ function WarehouseCapacity({ shipments }) {
         </div>
 
         {/* Bin Utilization Bar */}
-        <div style={{ marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>Bin Utilization</span>
-            <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: getStatusColor(stats.status) }}>
+        <div style={{ marginBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: '500' }}>Bin Utilization</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: getStatusColor(stats.status) }}>
               {utilizationPercent.toFixed(1)}% ({stats.projectedBinsUsed}/{stats.totalBins} bins)
             </span>
           </div>
           <div style={{
             width: '100%',
-            height: '20px',
+            height: '14px',
             backgroundColor: 'var(--surface-2)',
             borderRadius: '10px',
             overflow: 'hidden',
@@ -1076,13 +1076,13 @@ function WarehouseCapacity({ shipments }) {
         </div>
 
         {/* Stats Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.9rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.75rem' }}>
           <div>
             <div style={{ color: 'var(--text-500)', marginBottom: '0.25rem' }}>Current Bins Utilized</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <div style={{
                 fontWeight: 'bold',
-                fontSize: '1.1rem',
+                fontSize: '0.85rem',
                 color: 'var(--text-900)',
                 padding: '4px 8px',
                 borderRadius: '4px',
@@ -1093,22 +1093,22 @@ function WarehouseCapacity({ shipments }) {
               </div>
               <span style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>bins</span>
             </div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-500)', marginTop: '0.25rem' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-500)', marginTop: '0.25rem' }}>
               (Stock: {stats.currentStock.toLocaleString()} pallets)
             </div>
           </div>
           <div>
             <div style={{ color: 'var(--text-500)', marginBottom: '0.25rem' }}>Incoming (Week {warehouseData.currentWeek}) 🔄</div>
-            <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--warning)' }}>
+            <div style={{ fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--warning)' }}>
               {(stats.currentWeekIncoming || 0).toLocaleString()}
             </div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-500)', marginTop: '0.25rem' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-500)', marginTop: '0.25rem' }}>
               (Month total: {stats.incoming.toLocaleString()})
             </div>
           </div>
           <div>
             <div style={{ color: 'var(--text-500)', marginBottom: '0.25rem' }}>Total Bins</div>
-            <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--success)' }}>
+            <div style={{ fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--success)' }}>
               {stats.totalBins}
             </div>
           </div>
@@ -1116,12 +1116,12 @@ function WarehouseCapacity({ shipments }) {
             <div style={{ color: 'var(--text-500)', marginBottom: '0.25rem' }}>Available Bins</div>
             <div style={{
               fontWeight: 'bold',
-              fontSize: '1.1rem',
+              fontSize: '0.85rem',
               color: stats.availableBins >= 0 ? 'var(--success)' : 'var(--danger)'
             }}>
               {stats.availableBins >= 0 ? stats.availableBins : `(${Math.abs(stats.availableBins)})`}
             </div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-500)' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-500)' }}>
               After incoming: {stats.projectedAvailableBins >= 0 ? stats.projectedAvailableBins : `(${Math.abs(stats.projectedAvailableBins)})`}
             </div>
           </div>
@@ -1311,7 +1311,7 @@ function WarehouseCapacity({ shipments }) {
                       <td style={{ padding: '8px 12px', border: '1px solid var(--border)', fontSize: '0.85rem', color: warehouseColor, fontWeight: '500' }}>
                         {product.warehouse}
                       </td>
-                      <td style={{ padding: '8px 12px', border: '1px solid var(--border)', fontSize: '0.8rem', color: 'var(--text-500)' }}>
+                      <td style={{ padding: '8px 12px', border: '1px solid var(--border)', fontSize: '0.7rem', color: 'var(--text-500)' }}>
                         {(product.status || '').replace(/_/g, ' ')}
                       </td>
                     </tr>
@@ -1583,7 +1583,7 @@ function WarehouseCapacity({ shipments }) {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--navy-900)' }}>
+              <h3 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: 'var(--navy-900)' }}>
                 {detailProduct.orderRef || detailProduct.name}
               </h3>
               <button
