@@ -333,25 +333,25 @@ function RatesQuotes({ showSuccess, showError, loading }) {
     const forwarderInfo = forwarders[forwarder];
 
     return (
-      <div style={{ padding: "2rem" }}>
+      <div style={{ padding: "1rem" }}>
         {/* Upload Section */}
         <div
           style={{
             backgroundColor: "var(--surface-2)",
             border: "2px dashed #dee2e6",
-            borderRadius: "12px",
-            padding: "2rem",
+            borderRadius: "8px",
+            padding: "1rem",
             textAlign: "center",
-            marginBottom: "2rem",
+            marginBottom: "1rem",
           }}
         >
-          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>
+          <div style={{ fontSize: "1.8rem", marginBottom: "0.5rem" }}>
             {forwarderInfo.icon}
           </div>
-          <h3 style={{ marginBottom: "1rem", color: "var(--text-900)" }}>
+          <h3 style={{ marginBottom: "0.5rem", color: "var(--text-900)", fontSize: "0.95rem" }}>
             Upload {forwarderInfo.name} Quotes & Rates
           </h3>
-          <p style={{ color: "#6c757d", marginBottom: "1.5rem" }}>
+          <p style={{ color: "#6c757d", marginBottom: "0.75rem", fontSize: "0.8rem" }}>
             Upload PDF files, Excel spreadsheets, or other documents containing
             quotes and rates
           </p>
@@ -359,7 +359,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
           <label
             style={{
               display: "inline-block",
-              padding: "12px 24px",
+              padding: "8px 16px",
               backgroundColor: "var(--accent)",
               color: "white",
               borderRadius: "8px",
@@ -692,15 +692,15 @@ function RatesQuotes({ showSuccess, showError, loading }) {
         <div
           className="page-header"
           style={{
-            padding: "2rem 2rem 1rem 2rem",
+            padding: "1rem 1.5rem 0.75rem 1.5rem",
             borderBottom: "1px solid var(--border)",
             backgroundColor: "white",
           }}
         >
-          <h1 style={{ margin: 0, color: "var(--text-900)", fontSize: "2rem" }}>
+          <h1 style={{ margin: 0, color: "var(--text-900)", fontSize: "1.3rem" }}>
             💰 Rates & Quotes Management
           </h1>
-          <p style={{ margin: "0.5rem 0 0 0", color: "#6c757d" }}>
+          <p style={{ margin: "0.25rem 0 0 0", color: "#6c757d", fontSize: "0.85rem" }}>
             Upload and manage quotes from freight forwarding partners
           </p>
         </div>
@@ -719,7 +719,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
               onClick={() => setActiveTab(key)}
               style={{
                 flex: 1,
-                padding: "1rem 2rem",
+                padding: "0.6rem 1.2rem",
                 border: "none",
                 backgroundColor: activeTab === key ? "white" : "transparent",
                 color: activeTab === key ? "var(--accent)" : "#6c757d",
@@ -728,7 +728,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
                     ? "3px solid var(--accent)"
                     : "3px solid transparent",
                 cursor: "pointer",
-                fontSize: "1rem",
+                fontSize: "0.85rem",
                 fontWeight: activeTab === key ? 600 : 400,
                 transition: "all 0.2s ease",
                 display: "flex",
@@ -999,32 +999,32 @@ function RatesQuotes({ showSuccess, showError, loading }) {
             </div>
 
             {/* Report Summary */}
-            <div style={{ marginBottom: "2rem" }}>
-              <h3 style={{ color: "var(--text-900)", marginBottom: "1rem" }}>Summary</h3>
+            <div style={{ marginBottom: "1rem" }}>
+              <h3 style={{ color: "var(--text-900)", marginBottom: "0.5rem", fontSize: "0.95rem" }}>Summary</h3>
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                  gap: "1rem",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                  gap: "8px",
                 }}
               >
-                <div style={{ padding: "1rem", backgroundColor: "var(--surface-2)", borderRadius: "8px" }}>
-                  <div style={{ fontSize: "1.5rem", fontWeight: 600, color: "var(--success)" }}>
+                <div style={{ padding: "10px", backgroundColor: "var(--surface-2)", borderRadius: "6px" }}>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 600, color: "var(--success)" }}>
                     {comparisonReport.summary.totalQuotes}
                   </div>
-                  <div style={{ fontSize: "0.9rem", color: "var(--text-500)" }}>Quotes Analyzed</div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-500)" }}>Quotes Analyzed</div>
                 </div>
-                <div style={{ padding: "1rem", backgroundColor: "var(--surface-2)", borderRadius: "8px" }}>
-                  <div style={{ fontSize: "1.5rem", fontWeight: 600, color: "var(--info)" }}>
+                <div style={{ padding: "10px", backgroundColor: "var(--surface-2)", borderRadius: "6px" }}>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 600, color: "var(--info)" }}>
                     {comparisonReport.summary.totalPricesFound}
                   </div>
-                  <div style={{ fontSize: "0.9rem", color: "var(--text-500)" }}>Prices Found</div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-500)" }}>Prices Found</div>
                 </div>
-                <div style={{ padding: "1rem", backgroundColor: "var(--surface-2)", borderRadius: "8px" }}>
-                  <div style={{ fontSize: "1.5rem", fontWeight: 600, color: "var(--warning)" }}>
+                <div style={{ padding: "10px", backgroundColor: "var(--surface-2)", borderRadius: "6px" }}>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 600, color: "var(--warning)" }}>
                     {comparisonReport.summary.averageConfidence}%
                   </div>
-                  <div style={{ fontSize: "0.9rem", color: "var(--text-500)" }}>Avg Confidence</div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-500)" }}>Avg Confidence</div>
                 </div>
               </div>
             </div>

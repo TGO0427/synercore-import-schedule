@@ -143,19 +143,19 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '20px 32px', borderBottom: '1px solid rgba(255,255,255,0.08)',
+        padding: '12px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)',
       }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, letterSpacing: '0.5px' }}>
+          <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, letterSpacing: '0.5px' }}>
             Live Board
           </h1>
-          <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)' }}>
+          <p style={{ margin: '2px 0 0', fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)' }}>
             Auto-refreshes every 30s
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '2rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', letterSpacing: '1px' }}>
+            <div style={{ fontSize: '1.3rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', letterSpacing: '1px' }}>
               {clock.toLocaleTimeString()}
             </div>
             <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>
@@ -181,18 +181,18 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
 
       {/* KPI Tiles */}
       <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-        gap: '16px', padding: '24px 32px',
+        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+        gap: '8px', padding: '12px 24px',
       }}>
         {kpiTiles.map(tile => (
           <div key={tile.label} style={{
             background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: '14px', padding: '20px', borderLeft: `4px solid ${tile.color}`,
+            borderRadius: '8px', padding: '10px', borderLeft: `3px solid ${tile.color}`,
           }}>
-            <div style={{ fontSize: '2.5rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: tile.color }}>
+            <div style={{ fontSize: '1.4rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: tile.color }}>
               {tile.value}
             </div>
-            <div style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>
+            <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
               {tile.label}
             </div>
           </div>
@@ -202,14 +202,14 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
       {/* Charts + Activity Row */}
       <div style={{
         display: 'grid', gridTemplateColumns: '1fr 1fr',
-        gap: '20px', padding: '0 32px 32px',
+        gap: '12px', padding: '0 24px 24px',
       }}>
         {/* Donut Chart */}
         <div style={{
           background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '14px', padding: '24px',
+          borderRadius: '8px', padding: '14px',
         }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: '0.95rem', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
+          <h3 style={{ margin: '0 0 10px', fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
             Status Distribution
           </h3>
           <div style={{ height: '260px' }}>
@@ -220,9 +220,9 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
         {/* Recent Activity */}
         <div style={{
           background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '14px', padding: '24px',
+          borderRadius: '8px', padding: '14px',
         }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: '0.95rem', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
+          <h3 style={{ margin: '0 0 10px', fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
             Recent Activity
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

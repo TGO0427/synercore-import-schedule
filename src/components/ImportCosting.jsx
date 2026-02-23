@@ -783,13 +783,13 @@ function ImportCosting({ showSuccess, showError }) {
   }
 
   return (
-    <div style={{ padding: '1.5rem' }}>
+    <div style={{ padding: '1rem' }}>
       <div className="brand-strip" />
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <div className="page-header">
-          <h2 style={{ margin: 0, fontSize: '1.5rem', color: '#0f172a' }}>Import Costing</h2>
-          <p style={{ margin: '0.25rem 0 0', color: 'var(--text-500)', fontSize: '0.9rem' }}>
+          <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a' }}>Import Costing</h2>
+          <p style={{ margin: '0.25rem 0 0', color: 'var(--text-500)', fontSize: '0.8rem' }}>
             FCL Import Cost Comparison
           </p>
         </div>
@@ -917,9 +917,9 @@ function ImportCosting({ showSuccess, showError }) {
               </div>
             </div>
           </div>
-          <div style={{ padding: '1.5rem' }}>
+          <div style={{ padding: '1rem' }}>
             {getSupplierChartData.labels.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
+              <div style={{ textAlign: 'center', padding: '1rem', color: '#9ca3af' }}>
                 No data available for the selected filters.
               </div>
             ) : (
@@ -1608,9 +1608,9 @@ function ImportCosting({ showSuccess, showError }) {
               )}
 
               {/* Section: Totals Summary */}
-              <div style={{ marginBottom: '1.5rem', padding: '1.5rem', backgroundColor: '#0f172a', borderRadius: '8px', color: 'white' }}>
-                <h4 style={{ margin: '0 0 1rem', fontSize: '1.1rem' }}>Summary Totals</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem' }}>
+              <div style={{ marginBottom: '1rem', padding: '10px', backgroundColor: '#0f172a', borderRadius: '6px', color: 'white' }}>
+                <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem' }}>Summary Totals</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
                   <div>
                     <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px' }}>Total Shipping Cost</div>
                     <div style={{ fontSize: '1.25rem', fontWeight: '700' }}>{formatCurrency(calculatedTotals.total_shipping_cost_zar)}</div>
