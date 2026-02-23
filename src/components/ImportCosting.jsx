@@ -132,6 +132,7 @@ function ImportCosting({ showSuccess, showError }) {
   const [estimates, setEstimates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [formExpanded, setFormExpanded] = useState(false);
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
   const [editingId, setEditingId] = useState(null);
   const [calculatedTotals, setCalculatedTotals] = useState({});
@@ -1029,15 +1030,20 @@ function ImportCosting({ showSuccess, showError }) {
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center',
-          alignItems: 'flex-start', padding: '1rem', zIndex: 1000, overflowY: 'auto'
+          alignItems: formExpanded ? 'stretch' : 'flex-start',
+          padding: formExpanded ? 0 : '1rem', zIndex: 1000, overflowY: 'auto'
         }}>
           <div style={{
-            backgroundColor: 'white', borderRadius: '12px',
-            width: '95%', maxWidth: '1400px', minWidth: '600px',
-            height: '90vh', minHeight: '400px',
+            backgroundColor: 'white', borderRadius: formExpanded ? 0 : '12px',
+            width: formExpanded ? '100vw' : '95%',
+            maxWidth: formExpanded ? '100vw' : '1400px',
+            minWidth: formExpanded ? '100vw' : '600px',
+            height: formExpanded ? '100vh' : '90vh',
+            minHeight: '400px',
             overflow: 'auto',
-            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-            resize: 'both',
+            boxShadow: formExpanded ? 'none' : '0 25px 50px -12px rgba(0,0,0,0.25)',
+            resize: formExpanded ? 'none' : 'both',
+            transition: 'all 0.2s ease',
           }}>
             {/* Form Header */}
             <div style={{
@@ -1048,12 +1054,21 @@ function ImportCosting({ showSuccess, showError }) {
               <h3 style={{ margin: 0, color: '#0f172a' }}>
                 {editingId ? 'Edit Cost Estimate' : 'New Cost Estimate'}
               </h3>
-              <button
-                onClick={() => { setShowForm(false); setEditingId(null); }}
-                style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-500)' }}
-              >
-                x
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={() => setFormExpanded(!formExpanded)}
+                  title={formExpanded ? 'Collapse form' : 'Expand form'}
+                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 10px', fontSize: '0.8rem', cursor: 'pointer', color: 'var(--text-700)', fontWeight: 500 }}
+                >
+                  {formExpanded ? '⊖ Collapse' : '⊕ Expand'}
+                </button>
+                <button
+                  onClick={() => { setShowForm(false); setEditingId(null); setFormExpanded(false); }}
+                  style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-500)' }}
+                >
+                  x
+                </button>
+              </div>
             </div>
 
             <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
