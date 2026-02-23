@@ -175,6 +175,7 @@ export default async function addCostingColumns() {
   const originColumns = [
     'country_of_origin VARCHAR(100)',
     'port_of_loading VARCHAR(100)',
+    'load_type VARCHAR(100)',
     'roe_customs NUMERIC(12,6)',
   ];
 
