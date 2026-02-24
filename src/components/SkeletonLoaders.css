@@ -2,25 +2,25 @@
 @keyframes skeleton-pulse {
   0%, 100% {
     opacity: 1;
-    background-color: #f0f0f0;
+    background-color: #f3f4f6;
   }
   50% {
-    opacity: 0.6;
-    background-color: #e0e0e0;
+    opacity: 0.5;
+    background-color: #e8eaed;
   }
 }
 
 .skeleton-pulse {
   display: block;
   animation: skeleton-pulse 1.5s ease-in-out infinite;
-  background-color: #f0f0f0;
+  background-color: #f3f4f6;
 }
 
 /* ============ TABLE SKELETON ============ */
 .skeleton-table {
   width: 100%;
   border-collapse: collapse;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #eef0f3;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -30,7 +30,7 @@
   grid-auto-columns: 1fr;
   grid-auto-flow: column;
   background-color: #fafafa;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid #eef0f3;
   padding: 12px;
 }
 
@@ -50,7 +50,7 @@
   grid-auto-columns: 1fr;
   grid-auto-flow: column;
   padding: 12px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f5f6f8;
   align-items: center;
 }
 
@@ -67,7 +67,7 @@
 /* ============ SHIPMENT TABLE SKELETON ============ */
 .skeleton-shipment-table {
   width: 100%;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #eef0f3;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -75,7 +75,7 @@
 .skeleton-shipment-row {
   display: flex;
   padding: 12px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f5f6f8;
   align-items: center;
   gap: 8px;
 }
@@ -92,7 +92,7 @@
   padding: 20px;
   background-color: #fff;
   border-radius: 8px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #eef0f3;
 }
 
 .skeleton-form-field {
@@ -114,7 +114,7 @@
 
 /* ============ CARD SKELETON ============ */
 .skeleton-card {
-  border: 1px solid #e0e0e0;
+  border: 1px solid #eef0f3;
   border-radius: 8px;
   overflow: hidden;
   background-color: #fff;
@@ -176,7 +176,7 @@
   gap: 12px;
   padding: 12px;
   background-color: #fff;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #eef0f3;
   border-radius: 6px;
   align-items: flex-start;
 }
@@ -200,7 +200,7 @@
   align-items: center;
   padding: 16px 20px;
   background-color: #fff;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid #eef0f3;
   border-radius: 8px 8px 0 0;
 }
 
@@ -220,7 +220,7 @@
 
 .skeleton-page-header {
   background-color: #fff;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid #eef0f3;
   padding: 16px 20px;
 }
 
@@ -236,7 +236,7 @@
   background-color: #fff;
   border-radius: 8px;
   padding: 16px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #eef0f3;
 }
 
 .skeleton-page-main {
@@ -244,7 +244,7 @@
   background-color: #fff;
   border-radius: 8px;
   padding: 16px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #eef0f3;
 }
 
 /* ============ RESPONSIVE DESIGN ============ */
