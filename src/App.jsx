@@ -179,9 +179,6 @@ function App() {
       initializedRef.current = true;
       setIsAuthenticated(true);
       setUsername(user.username);
-      // Set loading before fetching (one per fetch call)
-      startLoading();
-      startLoading();
       fetchShipments();
       fetchSuppliers();
     } else {
@@ -600,8 +597,6 @@ function App() {
     setIsAuthenticated(true);
     setUsername(loginUsername);
     // Immediately fetch data after login instead of waiting for 30s poll
-    startLoading();
-    startLoading();
     initializedRef.current = true;
     fetchShipments();
     fetchSuppliers();
