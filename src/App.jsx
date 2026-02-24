@@ -79,6 +79,9 @@ function App() {
   const [shipments, setShipments] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const loadingCountRef = useRef(0);
+  const startLoading = () => { loadingCountRef.current += 1; setLoading(true); };
+  const stopLoading = () => { loadingCountRef.current = Math.max(0, loadingCountRef.current - 1); if (loadingCountRef.current === 0) setLoading(false); };
   const [notifications, setNotifications] = useState([]);
   const [activeView, setActiveView] = useState('shipping');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -176,9 +179,9 @@ function App() {
       initializedRef.current = true;
       setIsAuthenticated(true);
       setUsername(user.username);
-      // Set loading before fetching
-      setLoading(true);
-      // Only fetch if authenticated
+      // Set loading before fetching (one per fetch call)
+      startLoading();
+      startLoading();
       fetchShipments();
       fetchSuppliers();
     } else {
@@ -284,20 +287,18 @@ function App() {
       lastFetchRef.current.shipments = now;
 
       if (!isBackgroundSync) {
-        setLoading(true);
+        startLoading();
       }
 
       let response;
       let lastError;
       const maxRetries = 3;
-      const retryDelay = 1000;
 
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           response = await fetchWithTimeout(getApiUrl('/api/shipments?limit=1000'), {
             headers: {
-              'Cache-Control': 'no-cache',
-              'Pragma': 'no-cache',
+              ...(isBackgroundSync ? { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } : {}),
               ...authUtils.getAuthHeader()
             }
           }, 10000);
@@ -313,7 +314,7 @@ function App() {
           }
         } catch (err) {
           lastError = err;
-          if (attempt < maxRetries) await new Promise(r => setTimeout(r, retryDelay));
+          if (attempt < maxRetries) await new Promise(r => setTimeout(r, 300 * attempt));
         }
       }
 
@@ -367,7 +368,7 @@ function App() {
       console.error('App: Error fetching shipments:', err);
       if (!isBackgroundSync) showError(`Failed to load shipments: ${err.message}`);
     } finally {
-      if (!isBackgroundSync) setLoading(false);
+      if (!isBackgroundSync) stopLoading();
     }
   };
 
@@ -380,7 +381,7 @@ function App() {
       }
       lastFetchRef.current.suppliers = now;
 
-      if (!isBackgroundSync) setLoading(true);
+      if (!isBackgroundSync) startLoading();
 
       const res = await fetchWithTimeout(getApiUrl('/api/suppliers'), {
         headers: authUtils.getAuthHeader()
@@ -399,7 +400,7 @@ function App() {
       console.error('Error fetching suppliers:', err);
       if (!isBackgroundSync) showError(err.message);
     } finally {
-      if (!isBackgroundSync) setLoading(false);
+      if (!isBackgroundSync) stopLoading();
     }
   };
 
@@ -598,6 +599,12 @@ function App() {
     localStorage.setItem('username', loginUsername);
     setIsAuthenticated(true);
     setUsername(loginUsername);
+    // Immediately fetch data after login instead of waiting for 30s poll
+    startLoading();
+    startLoading();
+    initializedRef.current = true;
+    fetchShipments();
+    fetchSuppliers();
   };
 
   const handleLogout = () => {

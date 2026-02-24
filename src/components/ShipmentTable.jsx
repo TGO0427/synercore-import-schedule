@@ -6,6 +6,7 @@ import WeekCalendar from './WeekCalendar';
 import BulkStatusUpdate from './BulkStatusUpdate';
 import FilterPresetManager from './FilterPresetManager';
 import ResizableModal from './ResizableModal';
+import { SkeletonShipmentTable } from './SkeletonLoaders';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -814,7 +815,15 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
   };
 
   if (loading) {
-    return <div className="loading">Loading shipments...</div>;
+    return (
+      <div className="shipments-table card">
+        <div className="brand-strip" />
+        <div style={{ padding: '1rem 1.25rem 0', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--navy-900)' }}>Shipping Schedule</h2>
+        </div>
+        <SkeletonShipmentTable rows={12} />
+      </div>
+    );
   }
 
   return (

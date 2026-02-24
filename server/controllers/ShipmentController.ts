@@ -103,12 +103,10 @@ export class ShipmentController {
     if (params.supplier) filter.supplier = params.supplier;
     if (params.weekNumber) filter.week_number = params.weekNumber;
 
-    const shipments = await shipmentRepository.findAll({
-      filter,
-      pagination: { page, limit }
-    });
-
-    const total = await shipmentRepository.count(filter);
+    const [shipments, total] = await Promise.all([
+      shipmentRepository.findAll({ filter, pagination: { page, limit } }),
+      shipmentRepository.count(filter)
+    ]);
 
     return {
       shipments,
