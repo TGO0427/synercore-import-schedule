@@ -42,7 +42,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
     return Math.ceil((((now - yearStart) / 86400000) + yearStart.getDay() + 1) / 7);
   };
 
-  const getShipmentStats = () => {
+  const stats = useMemo(() => {
     const supplierOrderRefs = {};
     const warehouseOrderRefs = {};
     const weekOrderRefs = {};
@@ -105,7 +105,7 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
 
     const uniqueOrderRefs = new Set(shipments.map(s => s.orderRef).filter(Boolean));
 
-    const stats = {
+    const result = {
       total: uniqueOrderRefs.size,
       planned: statusOrderRefs.planned.size,
       inTransit: statusOrderRefs.inTransit.size,
@@ -124,14 +124,12 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
       },
     };
 
-    Object.keys(warehouseOrderRefs).forEach(w => { stats.byWarehouse[w] = warehouseOrderRefs[w].size; });
-    Object.keys(supplierOrderRefs).forEach(s => { stats.bySupplier[s] = supplierOrderRefs[s].size; });
-    Object.keys(weekOrderRefs).forEach(w => { stats.byWeek[w] = weekOrderRefs[w].size; });
+    Object.keys(warehouseOrderRefs).forEach(w => { result.byWarehouse[w] = warehouseOrderRefs[w].size; });
+    Object.keys(supplierOrderRefs).forEach(s => { result.bySupplier[s] = supplierOrderRefs[s].size; });
+    Object.keys(weekOrderRefs).forEach(w => { result.byWeek[w] = weekOrderRefs[w].size; });
 
-    return stats;
-  };
-
-  const stats = getShipmentStats();
+    return result;
+  }, [shipments]);
 
   // Status donut data
   const statusChartData = useMemo(() => [
