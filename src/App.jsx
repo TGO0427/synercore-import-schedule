@@ -85,8 +85,14 @@ function App() {
   const { showSuccess, showError, showWarning, showInfo, confirm: confirmAction } = useNotification();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [username, setUsername] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    const user = authUtils.getUser();
+    return !!(user && authUtils.isAuthenticated() && !authUtils.isTokenExpired());
+  });
+  const [username, setUsername] = useState(() => {
+    const user = authUtils.getUser();
+    return user?.username || '';
+  });
   const [lastSyncTime, setLastSyncTime] = useState(null);
   const [showSupplierPortal, setShowSupplierPortal] = useState(false); // New state for supplier portal
 
@@ -592,7 +598,6 @@ function App() {
     authUtils.clearAuth();
     setIsAuthenticated(false);
     setUsername('');
-    navigate('/login');
   };
 
   // ---------- helper: derive active view from URL ----------
