@@ -7,6 +7,9 @@ import PostArrivalWorkflowReport from './PostArrivalWorkflowReport';
 import CurrentWeekStoredReport from './CurrentWeekStoredReport';
 import { getApiUrl } from '../config/api';
 import { useNotification } from '../contexts/NotificationContext';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 // Helper function to extract forwarding agent from shipment data
 const extractForwardingAgent = (shipment) => {
@@ -56,6 +59,159 @@ function ReportsView({ shipments: propShipments }) {
       params.set('status', status);
     }
     setSearchParams(params, { replace: true });
+  };
+
+  const exportToExcel = () => {
+    const wb = XLSX.utils.book_new();
+
+    // Summary Sheet
+    const totalQuantity = displayedShipments.reduce((sum, s) => sum + (s.quantity || 0), 0);
+    const totalPallets = displayedShipments.reduce((sum, s) => sum + (s.palletQty || 0), 0);
+    const summaryData = [
+      ['Shipment Report'],
+      ['Generated:', new Date().toLocaleString()],
+      [],
+      ['Filters Applied:'],
+      ['Date Range:', selectedDateRange === 'custom'
+        ? `${customDateRange.start || 'Any'} to ${customDateRange.end || 'Any'}`
+        : selectedDateRange === 'all' ? 'All Time' : selectedDateRange],
+      ['Status Filter:', statusFilter ? statusFilter.replace(/_/g, ' ') : 'All'],
+      [],
+      ['Summary Statistics:'],
+      ['Total Shipments:', analytics.totalShipments],
+      ['Total Quantity:', totalQuantity],
+      ['Total Pallets:', Math.round(totalPallets)]
+    ];
+    const summaryWS = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, summaryWS, 'Summary');
+
+    // Shipments Sheet
+    const dataRows = displayedShipments.map(s => ({
+      'Supplier': s.supplier || '',
+      'Order Ref': s.orderRef || s.order_ref || '',
+      'Product': s.productName || '',
+      'Week': s.weekNumber || '',
+      'Quantity': s.quantity || 0,
+      'Pallet Qty': Math.round(s.palletQty || 0),
+      'CBM': s.cbm || 0,
+      'Status': (s.latestStatus || '').replace(/_/g, ' '),
+      'Warehouse': s.receivingWarehouse || '',
+      'Final POD': s.finalPod || '',
+      'Forwarding Agent': s.forwardingAgent || ''
+    }));
+    const dataWS = XLSX.utils.json_to_sheet(dataRows);
+    XLSX.utils.book_append_sheet(wb, dataWS, 'Shipments');
+
+    // Supplier Breakdown Sheet
+    const supplierRows = Object.entries(analytics.supplierStats)
+      .sort(([, a], [, b]) => b.total - a.total)
+      .map(([supplier, stats]) => ({
+        'Supplier': supplier,
+        'Total': stats.total,
+        'Arrived': stats.arrived,
+        'In Transit': stats.inTransit,
+        'Delayed': stats.delayed,
+        'Performance %': stats.total > 0 ? ((stats.arrived / stats.total) * 100).toFixed(1) : '0'
+      }));
+    const supplierWS = XLSX.utils.json_to_sheet(supplierRows);
+    XLSX.utils.book_append_sheet(wb, supplierWS, 'Supplier Breakdown');
+
+    const fileName = `shipment_report_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+
+    // Title
+    doc.setFontSize(18);
+    doc.text('Shipment Report', pageWidth / 2, 20, { align: 'center' });
+
+    // Filters
+    doc.setFontSize(10);
+    let yPos = 35;
+    const dateLabel = selectedDateRange === 'custom'
+      ? `${customDateRange.start || 'Any'} to ${customDateRange.end || 'Any'}`
+      : selectedDateRange === 'all' ? 'All Time' : selectedDateRange;
+    doc.text(`Date Range: ${dateLabel}`, 20, yPos);
+    yPos += 5;
+    if (statusFilter) {
+      doc.text(`Status Filter: ${statusFilter.replace(/_/g, ' ')}`, 20, yPos);
+      yPos += 5;
+    }
+    yPos += 5;
+
+    // Summary stats
+    const totalQuantity = displayedShipments.reduce((sum, s) => sum + (s.quantity || 0), 0);
+    const totalPallets = displayedShipments.reduce((sum, s) => sum + (s.palletQty || 0), 0);
+    doc.setFontSize(12);
+    doc.text('Summary Statistics:', 20, yPos);
+    yPos += 7;
+    doc.setFontSize(10);
+    doc.text(`Total Shipments: ${analytics.totalShipments}`, 25, yPos);
+    yPos += 5;
+    doc.text(`Total Quantity: ${totalQuantity.toLocaleString()}`, 25, yPos);
+    yPos += 5;
+    doc.text(`Total Pallets: ${Math.round(totalPallets).toLocaleString()}`, 25, yPos);
+    yPos += 10;
+
+    // Shipments table
+    doc.autoTable({
+      startY: yPos,
+      head: [['Supplier', 'Order Ref', 'Product', 'Week', 'Qty', 'Pallets', 'Status', 'Warehouse']],
+      body: displayedShipments.map(s => [
+        s.supplier || '',
+        s.orderRef || s.order_ref || '',
+        s.productName || '',
+        s.weekNumber || '-',
+        s.quantity || 0,
+        Math.round(s.palletQty || 0) || 1,
+        (s.latestStatus || '').replace(/_/g, ' '),
+        s.receivingWarehouse || ''
+      ]),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [5, 150, 105] }
+    });
+
+    // Supplier breakdown table
+    const supplierEntries = Object.entries(analytics.supplierStats)
+      .sort(([, a], [, b]) => b.total - a.total);
+    if (supplierEntries.length > 0) {
+      const afterShipments = doc.lastAutoTable.finalY + 10;
+      doc.setFontSize(12);
+      doc.text('Supplier Breakdown', 20, afterShipments);
+
+      doc.autoTable({
+        startY: afterShipments + 5,
+        head: [['Supplier', 'Total', 'Arrived', 'In Transit', 'Delayed', 'Performance %']],
+        body: supplierEntries.map(([supplier, stats]) => [
+          supplier,
+          stats.total,
+          stats.arrived,
+          stats.inTransit,
+          stats.delayed,
+          stats.total > 0 ? ((stats.arrived / stats.total) * 100).toFixed(1) + '%' : '0%'
+        ]),
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [5, 150, 105] }
+      });
+    }
+
+    // Footer with timestamp and page numbers
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.text(
+        `Generated: ${new Date().toLocaleString()} | Page ${i} of ${pageCount}`,
+        pageWidth / 2,
+        doc.internal.pageSize.height - 10,
+        { align: 'center' }
+      );
+    }
+
+    doc.save(`shipment_report_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   // Fetch saved reports on component mount
@@ -648,6 +804,12 @@ function ReportsView({ shipments: propShipments }) {
           <button className="save-report-btn" onClick={saveCurrentReport}>
             💾 Save Report
           </button>
+          <button className="export-excel-btn" onClick={exportToExcel}>
+            📊 Export Excel
+          </button>
+          <button className="export-pdf-btn" onClick={exportToPDF}>
+            📄 Export PDF
+          </button>
         </>
       )}
 
@@ -867,6 +1029,38 @@ function ReportsView({ shipments: propShipments }) {
 
         .save-report-btn:hover {
           background: #218838;
+          transform: translateY(-1px);
+        }
+
+        .export-excel-btn {
+          background: #10b981;
+          color: white;
+          border: none;
+          padding: 0.75rem 1rem;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 500;
+          transition: all 0.2s;
+        }
+
+        .export-excel-btn:hover {
+          background: #059669;
+          transform: translateY(-1px);
+        }
+
+        .export-pdf-btn {
+          background: #e53e3e;
+          color: white;
+          border: none;
+          padding: 0.75rem 1rem;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 500;
+          transition: all 0.2s;
+        }
+
+        .export-pdf-btn:hover {
+          background: #c53030;
           transform: translateY(-1px);
         }
 
