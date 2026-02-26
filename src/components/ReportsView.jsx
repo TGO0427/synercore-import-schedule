@@ -769,7 +769,7 @@ function ReportsView({ shipments: propShipments }) {
       <div className="brand-strip" />
       <div className="page-header">
         <h2>Reports & Analytics</h2>
-        <p>Comprehensive insights into your shipment operations ({displayedShipments.length} shipments{statusFilter ? ` filtered by ${statusFilter.replace(/_/g, ' ')}` : ''})</p>
+        <p>Comprehensive insights into your shipment operations ({analytics.totalShipments} shipments{statusFilter ? ` filtered by ${statusFilter.replace(/_/g, ' ')}` : ''})</p>
       </div>
 
       <ReportControls />
