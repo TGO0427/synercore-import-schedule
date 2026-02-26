@@ -244,6 +244,7 @@ function ReportsView({ shipments: propShipments }) {
             finalPod: s.final_pod || s.finalPod,
             forwardingAgent: s.forwarding_agent || s.forwardingAgent,
             quantity: Number(s.quantity) || 0,
+            palletQty: Number(s.pallet_qty || s.palletQty) || 0,
             cbm: Number(s.cbm) || 0
           }));
 
