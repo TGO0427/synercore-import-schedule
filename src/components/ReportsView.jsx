@@ -228,6 +228,15 @@ function ReportsView({ shipments: propShipments }) {
     });
   }, [allShipments, propShipments, selectedDateRange, customDateRange]);
 
+  // Apply status filter on top of date-filtered shipments
+  const displayedShipments = useMemo(() => {
+    if (!statusFilter) return filteredShipments;
+    return filteredShipments.filter(s => {
+      const status = s.latestStatus || s.latest_status;
+      return status === statusFilter;
+    });
+  }, [filteredShipments, statusFilter]);
+
   const analytics = useMemo(() => {
     const currentWeek = getCurrentWeekNumber();
     
@@ -782,7 +791,7 @@ function ReportsView({ shipments: propShipments }) {
       <div className="brand-strip" />
       <div className="page-header">
         <h2>Reports & Analytics</h2>
-        <p>Comprehensive insights into your shipment operations ({filteredShipments.length} shipments)</p>
+        <p>Comprehensive insights into your shipment operations ({displayedShipments.length} shipments{statusFilter ? ` filtered by ${statusFilter.replace(/_/g, ' ')}` : ''})</p>
       </div>
 
       <ReportControls />
@@ -809,10 +818,10 @@ function ReportsView({ shipments: propShipments }) {
       </div>
 
       {/* Post-Arrival Workflow Report */}
-      <PostArrivalWorkflowReport shipments={filteredShipments} />
+      <PostArrivalWorkflowReport shipments={displayedShipments} />
 
       {/* Current Week Stored Shipments Report */}
-      <CurrentWeekStoredReport shipments={filteredShipments} />
+      <CurrentWeekStoredReport shipments={displayedShipments} />
 
       <style>{`
         .reports-view {
