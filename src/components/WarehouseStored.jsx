@@ -297,7 +297,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
       'Warehouse': s.receivingWarehouse || 'Unassigned',
       'Final POD': s.finalPod || '',
       'Stored Date': formatDate(s.receivingDate || s.updatedAt || s.estimatedArrival),
-      'Days in Storage': getDaysInStorage(s),
+      'Days in Storage': (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE' ? getDaysInStorage(s) : '-',
       'Archived': s.isArchived || s.latestStatus === 'archived' ? 'Yes' : 'No'
     }));
     const dataWS = XLSX.utils.json_to_sheet(dataRows);
@@ -367,7 +367,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
         Math.round(s.palletQty || 0) || 1,
         s.receivingWarehouse || 'Unassigned',
         formatDate(s.receivingDate || s.updatedAt || s.estimatedArrival),
-        getDaysInStorage(s)
+        (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE' ? getDaysInStorage(s) : '-'
       ]),
       styles: { fontSize: 8 },
       headStyles: { fillColor: [5, 150, 105] }
