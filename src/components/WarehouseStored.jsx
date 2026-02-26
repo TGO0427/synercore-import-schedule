@@ -510,6 +510,19 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                     No weeks
                   </div>
                 )}
+                {weekFilters.length > 0 && (
+                  <button
+                    onClick={() => { setWeekFilters([]); setShowWeekDropdown(false); }}
+                    style={{
+                      display: 'block', width: '100%', padding: '6px 10px',
+                      background: 'none', border: 'none', borderTop: '1px solid var(--border)',
+                      color: 'var(--danger)', fontSize: 13, fontWeight: 600,
+                      cursor: 'pointer', textAlign: 'center'
+                    }}
+                  >
+                    Clear All
+                  </button>
+                )}
               </div>
             )}
           </div>
