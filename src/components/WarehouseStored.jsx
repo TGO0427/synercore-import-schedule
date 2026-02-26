@@ -4,6 +4,9 @@ import { ShipmentStatus } from '../types/shipment';
 import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
 import { useNotification } from '../contexts/NotificationContext';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArchiveShipment, loading }) {
   const { showSuccess, showError, confirm: confirmAction } = useNotification();
@@ -259,6 +262,154 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     }
   };
 
+  const exportToExcel = () => {
+    const wb = XLSX.utils.book_new();
+
+    // Summary Sheet
+    const totalQty = filteredAndSortedShipments.reduce((sum, s) => sum + (Number(s.quantity) || 0), 0);
+    const pallets = Math.round(filteredAndSortedShipments.reduce((sum, s) => sum + (Number(s.palletQty) || 0), 0));
+    const summaryData = [
+      ['Stored Stock Report'],
+      ['Generated:', new Date().toLocaleString()],
+      [],
+      ['Search Filter:', searchTerm || 'None'],
+      ['Week Filter:', weekFilters.length > 0 ? weekFilters.map(w => `Week ${w}`).join(', ') : 'All'],
+      [],
+      ['Summary:'],
+      ['Total Items:', filteredAndSortedShipments.length],
+      ['Warehouses:', groupedByWarehouse.length],
+      ['Total Quantity:', totalQty],
+      ['Total Pallets:', pallets]
+    ];
+    const summaryWS = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, summaryWS, 'Summary');
+
+    // Shipments Sheet
+    const dataRows = filteredAndSortedShipments.map(s => ({
+      'Order Ref': s.orderRef || '',
+      'Supplier': s.supplier || '',
+      'Product': s.productName || '',
+      'Quantity': s.quantity || 0,
+      'Pallet Qty': Math.round(s.palletQty || 0),
+      'CBM': s.cbm || 0,
+      'Week': s.weekNumber || '',
+      'Warehouse': s.receivingWarehouse || 'Unassigned',
+      'Final POD': s.finalPod || '',
+      'Stored Date': formatDate(s.receivingDate || s.updatedAt || s.estimatedArrival),
+      'Days in Storage': getDaysInStorage(s),
+      'Archived': s.isArchived || s.latestStatus === 'archived' ? 'Yes' : 'No'
+    }));
+    const dataWS = XLSX.utils.json_to_sheet(dataRows);
+    XLSX.utils.book_append_sheet(wb, dataWS, 'Stored Stock');
+
+    // Per-Warehouse Sheet
+    const whRows = groupedByWarehouse.map(({ name, shipments: wh }) => ({
+      'Warehouse': name,
+      'Items': wh.length,
+      'Total Quantity': wh.reduce((sum, s) => sum + (Number(s.quantity) || 0), 0),
+      'Total Pallets': Math.round(wh.reduce((sum, s) => sum + (Number(s.palletQty) || 0), 0)),
+      'Active': wh.filter(s => !s.isArchived && s.latestStatus !== 'archived').length,
+      'Archived': wh.filter(s => s.isArchived || s.latestStatus === 'archived').length
+    }));
+    const whWS = XLSX.utils.json_to_sheet(whRows);
+    XLSX.utils.book_append_sheet(wb, whWS, 'Warehouse Breakdown');
+
+    XLSX.writeFile(wb, `stored_stock_report_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+
+    // Title
+    doc.setFontSize(18);
+    doc.text('Stored Stock Report', pageWidth / 2, 20, { align: 'center' });
+
+    // Filters
+    doc.setFontSize(10);
+    let yPos = 35;
+    if (searchTerm) {
+      doc.text(`Search: ${searchTerm}`, 20, yPos);
+      yPos += 5;
+    }
+    if (weekFilters.length > 0) {
+      doc.text(`Week Filter: ${weekFilters.map(w => `Week ${w}`).join(', ')}`, 20, yPos);
+      yPos += 5;
+    }
+    yPos += 3;
+
+    // Summary
+    const totalQty = filteredAndSortedShipments.reduce((sum, s) => sum + (Number(s.quantity) || 0), 0);
+    const pallets = Math.round(filteredAndSortedShipments.reduce((sum, s) => sum + (Number(s.palletQty) || 0), 0));
+    doc.setFontSize(12);
+    doc.text('Summary:', 20, yPos);
+    yPos += 7;
+    doc.setFontSize(10);
+    doc.text(`Total Items: ${filteredAndSortedShipments.length}`, 25, yPos);
+    yPos += 5;
+    doc.text(`Warehouses: ${groupedByWarehouse.length}`, 25, yPos);
+    yPos += 5;
+    doc.text(`Total Quantity: ${totalQty.toLocaleString()}`, 25, yPos);
+    yPos += 5;
+    doc.text(`Total Pallets: ${pallets.toLocaleString()}`, 25, yPos);
+    yPos += 10;
+
+    // Stock table
+    doc.autoTable({
+      startY: yPos,
+      head: [['Order Ref', 'Supplier', 'Product', 'Qty', 'Pallets', 'Warehouse', 'Stored Date', 'Days']],
+      body: filteredAndSortedShipments.map(s => [
+        s.orderRef || '',
+        s.supplier || '',
+        s.productName || '',
+        s.quantity || 0,
+        Math.round(s.palletQty || 0) || 1,
+        s.receivingWarehouse || 'Unassigned',
+        formatDate(s.receivingDate || s.updatedAt || s.estimatedArrival),
+        getDaysInStorage(s)
+      ]),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [5, 150, 105] }
+    });
+
+    // Warehouse breakdown table
+    if (groupedByWarehouse.length > 0) {
+      const afterStock = doc.lastAutoTable.finalY + 10;
+      doc.setFontSize(12);
+      doc.text('Warehouse Breakdown', 20, afterStock);
+
+      doc.autoTable({
+        startY: afterStock + 5,
+        head: [['Warehouse', 'Items', 'Quantity', 'Pallets', 'Active', 'Archived']],
+        body: groupedByWarehouse.map(({ name, shipments: wh }) => [
+          name,
+          wh.length,
+          wh.reduce((sum, s) => sum + (Number(s.quantity) || 0), 0),
+          Math.round(wh.reduce((sum, s) => sum + (Number(s.palletQty) || 0), 0)),
+          wh.filter(s => !s.isArchived && s.latestStatus !== 'archived').length,
+          wh.filter(s => s.isArchived || s.latestStatus === 'archived').length
+        ]),
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [5, 150, 105] }
+      });
+    }
+
+    // Footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.text(
+        `Generated: ${new Date().toLocaleString()} | Page ${i} of ${pageCount}`,
+        pageWidth / 2,
+        doc.internal.pageSize.height - 10,
+        { align: 'center' }
+      );
+    }
+
+    doc.save(`stored_stock_report_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
@@ -371,6 +522,30 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
               {archivingAll ? 'Archiving...' : `Archive All (${activeShipmentsCount})`}
             </button>
           )}
+          <button
+            onClick={exportToExcel}
+            style={{
+              background: '#10b981', color: 'white', border: 'none',
+              padding: '6px 12px', borderRadius: 6, cursor: 'pointer',
+              fontWeight: 500, fontSize: 13, transition: 'all 0.2s'
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = '#059669'}
+            onMouseLeave={e => e.currentTarget.style.background = '#10b981'}
+          >
+            Export Excel
+          </button>
+          <button
+            onClick={exportToPDF}
+            style={{
+              background: '#e53e3e', color: 'white', border: 'none',
+              padding: '6px 12px', borderRadius: 6, cursor: 'pointer',
+              fontWeight: 500, fontSize: 13, transition: 'all 0.2s'
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = '#c53030'}
+            onMouseLeave={e => e.currentTarget.style.background = '#e53e3e'}
+          >
+            Export PDF
+          </button>
         </div>
       </div>
 
