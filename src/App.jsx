@@ -1,14 +1,14 @@
 // src/App.jsx
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
-import ShipmentTable from './components/ShipmentTable';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import Dashboard from './components/Dashboard';
 import LoginPage from './components/LoginPage';
-import NotificationContainer from './components/NotificationContainer';
 import SynercoreLogo from './components/SynercoreLogo';
+import { useNotification } from './contexts/NotificationContext';
 import OfflineIndicator from './components/OfflineIndicator';
-import { SHIPPING_EXCLUDED_STATUSES } from './types/shipment';
 import ErrorBoundary from './components/ErrorBoundary';
 import ConnectionOverlay from './components/ConnectionOverlay';
+import { VIEW_ROUTES } from './routes';
 
 // Lazy-loaded pages (code-split for faster initial load)
 const ArchiveView = lazy(() => import('./components/ArchiveView'));
@@ -19,7 +19,7 @@ const SupplierManagement = lazy(() => import('./components/SupplierManagement'))
 const RatesQuotes = lazy(() => import('./components/RatesQuotes'));
 const PostArrivalWorkflow = lazy(() => import('./components/PostArrivalWorkflow'));
 const WarehouseStored = lazy(() => import('./components/WarehouseStored'));
-const FileUpload = lazy(() => import('./components/FileUpload'));
+const ShippingView = lazy(() => import('./components/ShippingView'));
 const AlertHub = lazy(() => import('./components/AlertHub'));
 const UserSettings = lazy(() => import('./components/UserSettings'));
 const HelpGuide = lazy(() => import('./components/HelpGuide'));
@@ -82,13 +82,12 @@ function App() {
   const loadingCountRef = useRef(0);
   const startLoading = () => { loadingCountRef.current += 1; setLoading(true); };
   const stopLoading = () => { loadingCountRef.current = Math.max(0, loadingCountRef.current - 1); if (loadingCountRef.current === 0) setLoading(false); };
-  const [notifications, setNotifications] = useState([]);
-  const [activeView, setActiveView] = useState('shipping');
+  const { showSuccess, showError, showWarning, showInfo, confirm: confirmAction } = useNotification();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
   const [lastSyncTime, setLastSyncTime] = useState(null);
-  const [statusFilter, setStatusFilter] = useState(null); // null = no filter
-  const [globalSearchTerm, setGlobalSearchTerm] = useState(''); // from GlobalSearch
   const [showSupplierPortal, setShowSupplierPortal] = useState(false); // New state for supplier portal
 
   // Alert Hub state
@@ -124,8 +123,7 @@ function App() {
   });
   const toggleSection = (key) => setSidebarSections(prev => ({ ...prev, [key]: !prev[key] }));
 
-  // Password Recovery state
-  const [currentView, setCurrentView] = useState('login'); // 'login', 'forgotPassword', 'resetPassword'
+  // Password recovery is now handled by routes
 
   // WebSocket integration
   const { isConnected: wsConnected, onShipmentUpdate, onDocumentUpload, joinShipment, leaveShipment } = useWebSocket();
@@ -202,18 +200,6 @@ function App() {
 
     return () => clearInterval(poll);
   }, [wsConnected]);
-
-  // ---------- notifications ----------
-  const addNotification = (type, message, options = {}) =>
-    setNotifications(prev => [...prev, { id: Date.now() + Math.random(), type, message, ...options }]);
-
-  const removeNotification = (id) => setNotifications(prev => prev.filter(n => n.id !== id));
-  const showSuccess = (m, o = {}) => { addNotification('success', m, o); };
-  const showError   = (m, o = {}) => { addNotification('error', m, o); };
-  const showWarning = (m, o = {}) => { addNotification('warning', m, o); };
-  const showInfo    = (m, o = {}) => { addNotification('info', m, o); };
-  const showDark    = (m, o = {}) => { addNotification('dark', m, o); };
-  const showLight   = (m, o = {}) => { addNotification('light', m, o); };
 
   // ---------- alerts ----------
   const [dismissedAlertIds, setDismissedAlertIds] = useState(() => {
@@ -429,7 +415,7 @@ function App() {
   };
 
   const handleDeleteSupplier = async (id) => {
-    if (!confirm('Are you sure you want to delete this supplier?')) return;
+    if (!(await confirmAction({ title: 'Delete Supplier', message: 'Are you sure you want to delete this supplier?', type: 'danger', confirmText: 'Delete' }))) return;
     try {
       const response = await authFetch(getApiUrl(`/api/suppliers/${id}`), { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete supplier');
@@ -606,255 +592,56 @@ function App() {
     authUtils.clearAuth();
     setIsAuthenticated(false);
     setUsername('');
-    setActiveView('shipping');
+    navigate('/login');
   };
 
-  // ---------- UI helpers ----------
-  const handleStatusCardClick = (status) => {
-    setStatusFilter(prev => (prev === status ? null : status));
+  // ---------- helper: derive active view from URL ----------
+  const activeView = (() => {
+    const path = location.pathname;
+    if (path === '/shipping' || path === '/') return 'shipping';
+    if (path === '/dashboard') return 'dashboard';
+    if (path === '/suppliers') return 'suppliers';
+    if (path === '/workflow') return 'workflow';
+    if (path === '/capacity') return 'capacity';
+    if (path === '/stored') return 'stored';
+    if (path === '/archives') return 'archives';
+    if (path === '/rates') return 'rates';
+    if (path === '/costing') return 'costing';
+    if (path === '/costing-requests') return 'costing-requests';
+    if (path === '/reports') return 'reports';
+    if (path === '/advanced-reports') return 'advanced-reports';
+    if (path === '/users') return 'users';
+    return 'shipping';
+  })();
+
+  const StoredWrapper = () => {
+    const storedShipments = shipments.filter(s => s.latestStatus === 'stored' || s.latestStatus === 'archived');
+    return (
+      <WarehouseStored
+        shipments={storedShipments}
+        onUpdateShipment={handleUpdateShipment}
+        onDeleteShipment={handleDeleteShipment}
+        onArchiveShipment={handleArchiveShipment}
+        loading={loading}
+      />
+    );
   };
 
-  const handleDashboardNavigate = (view, options = {}) => {
-    if (options.statusFilter !== undefined) {
-      setStatusFilter(options.statusFilter);
-    } else {
-      setStatusFilter(null);
-    }
-    if (options.searchTerm) {
-      setGlobalSearchTerm(options.searchTerm);
-    }
-    setActiveView(view);
-  };
-
-  const renderMainContent = () => {
-    switch (activeView) {
-      case 'shipping': {
-        // Hide items that are in post-arrival workflow, stored, or archived
-        let shippingShipments = shipments.filter(s =>
-          !SHIPPING_EXCLUDED_STATUSES.includes(s.latestStatus)
-        );
-
-        if (statusFilter) {
-          const META_FILTERS = {
-            in_transit: ['in_transit_airfreight', 'in_transit_roadway', 'in_transit_seaway'],
-            arrived: ['arrived_pta', 'arrived_klm', 'arrived_offsite'],
-            planned: ['planned_airfreight', 'planned_seafreight'],
-          };
-          const matchStatuses = META_FILTERS[statusFilter] || [statusFilter];
-          shippingShipments = shippingShipments.filter(s => matchStatuses.includes(s.latestStatus));
-        }
-
-        // Count unique ORDER/REF - duplicates count as 1 shipment
-        const uniqueOrderRefs = new Set(shippingShipments.map(s => s.orderRef).filter(Boolean));
-
-        // Group shipments by status with unique orderRef counting
-        const statusOrderRefs = {};
-        shippingShipments.forEach(s => {
-          if (s.latestStatus && s.orderRef) {
-            if (!statusOrderRefs[s.latestStatus]) {
-              statusOrderRefs[s.latestStatus] = new Set();
-            }
-            statusOrderRefs[s.latestStatus].add(s.orderRef);
-          }
-        });
-
-        const stats = {
-          total: uniqueOrderRefs.size,
-          planned_airfreight: 0, planned_seafreight: 0,
-          in_transit_airfreight: 0, in_transit_roadway: 0, in_transit_seaway: 0,
-          moored: 0, berth_working: 0, berth_complete: 0,
-          arrived_pta: 0, arrived_klm: 0, arrived_offsite: 0,
-          unloading: 0, inspection_pending: 0, inspecting: 0,
-          inspection_failed: 0, inspection_passed: 0,
-          receiving: 0, received: 0, stored: 0,
-          delayed: 0, cancelled: 0
-        };
-
-        // Set counts from unique orderRef sets
-        Object.keys(statusOrderRefs).forEach(status => {
-          if (stats.hasOwnProperty(status)) {
-            stats[status] = statusOrderRefs[status].size;
-          }
-        });
-
-        return (
-          <div className="window-content">
-            {/* stat cards */}
-            <div className="stats-grid">
-              {[
-                { key: 'total', status: null, value: stats.total, label: 'Total Shipments', icon: '📦', ring: 'ring-accent', tint: 'rgba(5,150,105,0.1)' },
-                { key: 'planned_airfreight', status: 'planned_airfreight', value: stats.planned_airfreight, label: 'Planned Airfreight', icon: '✈️', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
-                { key: 'planned_seafreight', status: 'planned_seafreight', value: stats.planned_seafreight, label: 'Planned Seafreight', icon: '🚢', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
-                { key: 'in_transit_airfreight', status: 'in_transit_airfreight', value: stats.in_transit_airfreight, label: 'In Transit Air', icon: '✈️', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
-                { key: 'in_transit_roadway', status: 'in_transit_roadway', value: stats.in_transit_roadway, label: 'In Transit Road', icon: '🚛', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
-                { key: 'in_transit_seaway', status: 'in_transit_seaway', value: stats.in_transit_seaway, label: 'In Transit Sea', icon: '🌊', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
-                { key: 'moored', status: 'moored', value: stats.moored, label: 'Moored', icon: '⚓', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
-                { key: 'berth_working', status: 'berth_working', value: stats.berth_working, label: 'Berth Working', icon: '🏗️', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
-                { key: 'berth_complete', status: 'berth_complete', value: stats.berth_complete, label: 'Berth Complete', icon: '✅', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
-                { key: 'arrived_pta', status: 'arrived_pta', value: stats.arrived_pta, label: 'Arrived PTA', icon: '🏢', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
-                { key: 'arrived_klm', status: 'arrived_klm', value: stats.arrived_klm, label: 'Arrived KLM', icon: '🏢', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
-                { key: 'unloading', status: 'unloading', value: stats.unloading, label: 'Unloading', icon: '📦', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
-                { key: 'inspection_pending', status: 'inspection_pending', value: stats.inspection_pending, label: 'Inspection Pending', icon: '🔍', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
-                { key: 'inspecting', status: 'inspecting', value: stats.inspecting, label: 'Inspecting', icon: '🔍', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
-                { key: 'inspection_failed', status: 'inspection_failed', value: stats.inspection_failed, label: 'Inspection Failed', icon: '❌', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
-                { key: 'inspection_passed', status: 'inspection_passed', value: stats.inspection_passed, label: 'Inspection Passed', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
-                { key: 'receiving', status: 'receiving', value: stats.receiving, label: 'Receiving', icon: '📥', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
-                { key: 'received', status: 'received', value: stats.received, label: 'Received', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
-                { key: 'stored', status: 'stored', value: stats.stored, label: 'Stored', icon: '🏪', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
-                { key: 'delayed', status: 'delayed', value: stats.delayed, label: 'Delayed', icon: '⚠️', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
-                { key: 'cancelled', status: 'cancelled', value: stats.cancelled, label: 'Cancelled', icon: '❌', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
-              ]
-                .filter(card => card.status === null || card.value > 0)
-                .map(card => (
-                  <div key={card.key}
-                    className={`stat-card ${card.ring} clickable ${statusFilter === card.status ? 'active' : ''}`}
-                    onClick={() => card.status === null ? setStatusFilter(null) : handleStatusCardClick(card.status)}
-                  >
-                    <div style={{
-                      width: 24, height: 24, borderRadius: '50%', display: 'flex',
-                      alignItems: 'center', justifyContent: 'center', fontSize: 12,
-                      backgroundColor: card.tint, marginBottom: 6,
-                    }}>
-                      {card.icon}
-                    </div>
-                    <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 1px', color: 'var(--navy-900)' }}>
-                      {card.value}
-                    </h3>
-                    <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>
-                      {card.label}
-                    </p>
-                  </div>
-                ))
-              }
-            </div>
-
-            {/* current filter chip */}
-            {statusFilter && (
-              <div style={{
-                margin: '1rem 0',
-                padding: '0.75rem 1rem',
-                backgroundColor: 'rgba(59,130,246,0.08)',
-                border: '1px solid rgba(59,130,246,0.3)',
-                borderRadius: '8px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <span style={{ color: 'var(--info)', fontWeight: 'bold' }}>
-                  Filtered by: {statusFilter.replace(/_/g, ' ').toUpperCase()}
-                </span>
-                <button
-                  onClick={() => setStatusFilter(null)}
-                  className="btn btn-sm"
-                  style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}
-                >
-                  Clear Filter
-                </button>
-              </div>
-            )}
-
-            <FileUpload onFileUpload={handleFileUpload} loading={loading} />
-
-            <ShipmentTable
-              shipments={shippingShipments}
-              onUpdateShipment={handleUpdateShipment}
-              onDeleteShipment={handleDeleteShipment}
-              onCreateShipment={handleCreateShipment}
-              loading={loading}
-              showSuccess={showSuccess}
-              showError={showError}
-              showWarning={showWarning}
-              globalSearchTerm={globalSearchTerm}
-              onClearGlobalSearch={() => setGlobalSearchTerm('')}
-            />
-          </div>
-        );
-      }
-      case 'archives':
-        return <ArchiveView />;
-      case 'reports':
-        return <ReportsView shipments={shipments} statusFilter={statusFilter} onStatusFilter={handleStatusCardClick} />;
-      case 'advanced-reports':
-        return <AdvancedReports />;
-      case 'dashboard':
-        return <Dashboard shipments={shipments} onNavigate={handleDashboardNavigate} onOpenLiveBoard={() => setLiveBoardOpen(true)} />;
-      case 'capacity':
-        return <WarehouseCapacity shipments={shipments} />;
-      case 'users':
-        return isAdmin ? <UserManagement /> : (
-          <div style={{ padding: '2rem', textAlign: 'center' }}>
-            <h2>Access Denied</h2>
-            <p>You need administrator privileges to access User Management.</p>
-          </div>
-        );
-      case 'suppliers':
-        return (
-          <SupplierManagement
-            suppliers={suppliers}
-            shipments={shipments}
-            onAddSupplier={handleAddSupplier}
-            onUpdateSupplier={handleUpdateSupplier}
-            onDeleteSupplier={handleDeleteSupplier}
-            onImportSchedule={handleImportSchedule}
-            showSuccess={showSuccess}
-            showError={showError}
-            loading={loading}
-          />
-        );
-      case 'rates':
-        return <RatesQuotes showSuccess={showSuccess} showError={showError} loading={loading} />;
-      case 'costing':
-        return <ImportCosting showSuccess={showSuccess} showError={showError} />;
-      case 'costing-requests':
-        return isAdmin ? <CostingRequests /> : (
-          <div style={{ padding: '2rem', textAlign: 'center' }}>
-            <h2>Access Denied</h2>
-            <p>You need administrator privileges to view costing requests.</p>
-          </div>
-        );
-      case 'workflow':
-        return <PostArrivalWorkflow showSuccess={showSuccess} showError={showError} showWarning={showWarning} globalSearchTerm={globalSearchTerm} onClearGlobalSearch={() => setGlobalSearchTerm('')} />;
-      case 'stored': {
-        const storedShipments = shipments.filter(s => s.latestStatus === 'stored' || s.latestStatus === 'archived');
-        return (
-          <WarehouseStored
-            shipments={storedShipments}
-            onUpdateShipment={handleUpdateShipment}
-            onDeleteShipment={handleDeleteShipment}
-            onArchiveShipment={handleArchiveShipment}
-            loading={loading}
-            showSuccess={showSuccess}
-            showError={showError}
-            globalSearchTerm={globalSearchTerm}
-            onClearGlobalSearch={() => setGlobalSearchTerm('')}
-          />
-        );
-      }
-      default:
-        return (
-          <div style={{ padding: '2rem', textAlign: 'center' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-              <SynercoreLogo size="large" />
-            </div>
-            <h2>Welcome to Import Supply Chain Management</h2>
-            <p>Select a view from the sidebar to get started.</p>
-          </div>
-        );
-    }
-  };
+  const AccessDenied = () => (
+    <div style={{ padding: '2rem', textAlign: 'center' }}>
+      <h2>Access Denied</h2>
+      <p>You need administrator privileges to access this page.</p>
+    </div>
+  );
 
   if (!isAuthenticated) {
-    if (currentView === 'forgotPassword') {
-      return <ForgotPassword onBack={() => setCurrentView('login')} />;
-    }
-    if (currentView === 'resetPassword') {
-      return <ResetPassword onBack={() => setCurrentView('login')} />;
-    }
     return (
-      <LoginPage
-        onLogin={handleLogin}
-        onForgotPassword={() => setCurrentView('forgotPassword')}
-      />
+      <Routes>
+        <Route path="/forgot-password" element={<ForgotPassword onBack={() => navigate('/login')} />} />
+        <Route path="/reset-password" element={<ResetPassword onBack={() => navigate('/login')} />} />
+        <Route path="/login" element={<LoginPage onLogin={handleLogin} onForgotPassword={() => navigate('/forgot-password')} />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
     );
   }
 
@@ -931,7 +718,7 @@ function App() {
               <button
                 key={key}
                 className={`nav-item ${activeView === item.view ? 'active' : ''}`}
-                onClick={() => setActiveView(item.view)}
+                onClick={() => navigate(VIEW_ROUTES[item.view] || '/shipping')}
                 title={sidebarCollapsed ? item.label : undefined}
               >
                 <span className="nav-icon">{item.icon}</span>
@@ -1049,7 +836,7 @@ function App() {
             <span className="nav-icon">🏢</span> <span className="nav-label">Supplier Portal</span>
           </button>
           {isAdmin && (
-            <button className={`nav-item ${activeView === 'users' ? 'active' : ''}`} onClick={() => setActiveView('users')} title={sidebarCollapsed ? 'User Management' : undefined}>
+            <button className={`nav-item ${activeView === 'users' ? 'active' : ''}`} onClick={() => navigate('/users')} title={sidebarCollapsed ? 'User Management' : undefined}>
               <span className="nav-icon">👥</span> <span className="nav-label">User Management</span>
             </button>
           )}
@@ -1069,7 +856,7 @@ function App() {
           background: 'var(--surface)', width: '100%'
         }}>
           <SynercoreLogo size="medium" />
-          <GlobalSearch shipments={shipments} onNavigate={handleDashboardNavigate} />
+          <GlobalSearch shipments={shipments} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <div style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>
               Logged in as: <strong style={{ color: 'var(--text-900)' }}>{username}</strong>
@@ -1106,7 +893,7 @@ function App() {
             </button>
             {isAdmin && costingRequestCount > 0 && (
               <button
-                onClick={() => setActiveView('costing-requests')}
+                onClick={() => navigate('/costing-requests')}
                 className="btn"
                 style={{
                   position: 'relative',
@@ -1145,7 +932,44 @@ function App() {
 
         <ErrorBoundary>
           <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', color: 'var(--text-secondary)' }}>Loading...</div>}>
-            {renderMainContent()}
+            <Routes>
+              <Route path="/shipping" element={
+                <ShippingView
+                  shipments={shipments}
+                  onFileUpload={handleFileUpload}
+                  onUpdateShipment={handleUpdateShipment}
+                  onDeleteShipment={handleDeleteShipment}
+                  onCreateShipment={handleCreateShipment}
+                  loading={loading}
+                />
+              } />
+              <Route path="/dashboard" element={
+                <Dashboard shipments={shipments} onOpenLiveBoard={() => setLiveBoardOpen(true)} />
+              } />
+              <Route path="/suppliers" element={
+                <SupplierManagement
+                  suppliers={suppliers}
+                  shipments={shipments}
+                  onAddSupplier={handleAddSupplier}
+                  onUpdateSupplier={handleUpdateSupplier}
+                  onDeleteSupplier={handleDeleteSupplier}
+                  onImportSchedule={handleImportSchedule}
+                  loading={loading}
+                />
+              } />
+              <Route path="/workflow" element={<PostArrivalWorkflow />} />
+              <Route path="/capacity" element={<WarehouseCapacity shipments={shipments} />} />
+              <Route path="/stored" element={<StoredWrapper />} />
+              <Route path="/archives" element={<ArchiveView />} />
+              <Route path="/rates" element={<RatesQuotes loading={loading} />} />
+              <Route path="/costing" element={<ImportCosting />} />
+              <Route path="/costing-requests" element={isAdmin ? <CostingRequests /> : <AccessDenied />} />
+              <Route path="/reports" element={<ReportsView shipments={shipments} />} />
+              <Route path="/advanced-reports" element={<AdvancedReports />} />
+              <Route path="/users" element={isAdmin ? <UserManagement /> : <AccessDenied />} />
+              <Route path="/" element={<Navigate to="/shipping" replace />} />
+              <Route path="*" element={<Navigate to="/shipping" replace />} />
+            </Routes>
           </Suspense>
         </ErrorBoundary>
       </div>
@@ -1157,14 +981,12 @@ function App() {
           onRefresh={() => fetchShipments(true)}
         />
       )}
-      <NotificationContainer notifications={notifications} onRemoveNotification={removeNotification} />
       <AlertHub
         open={alertHubOpen}
         onClose={() => setAlertHubOpen(false)}
         alerts={alerts}
         onDismiss={handleAlertDismiss}
         onMarkRead={handleAlertMarkRead}
-        onNavigate={handleDashboardNavigate}
       />
       {settingsOpen && (
         <UserSettings

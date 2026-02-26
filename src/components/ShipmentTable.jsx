@@ -14,6 +14,7 @@ import { getApiUrl } from '../config/api';
 import { authFetch } from '../utils/authFetch';
 import filterPreferencesManager from '../utils/filterPreferences';
 import { copyToClipboard } from '../utils/clipboard';
+import { useNotification } from '../contexts/NotificationContext';
 
 // Forwarding agent options for airfreight (major passenger airlines with cargo divisions)
 const AIRFREIGHT_AGENTS = [
@@ -76,7 +77,8 @@ const getForwardingAgents = (status) => {
   return isAirfreightStatus(status) ? AIRFREIGHT_AGENTS : SEAFREIGHT_AGENTS;
 };
 
-function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreateShipment, loading, showSuccess, showError, showWarning, globalSearchTerm, onClearGlobalSearch }) {
+function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreateShipment, loading, globalSearchTerm, onClearGlobalSearch }) {
+  const { showSuccess, showError, showWarning, confirm: confirmAction } = useNotification();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState(['all']);
   const [sortConfig, setSortConfig] = useState({ key: 'weekNumber', direction: 'asc' });
@@ -688,7 +690,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
       return;
     }
 
-    if (!confirm(`Are you sure you want to archive ${autoArchiveStats.eligibleForArchive} old ARRIVED shipments?`)) {
+    if (!(await confirmAction({ title: 'Archive Shipments', message: `Are you sure you want to archive ${autoArchiveStats.eligibleForArchive} old ARRIVED shipments?`, type: 'warning', confirmText: 'Archive' }))) {
       return;
     }
 
@@ -2016,8 +2018,8 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  if (window.confirm('Are you sure you want to remove this shipment? This action cannot be undone.')) {
+                onClick={async () => {
+                  if (await confirmAction({ title: 'Remove Shipment', message: 'Are you sure you want to remove this shipment? This action cannot be undone.', type: 'danger', confirmText: 'Remove' })) {
                     onDeleteShipment(amendingShipment.id);
                     setShowAmendShipmentDialog(false);
                     setAmendingShipment(null);

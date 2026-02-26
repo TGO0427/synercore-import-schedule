@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
+import { useNotification } from '../contexts/NotificationContext';
 
 function ArchiveView() {
+  const { showError } = useNotification();
   const [archives, setArchives] = useState([]);
   const [dbArchived, setDbArchived] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -82,7 +84,7 @@ function ArchiveView() {
       setNewName('');
     } catch (error) {
       console.error('Error renaming archive:', error);
-      alert('Failed to rename archive');
+      showError('Failed to rename archive');
     }
   };
 
@@ -125,7 +127,7 @@ function ArchiveView() {
       cancelEditingShipment();
     } catch (error) {
       console.error('Error updating shipment:', error);
-      alert('Failed to update shipment');
+      showError('Failed to update shipment');
     }
   };
 

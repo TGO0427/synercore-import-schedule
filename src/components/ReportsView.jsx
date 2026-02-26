@@ -5,6 +5,7 @@ import { getCurrentWeekNumber } from '../utils/dateUtils';
 import PostArrivalWorkflowReport from './PostArrivalWorkflowReport';
 import CurrentWeekStoredReport from './CurrentWeekStoredReport';
 import { getApiUrl } from '../config/api';
+import { useNotification } from '../contexts/NotificationContext';
 
 // Helper function to extract forwarding agent from shipment data
 const extractForwardingAgent = (shipment) => {
@@ -30,7 +31,8 @@ const extractForwardingAgent = (shipment) => {
   return destinations[Math.floor(Math.random() * destinations.length)];
 };
 
-function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter }) {
+function ReportsView({ shipments: propShipments }) {
+  const { showSuccess, showError, confirm: confirmAction } = useNotification();
   const [savedReports, setSavedReports] = useState([]);
   const [loadingReports, setLoadingReports] = useState(false);
   const [allShipments, setAllShipments] = useState([]);
@@ -43,6 +45,8 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('current'); // 'current' or 'historical'
   const [selectedReport, setSelectedReport] = useState(null);
+  const [statusFilter, setStatusFilter] = useState(null);
+  const handleStatusFilter = (status) => setStatusFilter(prev => (prev === status ? null : status));
 
   // Fetch saved reports on component mount
   useEffect(() => {
@@ -129,14 +133,14 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
 
       if (response.ok) {
         const result = await response.json();
-        alert('Report saved successfully!');
+        showSuccess('Report saved successfully!');
         fetchSavedReports();
       } else {
         throw new Error('Failed to save report');
       }
     } catch (error) {
       console.error('Error saving report:', error);
-      alert('Error saving report: ' + error.message);
+      showError('Error saving report: ' + error.message);
     }
   };
 
@@ -154,7 +158,7 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
   };
 
   const deleteReport = async (reportId) => {
-    if (!confirm('Are you sure you want to delete this report?')) return;
+    if (!(await confirmAction({ title: 'Delete Report', message: 'Are you sure you want to delete this report?', type: 'danger', confirmText: 'Delete' }))) return;
 
     try {
       const response = await authFetch(getApiUrl(`/api/reports/${reportId}`), {
@@ -776,7 +780,7 @@ function ReportsView({ shipments: propShipments, statusFilter, onStatusFilter })
       <SummaryCards
         analytics={analytics}
         statusFilter={statusFilter}
-        onStatusFilter={onStatusFilter}
+        onStatusFilter={handleStatusFilter}
       />
 
       <div className="charts-grid">

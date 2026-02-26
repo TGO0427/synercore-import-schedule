@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
+import { useNotification } from '../contexts/NotificationContext';
 
 function NotificationHistory() {
+  const { confirm: confirmAction } = useNotification();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState(null);
@@ -36,7 +38,7 @@ function NotificationHistory() {
   };
 
   const deleteNotification = async (id) => {
-    if (!confirm('Delete this notification?')) return;
+    if (!(await confirmAction({ title: 'Delete Notification', message: 'Delete this notification?', type: 'danger', confirmText: 'Delete' }))) return;
 
     try {
       const res = await authFetch(getApiUrl(`/api/notifications/history/${id}`), {

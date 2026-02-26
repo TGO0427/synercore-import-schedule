@@ -4,6 +4,7 @@ import { jsPDF } from 'jspdf';
 import { ShipmentStatus } from '../types/shipment';
 import { authUtils } from '../utils/auth';
 import CapacityForecastTable from './CapacityForecastTable';
+import { useNotification } from '../contexts/NotificationContext';
 
 // Helper function to get current month's weeks using consistent week calculation
 const getCurrentMonthWeeks = () => {
@@ -105,6 +106,7 @@ function WarehouseCapacity({ shipments }) {
   const [lastSyncTime, setLastSyncTime] = useState(null);
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(null);
   const [detailProduct, setDetailProduct] = useState(null);
+  const { showError, showWarning, showSuccess } = useNotification();
 
   // Load warehouse capacity data from database on mount
   useEffect(() => {
@@ -362,7 +364,7 @@ function WarehouseCapacity({ shipments }) {
     const token = authUtils.getToken();
 
     if (!token) {
-      alert('You must be logged in to update warehouse capacity.');
+      showError('You must be logged in to update warehouse capacity.');
       setIsSaving(false);
       return;
     }
@@ -385,7 +387,7 @@ function WarehouseCapacity({ shipments }) {
         });
 
         if (response.status === 401 || response.status === 403) {
-          alert('Your session has expired. Please log in again.');
+          showError('Your session has expired. Please log in again.');
           authUtils.clearAuth();
           window.location.reload();
           setIsSaving(false);
@@ -419,7 +421,7 @@ function WarehouseCapacity({ shipments }) {
         });
 
         if (response.status === 401 || response.status === 403) {
-          alert('Your session has expired. Please log in again.');
+          showError('Your session has expired. Please log in again.');
           authUtils.clearAuth();
           window.location.reload();
           setIsSaving(false);
@@ -453,7 +455,7 @@ function WarehouseCapacity({ shipments }) {
         });
 
         if (response.status === 401 || response.status === 403) {
-          alert('Your session has expired. Please log in again.');
+          showError('Your session has expired. Please log in again.');
           authUtils.clearAuth();
           window.location.reload();
           setIsSaving(false);
@@ -483,9 +485,9 @@ function WarehouseCapacity({ shipments }) {
     setIsSaving(false);
 
     if (failCount > 0) {
-      alert(`Saved ${successCount} changes, but ${failCount} failed. Please check console for details.`);
+      showWarning(`Saved ${successCount} changes, but ${failCount} failed. Please check console for details.`);
     } else if (successCount > 0) {
-      alert(`✓ Successfully saved ${successCount} ${successCount === 1 ? 'change' : 'changes'}!`);
+      showSuccess(`Successfully saved ${successCount} ${successCount === 1 ? 'change' : 'changes'}`);
 
       // Reload warehouse capacity data from server to get fresh values
       try {
@@ -977,7 +979,7 @@ function WarehouseCapacity({ shipments }) {
       
     } catch (error) {
       console.error('Error exporting warehouse capacity data:', error);
-      alert('Failed to export warehouse capacity data. Please try again.');
+      showError('Failed to export warehouse capacity data. Please try again.');
     }
   }, [warehouseData, selectedWarehouse, shipments]);
 

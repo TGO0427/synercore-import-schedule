@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const SEVERITY_ORDER = { critical: 3, warning: 2, info: 1 };
 
@@ -8,8 +9,8 @@ export default function AlertHub({
   alerts = [],
   onDismiss,
   onMarkRead,
-  onNavigate,
 }) {
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [severity, setSeverity] = useState('all'); // all | critical | warning | info
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
@@ -92,17 +93,18 @@ export default function AlertHub({
             style={{
               border: '1px solid #eee', borderLeft: `4px solid ${colorFor(a.severity)}`,
               borderRadius: 8, padding: 12, background: a.read ? '#fafafa' : '#fff',
-              cursor: a.meta?.orderRef && onNavigate ? 'pointer' : 'default',
+              cursor: a.meta?.orderRef ? 'pointer' : 'default',
               transition: 'background 0.15s',
             }}
             onClick={() => {
-              if (a.meta?.orderRef && onNavigate) {
+              if (a.meta?.orderRef) {
                 onMarkRead?.(a.id);
-                onNavigate(viewForStatus(a.meta?.status), { searchTerm: a.meta.orderRef });
+                const dest = viewForStatus(a.meta?.status);
+                navigate(`/${dest}?search=${encodeURIComponent(a.meta.orderRef)}`);
                 onClose();
               }
             }}
-            onMouseEnter={e => { if (a.meta?.orderRef && onNavigate) e.currentTarget.style.background = '#f0f7ff'; }}
+            onMouseEnter={e => { if (a.meta?.orderRef) e.currentTarget.style.background = '#f0f7ff'; }}
             onMouseLeave={e => { e.currentTarget.style.background = a.read ? '#fafafa' : '#fff'; }}
           >
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -129,7 +131,7 @@ export default function AlertHub({
               </div>
             )}
             <div style={{ display: 'flex', gap: 8 }} onClick={e => e.stopPropagation()}>
-              {a.meta?.orderRef && onNavigate && (() => {
+              {a.meta?.orderRef && (() => {
                 const dest = viewForStatus(a.meta?.status);
                 const label = dest === 'stored' ? 'View in Stored Stock'
                   : dest === 'workflow' ? 'View in Workflow'
@@ -138,7 +140,7 @@ export default function AlertHub({
                 return (
                   <button onClick={() => {
                     onMarkRead?.(a.id);
-                    onNavigate(dest, { searchTerm: a.meta.orderRef });
+                    navigate(`/${dest}?search=${encodeURIComponent(a.meta.orderRef)}`);
                     onClose();
                   }} style={btnStyle('#059669')}>{label}</button>
                 );

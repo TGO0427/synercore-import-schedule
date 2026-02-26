@@ -2,9 +2,11 @@
 import React, { useState, useRef } from 'react';
 import { ExcelProcessor } from '../utils/excelProcessor';
 import ImportValidationPreview from './ImportValidationPreview';
+import { useNotification } from '../contexts/NotificationContext';
 import './FileUpload.css'; // ← add this
 
 function FileUpload({ onFileUpload, loading }) {
+  const { showError, showWarning } = useNotification();
   const [isOpen, setIsOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [validationData, setValidationData] = useState(null);
@@ -32,7 +34,7 @@ function FileUpload({ onFileUpload, loading }) {
       setValidationData(result);
       currentFileRef.current = file;
     } catch (error) {
-      alert(`Error reading file: ${error.message}`);
+      showError(`Error reading file: ${error.message}`);
     } finally {
       setValidationLoading(false);
     }
@@ -44,8 +46,8 @@ function FileUpload({ onFileUpload, loading }) {
       'application/vnd.ms-excel', '.xlsx', '.xls',
     ];
     const isValidType = validTypes.some(t => file.type === t || file.name.toLowerCase().endsWith(t));
-    if (!isValidType) return alert('Please select a valid Excel file (.xlsx or .xls)');
-    if (file.size > 10 * 1024 * 1024) return alert('File size must be less than 10MB');
+    if (!isValidType) { showWarning('Please select a valid Excel file (.xlsx or .xls)'); return; }
+    if (file.size > 10 * 1024 * 1024) { showWarning('File size must be less than 10MB'); return; }
 
     // Validate file before showing preview
     handleValidateFile(file);

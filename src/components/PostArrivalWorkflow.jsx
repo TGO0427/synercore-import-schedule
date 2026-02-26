@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { authFetch } from '../utils/authFetch';
 import { authUtils } from '../utils/auth';
 import { ShipmentStatus, InspectionStatus, ReceivingStatus, STATUS_LABELS } from '../types/shipment';
 import { getApiUrl } from '../config/api';
 import PostArrivalWizard from './PostArrivalWizard';
 import ConfirmationModal from './ConfirmationModal';
+import { useNotification } from '../contexts/NotificationContext';
 
-function PostArrivalWorkflow({ showSuccess, showError, showWarning, globalSearchTerm, onClearGlobalSearch }) {
+function PostArrivalWorkflow() {
+  const { showSuccess, showError, showWarning } = useNotification();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const globalSearchTerm = searchParams.get('search') || '';
   const [postArrivalShipments, setPostArrivalShipments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedShipment, setSelectedShipment] = useState(null);
@@ -48,7 +53,10 @@ function PostArrivalWorkflow({ showSuccess, showError, showWarning, globalSearch
   useEffect(() => {
     if (globalSearchTerm) {
       setSearchTerm(globalSearchTerm);
-      onClearGlobalSearch?.();
+      // Clear the search param from URL after consuming it
+      const params = new URLSearchParams(searchParams);
+      params.delete('search');
+      setSearchParams(params, { replace: true });
     }
   }, [globalSearchTerm]);
 

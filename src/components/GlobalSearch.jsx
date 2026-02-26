@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-function GlobalSearch({ shipments, onNavigate }) {
+function GlobalSearch({ shipments }) {
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -54,7 +56,7 @@ function GlobalSearch({ shipments, onNavigate }) {
   const handleSelect = (shipment) => {
     setOpen(false);
     setQuery('');
-    onNavigate('shipping', { searchTerm: shipment.orderRef });
+    navigate(`/shipping?search=${encodeURIComponent(shipment.orderRef)}`);
   };
 
   const getStatusPill = (status) => {

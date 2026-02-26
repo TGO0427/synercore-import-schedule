@@ -1,9 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ShipmentStatus } from '../types/shipment';
 import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
+import { useNotification } from '../contexts/NotificationContext';
 
-function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArchiveShipment, loading, showSuccess, showError, globalSearchTerm, onClearGlobalSearch }) {
+function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArchiveShipment, loading }) {
+  const { showSuccess, showError, confirm: confirmAction } = useNotification();
+  const [searchParamsObj, setSearchParamsObj] = useSearchParams();
+  const globalSearchTerm = searchParamsObj.get('search') || '';
   const [searchTerm, setSearchTerm] = useState(globalSearchTerm || '');
   const [weekFilters, setWeekFilters] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: 'storedDate', direction: 'desc' });
@@ -19,11 +24,13 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
   const [editShipment, setEditShipment] = useState(null); // shipment being edited
   const [editForm, setEditForm] = useState({});
 
-  // Sync global search term
+  // Sync global search term from URL
   useEffect(() => {
     if (globalSearchTerm) {
       setSearchTerm(globalSearchTerm);
-      onClearGlobalSearch?.();
+      const params = new URLSearchParams(searchParamsObj);
+      params.delete('search');
+      setSearchParamsObj(params, { replace: true });
     }
   }, [globalSearchTerm]);
 
@@ -158,9 +165,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
   const handleArchiveAll = async () => {
     if (activeShipmentsCount === 0) return;
 
-    const confirmArchive = window.confirm(
-      `Are you sure you want to archive all ${activeShipmentsCount} stored shipment(s)?\n\nThis will move them to the archive for record-keeping.`
-    );
+    const confirmArchive = await confirmAction({ title: 'Archive All Stored', message: `Are you sure you want to archive all ${activeShipmentsCount} stored shipment(s)? This will move them to the archive for record-keeping.`, type: 'warning', confirmText: 'Archive All' });
     if (!confirmArchive) return;
 
     setArchivingAll(true);

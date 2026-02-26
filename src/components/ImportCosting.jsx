@@ -16,6 +16,7 @@ import {
   lookupOceanFreightRate,
 } from '../utils/costingCalculations';
 import { generateEstimatePDF, generateEstimatePDFBase64, generateReportPDF as generateReportPDFUtil } from '../utils/costingPdf';
+import { useNotification } from '../contexts/NotificationContext';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -127,7 +128,8 @@ const INITIAL_FORM_STATE = {
   status: 'draft',
 };
 
-function ImportCosting({ showSuccess, showError }) {
+function ImportCosting() {
+  const { showSuccess, showError, confirm: confirmAction } = useNotification();
   const currentUser = authUtils.getUser();
   const isAdmin = currentUser?.role === 'admin';
   const [estimates, setEstimates] = useState([]);
@@ -648,7 +650,7 @@ function ImportCosting({ showSuccess, showError }) {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this cost estimate?')) return;
+    if (!(await confirmAction({ title: 'Delete Cost Estimate', message: 'Are you sure you want to delete this cost estimate?', type: 'danger', confirmText: 'Delete' }))) return;
 
     try {
       const response = await authFetch(getApiUrl(`/api/costing/${id}`), {
@@ -709,17 +711,17 @@ function ImportCosting({ showSuccess, showError }) {
       });
 
       if (response.ok) {
-        if (showSuccess) showSuccess('Email sent successfully!');
+        showSuccess('Email sent successfully!');
         setShowEmailModal(false);
         setEmailTo('');
         setEmailEstimate(null);
       } else {
         const data = await response.json();
-        if (showError) showError(`Failed to send email: ${data.error || 'Unknown error'}`);
+        showError(`Failed to send email: ${data.error || 'Unknown error'}`);
       }
     } catch (err) {
       console.error('Error sending email:', err);
-      if (showError) showError('Failed to send email. Please try again.');
+      showError('Failed to send email. Please try again.');
     } finally {
       setEmailSending(false);
     }

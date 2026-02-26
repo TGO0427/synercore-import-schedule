@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { authUtils } from "../utils/auth";
+import { useNotification } from '../contexts/NotificationContext';
 
 // Vite-friendly, no process.env usage
 // Prefer env, otherwise use '' so requests stay relative and hit the Vite proxy
@@ -7,7 +8,8 @@ const API_BASE = import.meta.env?.VITE_API_BASE_URL ?? '';
 
 
 
-function RatesQuotes({ showSuccess, showError, loading }) {
+function RatesQuotes({ loading }) {
+  const { showSuccess, showError, confirm: confirmAction } = useNotification();
   const [activeTab, setActiveTab] = useState("dhl");
 
   const [quotes, setQuotes] = useState({
@@ -62,7 +64,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
           });
           if (!res.ok) {
             if (res.status === 404) {
-              showError?.(
+              showError(
                 `${forwarders[fw].name} endpoint not found at ${API_BASE}/api/quotes/${fw}`
               );
             } else if (res.status === 401) {
@@ -77,7 +79,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
       setQuotes(Object.fromEntries(entries));
     } catch (err) {
       console.error("Error fetching quotes:", err);
-      showError?.("Could not fetch quotes. Check API and VITE_API_URL/REACT_APP_API_URL.");
+      showError("Could not fetch quotes. Check API and VITE_API_URL/REACT_APP_API_URL.");
     }
   }, [showError]);
 
@@ -111,13 +113,13 @@ function RatesQuotes({ showSuccess, showError, loading }) {
         throw new Error(msg);
       }
 
-      showSuccess?.(
+      showSuccess(
         `Successfully uploaded ${files.length} file(s) to ${forwarders[forwarder].name}`
       );
       fetchQuotes();
     } catch (error) {
       console.error("Error uploading files:", error);
-      showError?.(`Failed to upload files: ${error.message}`);
+      showError(`Failed to upload files: ${error.message}`);
     } finally {
       setUploading(false);
       event.target.value = ""; // reset file input
@@ -125,8 +127,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
   };
 
   const handleDeleteQuote = async (forwarder, filename) => {
-    // eslint-disable-next-line no-restricted-globals
-    if (!confirm(`Are you sure you want to delete "${filename}"?`)) return;
+    if (!(await confirmAction({ title: 'Delete File', message: `Are you sure you want to delete "${filename}"?`, type: 'danger', confirmText: 'Delete' }))) return;
 
     try {
       const response = await fetch(
@@ -145,11 +146,11 @@ function RatesQuotes({ showSuccess, showError, loading }) {
         throw new Error(msg);
       }
 
-      showSuccess?.(`Successfully deleted ${filename}`);
+      showSuccess(`Successfully deleted ${filename}`);
       fetchQuotes();
     } catch (error) {
       console.error("Error deleting file:", error);
-      showError?.(`Failed to delete file: ${error.message}`);
+      showError(`Failed to delete file: ${error.message}`);
     }
   };
 
@@ -158,7 +159,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
 
     const cleanName = newQuoteName.trim().replace(/[<>:"/\\|?*]/g, "");
     if (!cleanName) {
-      showError?.("Please enter a valid filename");
+      showError("Please enter a valid filename");
       return;
     }
 
@@ -185,14 +186,14 @@ function RatesQuotes({ showSuccess, showError, loading }) {
         throw new Error(msg);
       }
 
-      showSuccess?.(`Successfully renamed to ${cleanName}`);
+      showSuccess(`Successfully renamed to ${cleanName}`);
       setShowRenameDialog(false);
       setQuoteToRename(null);
       setNewQuoteName("");
       fetchQuotes();
     } catch (error) {
       console.error("Error renaming quote:", error);
-      showError?.(error.message);
+      showError(error.message);
     }
   };
 
@@ -232,7 +233,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
   // PDF Analysis
   const handleAnalyzeQuote = async (forwarder, filename) => {
     if (!filename.toLowerCase().endsWith(".pdf")) {
-      showError?.("Only PDF files can be analyzed");
+      showError("Only PDF files can be analyzed");
       return;
     }
 
@@ -261,14 +262,14 @@ function RatesQuotes({ showSuccess, showError, loading }) {
       const prices = result?.analysis?.prices?.length ?? 0;
       const routes = result?.analysis?.routes?.length ?? 0;
 
-      showSuccess?.(
+      showSuccess(
         `Analysis complete! Found ${prices} prices and ${routes} routes`
       );
 
       // Optional: setShowAnalysisView(true); store result if you want to show details
     } catch (error) {
       console.error("Error analyzing quote:", error);
-      showError?.(`Failed to analyze PDF: ${error.message}`);
+      showError(`Failed to analyze PDF: ${error.message}`);
     } finally {
       setAnalyzingQuote(null);
     }
@@ -285,7 +286,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
 
   const handleCompareSelected = async () => {
     if (selectedQuotes.length < 2) {
-      showError?.("Please select at least 2 quotes to compare");
+      showError("Please select at least 2 quotes to compare");
       return;
     }
 
@@ -294,7 +295,7 @@ function RatesQuotes({ showSuccess, showError, loading }) {
     );
 
     if (pdfQuotes.length < 2) {
-      showError?.("Please select at least 2 PDF files for comparison");
+      showError("Please select at least 2 PDF files for comparison");
       return;
     }
 
@@ -319,10 +320,10 @@ function RatesQuotes({ showSuccess, showError, loading }) {
       const result = await safeJson(response);
       setComparisonReport(result?.report ?? null);
       setShowComparisonReport(true);
-      showSuccess?.(`Comparison complete! Analyzed ${pdfQuotes.length} quotes`);
+      showSuccess(`Comparison complete! Analyzed ${pdfQuotes.length} quotes`);
     } catch (error) {
       console.error("Error comparing quotes:", error);
-      showError?.(`Failed to compare quotes: ${error.message}`);
+      showError(`Failed to compare quotes: ${error.message}`);
     }
   };
 

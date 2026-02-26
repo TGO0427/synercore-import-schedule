@@ -1,8 +1,10 @@
 // src/main.jsx
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
+import { NotificationProvider } from './contexts/NotificationContext.jsx';
 import './index.css';
 import './theme.css';
 
@@ -19,7 +21,11 @@ const root = createRoot(container);
 root.render(
   <React.StrictMode>
     <ErrorBoundary>
-      <App />
+      <BrowserRouter>
+        <NotificationProvider>
+          <App />
+        </NotificationProvider>
+      </BrowserRouter>
     </ErrorBoundary>
   </React.StrictMode>
 );

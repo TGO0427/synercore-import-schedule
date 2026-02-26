@@ -6,8 +6,10 @@ import SupplierCharts from './SupplierCharts';
 import { getApiUrl } from '../config/api';
 import { authFetch } from '../utils/authFetch';
 import { formatCurrency } from '../utils/costingCalculations';
+import { useNotification } from '../contexts/NotificationContext';
 
-function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onUpdateSupplier, onDeleteSupplier, onImportSchedule, showSuccess, showError, loading }) {
+function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onUpdateSupplier, onDeleteSupplier, onImportSchedule, loading }) {
+  const { showSuccess, showError, showWarning } = useNotification();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
@@ -248,7 +250,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
 
   const saveDocumentsOnly = useCallback(async () => {
     if (!selectedSupplier || documentFiles.length === 0) {
-      alert('Please select a supplier and add documents to save.');
+      showWarning('Please select a supplier and add documents to save.');
       return;
     }
 
@@ -268,7 +270,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
       if (uploadResponse.ok) {
         const uploadedDocs = await uploadResponse.json();
         showSuccess(`Successfully saved ${uploadedDocs.length} documents for ${selectedSupplier.name}`);
-        
+
         // Reset form but keep supplier selected
         setDocumentFiles([]);
       } else {
@@ -276,13 +278,13 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
       }
     } catch (error) {
       console.error('Error saving documents:', error);
-      alert('Error saving documents. Please try again.');
+      showError('Error saving documents. Please try again.');
     }
-  }, [selectedSupplier, documentFiles, showSuccess]);
+  }, [selectedSupplier, documentFiles, showSuccess, showWarning, showError]);
 
   const saveDocumentsAndClose = useCallback(async () => {
     if (!selectedSupplier || documentFiles.length === 0) {
-      alert('Please select a supplier and add documents to save.');
+      showWarning('Please select a supplier and add documents to save.');
       return;
     }
 
@@ -314,13 +316,13 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
       }
     } catch (error) {
       console.error('Error saving documents:', error);
-      alert('Error saving documents. Please try again.');
+      showError('Error saving documents. Please try again.');
     }
-  }, [selectedSupplier, documentFiles, showSuccess]);
+  }, [selectedSupplier, documentFiles, showSuccess, showWarning, showError]);
 
   const processImport = useCallback(async () => {
     if (!importFile || !selectedSupplier) {
-      alert('Please select a supplier and upload a file.');
+      showWarning('Please select a supplier and upload a file.');
       return;
     }
 
@@ -362,7 +364,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
       }
     } catch (error) {
       console.error('Error uploading documents:', error);
-      alert('Error uploading documents. Please try again.');
+      showError('Error uploading documents. Please try again.');
     }
   }, [importFile, selectedSupplier, documentFiles, showSuccess]);
 

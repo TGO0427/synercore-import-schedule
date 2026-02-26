@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ShipmentStatus } from '../types/shipment';
 import {
   Chart as ChartJS,
@@ -33,7 +34,8 @@ const STATUS_COLORS = { Planned: '#f59e0b', 'In Transit': '#3b82f6', Stored: '#1
 const WAREHOUSE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 const RANK_COLORS = ['#f59e0b', '#94a3b8', '#cd7f32', '#64748b', '#64748b'];
 
-function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
+function Dashboard({ shipments, onOpenLiveBoard }) {
+  const navigate = useNavigate();
   const [detailShipment, setDetailShipment] = useState(null);
 
   const getCurrentWeek = () => {
@@ -248,8 +250,8 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
           <div key={card.key} className={`stat-card ${card.ring} clickable`}
             role="button" tabIndex={0}
             aria-label={`${card.value} ${card.label} — click to view`}
-            onClick={() => onNavigate(card.view || 'shipping', { statusFilter: card.filter })}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigate(card.view || 'shipping', { statusFilter: card.filter }); } }}>
+            onClick={() => { const path = card.view ? `/${card.view}` : '/shipping'; navigate(card.filter ? `${path}?status=${card.filter}` : path); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const path = card.view ? `/${card.view}` : '/shipping'; navigate(card.filter ? `${path}?status=${card.filter}` : path); } }}>
             <div style={{
               width: 24, height: 24, borderRadius: '50%', display: 'flex',
               alignItems: 'center', justifyContent: 'center', fontSize: 12,
@@ -457,8 +459,8 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
                 borderRadius: 8, borderLeft: '3px solid var(--info)',
                 cursor: 'pointer', transition: 'background 0.15s',
               }}
-                onClick={() => onNavigate('shipping', { statusFilter: shipment.latestStatus })}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigate('shipping', { statusFilter: shipment.latestStatus }); } }}
+                onClick={() => navigate(`/shipping?status=${shipment.latestStatus}`)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/shipping?status=${shipment.latestStatus}`); } }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface)'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-2)'}
               >
@@ -484,34 +486,32 @@ function Dashboard({ shipments, onNavigate, onOpenLiveBoard }) {
       )}
 
       {/* Quick Actions */}
-      {onNavigate && (
-        <div style={{
-          display: 'flex', gap: 12, marginTop: '1.5rem', flexWrap: 'wrap',
-          paddingTop: '1.5rem', borderTop: '1px solid var(--border)',
-        }}>
-          <button className="btn btn-primary" style={{ padding: '10px 20px', fontSize: 13 }}
-            onClick={() => onNavigate('shipping')}>
-            Shipping Schedule
+      <div style={{
+        display: 'flex', gap: 12, marginTop: '1.5rem', flexWrap: 'wrap',
+        paddingTop: '1.5rem', borderTop: '1px solid var(--border)',
+      }}>
+        <button className="btn btn-primary" style={{ padding: '10px 20px', fontSize: 13 }}
+          onClick={() => navigate('/shipping')}>
+          Shipping Schedule
+        </button>
+        <button className="btn btn-ghost" style={{ padding: '10px 20px', fontSize: 13 }}
+          onClick={() => navigate('/reports')}>
+          Reports
+        </button>
+        <button className="btn btn-ghost" style={{ padding: '10px 20px', fontSize: 13 }}
+          onClick={() => navigate('/capacity')}>
+          Warehouse Capacity
+        </button>
+        {onOpenLiveBoard && (
+          <button className="btn" style={{
+            padding: '10px 20px', fontSize: 13,
+            background: 'var(--navy-900)', color: 'white', border: 'none',
+          }}
+            onClick={onOpenLiveBoard}>
+            Live Board
           </button>
-          <button className="btn btn-ghost" style={{ padding: '10px 20px', fontSize: 13 }}
-            onClick={() => onNavigate('reports')}>
-            Reports
-          </button>
-          <button className="btn btn-ghost" style={{ padding: '10px 20px', fontSize: 13 }}
-            onClick={() => onNavigate('capacity')}>
-            Warehouse Capacity
-          </button>
-          {onOpenLiveBoard && (
-            <button className="btn" style={{
-              padding: '10px 20px', fontSize: 13,
-              background: 'var(--navy-900)', color: 'white', border: 'none',
-            }}
-              onClick={onOpenLiveBoard}>
-              Live Board
-            </button>
-          )}
-        </div>
-      )}
+        )}
+      </div>
       {/* Order Detail Card */}
       {detailShipment && (
         <div

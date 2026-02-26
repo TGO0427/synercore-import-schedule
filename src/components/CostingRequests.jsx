@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getApiUrl } from '../config/api';
 import { authFetch } from '../utils/authFetch';
+import { useNotification } from '../contexts/NotificationContext';
 
 const PRIORITY_STYLES = {
   urgent: { backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' },
@@ -17,6 +18,7 @@ const STATUS_STYLES = {
 };
 
 function CostingRequests() {
+  const { confirm: confirmAction } = useNotification();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('pending');
@@ -63,7 +65,7 @@ function CostingRequests() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this request?')) return;
+    if (!(await confirmAction({ title: 'Delete Request', message: 'Are you sure you want to delete this request?', type: 'danger', confirmText: 'Delete' }))) return;
     try {
       const response = await authFetch(getApiUrl(`/api/costing-requests/${id}`), {
         method: 'DELETE',

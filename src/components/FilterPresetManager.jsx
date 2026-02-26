@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import filterPreferencesManager from '../utils/filterPreferences';
+import { useNotification } from '../contexts/NotificationContext';
 
 /**
  * FilterPresetManager Component
@@ -12,6 +13,7 @@ import filterPreferencesManager from '../utils/filterPreferences';
  * - onSavePreset: function - Callback when preset is saved
  */
 function FilterPresetManager({ viewName, currentFilters, onLoadPreset, onSavePreset }) {
+  const { showWarning, confirm: confirmAction } = useNotification();
   const [isOpen, setIsOpen] = useState(false);
   const [presetName, setPresetName] = useState('');
   const [showNewPreset, setShowNewPreset] = useState(false);
@@ -22,7 +24,7 @@ function FilterPresetManager({ viewName, currentFilters, onLoadPreset, onSavePre
 
   const handleSavePreset = () => {
     if (!presetName.trim()) {
-      alert('Please enter a preset name');
+      showWarning('Please enter a preset name');
       return;
     }
 
@@ -50,14 +52,13 @@ function FilterPresetManager({ viewName, currentFilters, onLoadPreset, onSavePre
     }
   };
 
-  const handleDeletePreset = (name, e) => {
+  const handleDeletePreset = async (name, e) => {
     e.stopPropagation();
-    if (window.confirm(`Delete preset "${name}"?`)) {
-      filterPreferencesManager.deletePreset(viewName, name);
-      // Force re-render
-      setIsOpen(!isOpen);
-      setTimeout(() => setIsOpen(!isOpen), 0);
-    }
+    if (!(await confirmAction({ title: 'Delete Preset', message: `Delete preset "${name}"?`, type: 'danger', confirmText: 'Delete' }))) return;
+    filterPreferencesManager.deletePreset(viewName, name);
+    // Force re-render
+    setIsOpen(!isOpen);
+    setTimeout(() => setIsOpen(!isOpen), 0);
   };
 
   const getRelativeTime = (dateString) => {

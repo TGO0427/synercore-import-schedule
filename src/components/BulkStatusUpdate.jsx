@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { ShipmentStatus } from '../types/shipment';
+import { useNotification } from '../contexts/NotificationContext';
 
 function BulkStatusUpdate({ shipments, onBulkUpdate, onClose }) {
+  const { showWarning, showError } = useNotification();
   const [selectedShipmentIds, setSelectedShipmentIds] = useState([]);
   const [newStatus, setNewStatus] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
@@ -23,7 +25,7 @@ function BulkStatusUpdate({ shipments, onBulkUpdate, onClose }) {
 
   const handleBulkUpdate = async () => {
     if (selectedShipmentIds.length === 0 || !newStatus) {
-      alert('Please select shipments and a new status');
+      showWarning('Please select shipments and a new status');
       return;
     }
     setShowConfirmation(true);
@@ -38,7 +40,7 @@ function BulkStatusUpdate({ shipments, onBulkUpdate, onClose }) {
       setNewStatus('');
       onClose();
     } catch (error) {
-      alert(`Error updating shipments: ${error.message}`);
+      showError(`Error updating shipments: ${error.message}`);
     } finally {
       setIsUpdating(false);
     }
