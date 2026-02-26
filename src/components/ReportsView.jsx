@@ -237,10 +237,10 @@ function ReportsView({ shipments: propShipments }) {
     });
   }, [filteredShipments, statusFilter]);
 
-  const analytics = useMemo(() => {
+  // Compute analytics from a shipment list (reused for cards vs filtered view)
+  const computeAnalytics = (shipmentList) => {
     const currentWeek = getCurrentWeekNumber();
-    
-    // Status distribution - track unique orderRefs per status
+
     const statusOrderRefs = {
       [ShipmentStatus.PLANNED_AIRFREIGHT]: new Set(),
       [ShipmentStatus.PLANNED_SEAFREIGHT]: new Set(),
@@ -258,49 +258,20 @@ function ReportsView({ shipments: propShipments }) {
       [ShipmentStatus.ARCHIVED]: new Set(),
     };
 
-    // Supplier performance - track unique orderRefs
     const supplierOrderRefs = {};
-
-    // Weekly arrivals - track unique orderRefs
     const weeklyOrderRefs = {};
-    
-    // Product categories
     const productStats = {};
-    
-    // Warehouse distribution
     const warehouseStats = {};
-
-    // Forwarding agent performance
     const forwardingAgentStats = {};
 
-    const dataSource = viewMode === 'historical' && selectedReport
-      ? selectedReport.analytics
-      : null;
-
-    if (dataSource) {
-      return {
-        statusCounts: dataSource.statusCounts || {},
-        supplierStats: dataSource.supplierStats || {},
-        weeklyArrivals: dataSource.weeklyArrivals || {},
-        productStats: dataSource.productStats || {},
-        warehouseStats: dataSource.warehouseStats || {},
-        forwardingAgentStats: dataSource.forwardingAgentStats || {},
-        totalShipments: dataSource.totalShipments || 0,
-        currentWeek
-      };
-    }
-
-    filteredShipments.forEach(shipment => {
-      // Normalize status field (handle both camelCase and snake_case)
+    shipmentList.forEach(shipment => {
       const status = shipment.latestStatus || shipment.latest_status;
       const orderRef = shipment.orderRef || shipment.order_ref || shipment.id;
 
-      // Status counts - count unique orderRefs per status
       if (statusOrderRefs.hasOwnProperty(status) && orderRef) {
         statusOrderRefs[status].add(orderRef);
       }
 
-      // Supplier stats - count unique orderRefs
       const supplier = shipment.supplier || 'Unknown';
       if (orderRef) {
         if (!supplierOrderRefs[supplier]) {
@@ -321,7 +292,6 @@ function ReportsView({ shipments: propShipments }) {
         }
       }
 
-      // Weekly arrivals - count unique orderRefs
       if (shipment.weekNumber && orderRef) {
         const week = parseInt(shipment.weekNumber);
         if (!weeklyOrderRefs[week]) {
@@ -329,40 +299,27 @@ function ReportsView({ shipments: propShipments }) {
         }
         weeklyOrderRefs[week].add(orderRef);
       }
-      
-      // Product stats
+
       if (shipment.productName) {
         if (!productStats[shipment.productName]) {
-          productStats[shipment.productName] = {
-            count: 0,
-            quantity: 0
-          };
+          productStats[shipment.productName] = { count: 0, quantity: 0 };
         }
         productStats[shipment.productName].count++;
         productStats[shipment.productName].quantity += shipment.quantity || 0;
       }
-      
-      // Warehouse stats
+
       const warehouse = shipment.receivingWarehouse || shipment.finalPod || 'Unknown';
       if (!warehouseStats[warehouse]) {
-        warehouseStats[warehouse] = {
-          count: 0,
-          quantity: 0
-        };
+        warehouseStats[warehouse] = { count: 0, quantity: 0 };
       }
       warehouseStats[warehouse].count++;
       warehouseStats[warehouse].quantity += shipment.quantity || 0;
 
-      // Forwarding agent stats (assuming agents are stored in finalPod or we'll extract from supplier/notes)
       const forwardingAgent = shipment.forwardingAgent || extractForwardingAgent(shipment) || 'Unknown';
       if (!forwardingAgentStats[forwardingAgent]) {
         forwardingAgentStats[forwardingAgent] = {
-          total: 0,
-          delivered: 0,
-          delayed: 0,
-          inTransit: 0,
-          totalPalletQty: 0,
-          avgDeliveryTime: 0
+          total: 0, delivered: 0, delayed: 0, inTransit: 0,
+          totalPalletQty: 0, avgDeliveryTime: 0
         };
       }
       forwardingAgentStats[forwardingAgent].total++;
@@ -376,43 +333,64 @@ function ReportsView({ shipments: propShipments }) {
       }
     });
 
-    // Convert status Sets to counts
     const statusCounts = {};
-    Object.keys(statusOrderRefs).forEach(status => {
-      statusCounts[status] = statusOrderRefs[status].size;
+    Object.keys(statusOrderRefs).forEach(s => {
+      statusCounts[s] = statusOrderRefs[s].size;
     });
 
-    // Convert supplier Sets to counts
     const supplierStats = {};
-    Object.keys(supplierOrderRefs).forEach(supplier => {
-      supplierStats[supplier] = {
-        total: supplierOrderRefs[supplier].total.size,
-        delayed: supplierOrderRefs[supplier].delayed.size,
-        arrived: supplierOrderRefs[supplier].arrived.size,
-        inTransit: supplierOrderRefs[supplier].inTransit.size
+    Object.keys(supplierOrderRefs).forEach(s => {
+      supplierStats[s] = {
+        total: supplierOrderRefs[s].total.size,
+        delayed: supplierOrderRefs[s].delayed.size,
+        arrived: supplierOrderRefs[s].arrived.size,
+        inTransit: supplierOrderRefs[s].inTransit.size
       };
     });
 
-    // Convert weekly Sets to counts
     const weeklyArrivals = {};
     Object.keys(weeklyOrderRefs).forEach(week => {
       weeklyArrivals[week] = weeklyOrderRefs[week].size;
     });
 
-    // Count unique orderRefs for total
-    const uniqueOrderRefs = new Set(filteredShipments.map(s => s.orderRef || s.order_ref).filter(Boolean));
+    const uniqueOrderRefs = new Set(shipmentList.map(s => s.orderRef || s.order_ref).filter(Boolean));
 
     return {
-      statusCounts,
-      supplierStats,
-      weeklyArrivals,
-      productStats,
-      warehouseStats,
-      forwardingAgentStats,
-      totalShipments: uniqueOrderRefs.size,
-      currentWeek
+      statusCounts, supplierStats, weeklyArrivals, productStats,
+      warehouseStats, forwardingAgentStats,
+      totalShipments: uniqueOrderRefs.size, currentWeek
     };
+  };
+
+  // Card-level analytics: always from the full date-filtered set (so all cards stay visible)
+  const cardAnalytics = useMemo(() => {
+    const dataSource = viewMode === 'historical' && selectedReport
+      ? selectedReport.analytics
+      : null;
+    if (dataSource) {
+      return {
+        statusCounts: dataSource.statusCounts || {},
+        supplierStats: dataSource.supplierStats || {},
+        weeklyArrivals: dataSource.weeklyArrivals || {},
+        productStats: dataSource.productStats || {},
+        warehouseStats: dataSource.warehouseStats || {},
+        forwardingAgentStats: dataSource.forwardingAgentStats || {},
+        totalShipments: dataSource.totalShipments || 0,
+        currentWeek: getCurrentWeekNumber()
+      };
+    }
+    return computeAnalytics(filteredShipments);
   }, [filteredShipments, viewMode, selectedReport]);
+
+  // Detail analytics: from the status-filtered set (charts, tables, reports reflect selection)
+  const analytics = useMemo(() => {
+    if (!statusFilter) return cardAnalytics;
+    const dataSource = viewMode === 'historical' && selectedReport
+      ? selectedReport.analytics
+      : null;
+    if (dataSource) return cardAnalytics;
+    return computeAnalytics(displayedShipments);
+  }, [cardAnalytics, statusFilter, displayedShipments, viewMode, selectedReport]);
 
   const StatusChart = ({ data }) => {
     const total = Object.values(data).reduce((sum, count) => sum + count, 0);
@@ -797,7 +775,7 @@ function ReportsView({ shipments: propShipments }) {
       <ReportControls />
 
       <SummaryCards
-        analytics={analytics}
+        analytics={cardAnalytics}
         statusFilter={statusFilter}
         onStatusFilter={handleStatusFilter}
       />
