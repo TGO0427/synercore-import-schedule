@@ -7,7 +7,7 @@ import PostArrivalWorkflowReport from './PostArrivalWorkflowReport';
 import CurrentWeekStoredReport from './CurrentWeekStoredReport';
 import { getApiUrl } from '../config/api';
 import { useNotification } from '../contexts/NotificationContext';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
