@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import { applyPlugin } from 'jspdf-autotable';
+applyPlugin(jsPDF);
 import * as XLSX from 'xlsx';
 
 function AdvancedReports() {

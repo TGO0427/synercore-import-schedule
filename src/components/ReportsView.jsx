@@ -8,7 +8,8 @@ import CurrentWeekStoredReport from './CurrentWeekStoredReport';
 import { getApiUrl } from '../config/api';
 import { useNotification } from '../contexts/NotificationContext';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import { applyPlugin } from 'jspdf-autotable';
+applyPlugin(jsPDF);
 import * as XLSX from 'xlsx';
 
 // Helper function to extract forwarding agent from shipment data
