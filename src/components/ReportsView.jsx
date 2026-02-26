@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { authFetch } from '../utils/authFetch';
 import { ShipmentStatus } from '../types/shipment';
 import { getCurrentWeekNumber } from '../utils/dateUtils';
@@ -45,8 +46,17 @@ function ReportsView({ shipments: propShipments }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('current'); // 'current' or 'historical'
   const [selectedReport, setSelectedReport] = useState(null);
-  const [statusFilter, setStatusFilter] = useState(null);
-  const handleStatusFilter = (status) => setStatusFilter(prev => (prev === status ? null : status));
+  const [searchParams, setSearchParams] = useSearchParams();
+  const statusFilter = searchParams.get('status') || null;
+  const handleStatusFilter = (status) => {
+    const params = new URLSearchParams(searchParams);
+    if (statusFilter === status || status === null) {
+      params.delete('status');
+    } else {
+      params.set('status', status);
+    }
+    setSearchParams(params, { replace: true });
+  };
 
   // Fetch saved reports on component mount
   useEffect(() => {

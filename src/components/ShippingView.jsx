@@ -5,6 +5,31 @@ import { SHIPPING_EXCLUDED_STATUSES } from '../types/shipment';
 
 const FileUpload = lazy(() => import('./FileUpload'));
 
+// Static card definitions — only value/active are dynamic
+const STAT_CARD_DEFS = [
+  { key: 'total', status: null, label: 'Total Shipments', icon: '\u{1F4E6}', ring: 'ring-accent', tint: 'rgba(5,150,105,0.1)' },
+  { key: 'planned_airfreight', status: 'planned_airfreight', label: 'Planned Airfreight', icon: '\u2708\uFE0F', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
+  { key: 'planned_seafreight', status: 'planned_seafreight', label: 'Planned Seafreight', icon: '\u{1F6A2}', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
+  { key: 'in_transit_airfreight', status: 'in_transit_airfreight', label: 'In Transit Air', icon: '\u2708\uFE0F', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+  { key: 'in_transit_roadway', status: 'in_transit_roadway', label: 'In Transit Road', icon: '\u{1F69B}', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+  { key: 'in_transit_seaway', status: 'in_transit_seaway', label: 'In Transit Sea', icon: '\u{1F30A}', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+  { key: 'moored', status: 'moored', label: 'Moored', icon: '\u2693', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+  { key: 'berth_working', status: 'berth_working', label: 'Berth Working', icon: '\u{1F3D7}\uFE0F', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+  { key: 'berth_complete', status: 'berth_complete', label: 'Berth Complete', icon: '\u2705', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+  { key: 'arrived_pta', status: 'arrived_pta', label: 'Arrived PTA', icon: '\u{1F3E2}', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
+  { key: 'arrived_klm', status: 'arrived_klm', label: 'Arrived KLM', icon: '\u{1F3E2}', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
+  { key: 'unloading', status: 'unloading', label: 'Unloading', icon: '\u{1F4E6}', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
+  { key: 'inspection_pending', status: 'inspection_pending', label: 'Inspection Pending', icon: '\u{1F50D}', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
+  { key: 'inspecting', status: 'inspecting', label: 'Inspecting', icon: '\u{1F50D}', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
+  { key: 'inspection_failed', status: 'inspection_failed', label: 'Inspection Failed', icon: '\u274C', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
+  { key: 'inspection_passed', status: 'inspection_passed', label: 'Inspection Passed', icon: '\u2705', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
+  { key: 'receiving', status: 'receiving', label: 'Receiving', icon: '\u{1F4E5}', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+  { key: 'received', status: 'received', label: 'Received', icon: '\u2705', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
+  { key: 'stored', status: 'stored', label: 'Stored', icon: '\u{1F3EA}', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
+  { key: 'delayed', status: 'delayed', label: 'Delayed', icon: '\u26A0\uFE0F', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
+  { key: 'cancelled', status: 'cancelled', label: 'Cancelled', icon: '\u274C', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
+];
+
 function ShippingView({ shipments, onFileUpload, onUpdateShipment, onDeleteShipment, onCreateShipment, loading }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const statusFilter = searchParams.get('status') || null;
@@ -81,35 +106,18 @@ function ShippingView({ shipments, onFileUpload, onUpdateShipment, onDeleteShipm
     return result;
   }, [shippingShipments]);
 
+  const statCards = useMemo(() =>
+    STAT_CARD_DEFS
+      .map(def => ({ ...def, value: def.status === null ? stats.total : stats[def.status] || 0 }))
+      .filter(card => card.status === null || card.value > 0),
+    [stats]
+  );
+
   return (
     <div className="window-content">
       {/* stat cards */}
       <div className="stats-grid">
-        {[
-          { key: 'total', status: null, value: stats.total, label: 'Total Shipments', icon: '\u{1F4E6}', ring: 'ring-accent', tint: 'rgba(5,150,105,0.1)' },
-          { key: 'planned_airfreight', status: 'planned_airfreight', value: stats.planned_airfreight, label: 'Planned Airfreight', icon: '\u2708\uFE0F', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
-          { key: 'planned_seafreight', status: 'planned_seafreight', value: stats.planned_seafreight, label: 'Planned Seafreight', icon: '\u{1F6A2}', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
-          { key: 'in_transit_airfreight', status: 'in_transit_airfreight', value: stats.in_transit_airfreight, label: 'In Transit Air', icon: '\u2708\uFE0F', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
-          { key: 'in_transit_roadway', status: 'in_transit_roadway', value: stats.in_transit_roadway, label: 'In Transit Road', icon: '\u{1F69B}', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
-          { key: 'in_transit_seaway', status: 'in_transit_seaway', value: stats.in_transit_seaway, label: 'In Transit Sea', icon: '\u{1F30A}', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
-          { key: 'moored', status: 'moored', value: stats.moored, label: 'Moored', icon: '\u2693', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
-          { key: 'berth_working', status: 'berth_working', value: stats.berth_working, label: 'Berth Working', icon: '\u{1F3D7}\uFE0F', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
-          { key: 'berth_complete', status: 'berth_complete', value: stats.berth_complete, label: 'Berth Complete', icon: '\u2705', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
-          { key: 'arrived_pta', status: 'arrived_pta', value: stats.arrived_pta, label: 'Arrived PTA', icon: '\u{1F3E2}', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
-          { key: 'arrived_klm', status: 'arrived_klm', value: stats.arrived_klm, label: 'Arrived KLM', icon: '\u{1F3E2}', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
-          { key: 'unloading', status: 'unloading', value: stats.unloading, label: 'Unloading', icon: '\u{1F4E6}', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
-          { key: 'inspection_pending', status: 'inspection_pending', value: stats.inspection_pending, label: 'Inspection Pending', icon: '\u{1F50D}', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
-          { key: 'inspecting', status: 'inspecting', value: stats.inspecting, label: 'Inspecting', icon: '\u{1F50D}', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
-          { key: 'inspection_failed', status: 'inspection_failed', value: stats.inspection_failed, label: 'Inspection Failed', icon: '\u274C', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
-          { key: 'inspection_passed', status: 'inspection_passed', value: stats.inspection_passed, label: 'Inspection Passed', icon: '\u2705', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
-          { key: 'receiving', status: 'receiving', value: stats.receiving, label: 'Receiving', icon: '\u{1F4E5}', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
-          { key: 'received', status: 'received', value: stats.received, label: 'Received', icon: '\u2705', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
-          { key: 'stored', status: 'stored', value: stats.stored, label: 'Stored', icon: '\u{1F3EA}', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
-          { key: 'delayed', status: 'delayed', value: stats.delayed, label: 'Delayed', icon: '\u26A0\uFE0F', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
-          { key: 'cancelled', status: 'cancelled', value: stats.cancelled, label: 'Cancelled', icon: '\u274C', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
-        ]
-          .filter(card => card.status === null || card.value > 0)
-          .map(card => (
+        {statCards.map(card => (
             <div key={card.key}
               className={`stat-card ${card.ring} clickable ${statusFilter === card.status ? 'active' : ''}`}
               onClick={() => card.status === null ? clearStatusFilter() : handleStatusCardClick(card.status)}

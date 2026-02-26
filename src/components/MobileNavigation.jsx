@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { VIEW_ROUTES } from '../routes';
 import './MobileNavigation.css';
 
 /**
@@ -8,23 +10,29 @@ import './MobileNavigation.css';
  * - Hamburger menu for mobile (< 768px)
  * - Bottom tab navigation for quick access
  * - Responsive and touch-friendly
- * - Active state tracking
+ * - Active state tracking via URL
  * - Sidebar menu for full navigation
  */
 
-export function MobileNavigation({ activeView, onNavigate }) {
+export function MobileNavigation() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const navItems = [
-    { id: 'shipping', label: 'Shipments', icon: '📦' },
-    { id: 'products', label: 'Products', icon: '📊' },
-    { id: 'warehouse', label: 'Warehouse', icon: '🏪' },
-    { id: 'reports', label: 'Reports', icon: '📈' },
-    { id: 'admin', label: 'Admin', icon: '⚙️' }
+    { id: 'shipping', label: 'Shipments', icon: '\u{1F4E6}' },
+    { id: 'reports', label: 'Reports', icon: '\u{1F4C8}' },
+    { id: 'stored', label: 'Warehouse', icon: '\u{1F3EA}' },
+    { id: 'suppliers', label: 'Suppliers', icon: '\u{1F3E2}' },
+    { id: 'dashboard', label: 'Dashboard', icon: '\u{1F4CA}' }
   ];
 
+  const activeView = Object.entries(VIEW_ROUTES).find(
+    ([, path]) => location.pathname === path
+  )?.[0] || 'shipping';
+
   const handleNavigation = (viewId) => {
-    onNavigate(viewId);
+    navigate(VIEW_ROUTES[viewId] || '/shipping');
     setSidebarOpen(false);
   };
 
@@ -37,12 +45,12 @@ export function MobileNavigation({ activeView, onNavigate }) {
           onClick={() => setSidebarOpen(!sidebarOpen)}
           aria-label="Toggle navigation menu"
         >
-          ☰
+          {'\u2630'}
         </button>
         <h1 className="header-title">Synercore</h1>
         <div className="header-actions">
           <button className="header-icon-btn" aria-label="Notifications">
-            🔔
+            {'\u{1F514}'}
           </button>
         </div>
       </header>
@@ -56,7 +64,7 @@ export function MobileNavigation({ activeView, onNavigate }) {
             onClick={() => setSidebarOpen(false)}
             aria-label="Close navigation"
           >
-            ✕
+            {'\u2715'}
           </button>
         </div>
 
@@ -75,7 +83,7 @@ export function MobileNavigation({ activeView, onNavigate }) {
 
         <div className="sidebar-footer">
           <button className="nav-link logout-btn">
-            <span className="nav-icon">🚪</span>
+            <span className="nav-icon">{'\u{1F6AA}'}</span>
             <span className="nav-label">Logout</span>
           </button>
         </div>
@@ -121,7 +129,7 @@ export function MobileHeader({ title, onMenuClick, actions }) {
         onClick={onMenuClick}
         aria-label="Toggle navigation menu"
       >
-        ☰
+        {'\u2630'}
       </button>
       <h1 className="header-title">{title}</h1>
       <div className="header-actions">
@@ -179,7 +187,7 @@ export function SidebarNavigation({ items, activeItem, onItemClick, isOpen, onCl
             onClick={onClose}
             aria-label="Close navigation"
           >
-            ✕
+            {'\u2715'}
           </button>
         </div>
 

@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, lazy, Suspense } from 'react';
 import NotificationContainer from '../components/NotificationContainer';
-import ConfirmationModal from '../components/ConfirmationModal';
+
+const ConfirmationModal = lazy(() => import('../components/ConfirmationModal'));
 
 const NotificationContext = createContext(null);
 
@@ -66,20 +67,31 @@ export function NotificationProvider({ children }) {
         onRemoveNotification={removeNotification}
       />
       {confirmation && (
-        <ConfirmationModal
-          title={confirmation.title}
-          message={confirmation.message}
-          confirmText={confirmation.confirmText}
-          cancelText={confirmation.cancelText}
-          type={confirmation.type}
-          onConfirm={handleConfirm}
-          onCancel={handleCancel}
-        />
+        <Suspense fallback={null}>
+          <ConfirmationModal
+            title={confirmation.title}
+            message={confirmation.message}
+            confirmText={confirmation.confirmText}
+            cancelText={confirmation.cancelText}
+            type={confirmation.type}
+            onConfirm={handleConfirm}
+            onCancel={handleCancel}
+          />
+        </Suspense>
       )}
     </NotificationContext.Provider>
   );
 }
 
+/**
+ * @typedef {Object} NotificationAPI
+ * @property {(message: string, options?: Object) => void} showSuccess
+ * @property {(message: string, options?: Object) => void} showError
+ * @property {(message: string, options?: Object) => void} showWarning
+ * @property {(message: string, options?: Object) => void} showInfo
+ * @property {(opts: {title?: string, message?: string, confirmText?: string, cancelText?: string, type?: 'default'|'warning'|'danger'|'success'}) => Promise<boolean>} confirm
+ */
+/** @returns {NotificationAPI} */
 export function useNotification() {
   const context = useContext(NotificationContext);
   if (!context) {
