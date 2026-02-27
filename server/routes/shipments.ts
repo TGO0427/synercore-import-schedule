@@ -15,6 +15,7 @@ import ShipmentController, {
 } from '../controllers/ShipmentController.js';
 import { ShipmentsController } from '../controllers/shipmentsController.js';
 import type { BodyRequest } from '../types/api.js';
+import { AuditRepository } from '../db/repositories/AuditRepository.ts';
 
 const router = Router();
 
@@ -188,6 +189,11 @@ router.post(
       selectedWeekDate
     });
 
+    const user = (req as any).user;
+    if (user) {
+      AuditRepository.logAudit(user.id, user.username || user.email, 'create', 'shipment', shipment.id, shipment.orderRef || orderRef, { orderRef, supplier, quantity });
+    }
+
     res.status(201).json({
       data: shipment,
       message: 'Shipment created successfully'
@@ -288,6 +294,148 @@ router.get(
 );
 
 /**
+ * GET /api/shipments/search
+ * Full-text search across shipments
+ */
+router.get(
+  '/search',
+  asyncHandler(async (req: Request, res: Response) => {
+    const q = (req.query.q as string || '').trim();
+    if (!q) {
+      return res.json({ data: [], total: 0 });
+    }
+
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 20, 100);
+    const offset = parseInt(req.query.offset as string, 10) || 0;
+
+    // Use plainto_tsquery for user-friendly input (no special syntax required)
+    const pool = (await import('../db/connection.js')).default;
+
+    const result = await pool.query(
+      `SELECT *, ts_rank(search_vector, plainto_tsquery('english', $1)) AS rank
+       FROM shipments
+       WHERE search_vector @@ plainto_tsquery('english', $1)
+          OR order_ref ILIKE $2
+          OR supplier ILIKE $2
+          OR product_name ILIKE $2
+          OR vessel_name ILIKE $2
+       ORDER BY rank DESC, updated_at DESC
+       LIMIT $3 OFFSET $4`,
+      [q, `%${q}%`, limit, offset]
+    );
+
+    const countResult = await pool.query(
+      `SELECT COUNT(*) FROM shipments
+       WHERE search_vector @@ plainto_tsquery('english', $1)
+          OR order_ref ILIKE $2
+          OR supplier ILIKE $2
+          OR product_name ILIKE $2
+          OR vessel_name ILIKE $2`,
+      [q, `%${q}%`]
+    );
+
+    res.json({
+      data: result.rows,
+      total: parseInt(countResult.rows[0].count, 10),
+      query: q
+    });
+  })
+);
+
+/**
+ * POST /api/shipments/bulk/archive
+ * Archive multiple shipments
+ */
+router.post(
+  '/bulk/archive',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+
+    const results: Array<{ id: string; success: boolean; error?: string }> = [];
+    for (const id of ids) {
+      try {
+        const shipment = await ShipmentController.archiveShipment(id);
+        results.push({ id, success: true });
+
+        const user = (req as any).user;
+        if (user) {
+          AuditRepository.logAudit(user.id, user.username || user.email, 'archive', 'shipment', id, shipment.orderRef || id, { bulkAction: true });
+        }
+      } catch (err) {
+        results.push({ id, success: false, error: (err as Error).message });
+      }
+    }
+
+    res.json({ results, archived: results.filter(r => r.success).length, failed: results.filter(r => !r.success).length });
+  })
+);
+
+/**
+ * POST /api/shipments/bulk/delete
+ * Delete multiple shipments
+ */
+router.post(
+  '/bulk/delete',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+
+    const results: Array<{ id: string; success: boolean; error?: string }> = [];
+    for (const id of ids) {
+      try {
+        await ShipmentController.deleteShipment(id);
+        results.push({ id, success: true });
+
+        const user = (req as any).user;
+        if (user) {
+          AuditRepository.logAudit(user.id, user.username || user.email, 'delete', 'shipment', id, id, { bulkAction: true });
+        }
+      } catch (err) {
+        results.push({ id, success: false, error: (err as Error).message });
+      }
+    }
+
+    res.json({ results, deleted: results.filter(r => r.success).length, failed: results.filter(r => !r.success).length });
+  })
+);
+
+/**
+ * POST /api/shipments/bulk/restore
+ * Restore multiple shipments from archive
+ */
+router.post(
+  '/bulk/restore',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+
+    const results: Array<{ id: string; success: boolean; error?: string }> = [];
+    for (const id of ids) {
+      try {
+        const shipment = await ShipmentController.unarchiveShipment(id);
+        results.push({ id, success: true });
+
+        const user = (req as any).user;
+        if (user) {
+          AuditRepository.logAudit(user.id, user.username || user.email, 'restore', 'shipment', id, shipment.orderRef || id, { bulkAction: true });
+        }
+      } catch (err) {
+        results.push({ id, success: false, error: (err as Error).message });
+      }
+    }
+
+    res.json({ results, restored: results.filter(r => r.success).length, failed: results.filter(r => !r.success).length });
+  })
+);
+
+/**
  * GET /api/shipments/:id
  * Get single shipment by ID
  */
@@ -313,6 +461,11 @@ router.put(
     if (!handleValidationErrors(req, res)) return;
 
     const shipment = await ShipmentController.updateShipment(req.params.id!, req.body);
+
+    const user = (req as any).user;
+    if (user) {
+      AuditRepository.logAudit(user.id, user.username || user.email, 'update', 'shipment', req.params.id!, shipment.orderRef || req.params.id!, req.body);
+    }
 
     res.status(200).json({
       data: shipment,
@@ -377,6 +530,11 @@ router.delete(
   asyncHandler(async (req: Request, res: Response) => {
     await ShipmentController.deleteShipment(req.params.id!);
 
+    const user = (req as any).user;
+    if (user) {
+      AuditRepository.logAudit(user.id, user.username || user.email, 'delete', 'shipment', req.params.id!, req.params.id!, null);
+    }
+
     res.status(200).json({
       message: 'Shipment deleted successfully'
     });
@@ -391,6 +549,11 @@ router.post(
   '/:id/archive',
   asyncHandler(async (req: Request, res: Response) => {
     const shipment = await ShipmentController.archiveShipment(req.params.id!);
+
+    const user = (req as any).user;
+    if (user) {
+      AuditRepository.logAudit(user.id, user.username || user.email, 'archive', 'shipment', req.params.id!, shipment.orderRef || req.params.id!, { status: 'archived' });
+    }
 
     res.status(200).json({
       data: shipment,
@@ -408,9 +571,35 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const shipment = await ShipmentController.unarchiveShipment(req.params.id!);
 
+    const user = (req as any).user;
+    if (user) {
+      AuditRepository.logAudit(user.id, user.username || user.email, 'restore', 'shipment', req.params.id!, shipment.orderRef || req.params.id!, { status: 'restored' });
+    }
+
     res.status(200).json({
       data: shipment,
       message: 'Shipment unarchived successfully'
+    });
+  })
+);
+
+/**
+ * POST /api/shipments/:id/restore
+ * Restore shipment from archive (alias for unarchive)
+ */
+router.post(
+  '/:id/restore',
+  asyncHandler(async (req: Request, res: Response) => {
+    const shipment = await ShipmentController.unarchiveShipment(req.params.id!);
+
+    const user = (req as any).user;
+    if (user) {
+      AuditRepository.logAudit(user.id, user.username || user.email, 'restore', 'shipment', req.params.id!, shipment.orderRef || req.params.id!, { status: 'restored from archive' });
+    }
+
+    res.status(200).json({
+      data: shipment,
+      message: 'Shipment restored successfully'
     });
   })
 );

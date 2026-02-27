@@ -29,6 +29,7 @@ const ImportCosting = lazy(() => import('./components/ImportCosting'));
 const CostingRequests = lazy(() => import('./components/CostingRequests'));
 const GlobalSearch = lazy(() => import('./components/GlobalSearch'));
 const LiveBoard = lazy(() => import('./components/LiveBoard'));
+const AuditLog = lazy(() => import('./components/AuditLog'));
 import SupplierLogin from './pages/SupplierLogin';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -107,6 +108,16 @@ function App() {
     resources: false,
   });
   const toggleSection = (key) => setSidebarSections(prev => ({ ...prev, [key]: !prev[key] }));
+
+  // Theme
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('synercore_theme') || 'light';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('synercore_theme', theme);
+  }, [theme]);
 
   // WebSocket integration
   const { isConnected: wsConnected, onShipmentUpdate, onDocumentUpload } = useWebSocket();
@@ -224,6 +235,7 @@ function App() {
     if (path === '/reports') return 'reports';
     if (path === '/advanced-reports') return 'advanced-reports';
     if (path === '/users') return 'users';
+    if (path === '/audit') return 'audit';
     return 'shipping';
   })();
 
@@ -313,6 +325,7 @@ function App() {
             costingRequests: { label: 'Cost Requests', icon: '\u{1F4CB}', view: 'costing-requests', adminOnly: true, badge: costingRequestCount },
             reports: { label: 'Reports', icon: '\u{1F4CA}', view: 'reports' },
             advancedReports: { label: 'Advanced Reports', icon: '\u{1F4C8}', view: 'advanced-reports' },
+            audit: { label: 'Activity Log', icon: '\u{1F4DD}', view: 'audit', adminOnly: true },
           };
 
           const match = (label) => !q || label.toLowerCase().includes(q);
@@ -377,7 +390,7 @@ function App() {
               {renderSection('Master Data', 'masterData', ['suppliers'])}
               {renderSection('Operations', 'operations', ['shipping', 'workflow', 'capacity', 'stored', 'archives'])}
               {renderSection('Finance', 'finance', ['rates', 'costing', 'costingRequests'])}
-              {renderSection('Reports', 'reports', ['reports', 'advancedReports'])}
+              {renderSection('Reports', 'reports', ['reports', 'advancedReports', 'audit'])}
 
               {!sidebarCollapsed && (!q || resourcesVisible.length > 0) && (
                 <div className="sidebar-resources">
@@ -425,6 +438,9 @@ function App() {
 
         {/* Footer */}
         <div className="sidebar-footer">
+          <button className="nav-item" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} title={sidebarCollapsed ? (theme === 'dark' ? 'Light Mode' : 'Dark Mode') : undefined}>
+            <span className="nav-icon">{theme === 'dark' ? '\u2600\uFE0F' : '\u{1F319}'}</span> <span className="nav-label">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+          </button>
           <button className="nav-item" onClick={() => setHelpOpen(true)} title={sidebarCollapsed ? 'Help & Guide' : undefined}>
             <span className="nav-icon">{'\u{1F4DA}'}</span> <span className="nav-label">Help & Guide</span>
           </button>
@@ -573,6 +589,9 @@ function App() {
             } />
             <Route path="/users" element={
               <Suspense fallback={<PageLoader />}>{isAdmin ? <UserManagement /> : <AccessDenied />}</Suspense>
+            } />
+            <Route path="/audit" element={
+              <Suspense fallback={<PageLoader />}>{isAdmin ? <AuditLog /> : <AccessDenied />}</Suspense>
             } />
             <Route path="/" element={<Navigate to="/shipping" replace />} />
             <Route path="*" element={<Navigate to="/shipping" replace />} />

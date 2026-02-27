@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
+import FilterPresetBar from './FilterPresetBar';
 import { jsPDF } from 'jspdf';
 import { applyPlugin } from 'jspdf-autotable';
 applyPlugin(jsPDF);
@@ -259,6 +260,14 @@ function AdvancedReports() {
     }));
   };
 
+  const advancedCurrentFilters = { filters, aggregation, visualization };
+
+  const handleLoadPreset = (preset) => {
+    if (preset.filters !== undefined) setFilters(preset.filters);
+    if (preset.aggregation !== undefined) setAggregation(preset.aggregation);
+    if (preset.visualization !== undefined) setVisualization(preset.visualization);
+  };
+
   // Reset filters
   const resetFilters = () => {
     setFilters({
@@ -445,6 +454,12 @@ function AdvancedReports() {
         <h2>Advanced Reports</h2>
         <p>Custom filters, aggregations, and data analysis</p>
       </div>
+
+      <FilterPresetBar
+        viewName="advanced-reports"
+        currentFilters={advancedCurrentFilters}
+        onLoadPreset={handleLoadPreset}
+      />
 
       <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '20px' }}>
         {/* Filters Panel */}

@@ -106,6 +106,8 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
   const [showOrderDetailsModal, setShowOrderDetailsModal] = useState(false);
   const [orderDetailsShipment, setOrderDetailsShipment] = useState(null);
   const [edits, setEdits] = useState({}); // Track unsaved changes per shipment
+  const [formErrors, setFormErrors] = useState({});
+  const [amendFormErrors, setAmendFormErrors] = useState({});
   const [newShipment, setNewShipment] = useState({
     supplier: '',
     orderRef: '',
@@ -122,6 +124,15 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
     incoterm: '',
     notes: ''
   });
+
+  // Mobile responsiveness
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Auto-save add shipment form
   const { clearDraft: clearNewShipmentDraft } = useFormDraft(
@@ -529,8 +540,10 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
   };
 
   const handleAddShipment = async () => {
-    if (!newShipment.supplier || !newShipment.orderRef || !newShipment.finalPod) {
-      showWarning('Please fill in at least Supplier, Order/Ref, and Final POD fields.');
+    const errors = validateShipmentForm(newShipment);
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      showWarning('Please fix the validation errors before submitting.');
       return;
     }
 
@@ -580,6 +593,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
       setProductLines([{ name: '', qty: '' }]);
       setShowCustomSupplier(false);
       setNewShipmentSelectedWeekDate(null);
+      setFormErrors({});
       setShowAddShipmentDialog(false);
     } catch (error) {
       console.error('Error adding shipment:', error);
@@ -599,6 +613,27 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
       setShowCustomSupplier(false);
       setNewShipment(prev => ({ ...prev, supplier: value }));
     }
+  };
+
+  const validateShipmentForm = (data) => {
+    const errors = {};
+    if (!data.orderRef?.trim()) errors.orderRef = 'Order reference is required';
+    if (!data.supplier?.trim()) errors.supplier = 'Supplier is required';
+    if (!data.finalPod?.trim()) errors.finalPod = 'Final POD is required';
+    if (data.quantity !== undefined && data.quantity !== null && data.quantity !== '') {
+      if (isNaN(data.quantity) || Number(data.quantity) < 0) errors.quantity = 'Quantity must be a positive number';
+    }
+    if (data.weekNumber !== undefined && data.weekNumber !== null && data.weekNumber !== '') {
+      const wn = Number(data.weekNumber);
+      if (isNaN(wn) || wn < 1 || wn > 53) errors.weekNumber = 'Week number must be 1-53';
+    }
+    if (data.palletQty !== undefined && data.palletQty !== null && data.palletQty !== '') {
+      if (isNaN(data.palletQty) || Number(data.palletQty) < 0) errors.palletQty = 'Pallet quantity must be a positive number';
+    }
+    if (data.cbm !== undefined && data.cbm !== null && data.cbm !== '') {
+      if (isNaN(data.cbm) || Number(data.cbm) < 0) errors.cbm = 'CBM must be a positive number';
+    }
+    return errors;
   };
 
   const handleNewShipmentWeekUpdate = (weekNumber, selectedDate) => {
@@ -629,8 +664,10 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
   };
 
   const handleSaveAmendment = async () => {
-    if (!amendingShipment.supplier || !amendingShipment.orderRef || !amendingShipment.finalPod) {
-      showWarning('Please fill in at least Supplier, Order/Ref, and Final POD fields.');
+    const errors = validateShipmentForm(amendingShipment);
+    setAmendFormErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      showWarning('Please fix the validation errors before saving.');
       return;
     }
 
@@ -661,6 +698,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
       setShowAmendShipmentDialog(false);
       setAmendingShipment(null);
       setAmendShipmentSelectedWeekDate(null);
+      setAmendFormErrors({});
     } catch (error) {
       console.error('Error amending shipment:', error);
       showError('Failed to amend shipment. Please try again.');
@@ -737,8 +775,61 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
     setSelectedShipments(arrivedShipments.map(s => s.id));
   };
 
+  const handleSelectAll = () => {
+    setSelectedShipments(filteredAndSortedShipments.map(s => s.id));
+  };
+
   const handleClearSelection = () => {
     setSelectedShipments([]);
+  };
+
+  const handleBulkArchive = async () => {
+    if (selectedShipments.length === 0) return;
+    if (!confirm(`Archive ${selectedShipments.length} shipments?`)) return;
+    try {
+      const res = await authFetch(getApiUrl('/api/shipments/bulk/archive'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedShipments })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        showSuccess(`Archived ${data.archived} shipment(s)${data.failed > 0 ? `, ${data.failed} failed` : ''}`);
+        setSelectedShipments([]);
+        if (typeof onDeleteShipment === 'function') {
+          // Trigger a full refresh by calling onDeleteShipment which will cause the parent to refetch
+          window.location.reload();
+        }
+      } else {
+        showError('Failed to archive shipments');
+      }
+    } catch (err) {
+      showError('Error archiving shipments');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedShipments.length === 0) return;
+    if (!confirm(`Delete ${selectedShipments.length} shipments? This cannot be undone.`)) return;
+    try {
+      const res = await authFetch(getApiUrl('/api/shipments/bulk/delete'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedShipments })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        showSuccess(`Deleted ${data.deleted} shipment(s)${data.failed > 0 ? `, ${data.failed} failed` : ''}`);
+        setSelectedShipments([]);
+        if (typeof onDeleteShipment === 'function') {
+          window.location.reload();
+        }
+      } else {
+        showError('Failed to delete shipments');
+      }
+    } catch (err) {
+      showError('Error deleting shipments');
+    }
   };
 
   const performManualArchive = async () => {
@@ -971,6 +1062,111 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
         </button>
       </div>
 
+      {/* Bulk action toolbar */}
+      {selectedShipments.length > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px',
+          background: 'var(--accent-100, #dbeafe)', borderRadius: '8px', marginBottom: '12px',
+          border: '1px solid var(--accent, #3b82f6)'
+        }}>
+          <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{selectedShipments.length} selected</span>
+          <button className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '6px 12px' }}
+            onClick={handleBulkArchive}>Archive Selected</button>
+          <button className="btn btn-danger" style={{ fontSize: '0.8rem', padding: '6px 12px', background: '#dc2626', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}
+            onClick={handleBulkDelete}>Delete Selected</button>
+          <button className="btn btn-ghost" style={{ fontSize: '0.8rem', padding: '6px 12px' }}
+            onClick={handleClearSelection}>Clear Selection</button>
+        </div>
+      )}
+
+      {/* Mobile card layout */}
+      {isMobile && (
+        <div className="mobile-card-list">
+          {filteredAndSortedShipments.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-500)' }}>
+              No shipments found
+            </div>
+          ) : (
+            filteredAndSortedShipments.map(shipment => {
+              const progress = getShippingProgress(shipment.latestStatus);
+              return (
+                <div key={shipment.id} className="mobile-shipment-card">
+                  <div className="card-header">
+                    <span className="order-ref">{shipment.orderRef}</span>
+                    <select
+                      value={shipment.latestStatus}
+                      onChange={(e) => handleStatusUpdate(shipment.id, e.target.value)}
+                      className={`select status-badge status-${shipment.latestStatus}`}
+                      style={{
+                        borderRadius: 20, padding: '3px 10px', fontSize: 10,
+                        fontWeight: 600, textTransform: 'uppercase', border: 'none', minWidth: 80,
+                      }}
+                    >
+                      <option value={ShipmentStatus.PLANNED_AIRFREIGHT}>Planned Air</option>
+                      <option value={ShipmentStatus.PLANNED_SEAFREIGHT}>Planned Sea</option>
+                      <option value={ShipmentStatus.IN_TRANSIT_AIRFREIGHT}>In Transit Air</option>
+                      <option value={ShipmentStatus.AIR_CUSTOMS_CLEARANCE}>Air Customs</option>
+                      <option value={ShipmentStatus.IN_TRANSIT_ROADWAY}>In Transit Road</option>
+                      <option value={ShipmentStatus.IN_TRANSIT_SEAWAY}>In Transit Sea</option>
+                      <option value={ShipmentStatus.MOORED}>Moored</option>
+                      <option value={ShipmentStatus.BERTH_WORKING}>Berth Working</option>
+                      <option value={ShipmentStatus.BERTH_COMPLETE}>Berth Complete</option>
+                      <option value={ShipmentStatus.ARRIVED_PTA}>Arrived PTA</option>
+                      <option value={ShipmentStatus.ARRIVED_KLM}>Arrived KLM</option>
+                      <option value={ShipmentStatus.ARRIVED_OFFSITE}>Arrived OffSite</option>
+                      <option value={ShipmentStatus.DELAYED}>Delayed</option>
+                      <option value={ShipmentStatus.CANCELLED}>Cancelled</option>
+                    </select>
+                  </div>
+                  <dl className="card-details">
+                    <dt>Supplier</dt><dd>{shipment.supplier || '-'}</dd>
+                    <dt>Destination</dt><dd>{shipment.finalPod || '-'}</dd>
+                    <dt>Pallets</dt><dd>{shipment.palletQty ? Math.round(shipment.palletQty) : '-'}</dd>
+                    <dt>Week</dt><dd>{shipment.weekNumber || '-'}</dd>
+                    <dt>Vessel / AWB</dt><dd>{shipment.vesselName || '-'}</dd>
+                    <dt>Agent</dt><dd>{shipment.forwardingAgent || '-'}</dd>
+                  </dl>
+                  {/* Progress bar */}
+                  {shipment.latestStatus !== 'delayed' && shipment.latestStatus !== 'cancelled' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: 8 }}>
+                      <div style={{ display: 'flex', gap: '2px', flex: 1 }}>
+                        {[1,2,3,4,5].map(step => (
+                          <div key={step} style={{
+                            height: '5px', flex: 1, borderRadius: '3px',
+                            backgroundColor: step <= progress.current ? 'var(--accent)' : 'var(--border)',
+                          }} />
+                        ))}
+                      </div>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-500)' }}>
+                        {progress.current}/{progress.total}
+                      </span>
+                    </div>
+                  )}
+                  <div className="card-actions">
+                    <button
+                      className="btn btn-ghost"
+                      onClick={() => { setOrderDetailsShipment(shipment); setShowOrderDetailsModal(true); }}
+                      style={{ fontSize: 12, padding: '6px 12px' }}
+                    >
+                      Details
+                    </button>
+                    <button
+                      className="btn btn-ghost"
+                      onClick={() => handleAmendShipment(shipment)}
+                      style={{ fontSize: 12, padding: '6px 12px' }}
+                    >
+                      Amend
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {/* Desktop table layout */}
+      {!isMobile && (
       <div style={{
         overflow: 'auto',
         maxHeight: 'calc(100vh - 260px)',
@@ -982,9 +1178,9 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               <th style={{ width: 36, textAlign: 'center' }}>
                 <input
                   type="checkbox"
-                  checked={selectedShipments.length > 0 && selectedShipments.length === filteredAndSortedShipments.filter(s => s.latestStatus === 'arrived_pta' || s.latestStatus === 'arrived_klm' || s.latestStatus === 'arrived_offsite').length}
-                  onChange={(e) => e.target.checked ? handleSelectAllArrived() : handleClearSelection()}
-                  title="Select all ARRIVED shipments"
+                  checked={selectedShipments.length > 0 && selectedShipments.length === filteredAndSortedShipments.length}
+                  onChange={(e) => e.target.checked ? handleSelectAll() : handleClearSelection()}
+                  title="Select all shipments"
                 />
               </th>
               {[
@@ -1025,14 +1221,12 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   backgroundColor: isDelayed(shipment) ? '#fef2f2' : undefined,
                 }}>
                   <td style={{ width: 36, textAlign: 'center' }}>
-                    {(shipment.latestStatus === 'arrived_pta' || shipment.latestStatus === 'arrived_klm' || shipment.latestStatus === 'arrived_offsite') && (
-                      <input
-                        type="checkbox"
-                        checked={selectedShipments.includes(shipment.id)}
-                        onChange={(e) => handleShipmentSelect(shipment.id, e.target.checked)}
-                        title="Select for manual archive"
-                      />
-                    )}
+                    <input
+                      type="checkbox"
+                      checked={selectedShipments.includes(shipment.id)}
+                      onChange={(e) => handleShipmentSelect(shipment.id, e.target.checked)}
+                      title="Select shipment"
+                    />
                   </td>
                   <td>
                     <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-900)' }}>{shipment.supplier}</span>
@@ -1267,7 +1461,8 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
           </tbody>
         </table>
       </div>
-      
+      )}
+
       {/* Add Shipment Dialog */}
       {showAddShipmentDialog && (
         <ResizableModal
@@ -1276,6 +1471,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
           onClose={() => {
             setShowCustomSupplier(false);
             setNewShipmentSelectedWeekDate(null);
+            setFormErrors({});
             setShowAddShipmentDialog(false);
           }}
           initialWidth={650}
@@ -1290,8 +1486,9 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 {!showCustomSupplier ? (
                   <select
                     value={newShipment.supplier}
-                    onChange={(e) => handleSupplierChange(e.target.value)}
+                    onChange={(e) => { handleSupplierChange(e.target.value); setFormErrors(prev => ({ ...prev, supplier: undefined })); }}
                     className="select"
+                    style={formErrors.supplier ? { border: '1px solid var(--danger)' } : undefined}
                   >
                     <option value="">Select a supplier...</option>
                     {uniqueSuppliers.map(supplier => (
@@ -1304,10 +1501,11 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                     <input
                       type="text"
                       value={newShipment.supplier}
-                      onChange={(e) => handleInputChange('supplier', e.target.value)}
+                      onChange={(e) => { handleInputChange('supplier', e.target.value); setFormErrors(prev => ({ ...prev, supplier: undefined })); }}
                       className="input"
                       style={{
-                        flex: 1
+                        flex: 1,
+                        ...(formErrors.supplier ? { border: '1px solid var(--danger)' } : {})
                       }}
                       placeholder="Enter new supplier name"
                       autoFocus
@@ -1333,8 +1531,9 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                     </button>
                   </div>
                 )}
+                {formErrors.supplier && <div style={{ color: 'var(--danger)', fontSize: '0.75rem', marginTop: '2px' }}>{formErrors.supplier}</div>}
               </div>
-              
+
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Order/Ref *
@@ -1342,10 +1541,12 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 <input
                   type="text"
                   value={newShipment.orderRef}
-                  onChange={(e) => handleInputChange('orderRef', e.target.value)}
+                  onChange={(e) => { handleInputChange('orderRef', e.target.value); setFormErrors(prev => ({ ...prev, orderRef: undefined })); }}
                   className="input"
+                  style={formErrors.orderRef ? { border: '1px solid var(--danger)' } : undefined}
                   placeholder="Order reference"
                 />
+                {formErrors.orderRef && <div style={{ color: 'var(--danger)', fontSize: '0.75rem', marginTop: '2px' }}>{formErrors.orderRef}</div>}
               </div>
               
               <div>
@@ -1355,12 +1556,14 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 <input
                   type="text"
                   value={newShipment.finalPod}
-                  onChange={(e) => handleInputChange('finalPod', e.target.value)}
+                  onChange={(e) => { handleInputChange('finalPod', e.target.value); setFormErrors(prev => ({ ...prev, finalPod: undefined })); }}
                   className="input"
+                  style={formErrors.finalPod ? { border: '1px solid var(--danger)' } : undefined}
                   placeholder="Port of discharge"
                 />
+                {formErrors.finalPod && <div style={{ color: 'var(--danger)', fontSize: '0.75rem', marginTop: '2px' }}>{formErrors.finalPod}</div>}
               </div>
-              
+
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Status
@@ -1506,14 +1709,16 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   type="number"
                   step="0.01"
                   value={newShipment.cbm}
-                  onChange={(e) => handleInputChange('cbm', e.target.value)}
+                  onChange={(e) => { handleInputChange('cbm', e.target.value); setFormErrors(prev => ({ ...prev, cbm: undefined })); }}
                   className="input"
                   style={{
-                    width: '100%'
+                    width: '100%',
+                    ...(formErrors.cbm ? { border: '1px solid var(--danger)' } : {})
                   }}
                   placeholder="Cubic meters (optional)"
                   min="0"
                 />
+                {formErrors.cbm && <div style={{ color: 'var(--danger)', fontSize: '0.75rem', marginTop: '2px' }}>{formErrors.cbm}</div>}
               </div>
 
               <div>
@@ -1524,16 +1729,18 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   type="number"
                   step="0.01"
                   value={newShipment.palletQty}
-                  onChange={(e) => handleInputChange('palletQty', e.target.value)}
+                  onChange={(e) => { handleInputChange('palletQty', e.target.value); setFormErrors(prev => ({ ...prev, palletQty: undefined })); }}
                   className="input"
                   style={{
-                    width: '100%'
+                    width: '100%',
+                    ...(formErrors.palletQty ? { border: '1px solid var(--danger)' } : {})
                   }}
                   placeholder="Pallet quantity"
                   min="0"
                 />
+                {formErrors.palletQty && <div style={{ color: 'var(--danger)', fontSize: '0.75rem', marginTop: '2px' }}>{formErrors.palletQty}</div>}
               </div>
-              
+
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
                   Receiving Warehouse
@@ -1662,24 +1869,24 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </button>
               <button
                 onClick={handleAddShipment}
-                disabled={!newShipment.supplier || !newShipment.orderRef || !newShipment.finalPod}
+                disabled={!newShipment.supplier || !newShipment.orderRef || !newShipment.finalPod || Object.values(formErrors).some(Boolean)}
                 style={{
                   padding: '0.75rem 1.5rem',
-                  backgroundColor: (!newShipment.supplier || !newShipment.orderRef || !newShipment.finalPod) ? '#6c757d' : 'var(--success)',
+                  backgroundColor: (!newShipment.supplier || !newShipment.orderRef || !newShipment.finalPod || Object.values(formErrors).some(Boolean)) ? '#6c757d' : 'var(--success)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
-                  cursor: (!newShipment.supplier || !newShipment.orderRef || !newShipment.finalPod) ? 'not-allowed' : 'pointer',
+                  cursor: (!newShipment.supplier || !newShipment.orderRef || !newShipment.finalPod || Object.values(formErrors).some(Boolean)) ? 'not-allowed' : 'pointer',
                   fontSize: '0.9rem',
                   transition: 'background-color 0.2s ease'
                 }}
                 onMouseEnter={(e) => {
-                  if (newShipment.supplier && newShipment.orderRef && newShipment.finalPod) {
+                  if (newShipment.supplier && newShipment.orderRef && newShipment.finalPod && !Object.values(formErrors).some(Boolean)) {
                     e.target.style.backgroundColor = '#218838';
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (newShipment.supplier && newShipment.orderRef && newShipment.finalPod) {
+                  if (newShipment.supplier && newShipment.orderRef && newShipment.finalPod && !Object.values(formErrors).some(Boolean)) {
                     e.target.style.backgroundColor = 'var(--success)';
                   }
                 }}
@@ -1708,6 +1915,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
             setShowAmendShipmentDialog(false);
             setAmendingShipment(null);
             setAmendShipmentSelectedWeekDate(null);
+            setAmendFormErrors({});
           }}
           initialWidth={650}
           minWidth={400}
@@ -1721,13 +1929,15 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 <input
                   type="text"
                   value={amendingShipment.supplier}
-                  onChange={(e) => handleAmendInputChange('supplier', e.target.value)}
+                  onChange={(e) => { handleAmendInputChange('supplier', e.target.value); setAmendFormErrors(prev => ({ ...prev, supplier: undefined })); }}
                   className="input"
                   style={{
-                    width: '100%'
+                    width: '100%',
+                    ...(amendFormErrors.supplier ? { border: '1px solid var(--danger)' } : {})
                   }}
                   placeholder="Supplier name"
                 />
+                {amendFormErrors.supplier && <div style={{ color: 'var(--danger)', fontSize: '0.75rem', marginTop: '2px' }}>{amendFormErrors.supplier}</div>}
               </div>
 
               <div>
@@ -1737,13 +1947,15 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 <input
                   type="text"
                   value={amendingShipment.orderRef}
-                  onChange={(e) => handleAmendInputChange('orderRef', e.target.value)}
+                  onChange={(e) => { handleAmendInputChange('orderRef', e.target.value); setAmendFormErrors(prev => ({ ...prev, orderRef: undefined })); }}
                   className="input"
                   style={{
-                    width: '100%'
+                    width: '100%',
+                    ...(amendFormErrors.orderRef ? { border: '1px solid var(--danger)' } : {})
                   }}
                   placeholder="Order reference"
                 />
+                {amendFormErrors.orderRef && <div style={{ color: 'var(--danger)', fontSize: '0.75rem', marginTop: '2px' }}>{amendFormErrors.orderRef}</div>}
               </div>
 
               <div>
@@ -1753,13 +1965,15 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 <input
                   type="text"
                   value={amendingShipment.finalPod}
-                  onChange={(e) => handleAmendInputChange('finalPod', e.target.value)}
+                  onChange={(e) => { handleAmendInputChange('finalPod', e.target.value); setAmendFormErrors(prev => ({ ...prev, finalPod: undefined })); }}
                   className="input"
                   style={{
-                    width: '100%'
+                    width: '100%',
+                    ...(amendFormErrors.finalPod ? { border: '1px solid var(--danger)' } : {})
                   }}
                   placeholder="Port of discharge"
                 />
+                {amendFormErrors.finalPod && <div style={{ color: 'var(--danger)', fontSize: '0.75rem', marginTop: '2px' }}>{amendFormErrors.finalPod}</div>}
               </div>
 
               <div>
@@ -1881,14 +2095,16 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   type="number"
                   step="0.01"
                   value={amendingShipment.palletQty || ''}
-                  onChange={(e) => handleAmendInputChange('palletQty', e.target.value)}
+                  onChange={(e) => { handleAmendInputChange('palletQty', e.target.value); setAmendFormErrors(prev => ({ ...prev, palletQty: undefined })); }}
                   className="input"
                   style={{
-                    width: '100%'
+                    width: '100%',
+                    ...(amendFormErrors.palletQty ? { border: '1px solid var(--danger)' } : {})
                   }}
                   placeholder="Pallet quantity"
                   min="0"
                 />
+                {amendFormErrors.palletQty && <div style={{ color: 'var(--danger)', fontSize: '0.75rem', marginTop: '2px' }}>{amendFormErrors.palletQty}</div>}
               </div>
 
               <div>
@@ -2043,24 +2259,24 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               </button>
               <button
                 onClick={handleSaveAmendment}
-                disabled={!amendingShipment.supplier || !amendingShipment.orderRef || !amendingShipment.finalPod}
+                disabled={!amendingShipment.supplier || !amendingShipment.orderRef || !amendingShipment.finalPod || Object.values(amendFormErrors).some(Boolean)}
                 style={{
                   padding: '0.75rem 1.5rem',
-                  backgroundColor: (!amendingShipment.supplier || !amendingShipment.orderRef || !amendingShipment.finalPod) ? '#6c757d' : 'var(--info)',
+                  backgroundColor: (!amendingShipment.supplier || !amendingShipment.orderRef || !amendingShipment.finalPod || Object.values(amendFormErrors).some(Boolean)) ? '#6c757d' : 'var(--info)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
-                  cursor: (!amendingShipment.supplier || !amendingShipment.orderRef || !amendingShipment.finalPod) ? 'not-allowed' : 'pointer',
+                  cursor: (!amendingShipment.supplier || !amendingShipment.orderRef || !amendingShipment.finalPod || Object.values(amendFormErrors).some(Boolean)) ? 'not-allowed' : 'pointer',
                   fontSize: '0.9rem',
                   transition: 'background-color 0.2s ease'
                 }}
                 onMouseEnter={(e) => {
-                  if (amendingShipment.supplier && amendingShipment.orderRef && amendingShipment.finalPod) {
+                  if (amendingShipment.supplier && amendingShipment.orderRef && amendingShipment.finalPod && !Object.values(amendFormErrors).some(Boolean)) {
                     e.target.style.backgroundColor = '#0056b3';
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (amendingShipment.supplier && amendingShipment.orderRef && amendingShipment.finalPod) {
+                  if (amendingShipment.supplier && amendingShipment.orderRef && amendingShipment.finalPod && !Object.values(amendFormErrors).some(Boolean)) {
                     e.target.style.backgroundColor = 'var(--info)';
                   }
                 }}

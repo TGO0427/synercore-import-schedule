@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import db from '../db/connection.ts';
 
 const router = Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -219,6 +220,123 @@ router.get('/', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error fetching reports:', error);
     res.status(500).json({ error: 'Failed to fetch reports' });
+  }
+});
+
+// --- Scheduled Reports CRUD ---
+
+/**
+ * GET /api/reports/scheduled - Get user's scheduled reports
+ */
+router.get('/scheduled', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    const result = await db.query(
+      'SELECT * FROM scheduled_reports WHERE user_id = $1 ORDER BY created_at DESC',
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching scheduled reports:', error);
+    res.status(500).json({ error: 'Failed to fetch scheduled reports' });
+  }
+});
+
+/**
+ * POST /api/reports/scheduled - Create a scheduled report
+ */
+router.post('/scheduled', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    const { reportType, frequency, recipients, config } = req.body;
+
+    if (!reportType || !frequency) {
+      return res.status(400).json({ error: 'reportType and frequency are required' });
+    }
+
+    if (!['weekly', 'monthly', 'daily'].includes(frequency)) {
+      return res.status(400).json({ error: 'frequency must be weekly, monthly, or daily' });
+    }
+
+    // Calculate next_send_at
+    const now = new Date();
+    let nextSend;
+    if (frequency === 'daily') {
+      nextSend = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      nextSend.setHours(8, 0, 0, 0);
+    } else if (frequency === 'weekly') {
+      nextSend = new Date(now.getTime());
+      nextSend.setDate(nextSend.getDate() + (8 - nextSend.getDay()) % 7); // Next Monday
+      nextSend.setHours(8, 0, 0, 0);
+    } else {
+      nextSend = new Date(now.getFullYear(), now.getMonth() + 1, 1, 8, 0, 0);
+    }
+
+    const result = await db.query(
+      `INSERT INTO scheduled_reports (user_id, report_type, frequency, recipients, next_send_at, config)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [userId, reportType, frequency, JSON.stringify(recipients || []), nextSend, JSON.stringify(config || {})]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating scheduled report:', error);
+    res.status(500).json({ error: 'Failed to create scheduled report' });
+  }
+});
+
+/**
+ * PUT /api/reports/scheduled/:id - Update a scheduled report
+ */
+router.put('/scheduled/:id', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    const { id } = req.params;
+    const { frequency, recipients, config, enabled } = req.body;
+
+    const result = await db.query(
+      `UPDATE scheduled_reports SET
+        frequency = COALESCE($1, frequency),
+        recipients = COALESCE($2, recipients),
+        config = COALESCE($3, config),
+        enabled = COALESCE($4, enabled),
+        updated_at = CURRENT_TIMESTAMP
+       WHERE id = $5 AND user_id = $6 RETURNING *`,
+      [frequency, recipients ? JSON.stringify(recipients) : null, config ? JSON.stringify(config) : null, enabled, id, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Scheduled report not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating scheduled report:', error);
+    res.status(500).json({ error: 'Failed to update scheduled report' });
+  }
+});
+
+/**
+ * DELETE /api/reports/scheduled/:id - Delete a scheduled report
+ */
+router.delete('/scheduled/:id', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    const { id } = req.params;
+
+    const result = await db.query(
+      'DELETE FROM scheduled_reports WHERE id = $1 AND user_id = $2 RETURNING id',
+      [id, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Scheduled report not found' });
+    }
+
+    res.json({ message: 'Scheduled report deleted' });
+  } catch (error) {
+    console.error('Error deleting scheduled report:', error);
+    res.status(500).json({ error: 'Failed to delete scheduled report' });
   }
 });
 

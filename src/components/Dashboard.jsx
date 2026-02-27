@@ -1,6 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShipmentStatus } from '../types/shipment';
+import { authFetch } from '../utils/authFetch';
+import { getApiUrl } from '../config/api';
+import { authUtils } from '../utils/auth';
+import PerformanceMetrics from './PerformanceMetrics';
 import {
   Chart as ChartJS,
   CategoryScale, LinearScale, PointElement, LineElement,
@@ -37,6 +41,42 @@ const RANK_COLORS = ['#f59e0b', '#94a3b8', '#cd7f32', '#64748b', '#64748b'];
 function Dashboard({ shipments, onOpenLiveBoard }) {
   const navigate = useNavigate();
   const [detailShipment, setDetailShipment] = useState(null);
+  const [warehouseData, setWarehouseData] = useState([]);
+
+  // Fetch warehouse capacity data
+  useEffect(() => {
+    const fetchCapacity = async () => {
+      try {
+        const res = await authFetch(getApiUrl('/api/warehouse-capacity'));
+        if (res.ok) {
+          const data = await res.json();
+          setWarehouseData(Array.isArray(data) ? data : (data.data || []));
+        }
+      } catch (err) { /* silently ignore */ }
+    };
+    fetchCapacity();
+  }, []);
+
+  // Week-over-week percentage delta helper
+  const getWeekDelta = (shipments, filterFn) => {
+    const now = new Date();
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+    const thisWeek = shipments.filter(s => {
+      const d = new Date(s.updatedAt || s.createdAt);
+      return d >= oneWeekAgo && filterFn(s);
+    }).length;
+
+    const lastWeek = shipments.filter(s => {
+      const d = new Date(s.updatedAt || s.createdAt);
+      return d >= twoWeeksAgo && d < oneWeekAgo && filterFn(s);
+    }).length;
+
+    if (lastWeek === 0) return thisWeek > 0 ? '+100%' : '0%';
+    const pct = Math.round(((thisWeek - lastWeek) / lastWeek) * 100);
+    return pct >= 0 ? `+${pct}%` : `${pct}%`;
+  };
 
   const getCurrentWeek = () => {
     const now = new Date();
@@ -133,6 +173,62 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
     return result;
   }, [shipments]);
 
+  // Percentage-based week-over-week deltas
+  const pctDeltas = useMemo(() => {
+    const plannedStatuses = [ShipmentStatus.PLANNED_AIRFREIGHT, ShipmentStatus.PLANNED_SEAFREIGHT];
+    const transitStatuses = [
+      ShipmentStatus.IN_TRANSIT_AIRFREIGHT, ShipmentStatus.AIR_CUSTOMS_CLEARANCE,
+      ShipmentStatus.IN_TRANSIT_ROADWAY, ShipmentStatus.IN_TRANSIT_SEAWAY,
+      ShipmentStatus.MOORED, ShipmentStatus.BERTH_WORKING, ShipmentStatus.BERTH_COMPLETE,
+    ];
+    const storedStatuses = [ShipmentStatus.STORED, ShipmentStatus.ARCHIVED];
+    return {
+      total: getWeekDelta(shipments, () => true),
+      inTransit: getWeekDelta(shipments, s => transitStatuses.includes(s.latestStatus)),
+      stored: getWeekDelta(shipments, s => storedStatuses.includes(s.latestStatus)),
+      delayed: getWeekDelta(shipments, s => s.latestStatus === ShipmentStatus.DELAYED),
+      planned: getWeekDelta(shipments, s => plannedStatuses.includes(s.latestStatus)),
+    };
+  }, [shipments]);
+
+  // Average days in OFFSITE storage
+  const avgDaysOffsite = useMemo(() => {
+    const offsiteShipments = (shipments || []).filter(s =>
+      (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE' && s.latestStatus === ShipmentStatus.STORED
+    );
+    if (offsiteShipments.length === 0) return 0;
+    return Math.round(offsiteShipments.reduce((sum, s) => {
+      const storedDate = new Date(s.receivingDate || s.updatedAt || s.createdAt);
+      const days = Math.max(0, Math.floor((Date.now() - storedDate.getTime()) / (1000 * 60 * 60 * 24)));
+      return sum + days;
+    }, 0) / offsiteShipments.length);
+  }, [shipments]);
+
+  // Supplier on-time trend (last 8 weeks)
+  const supplierOnTimeTrend = useMemo(() => {
+    const arrivedStatuses = [
+      ShipmentStatus.ARRIVED_PTA, ShipmentStatus.ARRIVED_KLM, ShipmentStatus.ARRIVED_OFFSITE,
+      ShipmentStatus.STORED, ShipmentStatus.RECEIVED, ShipmentStatus.ARCHIVED,
+      ShipmentStatus.UNLOADING, ShipmentStatus.INSPECTION_PENDING, ShipmentStatus.INSPECTING,
+      ShipmentStatus.INSPECTION_PASSED, ShipmentStatus.RECEIVING,
+    ];
+    const weeks = [];
+    const now = new Date();
+    for (let i = 7; i >= 0; i--) {
+      const weekStart = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+      const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const weekShipments = (shipments || []).filter(s => {
+        const d = new Date(s.updatedAt || s.createdAt);
+        return d >= weekStart && d < weekEnd;
+      });
+      const arrived = weekShipments.filter(s => arrivedStatuses.includes(s.latestStatus));
+      const pct = weekShipments.length > 0 ? Math.round((arrived.length / weekShipments.length) * 100) : 0;
+      const weekNum = Math.ceil((weekStart.getTime() - new Date(weekStart.getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000));
+      weeks.push({ label: `W${weekNum}`, pct });
+    }
+    return weeks;
+  }, [shipments]);
+
   // Status donut data
   const statusChartData = useMemo(() => [
     { name: 'Planned', value: stats.planned },
@@ -227,22 +323,42 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
 
   // KPI cards
   const kpiCards = [
-    { key: 'total', value: stats.total, label: 'Total Shipments', icon: '📦', ring: 'ring-accent', tint: 'rgba(5,150,105,0.1)', filter: null, delta: stats.deltas.total },
-    { key: 'transit', value: stats.inTransit, label: 'In Transit', icon: '🚢', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)', filter: 'in_transit', delta: stats.deltas.inTransit },
-    { key: 'stored', value: stats.stored, label: 'Stored', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)', filter: 'stored', view: 'stored', delta: stats.deltas.stored },
-    { key: 'delayed', value: stats.delayed, label: 'Delayed', icon: '⚠️', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)', filter: 'delayed', delta: stats.deltas.delayed },
-    { key: 'planned', value: stats.planned, label: 'Planned', icon: '📅', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)', filter: 'planned', delta: stats.deltas.planned },
+    { key: 'total', value: stats.total, label: 'Total Shipments', icon: '📦', ring: 'ring-accent', tint: 'rgba(5,150,105,0.1)', filter: null, delta: stats.deltas.total, pctDelta: pctDeltas.total },
+    { key: 'transit', value: stats.inTransit, label: 'In Transit', icon: '🚢', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)', filter: 'in_transit', delta: stats.deltas.inTransit, pctDelta: pctDeltas.inTransit },
+    { key: 'stored', value: stats.stored, label: 'Stored', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)', filter: 'stored', view: 'stored', delta: stats.deltas.stored, pctDelta: pctDeltas.stored },
+    { key: 'delayed', value: stats.delayed, label: 'Delayed', icon: '⚠️', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)', filter: 'delayed', delta: stats.deltas.delayed, pctDelta: pctDeltas.delayed },
+    { key: 'planned', value: stats.planned, label: 'Planned', icon: '📅', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)', filter: 'planned', delta: stats.deltas.planned, pctDelta: pctDeltas.planned },
+    { key: 'offsite', value: `${avgDaysOffsite}d`, label: 'Avg Days in OFFSITE', icon: '🏭', ring: 'ring-accent', tint: 'rgba(139,92,246,0.1)', filter: 'stored', view: 'stored', delta: null, pctDelta: null },
   ];
 
-  const renderDelta = (delta) => {
-    if (delta > 0) return <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--success)' }}>↑ {delta} vs last week</span>;
-    if (delta < 0) return <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--danger)' }}>↓ {Math.abs(delta)} vs last week</span>;
-    return <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-500)', opacity: 0.6 }}>— vs last week</span>;
+  const renderDelta = (delta, pctDelta) => {
+    if (delta === null && pctDelta === null) return null;
+    const pctColor = pctDelta && pctDelta.startsWith('+') ? 'var(--success)' : pctDelta && pctDelta.startsWith('-') ? 'var(--danger)' : 'var(--text-500)';
+    if (delta > 0) return (
+      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--success)', display: 'flex', alignItems: 'center', gap: 4 }}>
+        ↑ {delta}
+        {pctDelta && <span style={{ fontSize: '0.7rem', fontWeight: 600, color: pctColor }}>{pctDelta} vs last week</span>}
+      </span>
+    );
+    if (delta < 0) return (
+      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: 4 }}>
+        ↓ {Math.abs(delta)}
+        {pctDelta && <span style={{ fontSize: '0.7rem', fontWeight: 600, color: pctColor }}>{pctDelta} vs last week</span>}
+      </span>
+    );
+    return (
+      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-500)', opacity: 0.6, display: 'flex', alignItems: 'center', gap: 4 }}>
+        —
+        {pctDelta && <span style={{ fontSize: '0.7rem', fontWeight: 600, color: pctColor }}>{pctDelta} vs last week</span>}
+      </span>
+    );
   };
 
   return (
     <div style={{ padding: '1rem' }}>
       <div className="brand-strip" />
+
+      {authUtils.getUser()?.role === 'admin' && <PerformanceMetrics />}
 
       {/* KPI Cards */}
       <div className="stats-grid">
@@ -261,13 +377,13 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
             <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600, color: 'var(--text-500)', margin: '0 0 1px' }}>
               {card.label}
             </p>
-            {renderDelta(card.delta)}
+            {renderDelta(card.delta, card.pctDelta)}
           </div>
         ))}
       </div>
 
       {/* Charts Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem', marginTop: '1.5rem' }}>
+      <div className="charts-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem', marginTop: '1.5rem' }}>
 
         {/* Weekly Trend — Orders vs Shipments */}
         <ChartCard title="Weekly Trend" subtitle="Orders per week">
@@ -392,6 +508,45 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
           )}
         </ChartCard>
 
+        {/* Supplier On-Time Trend — Line */}
+        <ChartCard title="Supplier On-Time Trend" subtitle="Last 8 weeks" style={{ gridColumn: '1 / -1' }}>
+          {supplierOnTimeTrend.length > 0 ? (
+            <div style={{ height: 220 }}>
+              <LineChart
+                data={{
+                  labels: supplierOnTimeTrend.map(d => d.label),
+                  datasets: [{
+                    label: 'On-Time %',
+                    data: supplierOnTimeTrend.map(d => d.pct),
+                    borderColor: '#8b5cf6',
+                    backgroundColor: 'rgba(139,92,246,0.08)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#8b5cf6',
+                    pointHoverRadius: 6,
+                    tension: 0.3,
+                    fill: true,
+                  }],
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: (ctx) => `${ctx.raw}% on-time` } },
+                  },
+                  scales: {
+                    x: { grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false }, ticks: { font: { size: 12 } } },
+                    y: { beginAtZero: true, max: 100, grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false }, ticks: { precision: 0, font: { size: 11 }, callback: (v) => `${v}%` } },
+                  },
+                }}
+              />
+            </div>
+          ) : (
+            <ChartEmpty label="No on-time data yet" />
+          )}
+        </ChartCard>
+
         {/* Products & Pallets by Week */}
         <ChartCard title="Products & Pallets by Week" subtitle="Weekly incoming volume" style={{ gridColumn: '1 / -1' }}>
           {productsPalletsTrend && productsPalletsTrend.length > 0 ? (
@@ -442,6 +597,27 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
             </div>
           </ChartCard>
         )}
+      </div>
+
+      {/* Warehouse Utilization */}
+      <div className="dash-panel" style={{ marginTop: '1.5rem' }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: '1rem', fontWeight: 600, color: 'var(--text-900)' }}>Warehouse Utilization</h3>
+        {warehouseData.map(w => {
+          const pct = w.total_capacity > 0 ? Math.round((w.bins_used / w.total_capacity) * 100) : 0;
+          const color = pct > 90 ? 'var(--danger)' : pct > 70 ? 'var(--warning)' : 'var(--success)';
+          return (
+            <div key={w.warehouse_name} style={{ marginBottom: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
+                <span style={{ fontWeight: 600, color: 'var(--text-700)' }}>{w.warehouse_name}</span>
+                <span style={{ color: 'var(--text-500)' }}>{w.bins_used} / {w.total_capacity} bins ({pct}%)</span>
+              </div>
+              <div style={{ height: '8px', borderRadius: '4px', background: 'var(--surface-2)' }}>
+                <div style={{ height: '100%', borderRadius: '4px', background: color, width: `${pct}%`, transition: 'width 0.3s' }} />
+              </div>
+            </div>
+          );
+        })}
+        {warehouseData.length === 0 && <p style={{ color: 'var(--text-500)', fontSize: '0.85rem', margin: 0 }}>No warehouse data available</p>}
       </div>
 
       {/* Upcoming Orders */}

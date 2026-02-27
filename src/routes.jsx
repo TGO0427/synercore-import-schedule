@@ -13,6 +13,7 @@ export const VIEW_ROUTES = {
   reports:           '/reports',
   'advanced-reports': '/advanced-reports',
   users:             '/users',
+  audit:             '/audit',
 };
 
 // Reverse map: path -> view name

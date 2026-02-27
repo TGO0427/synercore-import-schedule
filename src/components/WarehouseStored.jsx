@@ -4,6 +4,7 @@ import { ShipmentStatus } from '../types/shipment';
 import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
 import { useNotification } from '../contexts/NotificationContext';
+import FilterPresetBar from './FilterPresetBar';
 import { jsPDF } from 'jspdf';
 import { applyPlugin } from 'jspdf-autotable';
 applyPlugin(jsPDF);
@@ -27,6 +28,18 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
   const [selectedShipment, setSelectedShipment] = useState(null); // shipment detail card
   const [editShipment, setEditShipment] = useState(null); // shipment being edited
   const [editForm, setEditForm] = useState({});
+  const [bulkSelectedIds, setBulkSelectedIds] = useState(new Set());
+  const [bulkSelectAll, setBulkSelectAll] = useState(false);
+  const [bulkArchiving, setBulkArchiving] = useState(false);
+
+  // Mobile responsiveness
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Sync global search term from URL
   useEffect(() => {
@@ -191,6 +204,39 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     setArchivingAll(false);
     if (successCount > 0 && showSuccess) showSuccess(`Successfully archived ${successCount} shipment(s)`);
     if (failCount > 0 && showError) showError(`Failed to archive ${failCount} shipment(s)`);
+  };
+
+  const handleBulkArchive = async () => {
+    if (bulkSelectedIds.size === 0) return;
+    const doArchive = await confirmAction({
+      title: 'Bulk Archive',
+      message: `Are you sure you want to archive ${bulkSelectedIds.size} stored shipment(s)?`,
+      type: 'warning',
+      confirmText: `Archive ${bulkSelectedIds.size}`
+    });
+    if (!doArchive) return;
+
+    setBulkArchiving(true);
+    try {
+      const res = await authFetch(getApiUrl('/api/shipments/bulk/archive'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [...bulkSelectedIds] })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        showSuccess(`Archived ${data.archived} shipment(s)${data.failed > 0 ? `, ${data.failed} failed` : ''}`);
+        setBulkSelectedIds(new Set());
+        setBulkSelectAll(false);
+        window.location.reload();
+      } else {
+        showError('Failed to archive shipments');
+      }
+    } catch (err) {
+      showError('Error archiving shipments');
+    } finally {
+      setBulkArchiving(false);
+    }
   };
 
   const toggleWarehouse = (name) => {
@@ -411,6 +457,14 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     doc.save(`stored_stock_report_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
+  const storedCurrentFilters = { searchTerm, weekFilters, sortConfig };
+
+  const handleLoadPreset = (filters) => {
+    if (filters.searchTerm !== undefined) setSearchTerm(filters.searchTerm);
+    if (filters.weekFilters !== undefined) setWeekFilters(filters.weekFilters);
+    if (filters.sortConfig !== undefined) setSortConfig(filters.sortConfig);
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
@@ -563,6 +617,40 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
         </div>
       </div>
 
+      <FilterPresetBar
+        viewName="warehouse-stored"
+        currentFilters={storedCurrentFilters}
+        onLoadPreset={handleLoadPreset}
+      />
+
+      {/* Bulk action toolbar */}
+      {bulkSelectedIds.size > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px',
+          background: 'var(--accent-100, #dbeafe)', borderRadius: '8px', marginBottom: '12px',
+          border: '1px solid var(--accent, #3b82f6)'
+        }}>
+          <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{bulkSelectedIds.size} selected</span>
+          <button
+            style={{
+              fontSize: '0.8rem', padding: '6px 12px', background: 'var(--accent, #3b82f6)', color: 'white',
+              border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600
+            }}
+            disabled={bulkArchiving}
+            onClick={handleBulkArchive}
+          >
+            {bulkArchiving ? 'Archiving...' : `Archive Selected (${bulkSelectedIds.size})`}
+          </button>
+          <button
+            className="btn btn-ghost"
+            style={{ fontSize: '0.8rem', padding: '6px 12px' }}
+            onClick={() => { setBulkSelectedIds(new Set()); setBulkSelectAll(false); }}
+          >
+            Clear Selection
+          </button>
+        </div>
+      )}
+
       {/* Warehouse groups */}
       {filteredAndSortedShipments.length === 0 ? (
         <div style={{
@@ -605,14 +693,99 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                   </span>
                 </button>
 
-                {/* Table */}
-                {!isCollapsed && (() => {
+                {/* Mobile card layout */}
+                {!isCollapsed && isMobile && (
+                  <div className="mobile-card-list" style={{ padding: '8px' }}>
+                    {warehouseShipments.map((shipment) => {
+                      const isArch = shipment.isArchived || shipment.latestStatus === 'archived';
+                      const isOffsite = name.toUpperCase() === 'OFFSITE';
+                      return (
+                        <div key={shipment.id} className="mobile-shipment-card">
+                          <div className="card-header">
+                            <span
+                              className="order-ref"
+                              onClick={() => setSelectedShipment(shipment)}
+                              style={{ color: 'var(--accent)', cursor: 'pointer' }}
+                            >
+                              {shipment.orderRef}
+                            </span>
+                            {isArch && (
+                              <span style={{
+                                padding: '1px 5px', borderRadius: 4, fontSize: 10,
+                                fontWeight: 600, background: 'var(--surface-2)', color: 'var(--text-500)'
+                              }}>ARCHIVED</span>
+                            )}
+                          </div>
+                          <dl className="card-details">
+                            <dt>Supplier</dt><dd>{shipment.supplier || '-'}</dd>
+                            <dt>Product</dt><dd>{shipment.productName || 'N/A'}</dd>
+                            <dt>Quantity</dt><dd>{shipment.quantity || 'N/A'}</dd>
+                            <dt>Pallets</dt><dd>{shipment.palletQty ? Math.round(shipment.palletQty) : '-'}</dd>
+                            <dt>Stored</dt><dd>{formatDate(shipment.receivingDate || shipment.updatedAt || shipment.estimatedArrival)}</dd>
+                            {isOffsite && (
+                              <>
+                                <dt>Days Stored</dt>
+                                <dd style={{ fontWeight: 600, color: typeof getDaysInStorage(shipment) === 'number' && getDaysInStorage(shipment) > 30 ? 'var(--danger)' : 'var(--text-700)' }}>
+                                  {getDaysInStorage(shipment)}{typeof getDaysInStorage(shipment) === 'number' ? 'd' : ''}
+                                </dd>
+                              </>
+                            )}
+                          </dl>
+                          <div className="card-actions">
+                            <button
+                              className="btn btn-ghost"
+                              onClick={() => openEditModal(shipment)}
+                              style={{ fontSize: 12, padding: '6px 12px' }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="btn btn-ghost"
+                              onClick={() => setEditingWarehouse(shipment.id)}
+                              style={{ fontSize: 12, padding: '6px 12px' }}
+                            >
+                              Move
+                            </button>
+                            {!isArch && (
+                              <button
+                                className="btn btn-ghost"
+                                onClick={() => onArchiveShipment ? onArchiveShipment(shipment.id) : onDeleteShipment(shipment.id)}
+                                style={{ fontSize: 12, padding: '6px 12px' }}
+                              >
+                                Archive
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Desktop table layout */}
+                {!isCollapsed && !isMobile && (() => {
                   const isOffsite = name.toUpperCase() === 'OFFSITE';
                   return (
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                       <thead>
                         <tr>
+                          <th style={{ ...thStyle, width: '36px', textAlign: 'center', cursor: 'default' }}>
+                            <input type="checkbox"
+                              checked={bulkSelectAll && warehouseShipments.every(s => bulkSelectedIds.has(s.id))}
+                              onChange={(e) => {
+                                const next = new Set(bulkSelectedIds);
+                                if (e.target.checked) {
+                                  warehouseShipments.forEach(s => { if (!s.isArchived && s.latestStatus !== 'archived') next.add(s.id); });
+                                } else {
+                                  warehouseShipments.forEach(s => next.delete(s.id));
+                                }
+                                setBulkSelectedIds(next);
+                                setBulkSelectAll(next.size === filteredAndSortedShipments.filter(s => !s.isArchived && s.latestStatus !== 'archived').length);
+                              }}
+                              title="Select all in this warehouse"
+                            />
+                          </th>
                           {columns.map((col, i) => (
                             <th
                               key={i}
@@ -635,6 +808,21 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                             {(() => {
                               const isArch = shipment.isArchived || shipment.latestStatus === 'archived';
                               return (<>
+                            <td style={{ width: 36, textAlign: 'center', padding: '8px 4px' }}>
+                              {!isArch && (
+                                <input type="checkbox"
+                                  checked={bulkSelectedIds.has(shipment.id)}
+                                  onChange={(e) => {
+                                    const next = new Set(bulkSelectedIds);
+                                    if (e.target.checked) next.add(shipment.id);
+                                    else next.delete(shipment.id);
+                                    setBulkSelectedIds(next);
+                                    setBulkSelectAll(next.size === filteredAndSortedShipments.filter(s => !s.isArchived && s.latestStatus !== 'archived').length);
+                                  }}
+                                  title="Select for bulk action"
+                                />
+                              )}
+                            </td>
                             <td style={{ padding: '8px 12px', fontWeight: 600, fontSize: 13 }}>
                               <span
                                 onClick={() => setSelectedShipment(shipment)}

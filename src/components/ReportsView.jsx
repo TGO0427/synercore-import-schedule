@@ -7,6 +7,7 @@ import PostArrivalWorkflowReport from './PostArrivalWorkflowReport';
 import CurrentWeekStoredReport from './CurrentWeekStoredReport';
 import { getApiUrl } from '../config/api';
 import { useNotification } from '../contexts/NotificationContext';
+import FilterPresetBar from './FilterPresetBar';
 import { jsPDF } from 'jspdf';
 import { applyPlugin } from 'jspdf-autotable';
 applyPlugin(jsPDF);
@@ -50,6 +51,9 @@ function ReportsView({ shipments: propShipments }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('current'); // 'current' or 'historical'
   const [selectedReport, setSelectedReport] = useState(null);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleForm, setScheduleForm] = useState({ reportType: 'shipments', frequency: 'weekly', recipients: '' });
+  const [scheduledReports, setScheduledReports] = useState([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const statusFilter = searchParams.get('status') || null;
   const handleStatusFilter = (status) => {
@@ -751,6 +755,15 @@ function ReportsView({ shipments: propShipments }) {
     return icons[agent] || '🚚';
   };
 
+  const reportsCurrentFilters = { selectedDateRange, customDateRange, statusFilter, searchTerm };
+
+  const handleLoadPreset = (filters) => {
+    if (filters.selectedDateRange !== undefined) setSelectedDateRange(filters.selectedDateRange);
+    if (filters.customDateRange !== undefined) setCustomDateRange(filters.customDateRange);
+    if (filters.statusFilter !== undefined) handleStatusFilter(filters.statusFilter);
+    if (filters.searchTerm !== undefined) setSearchTerm(filters.searchTerm);
+  };
+
   const ReportControls = () => (
     <div className="report-controls">
       <div className="control-group">
@@ -811,6 +824,9 @@ function ReportsView({ shipments: propShipments }) {
           </button>
           <button className="export-pdf-btn" onClick={exportToPDF}>
             📄 Export PDF
+          </button>
+          <button className="schedule-report-btn" onClick={() => setShowScheduleModal(true)}>
+            Schedule Report
           </button>
         </>
       )}
@@ -938,6 +954,12 @@ function ReportsView({ shipments: propShipments }) {
 
       <ReportControls />
 
+      <FilterPresetBar
+        viewName="reports"
+        currentFilters={reportsCurrentFilters}
+        onLoadPreset={handleLoadPreset}
+      />
+
       <SummaryCards
         analytics={cardAnalytics}
         statusFilter={statusFilter}
@@ -964,6 +986,60 @@ function ReportsView({ shipments: propShipments }) {
 
       {/* Current Week Stored Shipments Report */}
       <CurrentWeekStoredReport shipments={displayedShipments} />
+
+      {/* Schedule Report Modal */}
+      {showScheduleModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: 'var(--surface, #fff)', borderRadius: '12px', padding: '24px', maxWidth: '480px', width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ margin: '0 0 16px', fontWeight: 600, color: 'var(--text-900, #1a202c)' }}>Schedule Automated Report</h3>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, marginBottom: '4px', color: 'var(--text-700, #4a5568)' }}>Report Type</label>
+              <select style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '6px', fontSize: '0.9rem' }} value={scheduleForm.reportType} onChange={e => setScheduleForm(f => ({ ...f, reportType: e.target.value }))}>
+                <option value="shipments">Shipments Summary</option>
+                <option value="suppliers">Supplier Performance</option>
+                <option value="warehouse">Warehouse Utilization</option>
+                <option value="weekly">Weekly Overview</option>
+                <option value="monthly">Monthly Overview</option>
+              </select>
+            </div>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, marginBottom: '4px', color: 'var(--text-700, #4a5568)' }}>Frequency</label>
+              <select style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '6px', fontSize: '0.9rem' }} value={scheduleForm.frequency} onChange={e => setScheduleForm(f => ({ ...f, frequency: e.target.value }))}>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, marginBottom: '4px', color: 'var(--text-700, #4a5568)' }}>Email Recipients (comma-separated)</label>
+              <input style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '6px', fontSize: '0.9rem', boxSizing: 'border-box' }} placeholder="user@example.com, user2@example.com" value={scheduleForm.recipients} onChange={e => setScheduleForm(f => ({ ...f, recipients: e.target.value }))} />
+            </div>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button className="save-report-btn" style={{ background: '#6c757d' }} onClick={() => setShowScheduleModal(false)}>Cancel</button>
+              <button className="save-report-btn" onClick={async () => {
+                try {
+                  const recipients = scheduleForm.recipients.split(',').map(e => e.trim()).filter(Boolean);
+                  const res = await authFetch(getApiUrl('/api/reports/scheduled'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reportType: scheduleForm.reportType, frequency: scheduleForm.frequency, recipients })
+                  });
+                  if (res.ok) {
+                    setShowScheduleModal(false);
+                    setScheduleForm({ reportType: 'shipments', frequency: 'weekly', recipients: '' });
+                    showSuccess('Report schedule created successfully!');
+                  } else {
+                    const err = await res.json();
+                    showError(err.error || 'Failed to create schedule');
+                  }
+                } catch (error) {
+                  showError('Failed to create report schedule');
+                }
+              }}>Create Schedule</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .reports-view {
@@ -1063,6 +1139,23 @@ function ReportsView({ shipments: propShipments }) {
 
         .export-pdf-btn:hover {
           background: #c53030;
+          transform: translateY(-1px);
+        }
+
+        .schedule-report-btn {
+          background: #6366f1;
+          color: white;
+          border: none;
+          padding: 0.75rem 1rem;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 500;
+          transition: all 0.2s;
+          font-size: 0.85rem;
+        }
+
+        .schedule-report-btn:hover {
+          background: #4f46e5;
           transform: translateY(-1px);
         }
 
@@ -1291,10 +1384,23 @@ function ReportsView({ shipments: propShipments }) {
         }
         
         @media (max-width: 768px) {
+          .reports-view {
+            padding: 0.75rem;
+          }
+
           .charts-grid {
             grid-template-columns: 1fr;
           }
-          
+
+          .report-controls {
+            flex-direction: column;
+            padding: 1rem;
+          }
+
+          .control-group {
+            width: 100%;
+          }
+
           .bar-chart {
             height: 150px;
           }

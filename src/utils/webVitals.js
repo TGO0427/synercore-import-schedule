@@ -76,6 +76,15 @@ function reportMetric(metric, name) {
         id: metric.id,
       },
     });
+
+    // Store in localStorage for PerformanceMetrics component
+    try {
+      const stored = JSON.parse(localStorage.getItem('synercore_perf_metrics') || '{}');
+      stored[name] = { value: metric.value, rating: metric.rating, timestamp: Date.now() };
+      localStorage.setItem('synercore_perf_metrics', JSON.stringify(stored));
+    } catch (e) {
+      // Ignore localStorage errors
+    }
   } catch (error) {
     console.error('Failed to report metric:', error);
   }

@@ -50,6 +50,7 @@ import schedulerAdminRouter from './routes/schedulerAdmin.ts';
 import supplierPortalRouter from './routes/supplierPortal.ts';
 import costingRouter from './routes/costing.ts';
 import costingRequestsRouter from './routes/costingRequests.ts';
+import auditRouter from './routes/audit.ts';
 
 import { helmetConfig, apiRateLimiter, authRateLimiter, createRateLimiter, authenticateToken } from './middleware/security.js';
 import { createSingleFileUpload, createMultipleFileUpload, handleUploadError, validateFilesPresent, verifyUploadPermission, generateSafeFilename } from './middleware/fileUpload.js';
@@ -171,6 +172,7 @@ app.use('/api/notifications', notificationsRouter); // Auth required within rout
 app.use('/api/supplier', supplierPortalRouter); // Supplier portal routes (auth within router)
 app.use('/api/costing', costingRouter); // Import costing routes (auth within router)
 app.use('/api/costing-requests', costingRequestsRouter); // Costing request routes (auth within router)
+app.use('/api/audit', authenticateToken, auditRouter);
 
 /* ---------------- Endpoints ---------------- */
 // Create upload instances

@@ -945,6 +945,186 @@ export const migrations: Migration[] = [
       }
     },
   },
+
+  // Phase 9: Audit Trail
+  {
+    name: 'add-audit-log-table',
+    version: '017',
+    description: 'Create audit_log table for tracking all changes',
+    depends_on: ['schema.sql'],
+    execute: async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS audit_log (
+          id SERIAL PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          username VARCHAR(255) NOT NULL,
+          action VARCHAR(50) NOT NULL,
+          entity_type VARCHAR(50) NOT NULL,
+          entity_id TEXT NOT NULL,
+          entity_label TEXT,
+          changes JSONB,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_audit_log_entity_type ON audit_log(entity_type);
+        CREATE INDEX IF NOT EXISTS idx_audit_log_entity_id ON audit_log(entity_id);
+        CREATE INDEX IF NOT EXISTS idx_audit_log_user_id ON audit_log(user_id);
+        CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at);
+        CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action);
+      `);
+
+      logInfo('Audit log table created successfully');
+      return true;
+    },
+  },
+
+  // Phase 10: Full-Text Search
+  {
+    name: 'add-fulltext-search',
+    version: '018',
+    description: 'Add full-text search vector column and GIN index to shipments',
+    depends_on: ['schema.sql'],
+    execute: async () => {
+      const client = await getPool().connect();
+      try {
+        await client.query('BEGIN');
+
+        // Check if column exists
+        const checkResult = await client.query(
+          `SELECT column_name FROM information_schema.columns
+           WHERE table_name='shipments' AND column_name='search_vector'`
+        );
+
+        if (checkResult.rows.length === 0) {
+          await client.query(
+            `ALTER TABLE shipments ADD COLUMN search_vector tsvector`
+          );
+
+          // Create GIN index
+          await client.query(
+            `CREATE INDEX IF NOT EXISTS idx_shipments_search_vector ON shipments USING gin(search_vector)`
+          );
+
+          // Update existing rows
+          await client.query(`
+            UPDATE shipments SET search_vector =
+              to_tsvector('english',
+                COALESCE(order_ref, '') || ' ' ||
+                COALESCE(supplier, '') || ' ' ||
+                COALESCE(product_name, '') || ' ' ||
+                COALESCE(final_pod, '') || ' ' ||
+                COALESCE(vessel_name, '') || ' ' ||
+                COALESCE(forwarding_agent, '') || ' ' ||
+                COALESCE(notes, '') || ' ' ||
+                COALESCE(receiving_warehouse, '')
+              )
+          `);
+
+          // Create trigger function
+          await client.query(`
+            CREATE OR REPLACE FUNCTION shipments_search_vector_update() RETURNS trigger AS $$
+            BEGIN
+              NEW.search_vector :=
+                to_tsvector('english',
+                  COALESCE(NEW.order_ref, '') || ' ' ||
+                  COALESCE(NEW.supplier, '') || ' ' ||
+                  COALESCE(NEW.product_name, '') || ' ' ||
+                  COALESCE(NEW.final_pod, '') || ' ' ||
+                  COALESCE(NEW.vessel_name, '') || ' ' ||
+                  COALESCE(NEW.forwarding_agent, '') || ' ' ||
+                  COALESCE(NEW.notes, '') || ' ' ||
+                  COALESCE(NEW.receiving_warehouse, '')
+                );
+              RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+          `);
+
+          // Create trigger
+          await client.query(`
+            DROP TRIGGER IF EXISTS trg_shipments_search_vector ON shipments;
+            CREATE TRIGGER trg_shipments_search_vector
+              BEFORE INSERT OR UPDATE ON shipments
+              FOR EACH ROW
+              EXECUTE FUNCTION shipments_search_vector_update();
+          `);
+        }
+
+        await client.query('COMMIT');
+        logInfo('Full-text search vector added to shipments table');
+        return true;
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+  },
+
+  // Phase 11: Notification Retry Tracking
+  {
+    name: 'add-notification-retry-columns',
+    version: '019',
+    description: 'Add retry_count and last_retry_at columns to notification_log',
+    depends_on: ['add-notifications-tables'],
+    execute: async () => {
+      const columns = [
+        'retry_count INTEGER DEFAULT 0',
+        'last_retry_at TIMESTAMP WITH TIME ZONE',
+      ];
+
+      for (const colDef of columns) {
+        const colName = colDef.split(' ')[0];
+        const checkResult = await pool.query(
+          `SELECT column_name FROM information_schema.columns
+           WHERE table_name='notification_log' AND column_name=$1`,
+          [colName]
+        );
+        if (checkResult.rows.length === 0) {
+          await pool.query(`ALTER TABLE notification_log ADD COLUMN ${colDef}`);
+          logInfo(`Added column ${colName} to notification_log`);
+        }
+      }
+      return true;
+    },
+  },
+
+  // Phase 12: Scheduled Reports
+  {
+    name: 'add-scheduled-reports-table',
+    version: '020',
+    description: 'Create scheduled_reports table for automated report generation',
+    depends_on: ['schema.sql'],
+    execute: async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS scheduled_reports (
+          id SERIAL PRIMARY KEY,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          report_type VARCHAR(100) NOT NULL,
+          frequency VARCHAR(50) NOT NULL DEFAULT 'weekly',
+          recipients JSONB DEFAULT '[]',
+          last_sent_at TIMESTAMP WITH TIME ZONE,
+          next_send_at TIMESTAMP WITH TIME ZONE,
+          config JSONB DEFAULT '{}',
+          enabled BOOLEAN DEFAULT true,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_scheduled_reports_user ON scheduled_reports(user_id);
+        CREATE INDEX IF NOT EXISTS idx_scheduled_reports_next_send ON scheduled_reports(next_send_at) WHERE enabled = true;
+        CREATE INDEX IF NOT EXISTS idx_scheduled_reports_frequency ON scheduled_reports(frequency);
+      `);
+
+      logInfo('Scheduled reports table created successfully');
+      return true;
+    },
+  },
 ];
 
 /**

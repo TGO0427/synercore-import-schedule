@@ -4,7 +4,7 @@ import { getApiUrl } from '../config/api';
 import { useNotification } from '../contexts/NotificationContext';
 
 function ArchiveView() {
-  const { showError } = useNotification();
+  const { showError, showSuccess, confirm: confirmAction } = useNotification();
   const [archives, setArchives] = useState([]);
   const [dbArchived, setDbArchived] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -17,6 +17,10 @@ function ArchiveView() {
   const [editFormData, setEditFormData] = useState(null);
   const [showFileArchives, setShowFileArchives] = useState(false);
   const [detailShipment, setDetailShipment] = useState(null);
+  const [restoringId, setRestoringId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [selectAll, setSelectAll] = useState(false);
+  const [bulkRestoring, setBulkRestoring] = useState(false);
 
   useEffect(() => {
     fetchArchives();
@@ -159,6 +163,66 @@ function ArchiveView() {
       return `Data Backup - ${new Date(dateStr).toLocaleDateString()}`;
     }
     return fileName.replace('.json', '');
+  };
+
+  const handleRestore = async (id, orderRef) => {
+    const doRestore = await confirmAction({
+      title: 'Restore Shipment',
+      message: `Are you sure you want to restore shipment "${orderRef || id}" from the archive?`,
+      type: 'warning',
+      confirmText: 'Restore'
+    });
+    if (!doRestore) return;
+
+    setRestoringId(id);
+    try {
+      const res = await authFetch(getApiUrl('/api/shipments/' + id + '/restore'), { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to restore shipment');
+      setDbArchived(prev => prev.filter(s => s.id !== id));
+      if (dbPagination) {
+        setDbPagination(prev => prev ? { ...prev, total: prev.total - 1 } : prev);
+      }
+      showSuccess(`Shipment "${orderRef || id}" restored successfully`);
+    } catch (error) {
+      console.error('Error restoring shipment:', error);
+      showError('Failed to restore shipment');
+    } finally {
+      setRestoringId(null);
+    }
+  };
+
+  const handleBulkRestore = async () => {
+    if (selectedIds.size === 0) return;
+    const doRestore = await confirmAction({
+      title: 'Bulk Restore',
+      message: `Are you sure you want to restore ${selectedIds.size} shipment(s) from the archive?`,
+      type: 'warning',
+      confirmText: `Restore ${selectedIds.size}`
+    });
+    if (!doRestore) return;
+
+    setBulkRestoring(true);
+    try {
+      const res = await authFetch(getApiUrl('/api/shipments/bulk/restore'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [...selectedIds] })
+      });
+      if (!res.ok) throw new Error('Failed to bulk restore');
+      const data = await res.json();
+      setDbArchived(prev => prev.filter(s => !selectedIds.has(s.id)));
+      setSelectedIds(new Set());
+      setSelectAll(false);
+      if (dbPagination) {
+        setDbPagination(prev => prev ? { ...prev, total: prev.total - (data.restored || 0) } : prev);
+      }
+      showSuccess(`Restored ${data.restored} shipment(s)${data.failed > 0 ? `, ${data.failed} failed` : ''}`);
+    } catch (error) {
+      console.error('Error bulk restoring:', error);
+      showError('Failed to bulk restore shipments');
+    } finally {
+      setBulkRestoring(false);
+    }
   };
 
   // Filter file archives (exclude data backups, apply search)
@@ -414,6 +478,34 @@ function ArchiveView() {
       <div style={{ padding: '16px 24px' }}>
         {loading && <div className="loading">Loading archives...</div>}
 
+        {/* Bulk action toolbar for DB-archived shipments */}
+        {!loading && selectedIds.size > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px',
+            background: '#dcfce7', borderRadius: '8px', marginBottom: '12px',
+            border: '1px solid #16a34a'
+          }}>
+            <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{selectedIds.size} selected</span>
+            <button
+              style={{
+                fontSize: '0.8rem', padding: '6px 12px', background: '#16a34a', color: 'white',
+                border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600
+              }}
+              disabled={bulkRestoring}
+              onClick={handleBulkRestore}
+            >
+              {bulkRestoring ? 'Restoring...' : `Restore Selected (${selectedIds.size})`}
+            </button>
+            <button
+              className="btn btn-ghost"
+              style={{ fontSize: '0.8rem', padding: '6px 12px' }}
+              onClick={() => { setSelectedIds(new Set()); setSelectAll(false); }}
+            >
+              Clear Selection
+            </button>
+          </div>
+        )}
+
         {/* DB-archived shipments */}
         {!loading && filteredDbArchived.length > 0 && (
           <div className="dash-panel" style={{ padding: 0, overflow: 'hidden', marginBottom: 20 }}>
@@ -421,7 +513,20 @@ function ArchiveView() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: 'var(--surface-2)' }}>
-                    {['Order Ref', 'Supplier', 'Product', 'Qty', 'Pallets', 'Warehouse', 'Archived'].map(h => (
+                    <th style={{
+                      width: '40px', textAlign: 'center', padding: '8px 12px',
+                      borderBottom: '1px solid var(--border)'
+                    }}>
+                      <input type="checkbox" checked={selectAll} onChange={(e) => {
+                        setSelectAll(e.target.checked);
+                        if (e.target.checked) {
+                          setSelectedIds(new Set(filteredDbArchived.map(s => s.id)));
+                        } else {
+                          setSelectedIds(new Set());
+                        }
+                      }} />
+                    </th>
+                    {['Order Ref', 'Supplier', 'Product', 'Qty', 'Pallets', 'Warehouse', 'Archived', ''].map(h => (
                       <th key={h} style={{
                         padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid var(--border)',
                         fontSize: 11, fontWeight: 600, color: 'var(--text-500)', textTransform: 'uppercase', letterSpacing: '0.3px'
@@ -434,6 +539,15 @@ function ArchiveView() {
                     <tr key={s.id} style={{ borderBottom: '1px solid var(--border)' }}
                       onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--surface-2)'}
                       onMouseLeave={e => e.currentTarget.style.backgroundColor = ''}>
+                      <td style={{ textAlign: 'center', padding: '8px 12px' }}>
+                        <input type="checkbox" checked={selectedIds.has(s.id)} onChange={(e) => {
+                          const next = new Set(selectedIds);
+                          if (e.target.checked) next.add(s.id);
+                          else next.delete(s.id);
+                          setSelectedIds(next);
+                          setSelectAll(next.size === filteredDbArchived.length);
+                        }} />
+                      </td>
                       <td style={{ padding: '8px 12px', fontWeight: 600, fontSize: 13 }}>
                         <span
                           onClick={() => setDetailShipment(s)}
@@ -447,6 +561,19 @@ function ArchiveView() {
                       <td style={{ padding: '8px 12px', fontSize: 13 }}>{(s.palletQty || s.pallet_qty) ? (Math.round(s.palletQty || s.pallet_qty) || 1) : '-'}</td>
                       <td style={{ padding: '8px 12px', fontSize: 13 }}>{s.receivingWarehouse || s.receiving_warehouse || 'N/A'}</td>
                       <td style={{ padding: '8px 12px', fontSize: 13 }}>{formatDate(s.updatedAt || s.updated_at)}</td>
+                      <td style={{ padding: '8px 12px', fontSize: 13 }}>
+                        <button
+                          onClick={() => handleRestore(s.id, s.orderRef || s.order_ref)}
+                          disabled={restoringId === s.id}
+                          style={{
+                            padding: '4px 10px', background: restoringId === s.id ? '#86efac' : '#16a34a',
+                            color: 'white', border: 'none', borderRadius: 4, fontSize: 12,
+                            cursor: restoringId === s.id ? 'not-allowed' : 'pointer', fontWeight: 600
+                          }}
+                        >
+                          {restoringId === s.id ? 'Restoring...' : 'Restore'}
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

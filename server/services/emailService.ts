@@ -82,15 +82,18 @@ export class EmailService {
     shipmentId: string | null = null,
     status: string = 'sent',
     errorMessage: string | null = null
-  ): Promise<void> {
+  ): Promise<number | null> {
     try {
-      await pool.query(
+      const result = await pool.query(
         `INSERT INTO notification_log (user_id, event_type, shipment_id, subject, message, status, error_message)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id`,
         [userId, eventType, shipmentId, subject, message, status, errorMessage]
       );
+      return result.rows[0]?.id || null;
     } catch (error) {
       console.error('Error logging notification:', error);
+      return null;
     }
   }
 
@@ -224,6 +227,69 @@ export class EmailService {
       console.error('❌ Error sending email:', error);
       return { success: false, error: errorMsg };
     }
+  }
+
+  /**
+   * Send email with retry logic (3 attempts with exponential backoff: 1s, 2s, 4s)
+   */
+  static async sendEmailWithRetry(
+    toEmail: string,
+    subject: string,
+    htmlContent: string,
+    textContent: string | null = null,
+    notificationLogId: number | null = null
+  ): Promise<EmailResult> {
+    const maxRetries = 3;
+    const backoffMs = [1000, 2000, 4000];
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const result = await this.sendEmail(toEmail, subject, htmlContent, textContent);
+
+      if (result.success) {
+        // Update notification_log if we have an ID
+        if (notificationLogId) {
+          try {
+            await pool.query(
+              `UPDATE notification_log SET status = 'sent', retry_count = $1, last_retry_at = CURRENT_TIMESTAMP WHERE id = $2`,
+              [attempt, notificationLogId]
+            );
+          } catch (err) {
+            console.error('Error updating notification log:', err);
+          }
+        }
+        return result;
+      }
+
+      // Update retry count in notification_log
+      if (notificationLogId) {
+        try {
+          await pool.query(
+            `UPDATE notification_log SET status = 'retrying', retry_count = $1, last_retry_at = CURRENT_TIMESTAMP, error_message = $2 WHERE id = $3`,
+            [attempt + 1, result.error, notificationLogId]
+          );
+        } catch (err) {
+          console.error('Error updating notification log:', err);
+        }
+      }
+
+      // Wait before retrying (except on last attempt)
+      if (attempt < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, backoffMs[attempt]));
+      }
+    }
+
+    // All retries failed
+    if (notificationLogId) {
+      try {
+        await pool.query(
+          `UPDATE notification_log SET status = 'failed', retry_count = $1, last_retry_at = CURRENT_TIMESTAMP WHERE id = $2`,
+          [maxRetries, notificationLogId]
+        );
+      } catch (err) {
+        console.error('Error updating notification log:', err);
+      }
+    }
+    return { success: false, error: `Failed after ${maxRetries} attempts` };
   }
 
   /**

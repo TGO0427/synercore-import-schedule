@@ -113,6 +113,7 @@ export default function AlertHub({
                 background: colorFor(a.severity)
               }} />
               <strong style={{ fontSize: 14 }}>{a.title}</strong>
+              {a.status && <DeliveryStatusIcon status={a.status} />}
               <span style={{ marginLeft: 'auto', fontSize: 12, color: '#999' }}>
                 {a.ts ? new Date(a.ts).toLocaleString() : ''}
               </span>
@@ -155,6 +156,52 @@ export default function AlertHub({
       </div>
     </aside>
   );
+}
+
+function DeliveryStatusIcon({ status }) {
+  if (status === 'sent') {
+    return (
+      <span
+        title="Delivered"
+        style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          width: 18, height: 18, borderRadius: '50%', background: '#dcfce7',
+          color: '#16a34a', fontSize: 11, fontWeight: 'bold', flexShrink: 0,
+        }}
+      >
+        &#10003;
+      </span>
+    );
+  }
+  if (status === 'failed') {
+    return (
+      <span
+        title="Delivery failed"
+        style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          width: 18, height: 18, borderRadius: '50%', background: '#fee2e2',
+          color: '#dc2626', fontSize: 11, fontWeight: 'bold', flexShrink: 0,
+        }}
+      >
+        &#10005;
+      </span>
+    );
+  }
+  if (status === 'retrying' || status === 'pending') {
+    return (
+      <span
+        title={status === 'retrying' ? 'Retrying delivery' : 'Pending'}
+        style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          width: 18, height: 18, borderRadius: '50%', background: '#fef3c7',
+          color: '#d97706', fontSize: 12, flexShrink: 0,
+        }}
+      >
+        &#9201;
+      </span>
+    );
+  }
+  return null;
 }
 
 function viewForStatus(status) {

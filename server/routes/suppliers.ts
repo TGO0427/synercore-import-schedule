@@ -2,8 +2,10 @@ import { Router, Request, Response } from 'express';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { body, validationResult } from 'express-validator';
 import db from '../db/connection.ts';
 import { validateSupplierCreate, validateSupplierUpdate, validateId, validate } from '../middleware/validation.js';
+import { AuditRepository } from '../db/repositories/AuditRepository.ts';
 
 const router = Router();
 const __filename: string = fileURLToPath(import.meta.url);
@@ -133,9 +135,46 @@ router.get('/:id', validateId, async (req: Request, res: Response) => {
   }
 });
 
+// Validation error handler for supplier routes
+const handleSupplierValidationErrors = (req: Request, res: Response): boolean => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({
+      error: 'Validation failed',
+      details: errors.array().map((err: any) => ({
+        field: err.param || err.path,
+        message: err.msg,
+        value: err.value
+      }))
+    });
+    return false;
+  }
+  return true;
+};
+
+// Additional inline validators for supplier create
+const supplierCreateValidators = [
+  body('name').trim().notEmpty().withMessage('Supplier name is required'),
+  body('email').optional({ nullable: true }).isEmail().withMessage('Invalid email format'),
+  body('phone').optional({ nullable: true }).trim(),
+  body('country').optional({ nullable: true }).trim(),
+  body('notes').optional({ nullable: true }).trim()
+];
+
+// Additional inline validators for supplier update
+const supplierUpdateValidators = [
+  body('name').optional().trim().notEmpty().withMessage('Supplier name cannot be empty'),
+  body('email').optional({ nullable: true }).isEmail().withMessage('Invalid email format'),
+  body('phone').optional({ nullable: true }).trim(),
+  body('country').optional({ nullable: true }).trim(),
+  body('notes').optional({ nullable: true }).trim()
+];
+
 // POST /api/suppliers - Create new supplier
-router.post('/', validateSupplierCreate, async (req: Request, res: Response) => {
+router.post('/', validateSupplierCreate, ...supplierCreateValidators, async (req: Request, res: Response) => {
   try {
+    if (!handleSupplierValidationErrors(req, res)) return;
+
     const id: string = req.body.id || Date.now().toString();
 
     await db.query(
@@ -154,7 +193,14 @@ router.post('/', validateSupplierCreate, async (req: Request, res: Response) => 
     );
 
     const result = await db.query('SELECT * FROM suppliers WHERE id = $1', [id]);
-    res.status(201).json(dbRowToSupplier(result.rows[0] as SupplierRow));
+    const supplier = dbRowToSupplier(result.rows[0] as SupplierRow);
+
+    const user = (req as any).user;
+    if (user) {
+      AuditRepository.logAudit(user.id, user.username || user.email, 'create', 'supplier', id, req.body.name, { name: req.body.name, email: req.body.email, country: req.body.country });
+    }
+
+    res.status(201).json(supplier);
   } catch (error) {
     console.error('Error creating supplier:', error);
     res.status(500).json({ error: 'Failed to create supplier' });
@@ -162,8 +208,10 @@ router.post('/', validateSupplierCreate, async (req: Request, res: Response) => 
 });
 
 // PUT /api/suppliers/:id - Update supplier
-router.put('/:id', validateSupplierUpdate, async (req: Request, res: Response) => {
+router.put('/:id', validateSupplierUpdate, ...supplierUpdateValidators, async (req: Request, res: Response) => {
   try {
+    if (!handleSupplierValidationErrors(req, res)) return;
+
     await db.query(
       `UPDATE suppliers SET
         name = COALESCE($1, name),
@@ -192,7 +240,14 @@ router.put('/:id', validateSupplierUpdate, async (req: Request, res: Response) =
       return res.status(404).json({ error: 'Supplier not found' });
     }
 
-    res.json(dbRowToSupplier(result.rows[0] as SupplierRow));
+    const supplier = dbRowToSupplier(result.rows[0] as SupplierRow);
+
+    const user = (req as any).user;
+    if (user) {
+      AuditRepository.logAudit(user.id, user.username || user.email, 'update', 'supplier', req.params.id, supplier.name || req.params.id, req.body);
+    }
+
+    res.json(supplier);
   } catch (error) {
     console.error('Error updating supplier:', error);
     res.status(500).json({ error: 'Failed to update supplier' });
@@ -202,10 +257,15 @@ router.put('/:id', validateSupplierUpdate, async (req: Request, res: Response) =
 // DELETE /api/suppliers/:id - Delete supplier
 router.delete('/:id', validateId, async (req: Request, res: Response) => {
   try {
-    const result = await db.query('DELETE FROM suppliers WHERE id = $1 RETURNING id', [req.params.id]);
+    const result = await db.query('DELETE FROM suppliers WHERE id = $1 RETURNING id, name', [req.params.id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Supplier not found' });
+    }
+
+    const user = (req as any).user;
+    if (user) {
+      AuditRepository.logAudit(user.id, user.username || user.email, 'delete', 'supplier', req.params.id, result.rows[0].name || req.params.id, null);
     }
 
     res.status(204).send();
