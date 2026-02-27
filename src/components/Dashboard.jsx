@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, startTransition } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShipmentStatus, DELAYED_STATUSES, isDelayedStatus } from '../types/shipment';
 import { authFetch } from '../utils/authFetch';
@@ -436,8 +436,8 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
           <div key={card.key} className={`stat-card ${card.ring} clickable`}
             role="button" tabIndex={0}
             aria-label={`${card.value} ${card.label} — click to view`}
-            onClick={() => { const path = card.view ? `/${card.view}` : '/shipping'; navigate(card.filter ? `${path}?status=${card.filter}` : path); }}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const path = card.view ? `/${card.view}` : '/shipping'; navigate(card.filter ? `${path}?status=${card.filter}` : path); } }}>
+            onClick={() => { const path = card.view ? `/${card.view}` : '/shipping'; startTransition(() => navigate(card.filter ? `${path}?status=${card.filter}` : path)); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const path = card.view ? `/${card.view}` : '/shipping'; startTransition(() => navigate(card.filter ? `${path}?status=${card.filter}` : path)); } }}>
             <div style={{
               width: 24, height: 24, borderRadius: '50%', display: 'flex',
               alignItems: 'center', justifyContent: 'center', fontSize: 12,

@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy, startTransition } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import LoginPage from './components/LoginPage';
 import SynercoreLogo from './components/SynercoreLogo';
@@ -339,7 +339,7 @@ function App() {
               <button
                 key={key}
                 className={`nav-item ${activeView === item.view ? 'active' : ''}`}
-                onClick={() => navigate(VIEW_ROUTES[item.view] || '/shipping')}
+                onClick={() => startTransition(() => navigate(VIEW_ROUTES[item.view] || '/shipping'))}
                 title={sidebarCollapsed ? item.label : undefined}
               >
                 <span className="nav-icon">{item.icon}</span>
@@ -454,7 +454,7 @@ function App() {
             <span className="nav-icon">{'\u{1F3E2}'}</span> <span className="nav-label">Supplier Portal</span>
           </button>
           {isAdmin && (
-            <button className={`nav-item ${activeView === 'users' ? 'active' : ''}`} onClick={() => navigate('/users')} title={sidebarCollapsed ? 'User Management' : undefined}>
+            <button className={`nav-item ${activeView === 'users' ? 'active' : ''}`} onClick={() => startTransition(() => navigate('/users'))} title={sidebarCollapsed ? 'User Management' : undefined}>
               <span className="nav-icon">{'\u{1F465}'}</span> <span className="nav-label">User Management</span>
             </button>
           )}
@@ -500,7 +500,7 @@ function App() {
             </button>
             {isAdmin && costingRequestCount > 0 && (
               <button
-                onClick={() => navigate('/costing-requests')}
+                onClick={() => startTransition(() => navigate('/costing-requests'))}
                 className="btn"
                 style={{
                   position: 'relative', fontSize: '0.9rem',
