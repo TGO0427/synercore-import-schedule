@@ -21,9 +21,10 @@ export default function useFormDraft(key, formData, setFormData, { debounceMs = 
   const timerRef = useRef(null);
   const initializedRef = useRef(false);
 
-  // Restore draft on mount (once)
+  // Restore draft when enabled (once per enable cycle)
   useEffect(() => {
-    if (!enabled || initializedRef.current) return;
+    if (!enabled) return;
+    if (initializedRef.current) return;
     initializedRef.current = true;
 
     try {
@@ -61,15 +62,24 @@ export default function useFormDraft(key, formData, setFormData, { debounceMs = 
     };
   }, [formData, storageKey, debounceMs, enabled]);
 
+  // Reset initialization when disabled so re-enabling restores draft again
+  useEffect(() => {
+    if (!enabled) {
+      initializedRef.current = false;
+      setIsDirty(false);
+    }
+  }, [enabled]);
+
   // Warn user about unsaved changes before leaving the page
   useEffect(() => {
-    if (!isDirty) return;
+    if (!isDirty || !enabled) return;
     const handler = (e) => {
       e.preventDefault();
+      e.returnValue = ''; // Required by Chrome/Edge to show the dialog
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
-  }, [isDirty]);
+  }, [isDirty, enabled]);
 
   // Clear draft (call on successful submit)
   const clearDraft = useCallback(() => {
