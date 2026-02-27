@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { getCurrentWeekNumber } from '../utils/dateUtils';
 import { jsPDF } from 'jspdf';
-import { ShipmentStatus } from '../types/shipment';
+import { ShipmentStatus, DELAYED_STATUSES } from '../types/shipment';
 import { authUtils } from '../utils/auth';
 import CapacityForecastTable from './CapacityForecastTable';
 import { useNotification } from '../contexts/NotificationContext';
@@ -1212,7 +1212,7 @@ function WarehouseCapacity({ shipments }) {
       ShipmentStatus.IN_TRANSIT_AIRFREIGHT, ShipmentStatus.IN_TRANSIT_SEAWAY,
       ShipmentStatus.IN_TRANSIT_ROADWAY, ShipmentStatus.AIR_CUSTOMS_CLEARANCE,
       ShipmentStatus.MOORED, ShipmentStatus.BERTH_WORKING, ShipmentStatus.BERTH_COMPLETE,
-      ShipmentStatus.DELAYED,
+      ...DELAYED_STATUSES,
     ];
     const productData = shipments
       .filter(shipment => {

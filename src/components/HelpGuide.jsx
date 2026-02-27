@@ -97,7 +97,7 @@ function HelpGuide({ onClose }) {
               <li><strong>Total Shipments</strong> — All active shipments</li>
               <li><strong>In Transit</strong> — Shipments currently being transported</li>
               <li><strong>Arrived</strong> — Shipments at destination</li>
-              <li><strong>Delayed</strong> — Overdue shipments</li>
+              <li><strong>Delayed</strong> — Overdue shipments, with sub-types: Port, Customs, Documents, Supplier</li>
               <li><strong>Planned</strong> — Shipments in planning stage</li>
             </ul>
             <p>Each tile shows a week-over-week delta indicator (up/down arrow) comparing to the previous week.</p>
@@ -142,7 +142,7 @@ function HelpGuide({ onClose }) {
               <li><strong>Air Customs Clearance</strong> — Airfreight clearing customs</li>
               <li><strong>Moored / Berth Working / Berth Complete</strong> — At port stages</li>
               <li><strong>Arrived</strong> — Reached destination (PTA, KLM, or Offsite)</li>
-              <li><strong>Delayed</strong> — Overdue shipments</li>
+              <li><strong>Delayed</strong> — Overdue shipments, with sub-types: Port, Customs, Documents, Supplier</li>
             </ol>
 
             <h3>Adding Shipments</h3>

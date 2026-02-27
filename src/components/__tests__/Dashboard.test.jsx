@@ -16,9 +16,14 @@ jest.mock('../types/shipment', () => ({
     IN_TRANSIT_SEAWAY: 'in_transit_seaway',
     ARRIVED_PTA: 'arrived_pta',
     ARRIVED_KLM: 'arrived_klm',
-    DELAYED: 'delayed',
+    DELAYED_PORT: 'delayed_port',
+    DELAYED_CUSTOMS: 'delayed_customs',
+    DELAYED_DOCUMENTS: 'delayed_documents',
+    DELAYED_SUPPLIER: 'delayed_supplier',
     CANCELLED: 'cancelled',
   },
+  DELAYED_STATUSES: ['delayed_port', 'delayed_customs', 'delayed_documents', 'delayed_supplier'],
+  isDelayedStatus: (status) => ['delayed_port', 'delayed_customs', 'delayed_documents', 'delayed_supplier'].includes(status),
 }));
 
 const mockShipments = [
@@ -68,7 +73,7 @@ describe('Dashboard', () => {
       { id: '1', latestStatus: 'planned_airfreight', supplier: 'Test' },
       { id: '2', latestStatus: 'in_transit_airfreight', supplier: 'Test' },
       { id: '3', latestStatus: 'arrived_pta', supplier: 'Test' },
-      { id: '4', latestStatus: 'delayed', supplier: 'Test' },
+      { id: '4', latestStatus: 'delayed_port', supplier: 'Test' },
       { id: '5', latestStatus: 'cancelled', supplier: 'Test' },
     ];
 

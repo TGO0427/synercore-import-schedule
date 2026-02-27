@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { authFetch } from '../utils/authFetch';
-import { ShipmentStatus } from '../types/shipment';
+import { ShipmentStatus, isDelayedStatus, DELAYED_STATUSES } from '../types/shipment';
 import { getCurrentWeekNumber } from '../utils/dateUtils';
 import PostArrivalWorkflowReport from './PostArrivalWorkflowReport';
 import CurrentWeekStoredReport from './CurrentWeekStoredReport';
@@ -414,7 +414,10 @@ function ReportsView({ shipments: propShipments }) {
       [ShipmentStatus.BERTH_COMPLETE]: new Set(),
       [ShipmentStatus.ARRIVED_PTA]: new Set(),
       [ShipmentStatus.ARRIVED_KLM]: new Set(),
-      [ShipmentStatus.DELAYED]: new Set(),
+      [ShipmentStatus.DELAYED_PORT]: new Set(),
+      [ShipmentStatus.DELAYED_CUSTOMS]: new Set(),
+      [ShipmentStatus.DELAYED_DOCUMENTS]: new Set(),
+      [ShipmentStatus.DELAYED_SUPPLIER]: new Set(),
       [ShipmentStatus.CANCELLED]: new Set(),
       [ShipmentStatus.STORED]: new Set(),
       [ShipmentStatus.ARCHIVED]: new Set(),
@@ -445,7 +448,7 @@ function ReportsView({ shipments: propShipments }) {
           };
         }
         supplierOrderRefs[supplier].total.add(orderRef);
-        if (status === ShipmentStatus.DELAYED) {
+        if (isDelayedStatus(status)) {
           supplierOrderRefs[supplier].delayed.add(orderRef);
         } else if (status === ShipmentStatus.ARRIVED_PTA || status === ShipmentStatus.ARRIVED_KLM) {
           supplierOrderRefs[supplier].arrived.add(orderRef);
@@ -488,7 +491,7 @@ function ReportsView({ shipments: propShipments }) {
       forwardingAgentStats[forwardingAgent].totalPalletQty += shipment.palletQty || 0;
       if (status === ShipmentStatus.ARRIVED_PTA || status === ShipmentStatus.ARRIVED_KLM) {
         forwardingAgentStats[forwardingAgent].delivered++;
-      } else if (status === ShipmentStatus.DELAYED) {
+      } else if (isDelayedStatus(status)) {
         forwardingAgentStats[forwardingAgent].delayed++;
       } else if (status === ShipmentStatus.IN_TRANSIT_ROADWAY || status === ShipmentStatus.IN_TRANSIT_SEAWAY) {
         forwardingAgentStats[forwardingAgent].inTransit++;
@@ -569,7 +572,10 @@ function ReportsView({ shipments: propShipments }) {
       [ShipmentStatus.BERTH_COMPLETE]: '#7B1FA2',
       [ShipmentStatus.ARRIVED_PTA]: 'var(--success)',
       [ShipmentStatus.ARRIVED_KLM]: '#66BB6A',
-      [ShipmentStatus.DELAYED]: 'var(--danger)',
+      [ShipmentStatus.DELAYED_PORT]: '#dc3545',
+      [ShipmentStatus.DELAYED_CUSTOMS]: '#c62828',
+      [ShipmentStatus.DELAYED_DOCUMENTS]: '#e65100',
+      [ShipmentStatus.DELAYED_SUPPLIER]: '#d32f2f',
       [ShipmentStatus.CANCELLED]: '#9E9E9E',
     };
 
@@ -897,7 +903,7 @@ function ReportsView({ shipments: propShipments }) {
       { key: 'receiving', status: ShipmentStatus.RECEIVING, value: analytics.statusCounts[ShipmentStatus.RECEIVING] || 0, label: 'Receiving', icon: '📥', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
       { key: 'received', status: ShipmentStatus.RECEIVED, value: analytics.statusCounts[ShipmentStatus.RECEIVED] || 0, label: 'Received', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
       { key: 'stored', status: ShipmentStatus.STORED, value: analytics.statusCounts[ShipmentStatus.STORED] || 0, label: 'Stored', icon: '🏪', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
-      { key: 'delayed', status: ShipmentStatus.DELAYED, value: analytics.statusCounts[ShipmentStatus.DELAYED] || 0, label: 'Delayed', icon: '⚠️', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
+      { key: 'delayed', status: '__delayed_all__', value: DELAYED_STATUSES.reduce((sum, s) => sum + (analytics.statusCounts[s] || 0), 0), label: 'Delayed', icon: '⚠️', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
       { key: 'cancelled', status: ShipmentStatus.CANCELLED, value: analytics.statusCounts[ShipmentStatus.CANCELLED] || 0, label: 'Cancelled', icon: '❌', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
       { key: 'week', status: '__info__', value: `Week ${analytics.currentWeek}`, label: 'Current Week', icon: '📅', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
       { key: 'suppliers', status: '__info__', value: Object.keys(analytics.supplierStats).length, label: 'Active Suppliers', icon: '🏭', ring: 'ring-accent', tint: 'rgba(5,150,105,0.1)' },

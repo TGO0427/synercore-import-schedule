@@ -2031,7 +2031,10 @@ function getStatusColor(status) {
     'pending': '#d69e2e',
     'cancelled': '#e53e3e',
     'in-transit': '#805ad5',
-    'delayed': '#dd6b20'
+    'delayed_port': '#dc3545',
+    'delayed_customs': '#c62828',
+    'delayed_documents': '#e65100',
+    'delayed_supplier': '#d32f2f'
   };
   
   const statusLower = (status || '').toLowerCase();

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import useFormDraft from '../hooks/useFormDraft';
-import { ShipmentStatus } from '../types/shipment';
+import { ShipmentStatus, isDelayedStatus } from '../types/shipment';
 import { getCurrentWeekNumber } from '../utils/dateUtils';
 import WeekCalendar from './WeekCalendar';
 import BulkStatusUpdate from './BulkStatusUpdate';
@@ -343,7 +343,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
   };
 
   const isDelayed = (shipment) => {
-    return shipment.latestStatus === ShipmentStatus.DELAYED;
+    return isDelayedStatus(shipment.latestStatus);
   };
 
   const generatePDF = () => {
@@ -991,7 +991,12 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
           <option value={ShipmentStatus.ARRIVED_PTA}>Arrived PTA</option>
           <option value={ShipmentStatus.ARRIVED_KLM}>Arrived KLM</option>
           <option value={ShipmentStatus.ARRIVED_OFFSITE}>Arrived OffSite</option>
-          <option value={ShipmentStatus.DELAYED}>Delayed</option>
+          <optgroup label="Delayed">
+            <option value={ShipmentStatus.DELAYED_PORT}>Delayed - Port</option>
+            <option value={ShipmentStatus.DELAYED_CUSTOMS}>Delayed - Customs</option>
+            <option value={ShipmentStatus.DELAYED_DOCUMENTS}>Delayed - Documents</option>
+            <option value={ShipmentStatus.DELAYED_SUPPLIER}>Delayed - Supplier</option>
+          </optgroup>
           <option value={ShipmentStatus.CANCELLED}>Cancelled</option>
           <option value="arrived">Arrived (All)</option>
         </select>
@@ -1114,7 +1119,12 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                       <option value={ShipmentStatus.ARRIVED_PTA}>Arrived PTA</option>
                       <option value={ShipmentStatus.ARRIVED_KLM}>Arrived KLM</option>
                       <option value={ShipmentStatus.ARRIVED_OFFSITE}>Arrived OffSite</option>
-                      <option value={ShipmentStatus.DELAYED}>Delayed</option>
+                      <optgroup label="Delayed">
+                        <option value={ShipmentStatus.DELAYED_PORT}>Delayed - Port</option>
+                        <option value={ShipmentStatus.DELAYED_CUSTOMS}>Delayed - Customs</option>
+                        <option value={ShipmentStatus.DELAYED_DOCUMENTS}>Delayed - Documents</option>
+                        <option value={ShipmentStatus.DELAYED_SUPPLIER}>Delayed - Supplier</option>
+                      </optgroup>
                       <option value={ShipmentStatus.CANCELLED}>Cancelled</option>
                     </select>
                   </div>
@@ -1127,7 +1137,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                     <dt>Agent</dt><dd>{shipment.forwardingAgent || '-'}</dd>
                   </dl>
                   {/* Progress bar */}
-                  {shipment.latestStatus !== 'delayed' && shipment.latestStatus !== 'cancelled' && (
+                  {!isDelayedStatus(shipment.latestStatus) && shipment.latestStatus !== 'cancelled' && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: 8 }}>
                       <div style={{ display: 'flex', gap: '2px', flex: 1 }}>
                         {[1,2,3,4,5].map(step => (
@@ -1283,12 +1293,17 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                       <option value={ShipmentStatus.ARRIVED_PTA}>Arrived PTA</option>
                       <option value={ShipmentStatus.ARRIVED_KLM}>Arrived KLM</option>
                       <option value={ShipmentStatus.ARRIVED_OFFSITE}>Arrived OffSite</option>
-                      <option value={ShipmentStatus.DELAYED}>Delayed</option>
+                      <optgroup label="Delayed">
+                        <option value={ShipmentStatus.DELAYED_PORT}>Delayed - Port</option>
+                        <option value={ShipmentStatus.DELAYED_CUSTOMS}>Delayed - Customs</option>
+                        <option value={ShipmentStatus.DELAYED_DOCUMENTS}>Delayed - Documents</option>
+                        <option value={ShipmentStatus.DELAYED_SUPPLIER}>Delayed - Supplier</option>
+                      </optgroup>
                       <option value={ShipmentStatus.CANCELLED}>Cancelled</option>
                     </select>
                   </td>
                   <td>
-                    {shipment.latestStatus !== 'delayed' && shipment.latestStatus !== 'cancelled' ? (() => {
+                    {!isDelayedStatus(shipment.latestStatus) && shipment.latestStatus !== 'cancelled' ? (() => {
                       const progress = getShippingProgress(shipment.latestStatus);
                       return (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1309,9 +1324,9 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                     })() : (
                       <span style={{
                         fontSize: '0.7rem', fontWeight: 600,
-                        color: shipment.latestStatus === 'delayed' ? 'var(--danger)' : 'var(--text-500)'
+                        color: isDelayedStatus(shipment.latestStatus) ? 'var(--danger)' : 'var(--text-500)'
                       }}>
-                        {shipment.latestStatus === 'delayed' ? 'DELAYED' : 'CANCELLED'}
+                        {isDelayedStatus(shipment.latestStatus) ? 'DELAYED' : 'CANCELLED'}
                       </span>
                     )}
                   </td>
@@ -1588,7 +1603,12 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   <option value="arrived_pta">Arrived PTA</option>
                   <option value="arrived_klm">Arrived KLM</option>
                   <option value="arrived_offsite">Arrived OffSite</option>
-                  <option value="delayed">Delayed</option>
+                  <optgroup label="Delayed">
+                    <option value="delayed_port">Delayed - Port</option>
+                    <option value="delayed_customs">Delayed - Customs</option>
+                    <option value="delayed_documents">Delayed - Documents</option>
+                    <option value="delayed_supplier">Delayed - Supplier</option>
+                  </optgroup>
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
@@ -2000,7 +2020,12 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   <option value="arrived_pta">Arrived PTA</option>
                   <option value="arrived_klm">Arrived KLM</option>
                   <option value="arrived_offsite">Arrived OffSite</option>
-                  <option value="delayed">Delayed</option>
+                  <optgroup label="Delayed">
+                    <option value="delayed_port">Delayed - Port</option>
+                    <option value="delayed_customs">Delayed - Customs</option>
+                    <option value="delayed_documents">Delayed - Documents</option>
+                    <option value="delayed_supplier">Delayed - Supplier</option>
+                  </optgroup>
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>

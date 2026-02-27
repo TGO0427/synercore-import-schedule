@@ -1,7 +1,7 @@
 import React, { useMemo, lazy } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ShipmentTable from './ShipmentTable';
-import { SHIPPING_EXCLUDED_STATUSES } from '../types/shipment';
+import { SHIPPING_EXCLUDED_STATUSES, DELAYED_STATUSES, isDelayedStatus } from '../types/shipment';
 
 const FileUpload = lazy(() => import('./FileUpload'));
 
@@ -26,7 +26,10 @@ const STAT_CARD_DEFS = [
   { key: 'receiving', status: 'receiving', label: 'Receiving', icon: '\u{1F4E5}', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
   { key: 'received', status: 'received', label: 'Received', icon: '\u2705', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
   { key: 'stored', status: 'stored', label: 'Stored', icon: '\u{1F3EA}', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
-  { key: 'delayed', status: 'delayed', label: 'Delayed', icon: '\u26A0\uFE0F', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
+  { key: 'delayed_port', status: 'delayed_port', label: 'Delayed - Port', icon: '\u2693', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
+  { key: 'delayed_customs', status: 'delayed_customs', label: 'Delayed - Customs', icon: '\u{1F9F3}', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
+  { key: 'delayed_documents', status: 'delayed_documents', label: 'Delayed - Documents', icon: '\u{1F4C4}', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
+  { key: 'delayed_supplier', status: 'delayed_supplier', label: 'Delayed - Supplier', icon: '\u{1F3ED}', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
   { key: 'cancelled', status: 'cancelled', label: 'Cancelled', icon: '\u274C', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
 ];
 
@@ -67,6 +70,7 @@ function ShippingView({ shipments, onFileUpload, onUpdateShipment, onDeleteShipm
       in_transit: ['in_transit_airfreight', 'in_transit_roadway', 'in_transit_seaway'],
       arrived: ['arrived_pta', 'arrived_klm', 'arrived_offsite'],
       planned: ['planned_airfreight', 'planned_seafreight'],
+      delayed: ['delayed_port', 'delayed_customs', 'delayed_documents', 'delayed_supplier'],
     };
     const matchStatuses = META_FILTERS[statusFilter] || [statusFilter];
     shippingShipments = shippingShipments.filter(s => matchStatuses.includes(s.latestStatus));
@@ -94,7 +98,8 @@ function ShippingView({ shipments, onFileUpload, onUpdateShipment, onDeleteShipm
       unloading: 0, inspection_pending: 0, inspecting: 0,
       inspection_failed: 0, inspection_passed: 0,
       receiving: 0, received: 0, stored: 0,
-      delayed: 0, cancelled: 0
+      delayed_port: 0, delayed_customs: 0, delayed_documents: 0, delayed_supplier: 0,
+      cancelled: 0
     };
 
     Object.keys(statusOrderRefs).forEach(status => {

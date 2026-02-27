@@ -72,7 +72,10 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
         case ShipmentStatus.ARRIVED_KLM:
         case ShipmentStatus.ARRIVED_OFFSITE:
           arrived++; break;
-        case ShipmentStatus.DELAYED:
+        case ShipmentStatus.DELAYED_PORT:
+        case ShipmentStatus.DELAYED_CUSTOMS:
+        case ShipmentStatus.DELAYED_DOCUMENTS:
+        case ShipmentStatus.DELAYED_SUPPLIER:
           delayed++; break;
         default:
           processing++; break;

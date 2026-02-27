@@ -18,7 +18,10 @@
 .status-in_transit { background-color: #fff3e0; color: #f57c00; }
 .status-air_customs_clearance { background-color: #e1f5fe; color: #0277bd; }
 .status-arrived { background-color: #e8f5e8; color: #388e3c; }
-.status-delayed { background-color: #ffebee; color: #d32f2f; }
+.status-delayed_port { background-color: #ffebee; color: #dc3545; }
+.status-delayed_customs { background-color: #ffebee; color: #c62828; }
+.status-delayed_documents { background-color: #fff3e0; color: #e65100; }
+.status-delayed_supplier { background-color: #ffebee; color: #d32f2f; }
 .status-cancelled { background-color: #f5f5f5; color: #757575; }
 
 .priority-high { color: #d32f2f; font-weight: 600; }

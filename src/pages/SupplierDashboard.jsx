@@ -160,7 +160,7 @@ function SupplierDashboard({ onLogout }) {
     if (!status) return 'var(--text-500, #6c757d)';
     if (status === 'received') return 'var(--success, #28a745)';
     if (status === 'stored') return 'var(--info, #007bff)';
-    if (status === 'delayed') return 'var(--danger, #dc3545)';
+    if (status && status.startsWith('delayed_')) return 'var(--danger, #dc3545)';
     if (status.includes('in_transit')) return 'var(--warning, #ffc107)';
     if (status.includes('arrived')) return 'var(--info, #17a2b8)';
     if (status.includes('planned')) return 'var(--text-500, #6c757d)';
@@ -174,7 +174,7 @@ function SupplierDashboard({ onLogout }) {
     inTransit: shipments.filter(s => (s.latestStatus || s.latest_status || '').includes('transit')).length,
     arrived: shipments.filter(s => (s.latestStatus || s.latest_status || '').includes('arrived')).length,
     stored: shipments.filter(s => (s.latestStatus || s.latest_status) === 'stored').length,
-    delayed: shipments.filter(s => (s.latestStatus || s.latest_status) === 'delayed').length,
+    delayed: shipments.filter(s => (s.latestStatus || s.latest_status || '').startsWith('delayed_')).length,
   };
 
   const statCards = [

@@ -1,4 +1,4 @@
-import { Shipment, ShipmentStatus } from '../../src/types/shipment.js';
+import { Shipment, ShipmentStatus, DELAYED_STATUSES } from '../../src/types/shipment.js';
 import archiveService from '../services/archiveService.js';
 import db from '../db/connection.js';
 import EmailService from '../services/emailService.js';
@@ -238,7 +238,8 @@ export class ShipmentsController {
 
   static async getDelayedShipments(req, res) {
     try {
-      const result = await db.query('SELECT * FROM shipments WHERE latest_status = $1', [ShipmentStatus.DELAYED]);
+      const placeholders = DELAYED_STATUSES.map((_, i) => `$${i + 1}`).join(',');
+      const result = await db.query(`SELECT * FROM shipments WHERE latest_status IN (${placeholders})`, DELAYED_STATUSES);
       res.json(result.rows.map(dbRowToShipment));
     } catch (error) {
       sendError(res, Errors.DatabaseError('shipment retrieval'), 'getDelayedShipments');

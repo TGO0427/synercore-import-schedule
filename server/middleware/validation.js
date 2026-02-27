@@ -161,7 +161,10 @@ export const validateShipmentCreate = [
       'arrived_pta',
       'arrived_klm',
       'arrived_offsite',
-      'delayed',
+      'delayed_port',
+      'delayed_customs',
+      'delayed_documents',
+      'delayed_supplier',
       'cancelled',
       // Post-arrival workflow states
       'unloading',
@@ -320,7 +323,10 @@ export const validateShipmentQuery = [
       'arrived_pta',
       'arrived_klm',
       'arrived_offsite',
-      'delayed',
+      'delayed_port',
+      'delayed_customs',
+      'delayed_documents',
+      'delayed_supplier',
       'cancelled',
       // Post-arrival workflow states
       'unloading',

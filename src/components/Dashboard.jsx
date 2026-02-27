@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShipmentStatus } from '../types/shipment';
+import { ShipmentStatus, DELAYED_STATUSES, isDelayedStatus } from '../types/shipment';
 import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
 import { authUtils } from '../utils/auth';
@@ -151,7 +151,10 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
         case ShipmentStatus.STORED:
         case ShipmentStatus.ARCHIVED:
           statusOrderRefs.stored.add(orderRef); statusKey = 'stored'; break;
-        case ShipmentStatus.DELAYED:
+        case ShipmentStatus.DELAYED_PORT:
+        case ShipmentStatus.DELAYED_CUSTOMS:
+        case ShipmentStatus.DELAYED_DOCUMENTS:
+        case ShipmentStatus.DELAYED_SUPPLIER:
           statusOrderRefs.delayed.add(orderRef); statusKey = 'delayed'; break;
         case ShipmentStatus.CANCELLED:
           statusOrderRefs.cancelled.add(orderRef); break;
@@ -227,7 +230,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       ShipmentStatus.STORED, ShipmentStatus.ARCHIVED,
     ];
     const isDelayed = (s) =>
-      s.latestStatus === ShipmentStatus.DELAYED ||
+      isDelayedStatus(s.latestStatus) ||
       (s.weekNumber > 0 && s.weekNumber < currentWeek && preArrivalStatuses.includes(s.latestStatus));
     return {
       total: getWeekDelta(shipments, () => true),
@@ -375,7 +378,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       ShipmentStatus.IN_TRANSIT_AIRFREIGHT, ShipmentStatus.IN_TRANSIT_SEAWAY,
       ShipmentStatus.IN_TRANSIT_ROADWAY, ShipmentStatus.AIR_CUSTOMS_CLEARANCE,
       ShipmentStatus.MOORED, ShipmentStatus.BERTH_WORKING, ShipmentStatus.BERTH_COMPLETE,
-      ShipmentStatus.DELAYED,
+      ...DELAYED_STATUSES,
     ];
     return shipments
       .filter(s =>

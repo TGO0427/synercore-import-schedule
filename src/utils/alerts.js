@@ -29,12 +29,19 @@ export function computeShipmentAlerts(shipments) {
     };
 
     // Critical alerts - require immediate attention
-    if (s.latestStatus === 'delayed') {
+    if (s.latestStatus && s.latestStatus.startsWith('delayed_')) {
+      const delayReasons = {
+        'delayed_port': 'port congestion',
+        'delayed_customs': 'customs hold',
+        'delayed_documents': 'missing documents',
+        'delayed_supplier': 'supplier delay'
+      };
+      const reason = delayReasons[s.latestStatus] || 'unknown reason';
       alerts.push({
         ...base,
         severity: 'critical',
         title: 'Delayed Shipment',
-        description: `${s.supplier} - ${s.productName || s.orderRef} is delayed and requires attention.`
+        description: `${s.supplier} - ${s.productName || s.orderRef} is delayed (${reason}) and requires attention.`
       });
     }
 
@@ -137,7 +144,7 @@ export function computeShipmentAlerts(shipments) {
         isOverdue = shipmentWeek < currentWeek;
       }
 
-      if (isOverdue && !['arrived_pta', 'arrived_klm', 'arrived_offsite', 'unloading', 'inspection_pending', 'inspecting', 'inspection_failed', 'inspection_passed', 'receiving', 'received', 'stored', 'delayed', 'cancelled'].includes(s.latestStatus)) {
+      if (isOverdue && !['arrived_pta', 'arrived_klm', 'arrived_offsite', 'unloading', 'inspection_pending', 'inspecting', 'inspection_failed', 'inspection_passed', 'receiving', 'received', 'stored', 'delayed_port', 'delayed_customs', 'delayed_documents', 'delayed_supplier', 'cancelled'].includes(s.latestStatus)) {
         alerts.push({
           ...base,
           id: `ship-${s.id}-overdue`,

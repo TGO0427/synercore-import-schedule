@@ -91,7 +91,7 @@ router.get('/stats', async (req: Request, res: Response) => {
         COUNT(CASE WHEN latest_status LIKE '%transit%' THEN 1 END) as in_transit,
         COUNT(CASE WHEN latest_status LIKE 'arrived%' THEN 1 END) as arrived,
         COUNT(CASE WHEN latest_status = 'stored' THEN 1 END) as stored,
-        COUNT(CASE WHEN latest_status = 'delayed' THEN 1 END) as delayed,
+        COUNT(CASE WHEN latest_status LIKE 'delayed_%' THEN 1 END) as delayed,
         COUNT(CASE WHEN latest_status IN ('arrived_pta', 'arrived_klm', 'arrived_offsite', 'stored', 'received') THEN 1 END) as on_time_count
       FROM shipments
       WHERE LOWER(TRIM(supplier)) = LOWER(TRIM($1))

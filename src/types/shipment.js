@@ -11,7 +11,10 @@ export const ShipmentStatus = {
   ARRIVED_PTA: 'arrived_pta',
   ARRIVED_KLM: 'arrived_klm',
   ARRIVED_OFFSITE: 'arrived_offsite',
-  DELAYED: 'delayed',
+  DELAYED_PORT: 'delayed_port',
+  DELAYED_CUSTOMS: 'delayed_customs',
+  DELAYED_DOCUMENTS: 'delayed_documents',
+  DELAYED_SUPPLIER: 'delayed_supplier',
   CANCELLED: 'cancelled',
   // Post-arrival workflow states
   UNLOADING: 'unloading',
@@ -51,6 +54,17 @@ export const ShipmentPriority = {
 // ========== Centralized Status Groups ==========
 // Use these instead of defining ad-hoc status arrays in components.
 
+/** All delayed sub-type statuses */
+export const DELAYED_STATUSES = [
+  ShipmentStatus.DELAYED_PORT,
+  ShipmentStatus.DELAYED_CUSTOMS,
+  ShipmentStatus.DELAYED_DOCUMENTS,
+  ShipmentStatus.DELAYED_SUPPLIER,
+];
+
+/** Check if a status is any delayed sub-type */
+export const isDelayedStatus = (status) => DELAYED_STATUSES.includes(status);
+
 /** Statuses for shipments in the post-arrival workflow */
 export const POST_ARRIVAL_STATUSES = [
   ShipmentStatus.ARRIVED_PTA,
@@ -76,7 +90,7 @@ export const IN_TRANSIT_STATUSES = [
   ShipmentStatus.MOORED,
   ShipmentStatus.BERTH_WORKING,
   ShipmentStatus.BERTH_COMPLETE,
-  ShipmentStatus.DELAYED,
+  ...DELAYED_STATUSES,
 ];
 
 /** Arrival statuses only (subset of post-arrival) */
@@ -111,7 +125,10 @@ export const STATUS_LABELS = {
   [ShipmentStatus.ARRIVED_PTA]: 'Arrived PTA',
   [ShipmentStatus.ARRIVED_KLM]: 'Arrived KLM',
   [ShipmentStatus.ARRIVED_OFFSITE]: 'Arrived Offsite',
-  [ShipmentStatus.DELAYED]: 'Delayed',
+  [ShipmentStatus.DELAYED_PORT]: 'Delayed - Port',
+  [ShipmentStatus.DELAYED_CUSTOMS]: 'Delayed - Customs',
+  [ShipmentStatus.DELAYED_DOCUMENTS]: 'Delayed - Documents',
+  [ShipmentStatus.DELAYED_SUPPLIER]: 'Delayed - Supplier',
   [ShipmentStatus.CANCELLED]: 'Cancelled',
   [ShipmentStatus.UNLOADING]: 'Unloading',
   [ShipmentStatus.INSPECTION_PENDING]: 'Inspection Pending',
@@ -139,7 +156,10 @@ export const STATUS_COLORS = {
   [ShipmentStatus.ARRIVED_PTA]: '#28a745',
   [ShipmentStatus.ARRIVED_KLM]: '#28a745',
   [ShipmentStatus.ARRIVED_OFFSITE]: '#28a745',
-  [ShipmentStatus.DELAYED]: '#dc3545',
+  [ShipmentStatus.DELAYED_PORT]: '#dc3545',
+  [ShipmentStatus.DELAYED_CUSTOMS]: '#c62828',
+  [ShipmentStatus.DELAYED_DOCUMENTS]: '#e65100',
+  [ShipmentStatus.DELAYED_SUPPLIER]: '#d32f2f',
   [ShipmentStatus.CANCELLED]: '#9E9E9E',
   [ShipmentStatus.UNLOADING]: '#FF9800',
   [ShipmentStatus.INSPECTION_PENDING]: '#9C27B0',
@@ -237,7 +257,7 @@ export class Shipment {
   }
 
   isDelayed() {
-    return this.latestStatus === ShipmentStatus.DELAYED;
+    return DELAYED_STATUSES.includes(this.latestStatus);
   }
 
   isArrived() {
