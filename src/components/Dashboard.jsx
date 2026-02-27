@@ -97,6 +97,14 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
 
     const statusOrderRefs = { planned: new Set(), inTransit: new Set(), stored: new Set(), delayed: new Set(), cancelled: new Set() };
 
+    // Statuses that mean a shipment hasn't arrived yet (used for overdue detection)
+    const preArrivalStatuses = [
+      ShipmentStatus.PLANNED_AIRFREIGHT, ShipmentStatus.PLANNED_SEAFREIGHT,
+      ShipmentStatus.IN_TRANSIT_AIRFREIGHT, ShipmentStatus.AIR_CUSTOMS_CLEARANCE,
+      ShipmentStatus.IN_TRANSIT_ROADWAY, ShipmentStatus.IN_TRANSIT_SEAWAY,
+      ShipmentStatus.MOORED, ShipmentStatus.BERTH_WORKING, ShipmentStatus.BERTH_COMPLETE,
+    ];
+
     shipments.forEach(shipment => {
       const orderRef = shipment.orderRef;
       if (!orderRef) return;
@@ -104,11 +112,19 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       const wk = shipment.weekNumber;
       const weekBucket = wk === currentWeek ? 'curr' : wk === currentWeek - 1 ? 'prev' : null;
 
+      // Check if shipment is overdue: still pre-arrival but past its scheduled week
+      const isOverdue = wk > 0 && wk < currentWeek && preArrivalStatuses.includes(shipment.latestStatus);
+
       let statusKey = null;
       switch (shipment.latestStatus) {
         case ShipmentStatus.PLANNED_AIRFREIGHT:
         case ShipmentStatus.PLANNED_SEAFREIGHT:
-          statusOrderRefs.planned.add(orderRef); statusKey = 'planned'; break;
+          if (isOverdue) {
+            statusOrderRefs.delayed.add(orderRef); statusKey = 'delayed';
+          } else {
+            statusOrderRefs.planned.add(orderRef); statusKey = 'planned';
+          }
+          break;
         case ShipmentStatus.IN_TRANSIT_AIRFREIGHT:
         case ShipmentStatus.AIR_CUSTOMS_CLEARANCE:
         case ShipmentStatus.IN_TRANSIT_ROADWAY:
@@ -116,7 +132,22 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
         case ShipmentStatus.MOORED:
         case ShipmentStatus.BERTH_WORKING:
         case ShipmentStatus.BERTH_COMPLETE:
-          statusOrderRefs.inTransit.add(orderRef); statusKey = 'inTransit'; break;
+          if (isOverdue) {
+            statusOrderRefs.delayed.add(orderRef); statusKey = 'delayed';
+          } else {
+            statusOrderRefs.inTransit.add(orderRef); statusKey = 'inTransit';
+          }
+          break;
+        case ShipmentStatus.ARRIVED_PTA:
+        case ShipmentStatus.ARRIVED_KLM:
+        case ShipmentStatus.ARRIVED_OFFSITE:
+        case ShipmentStatus.UNLOADING:
+        case ShipmentStatus.INSPECTION_PENDING:
+        case ShipmentStatus.INSPECTING:
+        case ShipmentStatus.INSPECTION_PASSED:
+        case ShipmentStatus.INSPECTION_FAILED:
+        case ShipmentStatus.RECEIVING:
+        case ShipmentStatus.RECEIVED:
         case ShipmentStatus.STORED:
         case ShipmentStatus.ARCHIVED:
           statusOrderRefs.stored.add(orderRef); statusKey = 'stored'; break;
@@ -175,26 +206,55 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
 
   // Percentage-based week-over-week deltas
   const pctDeltas = useMemo(() => {
+    const currentWeek = getCurrentWeek();
+    const preArrivalStatuses = [
+      ShipmentStatus.PLANNED_AIRFREIGHT, ShipmentStatus.PLANNED_SEAFREIGHT,
+      ShipmentStatus.IN_TRANSIT_AIRFREIGHT, ShipmentStatus.AIR_CUSTOMS_CLEARANCE,
+      ShipmentStatus.IN_TRANSIT_ROADWAY, ShipmentStatus.IN_TRANSIT_SEAWAY,
+      ShipmentStatus.MOORED, ShipmentStatus.BERTH_WORKING, ShipmentStatus.BERTH_COMPLETE,
+    ];
     const plannedStatuses = [ShipmentStatus.PLANNED_AIRFREIGHT, ShipmentStatus.PLANNED_SEAFREIGHT];
     const transitStatuses = [
       ShipmentStatus.IN_TRANSIT_AIRFREIGHT, ShipmentStatus.AIR_CUSTOMS_CLEARANCE,
       ShipmentStatus.IN_TRANSIT_ROADWAY, ShipmentStatus.IN_TRANSIT_SEAWAY,
       ShipmentStatus.MOORED, ShipmentStatus.BERTH_WORKING, ShipmentStatus.BERTH_COMPLETE,
     ];
-    const storedStatuses = [ShipmentStatus.STORED, ShipmentStatus.ARCHIVED];
+    const storedStatuses = [
+      ShipmentStatus.ARRIVED_PTA, ShipmentStatus.ARRIVED_KLM, ShipmentStatus.ARRIVED_OFFSITE,
+      ShipmentStatus.UNLOADING, ShipmentStatus.INSPECTION_PENDING, ShipmentStatus.INSPECTING,
+      ShipmentStatus.INSPECTION_PASSED, ShipmentStatus.INSPECTION_FAILED,
+      ShipmentStatus.RECEIVING, ShipmentStatus.RECEIVED,
+      ShipmentStatus.STORED, ShipmentStatus.ARCHIVED,
+    ];
+    const isDelayed = (s) =>
+      s.latestStatus === ShipmentStatus.DELAYED ||
+      (s.weekNumber > 0 && s.weekNumber < currentWeek && preArrivalStatuses.includes(s.latestStatus));
     return {
       total: getWeekDelta(shipments, () => true),
-      inTransit: getWeekDelta(shipments, s => transitStatuses.includes(s.latestStatus)),
+      inTransit: getWeekDelta(shipments, s => transitStatuses.includes(s.latestStatus) && !isDelayed(s)),
       stored: getWeekDelta(shipments, s => storedStatuses.includes(s.latestStatus)),
-      delayed: getWeekDelta(shipments, s => s.latestStatus === ShipmentStatus.DELAYED),
-      planned: getWeekDelta(shipments, s => plannedStatuses.includes(s.latestStatus)),
+      delayed: getWeekDelta(shipments, s => isDelayed(s)),
+      planned: getWeekDelta(shipments, s => plannedStatuses.includes(s.latestStatus) && !isDelayed(s)),
     };
   }, [shipments]);
 
-  // Average days in OFFSITE storage
+  // Average days in OFFSITE storage — include all post-arrival statuses
   const avgDaysOffsite = useMemo(() => {
+    const offsiteStatuses = [
+      ShipmentStatus.ARRIVED_OFFSITE,
+      ShipmentStatus.UNLOADING,
+      ShipmentStatus.INSPECTION_PENDING,
+      ShipmentStatus.INSPECTING,
+      ShipmentStatus.INSPECTION_PASSED,
+      ShipmentStatus.INSPECTION_FAILED,
+      ShipmentStatus.RECEIVING,
+      ShipmentStatus.RECEIVED,
+      ShipmentStatus.STORED,
+      ShipmentStatus.ARCHIVED,
+    ];
     const offsiteShipments = (shipments || []).filter(s =>
-      (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE' && s.latestStatus === ShipmentStatus.STORED
+      (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE' &&
+      offsiteStatuses.includes(s.latestStatus)
     );
     if (offsiteShipments.length === 0) return 0;
     return Math.round(offsiteShipments.reduce((sum, s) => {
@@ -286,8 +346,15 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
   // Offsite storage duration
   const offsiteChartData = useMemo(() => {
     const now = new Date();
+    const offsiteStatuses = [
+      ShipmentStatus.ARRIVED_OFFSITE,
+      ShipmentStatus.UNLOADING, ShipmentStatus.INSPECTION_PENDING, ShipmentStatus.INSPECTING,
+      ShipmentStatus.INSPECTION_PASSED, ShipmentStatus.INSPECTION_FAILED,
+      ShipmentStatus.RECEIVING, ShipmentStatus.RECEIVED,
+      ShipmentStatus.STORED, ShipmentStatus.ARCHIVED,
+    ];
     const offsite = (shipments || []).filter(s =>
-      (s.latestStatus === 'stored' || s.latestStatus === 'archived') &&
+      offsiteStatuses.includes(s.latestStatus) &&
       (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE'
     );
     if (offsite.length === 0) return [];
