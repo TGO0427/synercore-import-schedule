@@ -135,22 +135,14 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
   }, []);
 
   // Auto-save add shipment form
-  const { clearDraft: clearNewShipmentDraft } = useFormDraft(
+  const { clearDraft: clearNewShipmentDraft, confirmClose: confirmCloseNew } = useFormDraft(
     'shipment_new', newShipment, setNewShipment, { enabled: showAddShipmentDialog }
   );
   // Auto-save amend shipment form
-  const { clearDraft: clearAmendShipmentDraft } = useFormDraft(
+  const { clearDraft: clearAmendShipmentDraft, confirmClose: confirmCloseAmend } = useFormDraft(
     `shipment_${amendingShipment?.id || 'none'}`, amendingShipment, setAmendingShipment,
     { enabled: showAmendShipmentDialog && !!amendingShipment }
   );
-
-  // Warn before leaving with unsaved form data
-  useEffect(() => {
-    if (!showAddShipmentDialog && !showAmendShipmentDialog) return;
-    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [showAddShipmentDialog, showAmendShipmentDialog]);
 
   // Pick up search term from global search
   useEffect(() => {
@@ -1483,12 +1475,12 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
         <ResizableModal
           title="Add New Shipment"
           isOpen={showAddShipmentDialog}
-          onClose={() => {
+          onClose={() => confirmCloseNew(() => {
             setShowCustomSupplier(false);
             setNewShipmentSelectedWeekDate(null);
             setFormErrors({});
             setShowAddShipmentDialog(false);
-          }}
+          })}
           initialWidth={650}
           minWidth={400}
           minHeight={400}
@@ -1931,12 +1923,12 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
         <ResizableModal
           title="Amend Shipment"
           isOpen={showAmendShipmentDialog}
-          onClose={() => {
+          onClose={() => confirmCloseAmend(() => {
             setShowAmendShipmentDialog(false);
             setAmendingShipment(null);
             setAmendShipmentSelectedWeekDate(null);
             setAmendFormErrors({});
-          }}
+          })}
           initialWidth={650}
           minWidth={400}
           minHeight={400}

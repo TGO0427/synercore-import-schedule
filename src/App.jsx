@@ -71,7 +71,7 @@ function App() {
 
   const { alerts, handleAlertDismiss, handleAlertMarkRead, pushAlert } = useAlerts(shipments);
 
-  const { showInfo } = useNotification();
+  const { showInfo, isNavigationBlocked, confirm } = useNotification();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -339,7 +339,22 @@ function App() {
               <button
                 key={key}
                 className={`nav-item ${activeView === item.view ? 'active' : ''}`}
-                onClick={() => startTransition(() => navigate(VIEW_ROUTES[item.view] || '/shipping'))}
+                onClick={() => {
+                  const route = VIEW_ROUTES[item.view] || '/shipping';
+                  if (isNavigationBlocked()) {
+                    confirm({
+                      title: 'Unsaved Changes',
+                      message: 'You have unsaved changes that will be lost. Are you sure you want to leave this page?',
+                      confirmText: 'Leave',
+                      cancelText: 'Stay',
+                      type: 'warning',
+                    }).then((confirmed) => {
+                      if (confirmed) startTransition(() => navigate(route));
+                    });
+                  } else {
+                    startTransition(() => navigate(route));
+                  }
+                }}
                 title={sidebarCollapsed ? item.label : undefined}
               >
                 <span className="nav-icon">{item.icon}</span>

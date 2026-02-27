@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { VIEW_ROUTES } from '../routes';
+import { useNotification } from '../contexts/NotificationContext';
 import './MobileNavigation.css';
 
 /**
@@ -18,6 +19,7 @@ export function MobileNavigation() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { isNavigationBlocked, confirm } = useNotification();
 
   const navItems = [
     { id: 'shipping', label: 'Shipments', icon: '\u{1F4E6}' },
@@ -32,8 +34,24 @@ export function MobileNavigation() {
   )?.[0] || 'shipping';
 
   const handleNavigation = (viewId) => {
-    navigate(VIEW_ROUTES[viewId] || '/shipping');
-    setSidebarOpen(false);
+    const route = VIEW_ROUTES[viewId] || '/shipping';
+    if (isNavigationBlocked()) {
+      confirm({
+        title: 'Unsaved Changes',
+        message: 'You have unsaved changes that will be lost. Are you sure you want to leave this page?',
+        confirmText: 'Leave',
+        cancelText: 'Stay',
+        type: 'warning',
+      }).then((confirmed) => {
+        if (confirmed) {
+          navigate(route);
+          setSidebarOpen(false);
+        }
+      });
+    } else {
+      navigate(route);
+      setSidebarOpen(false);
+    }
   };
 
   return (

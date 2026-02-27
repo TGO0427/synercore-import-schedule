@@ -29,13 +29,6 @@ function WorkflowWizard({
 
   const { clearDraft } = useFormDraft(draftKey || 'wizard', formData, setFormData, { enabled: !!draftKey });
 
-  // Warn before closing tab with unsaved wizard data
-  useEffect(() => {
-    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, []);
-
   // Get current step config
   const step = steps && steps.length > 0 ? steps[currentStep] : null;
   const isFirstStep = currentStep === 0;

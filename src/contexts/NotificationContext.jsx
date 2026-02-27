@@ -51,12 +51,27 @@ export function NotificationProvider({ children }) {
     setConfirmation(null);
   }, []);
 
+  // Navigation guard: tracks how many forms are currently blocking navigation.
+  // Uses a ref so checking it doesn't cause re-renders in the sidebar.
+  const navBlockCountRef = useRef(0);
+
+  const blockNavigation = useCallback(() => {
+    navBlockCountRef.current += 1;
+    return () => { navBlockCountRef.current -= 1; };
+  }, []);
+
+  const isNavigationBlocked = useCallback(() => {
+    return navBlockCountRef.current > 0;
+  }, []);
+
   const value = {
     showSuccess,
     showError,
     showWarning,
     showInfo,
     confirm,
+    blockNavigation,
+    isNavigationBlocked,
   };
 
   return (

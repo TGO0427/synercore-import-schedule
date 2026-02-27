@@ -66,17 +66,9 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
   });
 
   // Auto-save supplier form
-  const { clearDraft: clearSupplierDraft } = useFormDraft(
+  const { clearDraft: clearSupplierDraft, confirmClose: confirmCloseSupplier } = useFormDraft(
     `supplier_${editingSupplier?.id || 'new'}`, formData, setFormData, { enabled: showAddForm }
   );
-
-  // Warn before leaving with unsaved form data
-  useEffect(() => {
-    if (!showAddForm) return;
-    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [showAddForm]);
 
   // Memoize shipment counts per supplier for signals + sorting
   const supplierShipmentCounts = useMemo(() => {
@@ -920,7 +912,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={() => confirmCloseSupplier(() => {
                     setShowAddForm(false);
                     setEditingSupplier(null);
                     setFormData({
@@ -929,7 +921,7 @@ function SupplierManagement({ suppliers = [], shipments = [], onAddSupplier, onU
                       importFormats: [ImportFormat.EXCEL], documentFormats: [DocumentType.SHIPPING_SCHEDULE],
                       isActive: true, notes: ''
                     });
-                  }}
+                  })}
                   className="btn btn-secondary"
                 >
                   Cancel

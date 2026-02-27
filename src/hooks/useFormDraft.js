@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { useNotification } from '../contexts/NotificationContext';
 
 const PREFIX = 'synercore_draft_';
 
@@ -20,6 +21,13 @@ export default function useFormDraft(key, formData, setFormData, { debounceMs = 
   const [isDirty, setIsDirty] = useState(false);
   const timerRef = useRef(null);
   const initializedRef = useRef(false);
+  const { blockNavigation, confirm } = useNotification();
+
+  // Register this form as a navigation blocker while enabled
+  useEffect(() => {
+    if (!enabled) return;
+    return blockNavigation();
+  }, [enabled, blockNavigation]);
 
   // Restore draft when enabled (once per enable cycle)
   useEffect(() => {
@@ -90,5 +98,19 @@ export default function useFormDraft(key, formData, setFormData, { debounceMs = 
     if (timerRef.current) clearTimeout(timerRef.current);
   }, [storageKey]);
 
-  return { clearDraft, hasDraft, isDirty };
+  // Wrap a close/cancel action with an unsaved-changes confirmation.
+  // Use this for modal backdrop clicks, X buttons, cancel buttons, etc.
+  const confirmClose = useCallback((closeFn) => {
+    confirm({
+      title: 'Unsaved Changes',
+      message: 'You have unsaved changes that will be lost. Are you sure you want to close?',
+      confirmText: 'Discard',
+      cancelText: 'Keep Editing',
+      type: 'warning',
+    }).then((confirmed) => {
+      if (confirmed) closeFn();
+    });
+  }, [confirm]);
+
+  return { clearDraft, hasDraft, isDirty, confirmClose };
 }

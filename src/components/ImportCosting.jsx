@@ -138,7 +138,7 @@ function ImportCosting() {
   const [formExpanded, setFormExpanded] = useState(false);
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
   const [editingId, setEditingId] = useState(null);
-  const { clearDraft: clearCostingDraft } = useFormDraft(
+  const { clearDraft: clearCostingDraft, confirmClose: confirmCloseCosting } = useFormDraft(
     `costing_${editingId || 'new'}`, formData, setFormData, { enabled: showForm }
   );
   const [calculatedTotals, setCalculatedTotals] = useState({});
@@ -1078,7 +1078,7 @@ function ImportCosting() {
                   {formExpanded ? '⊖ Collapse' : '⊕ Expand'}
                 </button>
                 <button
-                  onClick={() => { setShowForm(false); setEditingId(null); setFormExpanded(false); }}
+                  onClick={() => confirmCloseCosting(() => { setShowForm(false); setEditingId(null); setFormExpanded(false); })}
                   style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-500)' }}
                 >
                   x
@@ -1686,7 +1686,7 @@ function ImportCosting() {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
                 <button
                   type="button"
-                  onClick={() => { setShowForm(false); setEditingId(null); }}
+                  onClick={() => confirmCloseCosting(() => { setShowForm(false); setEditingId(null); })}
                   style={{
                     padding: '10px 20px', backgroundColor: '#f3f4f6', color: '#374151',
                     border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500'
