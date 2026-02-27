@@ -507,6 +507,11 @@ router.post('/admin/users/:id/reset-password', authenticateToken, validateResetP
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
+    // Enforce same password strength rules as user reset (uppercase + lowercase + number)
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(newPassword)) {
+      return res.status(400).json({ error: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' });
+    }
+
     // Check if user exists
     const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [id]);
     if (userCheck.rows.length === 0) {

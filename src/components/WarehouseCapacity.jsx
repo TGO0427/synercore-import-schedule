@@ -5,6 +5,7 @@ import { ShipmentStatus, DELAYED_STATUSES } from '../types/shipment';
 import { authUtils } from '../utils/auth';
 import CapacityForecastTable from './CapacityForecastTable';
 import { useNotification } from '../contexts/NotificationContext';
+import { SkeletonCardGrid } from './SkeletonLoaders';
 
 // Helper function to get current month's weeks using consistent week calculation
 const getCurrentMonthWeeks = () => {
@@ -1531,25 +1532,29 @@ function WarehouseCapacity({ shipments }) {
       </div>
 
       {/* Capacity Cards Grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
-        gap: '1.25rem',
-        marginBottom: '1.5rem'
-      }}>
-        {filteredWarehouses.map(([warehouse, stats]) => (
-          <CapacityCard
-            key={warehouse}
-            warehouse={warehouse}
-            stats={stats}
-            onBinsUsedChange={handleBinsUsedChange}
-            onCardClick={handleCardClick}
-            isSelected={selectedWarehouse === warehouse}
-            editableBinsUsed={editableBinsUsed}
-            pendingChanges={pendingChanges}
-          />
-        ))}
-      </div>
+      {isLoadingCapacity ? (
+        <SkeletonCardGrid count={3} columns={3} />
+      ) : (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
+          gap: '1.25rem',
+          marginBottom: '1.5rem'
+        }}>
+          {filteredWarehouses.map(([warehouse, stats]) => (
+            <CapacityCard
+              key={warehouse}
+              warehouse={warehouse}
+              stats={stats}
+              onBinsUsedChange={handleBinsUsedChange}
+              onCardClick={handleCardClick}
+              isSelected={selectedWarehouse === warehouse}
+              editableBinsUsed={editableBinsUsed}
+              pendingChanges={pendingChanges}
+            />
+          ))}
+        </div>
+      )}
 
       {/* 8-Week Capacity Forecast */}
       <div style={{ marginBottom: '2rem' }}>

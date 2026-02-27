@@ -17,6 +17,7 @@ const PREFIX = 'synercore_draft_';
 export default function useFormDraft(key, formData, setFormData, { debounceMs = 1000, enabled = true } = {}) {
   const storageKey = PREFIX + key;
   const [hasDraft, setHasDraft] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   const timerRef = useRef(null);
   const initializedRef = useRef(false);
 
@@ -45,6 +46,7 @@ export default function useFormDraft(key, formData, setFormData, { debounceMs = 
     if (!enabled || !initializedRef.current) return;
 
     if (timerRef.current) clearTimeout(timerRef.current);
+    setIsDirty(true);
 
     timerRef.current = setTimeout(() => {
       try {
@@ -59,12 +61,23 @@ export default function useFormDraft(key, formData, setFormData, { debounceMs = 
     };
   }, [formData, storageKey, debounceMs, enabled]);
 
+  // Warn user about unsaved changes before leaving the page
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
+
   // Clear draft (call on successful submit)
   const clearDraft = useCallback(() => {
     localStorage.removeItem(storageKey);
     setHasDraft(false);
+    setIsDirty(false);
     if (timerRef.current) clearTimeout(timerRef.current);
   }, [storageKey]);
 
-  return { clearDraft, hasDraft };
+  return { clearDraft, hasDraft, isDirty };
 }

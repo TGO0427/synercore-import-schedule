@@ -113,10 +113,10 @@ export class ExcelProcessor {
       targetYear = currentYear + 1;
     } else if (currentMonth === 0 && weekNumber >= 45) {
       targetYear = currentYear - 1;
-    } else if (weekNumber < currentWeek - 20) {
+    } else if (weekNumber < currentWeek - 20) { // 20-week lookahead window for smart year detection
       // If week is more than 20 weeks behind current, it's probably next year
       targetYear = currentYear + 1;
-    } else if (weekNumber > currentWeek + 20) {
+    } else if (weekNumber > currentWeek + 20) { // 20-week lookahead window for smart year detection
       // If week is more than 20 weeks ahead of current, it's probably last year
       targetYear = currentYear - 1;
     }

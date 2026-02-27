@@ -8,6 +8,8 @@ const NotificationContainer = ({ notifications, onRemoveNotification }) => {
 
   return (
     <div
+      role="status"
+      aria-live="polite"
       style={{
         position: 'fixed',
         top: '20px',
@@ -21,6 +23,7 @@ const NotificationContainer = ({ notifications, onRemoveNotification }) => {
       {notifications.map((notification) => (
         <div
           key={notification.id}
+          role={notification.type === 'error' || notification.type === 'warning' ? 'alert' : undefined}
           style={{ pointerEvents: 'auto' }}
         >
           <Notification

@@ -57,34 +57,14 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
     fetchCapacity();
   }, []);
 
-  // Week-over-week percentage delta helper
-  const getWeekDelta = (shipments, filterFn) => {
-    const now = new Date();
-    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-
-    const thisWeek = shipments.filter(s => {
-      const d = new Date(s.updatedAt || s.createdAt);
-      return d >= oneWeekAgo && filterFn(s);
-    }).length;
-
-    const lastWeek = shipments.filter(s => {
-      const d = new Date(s.updatedAt || s.createdAt);
-      return d >= twoWeeksAgo && d < oneWeekAgo && filterFn(s);
-    }).length;
-
-    if (lastWeek === 0) return thisWeek > 0 ? '+100%' : '0%';
-    const pct = Math.round(((thisWeek - lastWeek) / lastWeek) * 100);
-    return pct >= 0 ? `+${pct}%` : `${pct}%`;
-  };
-
   const getCurrentWeek = () => {
     const now = new Date();
     const yearStart = new Date(now.getFullYear(), 0, 1);
     return Math.ceil((((now - yearStart) / 86400000) + yearStart.getDay() + 1) / 7);
   };
 
-  const stats = useMemo(() => {
+  // Consolidated single-pass computation: stats, percentage deltas, and offsite average
+  const { stats, pctDeltas, avgDaysOffsite } = useMemo(() => {
     const supplierOrderRefs = {};
     const warehouseOrderRefs = {};
     const weekOrderRefs = {};
@@ -104,6 +84,41 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       ShipmentStatus.IN_TRANSIT_ROADWAY, ShipmentStatus.IN_TRANSIT_SEAWAY,
       ShipmentStatus.MOORED, ShipmentStatus.BERTH_WORKING, ShipmentStatus.BERTH_COMPLETE,
     ];
+
+    // Status category arrays for pctDeltas computation
+    const plannedStatuses = [ShipmentStatus.PLANNED_AIRFREIGHT, ShipmentStatus.PLANNED_SEAFREIGHT];
+    const transitStatuses = [
+      ShipmentStatus.IN_TRANSIT_AIRFREIGHT, ShipmentStatus.AIR_CUSTOMS_CLEARANCE,
+      ShipmentStatus.IN_TRANSIT_ROADWAY, ShipmentStatus.IN_TRANSIT_SEAWAY,
+      ShipmentStatus.MOORED, ShipmentStatus.BERTH_WORKING, ShipmentStatus.BERTH_COMPLETE,
+    ];
+    const storedStatuses = [
+      ShipmentStatus.ARRIVED_PTA, ShipmentStatus.ARRIVED_KLM, ShipmentStatus.ARRIVED_OFFSITE,
+      ShipmentStatus.UNLOADING, ShipmentStatus.INSPECTION_PENDING, ShipmentStatus.INSPECTING,
+      ShipmentStatus.INSPECTION_PASSED, ShipmentStatus.INSPECTION_FAILED,
+      ShipmentStatus.RECEIVING, ShipmentStatus.RECEIVED,
+      ShipmentStatus.STORED, ShipmentStatus.ARCHIVED,
+    ];
+
+    // Date-based week-over-week counting for percentage deltas
+    const now = new Date();
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const dateWeekCounts = {
+      thisWeek: { total: 0, planned: 0, inTransit: 0, stored: 0, delayed: 0 },
+      lastWeek: { total: 0, planned: 0, inTransit: 0, stored: 0, delayed: 0 },
+    };
+
+    // Offsite average days tracking
+    const offsitePostArrivalStatuses = [
+      ShipmentStatus.ARRIVED_OFFSITE,
+      ShipmentStatus.UNLOADING, ShipmentStatus.INSPECTION_PENDING, ShipmentStatus.INSPECTING,
+      ShipmentStatus.INSPECTION_PASSED, ShipmentStatus.INSPECTION_FAILED,
+      ShipmentStatus.RECEIVING, ShipmentStatus.RECEIVED,
+      ShipmentStatus.STORED, ShipmentStatus.ARCHIVED,
+    ];
+    let offsiteDaysSum = 0;
+    let offsiteCount = 0;
 
     shipments.forEach(shipment => {
       const orderRef = shipment.orderRef;
@@ -177,6 +192,34 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       const week = shipment.weekNumber || 'N/A';
       if (!weekOrderRefs[week]) weekOrderRefs[week] = new Set();
       weekOrderRefs[week].add(orderRef);
+
+      // Date-based week-over-week counting for pctDeltas
+      const d = new Date(shipment.updatedAt || shipment.createdAt);
+      const shipmentIsDelayed = isDelayedStatus(shipment.latestStatus) ||
+        (shipment.weekNumber > 0 && shipment.weekNumber < currentWeek && preArrivalStatuses.includes(shipment.latestStatus));
+      let dateBucket = null;
+      if (d >= oneWeekAgo) dateBucket = 'thisWeek';
+      else if (d >= twoWeeksAgo) dateBucket = 'lastWeek';
+      if (dateBucket) {
+        dateWeekCounts[dateBucket].total++;
+        if (shipmentIsDelayed) {
+          dateWeekCounts[dateBucket].delayed++;
+        } else if (plannedStatuses.includes(shipment.latestStatus)) {
+          dateWeekCounts[dateBucket].planned++;
+        } else if (transitStatuses.includes(shipment.latestStatus)) {
+          dateWeekCounts[dateBucket].inTransit++;
+        } else if (storedStatuses.includes(shipment.latestStatus)) {
+          dateWeekCounts[dateBucket].stored++;
+        }
+      }
+
+      // Average days in OFFSITE storage
+      if (offsitePostArrivalStatuses.includes(shipment.latestStatus) &&
+          (shipment.receivingWarehouse || '').toUpperCase() === 'OFFSITE') {
+        const storedDate = new Date(shipment.receivingDate || shipment.updatedAt || shipment.createdAt);
+        offsiteDaysSum += Math.max(0, Math.floor((Date.now() - storedDate.getTime()) / (1000 * 60 * 60 * 24)));
+        offsiteCount++;
+      }
     });
 
     const uniqueOrderRefs = new Set(shipments.map(s => s.orderRef).filter(Boolean));
@@ -204,67 +247,24 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
     Object.keys(supplierOrderRefs).forEach(s => { result.bySupplier[s] = supplierOrderRefs[s].size; });
     Object.keys(weekOrderRefs).forEach(w => { result.byWeek[w] = weekOrderRefs[w].size; });
 
-    return result;
-  }, [shipments]);
-
-  // Percentage-based week-over-week deltas
-  const pctDeltas = useMemo(() => {
-    const currentWeek = getCurrentWeek();
-    const preArrivalStatuses = [
-      ShipmentStatus.PLANNED_AIRFREIGHT, ShipmentStatus.PLANNED_SEAFREIGHT,
-      ShipmentStatus.IN_TRANSIT_AIRFREIGHT, ShipmentStatus.AIR_CUSTOMS_CLEARANCE,
-      ShipmentStatus.IN_TRANSIT_ROADWAY, ShipmentStatus.IN_TRANSIT_SEAWAY,
-      ShipmentStatus.MOORED, ShipmentStatus.BERTH_WORKING, ShipmentStatus.BERTH_COMPLETE,
-    ];
-    const plannedStatuses = [ShipmentStatus.PLANNED_AIRFREIGHT, ShipmentStatus.PLANNED_SEAFREIGHT];
-    const transitStatuses = [
-      ShipmentStatus.IN_TRANSIT_AIRFREIGHT, ShipmentStatus.AIR_CUSTOMS_CLEARANCE,
-      ShipmentStatus.IN_TRANSIT_ROADWAY, ShipmentStatus.IN_TRANSIT_SEAWAY,
-      ShipmentStatus.MOORED, ShipmentStatus.BERTH_WORKING, ShipmentStatus.BERTH_COMPLETE,
-    ];
-    const storedStatuses = [
-      ShipmentStatus.ARRIVED_PTA, ShipmentStatus.ARRIVED_KLM, ShipmentStatus.ARRIVED_OFFSITE,
-      ShipmentStatus.UNLOADING, ShipmentStatus.INSPECTION_PENDING, ShipmentStatus.INSPECTING,
-      ShipmentStatus.INSPECTION_PASSED, ShipmentStatus.INSPECTION_FAILED,
-      ShipmentStatus.RECEIVING, ShipmentStatus.RECEIVED,
-      ShipmentStatus.STORED, ShipmentStatus.ARCHIVED,
-    ];
-    const isDelayed = (s) =>
-      isDelayedStatus(s.latestStatus) ||
-      (s.weekNumber > 0 && s.weekNumber < currentWeek && preArrivalStatuses.includes(s.latestStatus));
-    return {
-      total: getWeekDelta(shipments, () => true),
-      inTransit: getWeekDelta(shipments, s => transitStatuses.includes(s.latestStatus) && !isDelayed(s)),
-      stored: getWeekDelta(shipments, s => storedStatuses.includes(s.latestStatus)),
-      delayed: getWeekDelta(shipments, s => isDelayed(s)),
-      planned: getWeekDelta(shipments, s => plannedStatuses.includes(s.latestStatus) && !isDelayed(s)),
+    // Compute percentage-based week-over-week deltas (single-pass)
+    const computePctDelta = (tw, lw) => {
+      if (lw === 0) return tw > 0 ? '+100%' : '0%';
+      const pct = Math.round(((tw - lw) / lw) * 100);
+      return pct >= 0 ? `+${pct}%` : `${pct}%`;
     };
-  }, [shipments]);
 
-  // Average days in OFFSITE storage — include all post-arrival statuses
-  const avgDaysOffsite = useMemo(() => {
-    const offsiteStatuses = [
-      ShipmentStatus.ARRIVED_OFFSITE,
-      ShipmentStatus.UNLOADING,
-      ShipmentStatus.INSPECTION_PENDING,
-      ShipmentStatus.INSPECTING,
-      ShipmentStatus.INSPECTION_PASSED,
-      ShipmentStatus.INSPECTION_FAILED,
-      ShipmentStatus.RECEIVING,
-      ShipmentStatus.RECEIVED,
-      ShipmentStatus.STORED,
-      ShipmentStatus.ARCHIVED,
-    ];
-    const offsiteShipments = (shipments || []).filter(s =>
-      (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE' &&
-      offsiteStatuses.includes(s.latestStatus)
-    );
-    if (offsiteShipments.length === 0) return 0;
-    return Math.round(offsiteShipments.reduce((sum, s) => {
-      const storedDate = new Date(s.receivingDate || s.updatedAt || s.createdAt);
-      const days = Math.max(0, Math.floor((Date.now() - storedDate.getTime()) / (1000 * 60 * 60 * 24)));
-      return sum + days;
-    }, 0) / offsiteShipments.length);
+    return {
+      stats: result,
+      pctDeltas: {
+        total: computePctDelta(dateWeekCounts.thisWeek.total, dateWeekCounts.lastWeek.total),
+        inTransit: computePctDelta(dateWeekCounts.thisWeek.inTransit, dateWeekCounts.lastWeek.inTransit),
+        stored: computePctDelta(dateWeekCounts.thisWeek.stored, dateWeekCounts.lastWeek.stored),
+        delayed: computePctDelta(dateWeekCounts.thisWeek.delayed, dateWeekCounts.lastWeek.delayed),
+        planned: computePctDelta(dateWeekCounts.thisWeek.planned, dateWeekCounts.lastWeek.planned),
+      },
+      avgDaysOffsite: offsiteCount > 0 ? Math.round(offsiteDaysSum / offsiteCount) : 0,
+    };
   }, [shipments]);
 
   // Supplier on-time trend (last 8 weeks)

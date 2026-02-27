@@ -57,12 +57,13 @@ export function useShipments() {
 
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          response = await fetchWithTimeout(getApiUrl('/api/shipments?limit=1000'), {
+          // Server-side pagination limit
+          response = await fetchWithTimeout(getApiUrl('/api/shipments?limit=5000'), {
             headers: {
               ...(isBackgroundSync ? { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } : {}),
               ...authUtils.getAuthHeader()
             }
-          }, 10000);
+          }, 10000); // 10s fetch timeout per attempt
 
           if (response.ok) break;
 
@@ -75,13 +76,18 @@ export function useShipments() {
           }
         } catch (err) {
           lastError = err;
-          if (attempt < maxRetries) await new Promise(r => setTimeout(r, 300 * attempt));
+          if (attempt < maxRetries) await new Promise(r => setTimeout(r, 300 * attempt)); // Linear backoff: 300ms, 600ms
         }
       }
 
       if (!response || !response.ok) throw lastError || new Error('Failed to fetch shipments after retries');
 
       const data = await response.json();
+
+      // Warn if response may be truncated at the pagination limit
+      if ((data.data || []).length >= 5000) {
+        console.warn('Shipment data may be truncated: response count reached the 5000 limit');
+      }
 
       const normalized = (data.data || []).map(s => ({
         id: s.id,
@@ -123,8 +129,12 @@ export function useShipments() {
       setShipments(normalized);
       setLastSyncTime(new Date());
     } catch (err) {
-      console.error('useShipments: Error fetching shipments:', err);
-      if (!isBackgroundSync) showError(`Failed to load shipments: ${err.message}`);
+      if (isBackgroundSync) {
+        console.warn('Background sync failed:', err.message);
+      } else {
+        console.error('useShipments: Error fetching shipments:', err);
+        showError(`Failed to load shipments: ${err.message}`);
+      }
     } finally {
       if (!isBackgroundSync) stopLoading();
     }
@@ -232,7 +242,7 @@ export function useShipments() {
         try {
           await handleAddSupplier({ name: supplierName });
         } catch (err) {
-          // Supplier already exists or failed to create - suppress error
+          showError('Failed to create supplier: ' + err.message);
         }
       }
 
