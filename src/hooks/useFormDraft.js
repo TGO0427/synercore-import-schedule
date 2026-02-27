@@ -70,16 +70,17 @@ export default function useFormDraft(key, formData, setFormData, { debounceMs = 
     }
   }, [enabled]);
 
-  // Warn user about unsaved changes before leaving the page
+  // Warn user about unsaved changes before leaving the page.
+  // Triggers whenever the form/dialog is active (enabled=true).
   useEffect(() => {
-    if (!isDirty || !enabled) return;
+    if (!enabled) return;
     const handler = (e) => {
       e.preventDefault();
-      e.returnValue = ''; // Required by Chrome/Edge to show the dialog
+      e.returnValue = '';
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
-  }, [isDirty, enabled]);
+  }, [enabled]);
 
   // Clear draft (call on successful submit)
   const clearDraft = useCallback(() => {
