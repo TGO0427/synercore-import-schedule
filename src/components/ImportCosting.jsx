@@ -135,7 +135,7 @@ function ImportCosting() {
   const [estimates, setEstimates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [formExpanded, setFormExpanded] = useState(false);
+  const [formExpanded, setFormExpanded] = useState(true);
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
   const [editingId, setEditingId] = useState(null);
   const { clearDraft: clearCostingDraft, confirmClose: confirmCloseCosting } = useFormDraft(
