@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ShipmentStatus } from '../types/shipment';
+import { ShipmentStatus, PRE_ARRIVAL_STATUSES, getCurrentWeek } from '../types/shipment';
 import {
   Chart as ChartJS,
   ArcElement,
@@ -52,22 +52,26 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
       }
     });
     const unique = Object.values(orderRefs);
+    const currentWeek = getCurrentWeek();
 
     let planned = 0, inTransit = 0, arrived = 0, delayed = 0, port = 0, processing = 0;
     unique.forEach(s => {
+      const wk = parseInt(s.weekNumber) || 0;
+      const isOverdue = wk > 0 && wk < currentWeek && PRE_ARRIVAL_STATUSES.includes(s.latestStatus);
+
       switch (s.latestStatus) {
         case ShipmentStatus.PLANNED_AIRFREIGHT:
         case ShipmentStatus.PLANNED_SEAFREIGHT:
-          planned++; break;
+          if (isOverdue) { delayed++; } else { planned++; } break;
         case ShipmentStatus.IN_TRANSIT_AIRFREIGHT:
         case ShipmentStatus.IN_TRANSIT_ROADWAY:
         case ShipmentStatus.IN_TRANSIT_SEAWAY:
         case ShipmentStatus.AIR_CUSTOMS_CLEARANCE:
-          inTransit++; break;
+          if (isOverdue) { delayed++; } else { inTransit++; } break;
         case ShipmentStatus.MOORED:
         case ShipmentStatus.BERTH_WORKING:
         case ShipmentStatus.BERTH_COMPLETE:
-          port++; break;
+          if (isOverdue) { delayed++; } else { port++; } break;
         case ShipmentStatus.ARRIVED_PTA:
         case ShipmentStatus.ARRIVED_KLM:
         case ShipmentStatus.ARRIVED_OFFSITE:
