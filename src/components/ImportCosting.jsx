@@ -564,8 +564,8 @@ function ImportCosting() {
     // VAT excluded - not charged to clients
     const productCustomsCost = customs.totalDuties + customs.schedule1Duty;
 
-    // Total cost for this product
-    const totalProductCost = allocatedShippingCost + productCustomsCost;
+    // Total landed cost = product value (customs value) + duties + allocated shipping
+    const totalProductCost = customs.customsValue + productCustomsCost + allocatedShippingCost;
     const costPerKg = productWeight > 0 ? totalProductCost / productWeight : 0;
 
     return { weightRatio, allocatedShippingCost, productCustomsCost, totalProductCost, costPerKg };
