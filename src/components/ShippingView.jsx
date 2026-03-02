@@ -1,7 +1,7 @@
 import React, { useMemo, lazy } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ShipmentTable from './ShipmentTable';
-import { SHIPPING_EXCLUDED_STATUSES, DELAYED_STATUSES, isDelayedStatus } from '../types/shipment';
+import { SHIPPING_EXCLUDED_STATUSES, DELAYED_STATUSES, isDelayedStatus, PRE_ARRIVAL_STATUSES, getCurrentWeek } from '../types/shipment';
 
 const FileUpload = lazy(() => import('./FileUpload'));
 
@@ -75,18 +75,10 @@ function ShippingView({ shipments, onFileUpload, onUpdateShipment, onDeleteShipm
 
     if (statusFilter === 'delayed') {
       // Include both explicit delayed statuses AND overdue shipments (pre-arrival past their week)
-      const now = new Date();
-      const yearStart = new Date(now.getFullYear(), 0, 1);
-      const currentWeek = Math.ceil((((now - yearStart) / 86400000) + yearStart.getDay() + 1) / 7);
-      const preArrivalStatuses = [
-        'planned_airfreight', 'planned_seafreight',
-        'in_transit_airfreight', 'air_customs_clearance',
-        'in_transit_roadway', 'in_transit_seaway',
-        'moored', 'berth_working', 'berth_complete',
-      ];
+      const currentWeek = getCurrentWeek();
       shippingShipments = shippingShipments.filter(s =>
         DELAYED_STATUSES.includes(s.latestStatus) ||
-        (s.weekNumber > 0 && s.weekNumber < currentWeek && preArrivalStatuses.includes(s.latestStatus))
+        (s.weekNumber > 0 && s.weekNumber < currentWeek && PRE_ARRIVAL_STATUSES.includes(s.latestStatus))
       );
     } else {
       const matchStatuses = META_FILTERS[statusFilter] || [statusFilter];

@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, startTransition } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShipmentStatus, DELAYED_STATUSES, isDelayedStatus } from '../types/shipment';
+import { ShipmentStatus, DELAYED_STATUSES, isDelayedStatus, PRE_ARRIVAL_STATUSES, getCurrentWeek } from '../types/shipment';
 import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
 import { authUtils } from '../utils/auth';
@@ -57,12 +57,6 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
     fetchCapacity();
   }, []);
 
-  const getCurrentWeek = () => {
-    const now = new Date();
-    const yearStart = new Date(now.getFullYear(), 0, 1);
-    return Math.ceil((((now - yearStart) / 86400000) + yearStart.getDay() + 1) / 7);
-  };
-
   // Consolidated single-pass computation: stats, percentage deltas, and offsite average
   const { stats, pctDeltas, avgDaysOffsite } = useMemo(() => {
     const supplierOrderRefs = {};
@@ -76,14 +70,6 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
     };
 
     const statusOrderRefs = { planned: new Set(), inTransit: new Set(), stored: new Set(), delayed: new Set(), cancelled: new Set() };
-
-    // Statuses that mean a shipment hasn't arrived yet (used for overdue detection)
-    const preArrivalStatuses = [
-      ShipmentStatus.PLANNED_AIRFREIGHT, ShipmentStatus.PLANNED_SEAFREIGHT,
-      ShipmentStatus.IN_TRANSIT_AIRFREIGHT, ShipmentStatus.AIR_CUSTOMS_CLEARANCE,
-      ShipmentStatus.IN_TRANSIT_ROADWAY, ShipmentStatus.IN_TRANSIT_SEAWAY,
-      ShipmentStatus.MOORED, ShipmentStatus.BERTH_WORKING, ShipmentStatus.BERTH_COMPLETE,
-    ];
 
     // Status category arrays for pctDeltas computation
     const plannedStatuses = [ShipmentStatus.PLANNED_AIRFREIGHT, ShipmentStatus.PLANNED_SEAFREIGHT];
@@ -128,7 +114,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       const weekBucket = wk === currentWeek ? 'curr' : wk === currentWeek - 1 ? 'prev' : null;
 
       // Check if shipment is overdue: still pre-arrival but past its scheduled week
-      const isOverdue = wk > 0 && wk < currentWeek && preArrivalStatuses.includes(shipment.latestStatus);
+      const isOverdue = wk > 0 && wk < currentWeek && PRE_ARRIVAL_STATUSES.includes(shipment.latestStatus);
 
       let statusKey = null;
       switch (shipment.latestStatus) {
@@ -196,7 +182,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       // Date-based week-over-week counting for pctDeltas
       const d = new Date(shipment.updatedAt || shipment.createdAt);
       const shipmentIsDelayed = isDelayedStatus(shipment.latestStatus) ||
-        (shipment.weekNumber > 0 && shipment.weekNumber < currentWeek && preArrivalStatuses.includes(shipment.latestStatus));
+        (shipment.weekNumber > 0 && shipment.weekNumber < currentWeek && PRE_ARRIVAL_STATUSES.includes(shipment.latestStatus));
       let dateBucket = null;
       if (d >= oneWeekAgo) dateBucket = 'thisWeek';
       else if (d >= twoWeeksAgo) dateBucket = 'lastWeek';

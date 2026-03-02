@@ -1,8 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { authFetch } from '../utils/authFetch';
-import { ShipmentStatus, isDelayedStatus, DELAYED_STATUSES } from '../types/shipment';
-import { getCurrentWeekNumber } from '../utils/dateUtils';
+import { ShipmentStatus, isDelayedStatus, DELAYED_STATUSES, PRE_ARRIVAL_STATUSES, getCurrentWeek, isOverdue } from '../types/shipment';
 import PostArrivalWorkflowReport from './PostArrivalWorkflowReport';
 import CurrentWeekStoredReport from './CurrentWeekStoredReport';
 import { getApiUrl } from '../config/api';
@@ -393,6 +392,13 @@ function ReportsView({ shipments: propShipments }) {
   // Apply status filter on top of date-filtered shipments
   const displayedShipments = useMemo(() => {
     if (!statusFilter) return filteredShipments;
+    if (statusFilter === '__delayed_all__') {
+      const currentWeek = getCurrentWeek();
+      return filteredShipments.filter(s => {
+        const status = s.latestStatus || s.latest_status;
+        return isDelayedStatus(status) || isOverdue(s, currentWeek);
+      });
+    }
     return filteredShipments.filter(s => {
       const status = s.latestStatus || s.latest_status;
       return status === statusFilter;
@@ -401,7 +407,7 @@ function ReportsView({ shipments: propShipments }) {
 
   // Compute analytics from a shipment list (reused for cards vs filtered view)
   const computeAnalytics = (shipmentList) => {
-    const currentWeek = getCurrentWeekNumber();
+    const currentWeek = getCurrentWeek();
 
     const statusOrderRefs = {
       [ShipmentStatus.PLANNED_AIRFREIGHT]: new Set(),
@@ -428,6 +434,7 @@ function ReportsView({ shipments: propShipments }) {
     const productStats = {};
     const warehouseStats = {};
     const forwardingAgentStats = {};
+    const overdueOrderRefs = new Set();
 
     shipmentList.forEach(shipment => {
       const status = shipment.latestStatus || shipment.latest_status;
@@ -435,6 +442,12 @@ function ReportsView({ shipments: propShipments }) {
 
       if (statusOrderRefs.hasOwnProperty(status) && orderRef) {
         statusOrderRefs[status].add(orderRef);
+      }
+
+      // Check overdue: pre-arrival shipment past its scheduled week
+      const shipmentIsOverdue = !isDelayedStatus(status) && isOverdue(shipment, currentWeek);
+      if (shipmentIsOverdue && orderRef) {
+        overdueOrderRefs.add(orderRef);
       }
 
       const supplier = shipment.supplier || 'Unknown';
@@ -448,7 +461,7 @@ function ReportsView({ shipments: propShipments }) {
           };
         }
         supplierOrderRefs[supplier].total.add(orderRef);
-        if (isDelayedStatus(status)) {
+        if (isDelayedStatus(status) || shipmentIsOverdue) {
           supplierOrderRefs[supplier].delayed.add(orderRef);
         } else if (status === ShipmentStatus.ARRIVED_PTA || status === ShipmentStatus.ARRIVED_KLM) {
           supplierOrderRefs[supplier].arrived.add(orderRef);
@@ -491,7 +504,7 @@ function ReportsView({ shipments: propShipments }) {
       forwardingAgentStats[forwardingAgent].totalPalletQty += shipment.palletQty || 0;
       if (status === ShipmentStatus.ARRIVED_PTA || status === ShipmentStatus.ARRIVED_KLM) {
         forwardingAgentStats[forwardingAgent].delivered++;
-      } else if (isDelayedStatus(status)) {
+      } else if (isDelayedStatus(status) || shipmentIsOverdue) {
         forwardingAgentStats[forwardingAgent].delayed++;
       } else if (status === ShipmentStatus.IN_TRANSIT_ROADWAY || status === ShipmentStatus.IN_TRANSIT_SEAWAY) {
         forwardingAgentStats[forwardingAgent].inTransit++;
@@ -523,7 +536,8 @@ function ReportsView({ shipments: propShipments }) {
     return {
       statusCounts, supplierStats, weeklyArrivals, productStats,
       warehouseStats, forwardingAgentStats,
-      totalShipments: uniqueOrderRefs.size, currentWeek
+      totalShipments: uniqueOrderRefs.size, currentWeek,
+      overdueCount: overdueOrderRefs.size
     };
   };
 
@@ -541,7 +555,7 @@ function ReportsView({ shipments: propShipments }) {
         warehouseStats: dataSource.warehouseStats || {},
         forwardingAgentStats: dataSource.forwardingAgentStats || {},
         totalShipments: dataSource.totalShipments || 0,
-        currentWeek: getCurrentWeekNumber()
+        currentWeek: getCurrentWeek()
       };
     }
     return computeAnalytics(filteredShipments);
@@ -903,7 +917,7 @@ function ReportsView({ shipments: propShipments }) {
       { key: 'receiving', status: ShipmentStatus.RECEIVING, value: analytics.statusCounts[ShipmentStatus.RECEIVING] || 0, label: 'Receiving', icon: '📥', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
       { key: 'received', status: ShipmentStatus.RECEIVED, value: analytics.statusCounts[ShipmentStatus.RECEIVED] || 0, label: 'Received', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
       { key: 'stored', status: ShipmentStatus.STORED, value: analytics.statusCounts[ShipmentStatus.STORED] || 0, label: 'Stored', icon: '🏪', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
-      { key: 'delayed', status: '__delayed_all__', value: DELAYED_STATUSES.reduce((sum, s) => sum + (analytics.statusCounts[s] || 0), 0), label: 'Delayed', icon: '⚠️', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
+      { key: 'delayed', status: '__delayed_all__', value: DELAYED_STATUSES.reduce((sum, s) => sum + (analytics.statusCounts[s] || 0), 0) + (analytics.overdueCount || 0), label: 'Delayed', icon: '⚠️', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
       { key: 'cancelled', status: ShipmentStatus.CANCELLED, value: analytics.statusCounts[ShipmentStatus.CANCELLED] || 0, label: 'Cancelled', icon: '❌', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
       { key: 'week', status: '__info__', value: `Week ${analytics.currentWeek}`, label: 'Current Week', icon: '📅', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
       { key: 'suppliers', status: '__info__', value: Object.keys(analytics.supplierStats).length, label: 'Active Suppliers', icon: '🏭', ring: 'ring-accent', tint: 'rgba(5,150,105,0.1)' },

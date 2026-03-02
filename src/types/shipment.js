@@ -100,6 +100,33 @@ export const ARRIVAL_STATUSES = [
   ShipmentStatus.ARRIVED_OFFSITE,
 ];
 
+/** Pre-arrival statuses used for overdue detection */
+export const PRE_ARRIVAL_STATUSES = [
+  ShipmentStatus.PLANNED_AIRFREIGHT,
+  ShipmentStatus.PLANNED_SEAFREIGHT,
+  ShipmentStatus.IN_TRANSIT_AIRFREIGHT,
+  ShipmentStatus.AIR_CUSTOMS_CLEARANCE,
+  ShipmentStatus.IN_TRANSIT_ROADWAY,
+  ShipmentStatus.IN_TRANSIT_SEAWAY,
+  ShipmentStatus.MOORED,
+  ShipmentStatus.BERTH_WORKING,
+  ShipmentStatus.BERTH_COMPLETE,
+];
+
+/** Current week number (non-ISO, matches Dashboard formula) */
+export const getCurrentWeek = () => {
+  const now = new Date();
+  const yearStart = new Date(now.getFullYear(), 0, 1);
+  return Math.ceil((((now - yearStart) / 86400000) + yearStart.getDay() + 1) / 7);
+};
+
+/** Check if a shipment is overdue (pre-arrival + past its scheduled week) */
+export const isOverdue = (shipment, currentWeek) => {
+  const wk = parseInt(shipment.weekNumber) || 0;
+  const status = shipment.latestStatus || shipment.latest_status;
+  return wk > 0 && wk < currentWeek && PRE_ARRIVAL_STATUSES.includes(status);
+};
+
 /** Statuses hidden from the shipping schedule */
 export const SHIPPING_EXCLUDED_STATUSES = [
   ...POST_ARRIVAL_STATUSES,
