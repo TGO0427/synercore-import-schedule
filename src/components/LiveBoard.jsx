@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ShipmentStatus, PRE_ARRIVAL_STATUSES, getCurrentWeek } from '../types/shipment';
+import { ShipmentStatus, PRE_ARRIVAL_STATUSES, getCurrentWeek, isDelayedStatus } from '../types/shipment';
 import {
   Chart as ChartJS,
   ArcElement,
@@ -119,10 +119,19 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
     },
   };
 
-  // Recent activity (last 10 updated shipments)
+  // Recent activity — exclude archived/stored, prioritize delayed & in-transit
   const recentActivity = useMemo(() => {
+    const excludedStatuses = [ShipmentStatus.STORED, ShipmentStatus.ARCHIVED, ShipmentStatus.CANCELLED];
+    const currentWeek = getCurrentWeek();
     return [...shipments]
-      .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))
+      .filter(s => !excludedStatuses.includes(s.latestStatus))
+      .sort((a, b) => {
+        // Delayed/overdue first, then by most recently updated
+        const aDelayed = isDelayedStatus(a.latestStatus) || (parseInt(a.weekNumber) > 0 && parseInt(a.weekNumber) < currentWeek && PRE_ARRIVAL_STATUSES.includes(a.latestStatus));
+        const bDelayed = isDelayedStatus(b.latestStatus) || (parseInt(b.weekNumber) > 0 && parseInt(b.weekNumber) < currentWeek && PRE_ARRIVAL_STATUSES.includes(b.latestStatus));
+        if (aDelayed !== bDelayed) return bDelayed - aDelayed;
+        return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0);
+      })
       .slice(0, 6);
   }, [shipments]);
 
@@ -233,11 +242,18 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
             Recent Activity
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {recentActivity.map(s => (
+            {recentActivity.map(s => {
+              const currentWeek = getCurrentWeek();
+              const sIsDelayed = isDelayedStatus(s.latestStatus) || (parseInt(s.weekNumber) > 0 && parseInt(s.weekNumber) < currentWeek && PRE_ARRIVAL_STATUSES.includes(s.latestStatus));
+              const borderColor = sIsDelayed ? '#ef4444' : s.latestStatus?.startsWith('in_transit') ? '#3b82f6' : s.latestStatus?.startsWith('arrived') ? '#10b981' : 'rgba(5,150,105,0.5)';
+              const badgeBg = sIsDelayed ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.08)';
+              const badgeColor = sIsDelayed ? '#fca5a5' : 'rgba(255,255,255,0.7)';
+              const statusLabel = sIsDelayed && !isDelayedStatus(s.latestStatus) ? 'overdue' : (s.latestStatus || '').replace(/_/g, ' ');
+              return (
               <div key={s.id} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '10px 14px', background: 'rgba(255,255,255,0.03)',
-                borderRadius: '8px', borderLeft: '3px solid rgba(5,150,105,0.5)',
+                borderRadius: '8px', borderLeft: `3px solid ${borderColor}`,
               }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>
@@ -253,9 +269,9 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
                   <div style={{
                     fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase',
                     padding: '3px 8px', borderRadius: '4px',
-                    background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)',
+                    background: badgeBg, color: badgeColor,
                   }}>
-                    {(s.latestStatus || '').replace(/_/g, ' ')}
+                    {statusLabel}
                   </div>
                   {s.updatedAt && (
                     <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginTop: '3px' }}>
@@ -264,7 +280,8 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
             {recentActivity.length === 0 && (
               <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', textAlign: 'center', padding: '2rem' }}>
                 No recent activity
