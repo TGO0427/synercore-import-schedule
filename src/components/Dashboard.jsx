@@ -441,6 +441,9 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
               0% { transform: translateX(100%); }
               100% { transform: translateX(-100%); }
             }
+            .news-ticker-track:hover {
+              animation-play-state: paused !important;
+            }
           `}</style>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{
@@ -451,7 +454,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
               Freight News
             </span>
             <div style={{ flex: 1, overflow: 'hidden' }}>
-              <div style={{
+              <div className="news-ticker-track" style={{
                 display: 'flex', gap: '3rem', whiteSpace: 'nowrap',
                 animation: `news-scroll ${newsHeadlines.length * 8}s linear infinite`,
               }}>
