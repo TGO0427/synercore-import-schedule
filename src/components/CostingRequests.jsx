@@ -79,12 +79,33 @@ function CostingRequests() {
   };
 
   return (
-    <div style={{ padding: '1.5rem' }}>
-      <div className="brand-strip" />
-      <div className="page-header">
-        <h2>Costing Requests</h2>
-        <p>Manage costing requests from team members</p>
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1000,
+      backgroundColor: 'white', overflow: 'auto',
+      display: 'flex', flexDirection: 'column',
+    }}>
+      {/* Sticky Header */}
+      <div style={{
+        padding: '1rem 1.5rem', borderBottom: '1px solid #e5e7eb',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        position: 'sticky', top: 0, backgroundColor: 'white', zIndex: 10,
+      }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a' }}>Costing Requests</h2>
+          <p style={{ margin: '0.25rem 0 0', color: 'var(--text-500)', fontSize: '0.8rem' }}>Manage costing requests from team members</p>
+        </div>
+        <button
+          onClick={() => window.history.back()}
+          style={{
+            background: 'rgba(0,0,0,0.05)', border: '1px solid #d1d5db',
+            color: '#374151', padding: '8px 20px', borderRadius: '8px', cursor: 'pointer',
+            fontSize: '0.85rem', fontWeight: 500,
+          }}
+        >
+          ✕ Close
+        </button>
       </div>
+      <div style={{ padding: '1.5rem', flex: 1 }}>
 
       {error && (
         <div style={{ padding: '12px', backgroundColor: '#fef2f2', color: '#dc2626', borderRadius: '6px', marginBottom: '1rem' }}>
@@ -210,6 +231,7 @@ function CostingRequests() {
           </table>
         </div>
       )}
+      </div>
     </div>
   );
 }
