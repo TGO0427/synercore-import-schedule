@@ -735,11 +735,14 @@ function ImportCosting() {
     }
   };
 
+  // Info tooltip helper
+  const InfoTip = ({ text }) => <span className="info-tip" data-tip={text}>i</span>;
+
   // Render input field helper
-  const renderInput = (label, field, type = 'text', options = {}) => (
+  const renderInput = (label, field, type = 'text', options = {}, tooltip) => (
     <div style={{ marginBottom: '12px' }}>
       <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>
-        {label}
+        {label}{tooltip && <InfoTip text={tooltip} />}
       </label>
       <input
         type={type}
@@ -753,10 +756,10 @@ function ImportCosting() {
   );
 
   // Render select field helper
-  const renderSelect = (label, field, options) => (
+  const renderSelect = (label, field, options, tooltip) => (
     <div style={{ marginBottom: '12px' }}>
       <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>
-        {label}
+        {label}{tooltip && <InfoTip text={tooltip} />}
       </label>
       <select
         value={formData[field] || ''}
@@ -773,10 +776,10 @@ function ImportCosting() {
   );
 
   // Render currency input
-  const renderCurrencyInput = (label, field, currency = 'ZAR') => (
+  const renderCurrencyInput = (label, field, currency = 'ZAR', tooltip) => (
     <div style={{ marginBottom: '12px' }}>
       <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>
-        {label} ({currency})
+        {label} ({currency}){tooltip && <InfoTip text={tooltip} />}
       </label>
       <input
         type="number"
@@ -1089,7 +1092,7 @@ function ImportCosting() {
             <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
               {/* Section: Header Details */}
               <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 1rem', color: '#0f172a', fontSize: '1rem' }}>Shipment Details</h4>
+                <h4 style={{ margin: '0 0 1rem', color: '#0f172a', fontSize: '1rem' }}>Shipment Details <InfoTip text="Core shipment info: supplier, origin, ports, and shipping terms." /></h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
                   {renderInput('Reference Number', 'reference_number')}
                   <div style={{ marginBottom: '12px' }}>
@@ -1152,11 +1155,11 @@ function ImportCosting() {
                   {renderInput('Country of Origin', 'country_of_origin')}
                   {renderSelect('Port of Loading', 'port_of_loading', PORTS_OF_LOADING)}
                   {renderSelect('Port of Discharge', 'port_of_discharge', AFRICAN_PORTS)}
-                  {renderSelect('Load Type', 'load_type', LOAD_TYPES)}
+                  {renderSelect('Load Type', 'load_type', LOAD_TYPES, 'FCL = Full Container Load (exclusive use). LCL = Less than Container Load (shared).')}
                   {renderSelect('Container Type', 'container_type', CONTAINER_TYPES)}
-                  {renderSelect('INCO Terms', 'inco_terms', INCO_TERMS)}
-                  {renderInput('INCO Term Place', 'inco_term_place')}
-                  {renderInput('Transit Time (days)', 'transit_time_days', 'number')}
+                  {renderSelect('INCO Terms', 'inco_terms', INCO_TERMS, 'International Commercial Terms — defines who pays freight, insurance, and risk transfer point (e.g. FOB, CIF, EXW).')}
+                  {renderInput('INCO Term Place', 'inco_term_place', 'text', {}, "The named location for the Incoterm, e.g. 'Shanghai' for FOB Shanghai.")}
+                  {renderInput('Transit Time (days)', 'transit_time_days', 'number', {}, 'Estimated number of days from port of loading to port of discharge.')}
                   {renderSelect('Shipping Line', 'shipping_line', SHIPPING_LINES)}
                   {renderInput('No. of Containers', 'quantity', 'number')}
                   {renderInput('Costing Date', 'costing_date', 'date')}
@@ -1169,7 +1172,7 @@ function ImportCosting() {
               <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fef3c7', borderRadius: '8px', border: '2px solid #f59e0b' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                   <div>
-                    <h4 style={{ margin: 0, color: '#92400e', fontSize: '1rem' }}>Products in Container</h4>
+                    <h4 style={{ margin: 0, color: '#92400e', fontSize: '1rem' }}>Products in Container <InfoTip text="List all products in this shipment. Invoice value auto-calculates from weight × rate/kg." /></h4>
                     <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#b45309' }}>
                       Enter weight and rate/kg to auto-calculate invoice value. Totals populate Origin Charges.
                     </p>
@@ -1195,16 +1198,16 @@ function ImportCosting() {
                     <thead>
                       <tr style={{ backgroundColor: '#fbbf24', color: '#78350f' }}>
                         <th style={{ padding: '10px 8px', textAlign: 'left', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Product Name</th>
-                        <th style={{ padding: '10px 8px', textAlign: 'left', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>HS Code</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'left', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>HS Code <InfoTip text="Harmonized System code — the international tariff classification that determines duty rates." /></th>
                         <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Pack Size</th>
                         <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Pack Type</th>
                         <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Weight (kg)</th>
-                        <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Rate/kg</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Rate/kg <InfoTip text="Purchase price per kilogram in the selected currency." /></th>
                         <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Currency</th>
                         <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #f59e0b', backgroundColor: '#f59e0b', color: 'white' }}>Invoice Value</th>
-                        <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Weight %</th>
-                        <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Duty %</th>
-                        <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Sch 1 %</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Weight % <InfoTip text="This product's weight as a percentage of total shipment weight — used to allocate shared costs." /></th>
+                        <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Duty % <InfoTip text="General customs duty rate for this product based on its HS code." /></th>
+                        <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Sch 1 % <InfoTip text="Schedule 1 (Part 1) additional duty — an extra tariff on specific goods under SA trade policy." /></th>
                         <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}></th>
                       </tr>
                     </thead>
@@ -1341,12 +1344,12 @@ function ImportCosting() {
 
               {/* Section: Exchange Rate & Customs Value */}
               <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#ecfdf5', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 1rem', color: '#065f46', fontSize: '1rem' }}>Finex SA Exchange Rates</h4>
+                <h4 style={{ margin: '0 0 1rem', color: '#065f46', fontSize: '1rem' }}>Finex SA Exchange Rates <InfoTip text="Daily exchange rates from Finex SA. These convert foreign currency values to ZAR." /></h4>
                 <p style={{ margin: '0 0 1rem', fontSize: '0.8rem', color: 'var(--text-500)' }}>Enter the Finex SA rates from your daily email</p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
                   <div style={{ marginBottom: '12px' }}>
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#166534' }}>
-                      USD/ZAR Rate
+                      USD/ZAR Rate <InfoTip text="Today's Finex SA US Dollar to South African Rand exchange rate." />
                     </label>
                     <input
                       type="number"
@@ -1360,7 +1363,7 @@ function ImportCosting() {
                   </div>
                   <div style={{ marginBottom: '12px' }}>
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#1d4ed8' }}>
-                      EUR/ZAR Rate
+                      EUR/ZAR Rate <InfoTip text="Today's Finex SA Euro to South African Rand exchange rate." />
                     </label>
                     <input
                       type="number"
@@ -1377,7 +1380,7 @@ function ImportCosting() {
 
               {/* Section: Ocean Freight */}
               <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#eff6ff', borderRadius: '8px', border: '2px solid #3b82f6' }}>
-                <h4 style={{ margin: '0 0 1rem', color: '#1d4ed8', fontSize: '1rem' }}>Ocean Freight</h4>
+                <h4 style={{ margin: '0 0 1rem', color: '#1d4ed8', fontSize: '1rem' }}>Ocean Freight <InfoTip text="Sea freight charges from the shipping line. Enter in original currency — ZAR conversion is automatic." /></h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
                   {renderCurrencyInput('Ocean Freight', 'ocean_freight_usd', 'USD')}
                   <div style={{ marginBottom: '12px' }}>
@@ -1413,7 +1416,7 @@ function ImportCosting() {
 
               {/* Section: Origin Charges */}
               <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f0fdf4', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 1rem', color: '#166534', fontSize: '1rem' }}>Origin Charges</h4>
+                <h4 style={{ margin: '0 0 1rem', color: '#166534', fontSize: '1rem' }}>Origin Charges <InfoTip text="Charges at the port of loading (packing, handling, documentation) before the goods ship." /></h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
                   {renderCurrencyInput('Origin Charge', 'origin_charge_usd', 'USD')}
                   <div style={{ marginBottom: '12px' }}>
@@ -1446,7 +1449,7 @@ function ImportCosting() {
 
               {/* Section: Local Charges (Transport/Cartage) */}
               <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f0fdf4', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 1rem', color: '#166534', fontSize: '1rem' }}>Local Charges (Transport/Cartage) - ZAR</h4>
+                <h4 style={{ margin: '0 0 1rem', color: '#166534', fontSize: '1rem' }}>Local Charges (Transport/Cartage) - ZAR <InfoTip text="Inland transport and handling costs within South Africa after port discharge." /></h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
                   {renderCurrencyInput('Local Cartage: CPT to Klapmuts (<20 Ton)', 'local_cartage_cpt_klapmuts_20ton_zar')}
                   {renderCurrencyInput('Local Cartage: CPT to Klapmuts (21-28 Ton)', 'local_cartage_cpt_klapmuts_28ton_zar')}
@@ -1475,7 +1478,7 @@ function ImportCosting() {
 
               {/* Section: Destination Charges (Port/Shipping) */}
               <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#eff6ff', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 1rem', color: '#1e40af', fontSize: '1rem' }}>Destination Charges - ZAR</h4>
+                <h4 style={{ margin: '0 0 1rem', color: '#1e40af', fontSize: '1rem' }}>Destination Charges - ZAR <InfoTip text="Port-side fees at discharge: cargo dues, inspections, CTO, and turn-in costs." /></h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
                   {renderCurrencyInput('Shipping Line Charges (At Cost)', 'shipping_line_charges_zar')}
                   {renderCurrencyInput('Cargo Dues (20FT)', 'cargo_dues_20ft_zar')}
@@ -1498,12 +1501,12 @@ function ImportCosting() {
 
               {/* Section: Customs VAT & Duty Summary */}
               <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fef3c7', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 1rem', color: '#92400e', fontSize: '1rem' }}>Customs & Duties Summary</h4>
+                <h4 style={{ margin: '0 0 1rem', color: '#92400e', fontSize: '1rem' }}>Customs & Duties Summary <InfoTip text="SARS import duties and VAT calculated from customs value × duty rates per product." /></h4>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
                   <div>
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
-                      ROE for Customs
+                      ROE for Customs <InfoTip text="Rate of Exchange used by SARS for customs valuation. May differ from the commercial rate." />
                     </label>
                     <input
                       type="number"
@@ -1532,7 +1535,7 @@ function ImportCosting() {
                   </div>
                   <div>
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
-                      IMPORT VAT (15%)
+                      IMPORT VAT (15%) <InfoTip text="15% VAT levied on (customs value + duties + schedule 1 duty)." />
                     </label>
                     <div style={{ padding: '8px 12px', backgroundColor: '#fde68a', borderRadius: '6px', fontWeight: '600', color: '#78350f' }}>
                       {formatCurrency(getCustomsTotals().totalVat)}
@@ -1541,10 +1544,10 @@ function ImportCosting() {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-                  {renderCurrencyInput('Customs Declaration', 'customs_declaration_zar')}
+                  {renderCurrencyInput('Customs Declaration', 'customs_declaration_zar', 'ZAR', 'SARS customs processing/declaration fee charged per bill of entry.')}
                   <div>
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
-                      Agency Fee ({formData.agency_fee_percentage}% min R{formData.agency_fee_min})
+                      Agency Fee ({formData.agency_fee_percentage}% min R{formData.agency_fee_min}) <InfoTip text="Clearing agent's fee — calculated as a percentage of duties + VAT, subject to a minimum." />
                     </label>
                     <div style={{ padding: '8px 12px', backgroundColor: '#fde68a', borderRadius: '6px', fontWeight: '600', color: '#92400e' }}>
                       {formatCurrency(calculatedTotals.agency_fee_zar)}
@@ -1567,7 +1570,7 @@ function ImportCosting() {
               {/* Section: Product Cost Allocation */}
               {formData.products && formData.products.length > 0 && getTotalWeight() > 0 && (
                 <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#ecfdf5', borderRadius: '8px', border: '2px solid #10b981' }}>
-                  <h4 style={{ margin: '0 0 1rem', color: '#065f46', fontSize: '1rem' }}>Product Cost Allocation</h4>
+                  <h4 style={{ margin: '0 0 1rem', color: '#065f46', fontSize: '1rem' }}>Product Cost Allocation <InfoTip text="Breaks down the total landed cost per product. Shipping is split by weight share." /></h4>
                   <p style={{ margin: '0 0 1rem', fontSize: '0.8rem', color: '#047857' }}>
                     Shipping costs allocated by weight. Each product shows its share of total costs.
                   </p>
