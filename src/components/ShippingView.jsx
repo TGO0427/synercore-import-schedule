@@ -72,8 +72,26 @@ function ShippingView({ shipments, onFileUpload, onUpdateShipment, onDeleteShipm
       planned: ['planned_airfreight', 'planned_seafreight'],
       delayed: ['delayed_port', 'delayed_customs', 'delayed_documents', 'delayed_supplier'],
     };
-    const matchStatuses = META_FILTERS[statusFilter] || [statusFilter];
-    shippingShipments = shippingShipments.filter(s => matchStatuses.includes(s.latestStatus));
+
+    if (statusFilter === 'delayed') {
+      // Include both explicit delayed statuses AND overdue shipments (pre-arrival past their week)
+      const now = new Date();
+      const yearStart = new Date(now.getFullYear(), 0, 1);
+      const currentWeek = Math.ceil((((now - yearStart) / 86400000) + yearStart.getDay() + 1) / 7);
+      const preArrivalStatuses = [
+        'planned_airfreight', 'planned_seafreight',
+        'in_transit_airfreight', 'air_customs_clearance',
+        'in_transit_roadway', 'in_transit_seaway',
+        'moored', 'berth_working', 'berth_complete',
+      ];
+      shippingShipments = shippingShipments.filter(s =>
+        DELAYED_STATUSES.includes(s.latestStatus) ||
+        (s.weekNumber > 0 && s.weekNumber < currentWeek && preArrivalStatuses.includes(s.latestStatus))
+      );
+    } else {
+      const matchStatuses = META_FILTERS[statusFilter] || [statusFilter];
+      shippingShipments = shippingShipments.filter(s => matchStatuses.includes(s.latestStatus));
+    }
   }
 
   // Count unique ORDER/REF - duplicates count as 1 shipment
