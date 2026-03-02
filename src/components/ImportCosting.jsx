@@ -733,6 +733,7 @@ function ImportCosting() {
   };
 
   const resetForm = () => {
+    clearCostingDraft();
     setFormData(INITIAL_FORM_STATE);
     setEditingId(null);
     if (exchangeRate?.rate) {
