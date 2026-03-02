@@ -394,9 +394,9 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
   // KPI cards
   const kpiCards = [
     { key: 'total', value: stats.total, label: 'Total Shipments', icon: '📦', ring: 'ring-accent', tint: 'rgba(5,150,105,0.1)', filter: null, delta: stats.deltas.total, pctDelta: pctDeltas.total },
-    { key: 'transit', value: stats.inTransit, label: 'In Transit', icon: '🚢', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)', filter: 'in_transit', delta: stats.deltas.inTransit, pctDelta: pctDeltas.inTransit },
-    { key: 'stored', value: stats.stored, label: 'Stored', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)', filter: 'stored', view: 'stored', delta: stats.deltas.stored, pctDelta: pctDeltas.stored },
-    { key: 'delayed', value: stats.delayed, label: 'Delayed', icon: '⚠️', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)', filter: 'delayed', delta: stats.deltas.delayed, pctDelta: pctDeltas.delayed },
+    { key: 'transit', value: stats.inTransit, label: 'In Transit', icon: '🚢', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)', filter: 'in_transit', delta: stats.deltas.inTransit, pctDelta: pctDeltas.inTransit, info: stats.inTransit > 0 ? { label: 'Active', pill: 'pill-info' } : null },
+    { key: 'stored', value: stats.stored, label: 'Stored', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)', filter: 'stored', view: 'stored', delta: stats.deltas.stored, pctDelta: pctDeltas.stored, info: stats.stored > 0 ? { label: 'In Stock', pill: 'pill-ok' } : null },
+    { key: 'delayed', value: stats.delayed, label: 'Delayed', icon: '⚠️', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)', filter: 'delayed', delta: stats.deltas.delayed, pctDelta: pctDeltas.delayed, info: stats.delayed > 0 ? { label: 'Needs Attention', pill: 'pill-bad' } : null },
     { key: 'planned', value: stats.planned, label: 'Planned', icon: '📅', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)', filter: 'planned', delta: stats.deltas.planned, pctDelta: pctDeltas.planned },
     { key: 'offsite', value: `${avgDaysOffsite}d`, label: 'Avg Days in OFFSITE', icon: '🏭', ring: 'ring-accent', tint: 'rgba(139,92,246,0.1)', filter: 'stored', view: 'stored', delta: null, pctDelta: null },
   ];
@@ -448,6 +448,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
               {card.label}
             </p>
             {renderDelta(card.delta, card.pctDelta)}
+            {card.info && <span className={`pill ${card.info.pill}`} style={{ fontSize: 10, padding: '2px 6px', marginTop: 2 }}>{card.info.label}</span>}
           </div>
         ))}
       </div>

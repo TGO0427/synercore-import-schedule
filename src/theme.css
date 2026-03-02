@@ -311,6 +311,8 @@ body { margin: 0; font-family: 'Poppins', ui-sans-serif, system-ui, -apple-syste
   line-height: 1.3;
   flex-shrink: 0;
 }
+.sidebar-nav .nav-item .nav-badge-danger { background: rgba(239,68,68,0.2); color: #f87171; }
+.sidebar-nav .nav-item .nav-badge-info   { background: rgba(59,130,246,0.2); color: #93c5fd; }
 /* External link indicator */
 .sidebar-nav .nav-item .nav-external {
   margin-left: auto;

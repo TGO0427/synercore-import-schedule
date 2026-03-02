@@ -145,6 +145,22 @@ function ShippingView({ shipments, onFileUpload, onUpdateShipment, onDeleteShipm
         }
       </div>
 
+      {/* summary info pills */}
+      {(() => {
+        const delayedTotal = (stats.delayed_port || 0) + (stats.delayed_customs || 0) + (stats.delayed_documents || 0) + (stats.delayed_supplier || 0);
+        const inTransitTotal = (stats.in_transit_airfreight || 0) + (stats.in_transit_roadway || 0) + (stats.in_transit_seaway || 0);
+        const arrivedTotal = (stats.arrived_pta || 0) + (stats.arrived_klm || 0);
+        const inspectionPending = stats.inspection_pending || 0;
+        return (delayedTotal > 0 || inTransitTotal > 0 || arrivedTotal > 0 || inspectionPending > 0) ? (
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', margin: '0.75rem 0' }}>
+            {delayedTotal > 0 && <span className="pill pill-bad">{delayedTotal} Delayed</span>}
+            {inTransitTotal > 0 && <span className="pill pill-info">{inTransitTotal} In Transit</span>}
+            {arrivedTotal > 0 && <span className="pill pill-ok">{arrivedTotal} Arrived</span>}
+            {inspectionPending > 0 && <span className="pill pill-warn">{inspectionPending} Pending Inspection</span>}
+          </div>
+        ) : null;
+      })()}
+
       {/* current filter chip */}
       {statusFilter && (
         <div style={{

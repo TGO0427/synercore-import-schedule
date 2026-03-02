@@ -40,6 +40,7 @@ import useAlerts from './hooks/useAlerts';
 import { authFetch } from './utils/authFetch';
 import { getApiUrl } from './config/api';
 import { authUtils } from './utils/auth';
+import { POST_ARRIVAL_STATUSES } from './types/shipment';
 import { initWebVitals, logWebVitalsToConsole } from './utils/webVitals';
 import { initializeAnalytics } from './config/analytics';
 import './theme.css';
@@ -312,11 +313,14 @@ function App() {
         {(() => {
           const q = navSearch.toLowerCase();
 
+          const delayedCount = shipments.filter(s => s.latestStatus && s.latestStatus.startsWith('delayed_')).length;
+          const workflowCount = shipments.filter(s => POST_ARRIVAL_STATUSES.includes(s.latestStatus)).length;
+
           const navItems = {
             dashboard: { label: 'Dashboard', icon: '\u{1F4CA}', view: 'dashboard' },
             suppliers: { label: 'Suppliers', icon: '\u{1F3E2}', view: 'suppliers' },
-            shipping: { label: 'Shipping Schedule', icon: '\u{1F4E6}', view: 'shipping' },
-            workflow: { label: 'Post-Arrival Workflow', icon: '\u{1F4CB}', view: 'workflow' },
+            shipping: { label: 'Shipping Schedule', icon: '\u{1F4E6}', view: 'shipping', badge: delayedCount, badgeType: 'danger' },
+            workflow: { label: 'Post-Arrival Workflow', icon: '\u{1F4CB}', view: 'workflow', badge: workflowCount, badgeType: 'info' },
             capacity: { label: 'Warehouse Capacity', icon: '\u{1F3ED}', view: 'capacity' },
             stored: { label: 'Stored Stock', icon: '\u{1F3EA}', view: 'stored' },
             archives: { label: 'Shipment Archives', icon: '\u{1F4E6}', view: 'archives' },
@@ -359,7 +363,11 @@ function App() {
               >
                 <span className="nav-icon">{item.icon}</span>
                 <span className="nav-label">{item.label}</span>
-                {item.badge > 0 && <span className="nav-badge">{item.badge}</span>}
+                {item.badge > 0 && (
+                  <span className={`nav-badge ${item.badgeType === 'danger' ? 'nav-badge-danger' : item.badgeType === 'info' ? 'nav-badge-info' : ''}`}>
+                    {item.badge}
+                  </span>
+                )}
               </button>
             );
           };
