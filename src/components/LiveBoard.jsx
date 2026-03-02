@@ -141,7 +141,7 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
         if (pa !== pb) return pa - pb;
         return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0);
       })
-      .slice(0, 6);
+      .slice(0, 10);
   }, [shipments]);
 
   const kpiTiles = [
@@ -250,11 +250,12 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
           <h3 style={{ margin: '0 0 10px', fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
             Recent Activity
           </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '460px', overflowY: 'auto' }}>
             {recentActivity.map(s => {
               const currentWeek = getCurrentWeek();
               const sIsDelayed = isDelayedStatus(s.latestStatus) || (parseInt(s.weekNumber) > 0 && parseInt(s.weekNumber) < currentWeek && PRE_ARRIVAL_STATUSES.includes(s.latestStatus));
-              const borderColor = sIsDelayed ? '#ef4444' : s.latestStatus?.startsWith('in_transit') ? '#3b82f6' : s.latestStatus?.startsWith('arrived') ? '#10b981' : 'rgba(5,150,105,0.5)';
+              const isPlanned = s.latestStatus === ShipmentStatus.PLANNED_AIRFREIGHT || s.latestStatus === ShipmentStatus.PLANNED_SEAFREIGHT;
+              const borderColor = sIsDelayed ? '#ef4444' : s.latestStatus?.startsWith('in_transit') ? '#3b82f6' : s.latestStatus?.startsWith('arrived') ? '#10b981' : isPlanned ? '#f59e0b' : 'rgba(5,150,105,0.5)';
               const badgeBg = sIsDelayed ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.08)';
               const badgeColor = sIsDelayed ? '#fca5a5' : 'rgba(255,255,255,0.7)';
               const statusLabel = sIsDelayed && !isDelayedStatus(s.latestStatus) ? 'overdue' : (s.latestStatus || '').replace(/_/g, ' ');
