@@ -1944,16 +1944,32 @@ function ImportCosting() {
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center',
-          alignItems: 'center', zIndex: 2000
+          alignItems: 'stretch', zIndex: 2000
         }}>
           <div style={{
-            backgroundColor: 'white', borderRadius: '12px', padding: '1.5rem',
-            width: '500px', maxWidth: '90vw', maxHeight: '80vh', overflow: 'auto'
+            backgroundColor: 'white', width: '100vw', height: '100vh',
+            overflow: 'auto',
           }}>
-            <h3 style={{ margin: '0 0 1rem', color: '#0f172a' }}>Request a Costing</h3>
-            <p style={{ color: 'var(--text-500)', fontSize: '0.85rem', marginBottom: '1rem' }}>
-              Submit a request and an admin will prepare the cost estimate for you.
-            </p>
+            {/* Header */}
+            <div style={{
+              padding: '1rem 1.5rem', borderBottom: '1px solid #e5e7eb',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              position: 'sticky', top: 0, backgroundColor: 'white', zIndex: 10
+            }}>
+              <div>
+                <h3 style={{ margin: 0, color: '#0f172a' }}>Request a Costing</h3>
+                <p style={{ color: 'var(--text-500)', fontSize: '0.85rem', margin: '0.25rem 0 0' }}>
+                  Submit a request and an admin will prepare the cost estimate for you.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowRequestModal(false)}
+                style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#6b7280', lineHeight: 1 }}
+              >
+                ✕
+              </button>
+            </div>
+            <div style={{ padding: '1.5rem', maxWidth: '700px' }}>
             <div style={{ display: 'grid', gap: '0.75rem' }}>
               <div>
                 <label style={{ display: 'block', fontWeight: '500', fontSize: '0.85rem', marginBottom: '0.25rem' }}>Supplier Name</label>
@@ -2020,6 +2036,7 @@ function ImportCosting() {
               >
                 {requestSubmitting ? 'Submitting...' : 'Submit Request'}
               </button>
+            </div>
             </div>
           </div>
         </div>
