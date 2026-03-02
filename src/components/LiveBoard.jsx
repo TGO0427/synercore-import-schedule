@@ -119,17 +119,26 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
     },
   };
 
-  // Recent activity — exclude archived/stored, prioritize delayed & in-transit
+  // Recent activity — exclude archived/stored, active first, planned last
   const recentActivity = useMemo(() => {
     const excludedStatuses = [ShipmentStatus.STORED, ShipmentStatus.ARCHIVED, ShipmentStatus.CANCELLED];
     const currentWeek = getCurrentWeek();
+    const plannedStatuses = [ShipmentStatus.PLANNED_AIRFREIGHT, ShipmentStatus.PLANNED_SEAFREIGHT];
+
+    // Priority: 0 = delayed/overdue, 1 = in-transit/port/arrived, 2 = planned
+    const getPriority = (s) => {
+      const sDelayed = isDelayedStatus(s.latestStatus) || (parseInt(s.weekNumber) > 0 && parseInt(s.weekNumber) < currentWeek && PRE_ARRIVAL_STATUSES.includes(s.latestStatus));
+      if (sDelayed) return 0;
+      if (plannedStatuses.includes(s.latestStatus)) return 2;
+      return 1;
+    };
+
     return [...shipments]
       .filter(s => !excludedStatuses.includes(s.latestStatus))
       .sort((a, b) => {
-        // Delayed/overdue first, then by most recently updated
-        const aDelayed = isDelayedStatus(a.latestStatus) || (parseInt(a.weekNumber) > 0 && parseInt(a.weekNumber) < currentWeek && PRE_ARRIVAL_STATUSES.includes(a.latestStatus));
-        const bDelayed = isDelayedStatus(b.latestStatus) || (parseInt(b.weekNumber) > 0 && parseInt(b.weekNumber) < currentWeek && PRE_ARRIVAL_STATUSES.includes(b.latestStatus));
-        if (aDelayed !== bDelayed) return bDelayed - aDelayed;
+        const pa = getPriority(a);
+        const pb = getPriority(b);
+        if (pa !== pb) return pa - pb;
         return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0);
       })
       .slice(0, 6);
