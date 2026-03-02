@@ -456,7 +456,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
             <div style={{ flex: 1, overflow: 'hidden' }}>
               <div className="news-ticker-track" style={{
                 display: 'flex', gap: '3rem', whiteSpace: 'nowrap',
-                animation: `news-scroll ${newsHeadlines.length * 8}s linear infinite`,
+                animation: `news-scroll ${newsHeadlines.length * 4}s linear infinite`,
               }}>
                 {newsHeadlines.map((item, i) => (
                   <a

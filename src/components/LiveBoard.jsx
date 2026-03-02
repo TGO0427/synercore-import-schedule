@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ShipmentStatus, PRE_ARRIVAL_STATUSES, getCurrentWeek, isDelayedStatus } from '../types/shipment';
+import { getApiUrl } from '../config/api';
 import {
   Chart as ChartJS,
   ArcElement,
@@ -15,6 +16,21 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [detailShipment, setDetailShipment] = useState(null);
   const [refreshPulse, setRefreshPulse] = useState(false);
+  const [newsHeadlines, setNewsHeadlines] = useState([]);
+
+  // Fetch freight news
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        const res = await fetch(getApiUrl('/api/news'));
+        if (res.ok) {
+          const result = await res.json();
+          setNewsHeadlines(result.data || []);
+        }
+      } catch (err) { /* silently ignore */ }
+    };
+    fetchNews();
+  }, []);
 
   // Clock tick every second
   useEffect(() => {
@@ -179,6 +195,8 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
       <style>{`
         @keyframes liveboard-in { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
         @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(5,150,105,0.4); } 70% { box-shadow: 0 0 0 10px rgba(5,150,105,0); } 100% { box-shadow: 0 0 0 0 rgba(5,150,105,0); } }
+        @keyframes news-scroll-lb { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+        .news-ticker-lb:hover { animation-play-state: paused !important; }
       `}</style>
 
       {/* Header */}
@@ -219,6 +237,44 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
           </button>
         </div>
       </div>
+
+      {/* News Ticker */}
+      {newsHeadlines.length > 0 && (
+        <div style={{
+          padding: '6px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)',
+          overflow: 'hidden', display: 'flex', alignItems: 'center', gap: '12px',
+        }}>
+          <span style={{
+            fontSize: '0.65rem', fontWeight: 700, color: '#f59e0b',
+            textTransform: 'uppercase', letterSpacing: '0.5px', flexShrink: 0,
+          }}>
+            Freight News
+          </span>
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <div className="news-ticker-lb" style={{
+              display: 'flex', gap: '3rem', whiteSpace: 'nowrap',
+              animation: `news-scroll-lb ${newsHeadlines.length * 4}s linear infinite`,
+            }}>
+              {newsHeadlines.map((item, i) => (
+                <a
+                  key={i}
+                  href={item.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem',
+                    textDecoration: 'none', flexShrink: 0,
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.color = '#f59e0b'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+                >
+                  {item.title}
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* KPI Tiles */}
       <div style={{
