@@ -616,8 +616,8 @@ function App() {
             <Route path="/audit" element={
               <Suspense fallback={<PageLoader />}>{isAdmin ? <AuditLog /> : <AccessDenied />}</Suspense>
             } />
-            <Route path="/" element={<Navigate to="/shipping" replace />} />
-            <Route path="*" element={<Navigate to="/shipping" replace />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </ErrorBoundary>
       </div>
