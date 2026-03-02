@@ -272,7 +272,7 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
                       title="View order details"
                     >{s.orderRef}</span>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)' }}>{s.supplier}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)' }}>{s.supplier}{s.productName ? ` — ${s.productName}` : ''}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{
