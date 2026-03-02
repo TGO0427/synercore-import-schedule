@@ -622,6 +622,26 @@ function App() {
         </ErrorBoundary>
       </div>
 
+      {!liveBoardOpen && (
+        <button
+          onClick={() => setLiveBoardOpen(true)}
+          title="Open Live Board"
+          style={{
+            position: 'fixed', bottom: 24, right: 24, zIndex: 900,
+            width: 52, height: 52, borderRadius: '50%',
+            background: 'linear-gradient(135deg, #0f172a, #1e293b)',
+            border: '2px solid rgba(5,150,105,0.5)',
+            color: '#10b981', fontSize: 22,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+            transition: 'transform 0.2s, box-shadow 0.2s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.boxShadow = '0 6px 28px rgba(5,150,105,0.4)'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)'; }}
+        >
+          📡
+        </button>
+      )}
       {liveBoardOpen && (
         <LiveBoard
           shipments={shipments}
