@@ -555,9 +555,14 @@ function ImportCosting() {
     const productWeight = parseFloat(product.weight_kg) || 0;
     const weightRatio = totalWeight > 0 ? productWeight / totalWeight : 0;
 
-    // Get shipping costs from calculated totals
+    // For CIF/CIP terms, ocean freight is included in the product price,
+    // so only allocate local + destination + origin charges (not ocean freight)
+    const incoTerms = (formData.inco_terms || '').toUpperCase();
+    const freightIncluded = incoTerms === 'CIF' || incoTerms === 'CIP';
     const totalShippingCost = calculatedTotals.total_shipping_cost_zar || 0;
-    const allocatedShippingCost = totalShippingCost * weightRatio;
+    const oceanFreight = calculatedTotals.total_ocean_freight_zar || 0;
+    const shippingToAllocate = freightIncluded ? (totalShippingCost - oceanFreight) : totalShippingCost;
+    const allocatedShippingCost = shippingToAllocate * weightRatio;
 
     // Get customs values for this product
     const customs = calculateProductCustomsValues(product);
