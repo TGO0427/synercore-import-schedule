@@ -133,12 +133,19 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
       return 1;
     };
 
-    // Deduplicate by orderRef, keeping the most recently updated entry per order
+    // Group by orderRef, collect all product names per order
     const orderMap = {};
     shipments.forEach(s => {
       if (!s.orderRef || excludedStatuses.includes(s.latestStatus)) return;
-      if (!orderMap[s.orderRef] || new Date(s.updatedAt || 0) > new Date(orderMap[s.orderRef].updatedAt || 0)) {
-        orderMap[s.orderRef] = s;
+      if (!orderMap[s.orderRef]) {
+        orderMap[s.orderRef] = { ...s, _products: new Set() };
+      }
+      if (s.productName) orderMap[s.orderRef]._products.add(s.productName);
+      // Keep the most recently updated entry's fields
+      if (new Date(s.updatedAt || 0) > new Date(orderMap[s.orderRef].updatedAt || 0)) {
+        const products = orderMap[s.orderRef]._products;
+        orderMap[s.orderRef] = { ...s, _products: products };
+        if (s.productName) products.add(s.productName);
       }
     });
 
@@ -281,7 +288,9 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
                       title="View order details"
                     >{s.orderRef}</span>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)' }}>{s.supplier}{s.productName ? ` — ${s.productName}` : ''}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)' }}>
+                    {s.supplier}{s._products && s._products.size > 0 ? ` — ${[...s._products].join(', ')}` : ''}
+                  </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{
