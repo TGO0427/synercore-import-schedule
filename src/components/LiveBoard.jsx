@@ -282,9 +282,9 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
                   }}>
                     {statusLabel}
                   </div>
-                  {s.updatedAt && (
+                  {s.weekNumber && (
                     <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginTop: '3px' }}>
-                      {new Date(s.updatedAt).toLocaleString()}
+                      Week {s.weekNumber}
                     </div>
                   )}
                 </div>
