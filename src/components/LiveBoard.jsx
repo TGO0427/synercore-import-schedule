@@ -133,8 +133,16 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
       return 1;
     };
 
-    return [...shipments]
-      .filter(s => !excludedStatuses.includes(s.latestStatus))
+    // Deduplicate by orderRef, keeping the most recently updated entry per order
+    const orderMap = {};
+    shipments.forEach(s => {
+      if (!s.orderRef || excludedStatuses.includes(s.latestStatus)) return;
+      if (!orderMap[s.orderRef] || new Date(s.updatedAt || 0) > new Date(orderMap[s.orderRef].updatedAt || 0)) {
+        orderMap[s.orderRef] = s;
+      }
+    });
+
+    return Object.values(orderMap)
       .sort((a, b) => {
         const pa = getPriority(a);
         const pb = getPriority(b);
