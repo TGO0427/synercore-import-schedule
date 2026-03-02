@@ -172,8 +172,9 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
       background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e293b 100%)',
-      color: 'white', overflow: 'auto',
+      color: 'white', overflow: 'hidden',
       animation: 'liveboard-in 0.3s ease',
+      display: 'flex', flexDirection: 'column',
     }}>
       <style>{`
         @keyframes liveboard-in { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
@@ -243,16 +244,18 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
       <div style={{
         display: 'grid', gridTemplateColumns: '1fr 1fr',
         gap: '12px', padding: '0 24px 24px',
+        flex: 1, minHeight: 0,
       }}>
         {/* Donut Chart */}
         <div style={{
           background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: '8px', padding: '14px',
+          display: 'flex', flexDirection: 'column',
         }}>
           <h3 style={{ margin: '0 0 10px', fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
             Status Distribution
           </h3>
-          <div style={{ height: '260px' }}>
+          <div style={{ flex: 1, minHeight: 0 }}>
             <Doughnut data={donutData} options={donutOptions} />
           </div>
         </div>
@@ -261,11 +264,12 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
         <div style={{
           background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: '8px', padding: '14px',
+          display: 'flex', flexDirection: 'column',
         }}>
           <h3 style={{ margin: '0 0 10px', fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
             Recent Activity
           </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '460px', overflowY: 'auto' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, minHeight: 0, overflowY: 'auto' }}>
             {recentActivity.map(s => {
               const currentWeek = getCurrentWeek();
               const sIsDelayed = isDelayedStatus(s.latestStatus) || (parseInt(s.weekNumber) > 0 && parseInt(s.weekNumber) < currentWeek && PRE_ARRIVAL_STATUSES.includes(s.latestStatus));
