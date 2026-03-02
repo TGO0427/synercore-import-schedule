@@ -42,6 +42,21 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
   const navigate = useNavigate();
   const [detailShipment, setDetailShipment] = useState(null);
   const [warehouseData, setWarehouseData] = useState([]);
+  const [newsHeadlines, setNewsHeadlines] = useState([]);
+
+  // Fetch freight news headlines
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        const res = await fetch(getApiUrl('/api/news'));
+        if (res.ok) {
+          const result = await res.json();
+          setNewsHeadlines(result.data || []);
+        }
+      } catch (err) { /* silently ignore */ }
+    };
+    fetchNews();
+  }, []);
 
   // Fetch warehouse capacity data
   useEffect(() => {
@@ -413,6 +428,54 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
   return (
     <div style={{ padding: '1rem' }}>
       <div className="brand-strip" />
+
+      {/* Freight News Ticker */}
+      {newsHeadlines.length > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #0f172a, #1e293b)',
+          borderRadius: '8px', padding: '8px 16px', marginBottom: '0.75rem',
+          overflow: 'hidden', position: 'relative',
+        }}>
+          <style>{`
+            @keyframes news-scroll {
+              0% { transform: translateX(100%); }
+              100% { transform: translateX(-100%); }
+            }
+          `}</style>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{
+              fontSize: '0.7rem', fontWeight: 700, color: '#f59e0b',
+              textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}>
+              Freight News
+            </span>
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+              <div style={{
+                display: 'flex', gap: '3rem', whiteSpace: 'nowrap',
+                animation: `news-scroll ${newsHeadlines.length * 8}s linear infinite`,
+              }}>
+                {newsHeadlines.map((item, i) => (
+                  <a
+                    key={i}
+                    href={item.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem',
+                      textDecoration: 'none', flexShrink: 0,
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#f59e0b'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
+                  >
+                    {item.title}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {authUtils.getUser()?.role === 'admin' && <PerformanceMetrics />}
 
