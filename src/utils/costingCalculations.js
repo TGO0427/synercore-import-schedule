@@ -142,10 +142,22 @@ export const calculateCustomsValue = (data) => {
 export const calculateAllTotals = (data) => {
   const roeOrigin = parseFloat(data.roe_origin) || 0;  // USD/ZAR
   const roeEur = parseFloat(data.roe_eur) || 0;        // EUR/ZAR
-  const originChargeUsd = parseFloat(data.origin_charge_usd) || 0;
-  const originChargeEur = parseFloat(data.origin_charge_eur) || 0;
   const oceanFreightUsd = parseFloat(data.ocean_freight_usd) || 0;
   const oceanFreightEur = parseFloat(data.ocean_freight_eur) || 0;
+
+  // Fix historical bug: origin charges were auto-populated with product invoice totals.
+  // Detect and zero them out if they match the invoice totals.
+  const products = data.products || [];
+  const invoiceTotalUsd = products.reduce((sum, p) => sum + ((!p.currency || p.currency === 'USD') ? (parseFloat(p.invoice_value) || 0) : 0), 0);
+  const invoiceTotalEur = products.reduce((sum, p) => sum + ((p.currency === 'EUR') ? (parseFloat(p.invoice_value) || 0) : 0), 0);
+  let originChargeUsd = parseFloat(data.origin_charge_usd) || 0;
+  let originChargeEur = parseFloat(data.origin_charge_eur) || 0;
+  if (invoiceTotalUsd > 0 && Math.abs(originChargeUsd - invoiceTotalUsd) < 0.01) {
+    originChargeUsd = 0;
+  }
+  if (invoiceTotalEur > 0 && Math.abs(originChargeEur - invoiceTotalEur) < 0.01) {
+    originChargeEur = 0;
+  }
 
   // Calculate total weight from products or use legacy field
   const productsWeight = (data.products || []).reduce((sum, p) => sum + (parseFloat(p.weight_kg) || 0), 0);

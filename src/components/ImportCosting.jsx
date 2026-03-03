@@ -625,9 +625,20 @@ function ImportCosting() {
   };
 
   const handleEdit = (estimate) => {
+    const fixed = { ...estimate };
+    // Fix historical bug: origin charges were auto-populated with invoice totals
+    const products = fixed.products || [];
+    const invoiceTotalUsd = products.reduce((sum, p) => sum + ((!p.currency || p.currency === 'USD') ? (parseFloat(p.invoice_value) || 0) : 0), 0);
+    const invoiceTotalEur = products.reduce((sum, p) => sum + ((p.currency === 'EUR') ? (parseFloat(p.invoice_value) || 0) : 0), 0);
+    if (invoiceTotalUsd > 0 && Math.abs((parseFloat(fixed.origin_charge_usd) || 0) - invoiceTotalUsd) < 0.01) {
+      fixed.origin_charge_usd = 0;
+    }
+    if (invoiceTotalEur > 0 && Math.abs((parseFloat(fixed.origin_charge_eur) || 0) - invoiceTotalEur) < 0.01) {
+      fixed.origin_charge_eur = 0;
+    }
     setFormData({
       ...INITIAL_FORM_STATE,
-      ...estimate,
+      ...fixed,
     });
     setEditingId(estimate.id);
     setShowForm(true);
