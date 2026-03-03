@@ -310,8 +310,8 @@ export function generateEstimatePDF(estimate) {
   // Summary Totals
   const summaryRows = filterZeroRows([
     ['Total Shipping Cost', formatCurrency(totals.total_shipping_cost_zar)],
-    ['Total in Warehouse Cost', formatCurrency(totals.total_in_warehouse_cost_zar)],
-    ['Cost per KG', formatCurrency(totals.all_in_warehouse_cost_per_kg_zar)],
+    ['Total Landed Cost', formatCurrency(totals.total_landed_cost_zar)],
+    ['Landed Cost/KG', formatCurrency(totals.all_in_warehouse_cost_per_kg_zar)],
   ]);
   if (summaryRows.length > 0) {
     autoTable(doc, {
@@ -345,8 +345,8 @@ export function generateEstimatePDFBase64(estimate) {
   // Summary (simplified for email)
   const summaryRows = filterZeroRows([
     ['Total Shipping Cost', formatCurrency(totals.total_shipping_cost_zar)],
-    ['Total in Warehouse Cost', formatCurrency(totals.total_in_warehouse_cost_zar)],
-    ['Cost per KG', formatCurrency(totals.all_in_warehouse_cost_per_kg_zar)],
+    ['Total Landed Cost', formatCurrency(totals.total_landed_cost_zar)],
+    ['Landed Cost/KG', formatCurrency(totals.all_in_warehouse_cost_per_kg_zar)],
   ]);
   if (summaryRows.length > 0) {
     autoTable(doc, {

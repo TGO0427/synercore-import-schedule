@@ -193,11 +193,19 @@ export const calculateAllTotals = (data) => {
   // Total shipping cost (ocean freight + origin + local + destination charges)
   const totalShippingCostZar = totalOceanFreightZar + totalOriginChargesZar + localChargesSubtotalZar + destinationChargesSubtotalZar;
 
-  // Total in warehouse cost (shipping + customs) - VAT excluded
+  // Total in warehouse cost (shipping + customs overhead) - VAT excluded
   const totalInWarehouseCostZar = totalShippingCostZar + customsSubtotalZar;
 
-  // Cost per KG
+  // Total landed cost (product value + duties + shipping) - true all-in cost
+  const totalLandedCostZar = customsItemsTotals.totalCustomsValue + customsItemsTotals.totalDuties + customsItemsTotals.totalSchedule1Duty + totalShippingCostZar;
+
+  // Cost per KG (based on total landed cost including product value)
   const allInWarehouseCostPerKgZar = totalGrossWeightKg > 0
+    ? totalLandedCostZar / totalGrossWeightKg
+    : 0;
+
+  // Overhead cost per KG (shipping + customs overhead only, excluding product value)
+  const overheadCostPerKgZar = totalGrossWeightKg > 0
     ? totalInWarehouseCostZar / totalGrossWeightKg
     : 0;
 
@@ -216,7 +224,9 @@ export const calculateAllTotals = (data) => {
     customs_subtotal_zar: Math.round(customsSubtotalZar * 100) / 100,
     total_shipping_cost_zar: Math.round(totalShippingCostZar * 100) / 100,
     total_in_warehouse_cost_zar: Math.round(totalInWarehouseCostZar * 100) / 100,
+    total_landed_cost_zar: Math.round(totalLandedCostZar * 100) / 100,
     all_in_warehouse_cost_per_kg_zar: Math.round(allInWarehouseCostPerKgZar * 100) / 100,
+    overhead_cost_per_kg_zar: Math.round(overheadCostPerKgZar * 100) / 100,
     // Display-only fields (not saved to database, used for form display)
     _ocean_freight_usd_zar: Math.round(oceanFreightUsdZar * 100) / 100,
     _ocean_freight_eur_zar: Math.round(oceanFreightEurZar * 100) / 100,

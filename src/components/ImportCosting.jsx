@@ -225,7 +225,7 @@ function ImportCosting() {
         ? productWeight / totalWeight
         : 1;
 
-      supplierData[supplier].totalCost += (totals.total_in_warehouse_cost_zar || 0) * weightRatio;
+      supplierData[supplier].totalCost += (totals.total_landed_cost_zar || totals.total_in_warehouse_cost_zar || 0) * weightRatio;
       supplierData[supplier].totalWeight += productWeight || totalWeight;
       supplierData[supplier].totalInvoiceValue += productValue;
       supplierData[supplier].estimateCount += 1;
@@ -1641,7 +1641,7 @@ function ImportCosting() {
                           <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(getCustomsTotals().totalCustomsValue)}</td>
                           <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(getCustomsTotals().totalDuties + getCustomsTotals().totalSchedule1Duty)}</td>
                           <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(calculatedTotals.total_shipping_cost_zar)}</td>
-                          <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(calculatedTotals.total_in_warehouse_cost_zar)}</td>
+                          <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(calculatedTotals.total_landed_cost_zar)}</td>
                           <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(calculatedTotals.all_in_warehouse_cost_per_kg_zar)}</td>
                         </tr>
                       </tbody>
@@ -1659,11 +1659,11 @@ function ImportCosting() {
                     <div style={{ fontSize: '1.25rem', fontWeight: '700' }}>{formatCurrency(calculatedTotals.total_shipping_cost_zar)}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px' }}>Total in Warehouse Cost</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#10b981' }}>{formatCurrency(calculatedTotals.total_in_warehouse_cost_zar)}</div>
+                    <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px' }}>Total Landed Cost</div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#10b981' }}>{formatCurrency(calculatedTotals.total_landed_cost_zar)}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px' }}>Cost per KG</div>
+                    <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px' }}>Landed Cost/KG</div>
                     <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#f59e0b' }}>{formatCurrency(calculatedTotals.all_in_warehouse_cost_per_kg_zar)}</div>
                   </div>
                   <div>
@@ -1771,8 +1771,8 @@ function ImportCosting() {
                 <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Port</th>
                 <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Container</th>
                 <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb', minWidth: '280px' }}>Products</th>
-                <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Total Cost</th>
-                <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Cost/KG</th>
+                <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Total Landed</th>
+                <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Landed Cost/KG</th>
                 <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Status</th>
                 <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Actions</th>
               </tr>
@@ -1824,7 +1824,7 @@ function ImportCosting() {
                         )}
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '600', color: '#059669' }}>
-                        {formatCurrency(totals.total_in_warehouse_cost_zar)}
+                        {formatCurrency(totals.total_landed_cost_zar)}
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '500', color: '#d97706' }}>
                         {formatCurrency(totals.all_in_warehouse_cost_per_kg_zar)}
