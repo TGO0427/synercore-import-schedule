@@ -16,6 +16,14 @@ const filterZeroRows = (rows) => rows.filter(row => {
   return value !== 0 && value !== '-';
 });
 
+// Format date nicely (e.g. "03 Mar 2026")
+const formatDate = (dateStr) => {
+  if (!dateStr) return 'N/A';
+  const d = new Date(dateStr);
+  if (isNaN(d)) return dateStr;
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
 // Shared helper: calculate product weight/customs/duties totals
 const getProductTotals = (estimate) => {
   const products = estimate.products || [];
@@ -47,8 +55,42 @@ const getProductTotals = (estimate) => {
   return { totalWeight, totalCustomsValue, totalDuties };
 };
 
+// Calculate per-product cost/kg (matches ImportCosting calculateProductAllocation)
+const getProductCostPerKg = (product, estimate, totals, productTotals) => {
+  const roeCustoms = parseFloat(estimate.roe_customs) || parseFloat(estimate.roe_origin) || 0;
+  const roeEur = parseFloat(estimate.roe_eur) || roeCustoms;
+  const weight = parseFloat(product.weight_kg) || 0;
+  const invoiceValue = parseFloat(product.invoice_value) || 0;
+  const dutyPercent = parseFloat(product.duty_percent) || 0;
+  const dutySchedule1Percent = parseFloat(product.duty_schedule1_percent) || 0;
+  const currency = product.currency || 'USD';
+
+  let roe = roeCustoms;
+  if (currency === 'EUR') roe = roeEur;
+  if (currency === 'ZAR') roe = 1;
+
+  const customsValue = invoiceValue * roe;
+  const duties = customsValue * ((dutyPercent + dutySchedule1Percent) / 100);
+  const weightRatio = productTotals.totalWeight > 0 ? weight / productTotals.totalWeight : 0;
+
+  // For CIF/CIP/CFR, only allocate local + destination charges
+  const incoTerms = (estimate.inco_terms || '').toUpperCase();
+  const freightIncluded = ['CIF', 'CIP', 'CFR'].includes(incoTerms);
+  let shippingToAllocate;
+  if (freightIncluded) {
+    shippingToAllocate = (totals.local_charges_subtotal_zar || 0) + (totals.destination_charges_subtotal_zar || 0);
+  } else {
+    shippingToAllocate = totals.total_shipping_cost_zar || 0;
+  }
+  const allocatedShipping = shippingToAllocate * weightRatio;
+  const totalLanded = customsValue + duties + allocatedShipping;
+  const costPerKg = weight > 0 ? totalLanded / weight : 0;
+
+  return { costPerKg, totalLanded, allocatedShipping };
+};
+
 // Shared helper: render header, ROE info, shipment details, and products table
-const buildEstimateHeader = (doc, estimate, productTotals) => {
+const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
   const products = estimate.products || [];
 
   // Header
@@ -59,15 +101,14 @@ const buildEstimateHeader = (doc, estimate, productTotals) => {
   doc.setFontSize(10);
   doc.setTextColor(100);
   doc.text(`Reference: ${estimate.reference_number || 'N/A'}`, 14, 28);
-  doc.text(`Date: ${estimate.costing_date || 'N/A'}`, 14, 34);
+  doc.text(`Date: ${formatDate(estimate.costing_date)}`, 14, 34);
   doc.text(`Supplier: ${estimate.supplier_name || 'N/A'}`, 14, 40);
 
   // ROE Information
   doc.setFontSize(9);
   doc.setTextColor(0, 102, 204);
   doc.setFont(undefined, 'bold');
-  const roeDate = estimate.costing_date || new Date().toISOString().split('T')[0];
-  doc.text(`ROE Date: ${roeDate}`, 130, 28);
+  doc.text(`ROE Date: ${formatDate(estimate.costing_date)}`, 130, 28);
   doc.text(`USD/ZAR: ${formatNumber(estimate.roe_origin || 0, 4)}`, 130, 34);
   doc.text(`EUR/ZAR: ${formatNumber(estimate.roe_eur || 0, 4)}`, 130, 40);
   doc.setFont(undefined, 'normal');
@@ -102,8 +143,6 @@ const buildEstimateHeader = (doc, estimate, productTotals) => {
       const weight = parseFloat(p.weight_kg) || 0;
       const ratePerKg = parseFloat(p.rate_per_kg) || 0;
       const invoiceValue = parseFloat(p.invoice_value) || 0;
-      const dutyPercent = parseFloat(p.duty_percent) || 0;
-      const dutySchedule1Percent = parseFloat(p.duty_schedule1_percent) || 0;
       const currency = p.currency || 'USD';
 
       let roe = roeCustoms;
@@ -111,34 +150,40 @@ const buildEstimateHeader = (doc, estimate, productTotals) => {
       if (currency === 'ZAR') roe = 1;
 
       const customsValue = invoiceValue * roe;
-      const duties = customsValue * ((dutyPercent + dutySchedule1Percent) / 100);
-      const weightPercent = productTotals.totalWeight > 0 ? (weight / productTotals.totalWeight * 100) : 0;
+      const pCost = totals ? getProductCostPerKg(p, estimate, totals, productTotals) : { costPerKg: 0 };
 
       return [
         p.name || '-',
         p.hs_code || '-',
-        p.pack_size || '-',
-        p.pack_type || '-',
         `${formatNumber(weight)} kg`,
         `${formatNumber(ratePerKg, 2)}`,
         currency,
         formatNumber(invoiceValue, 2),
-        `${formatNumber(weightPercent, 1)}%`,
-        formatCurrency(duties),
+        formatCurrency(customsValue),
+        formatCurrency(pCost.costPerKg),
       ];
     });
 
+    // Calculate overall cost/kg
+    const overallCostPerKg = totals ? (totals.all_in_warehouse_cost_per_kg_zar || 0) : 0;
     productRows.push([
-      'TOTAL', '', '', '', `${formatNumber(productTotals.totalWeight)} kg`, '', '', '', '100%', formatCurrency(productTotals.totalDuties),
+      'TOTAL', '', `${formatNumber(productTotals.totalWeight)} kg`, '', '', '', formatCurrency(productTotals.totalCustomsValue), formatCurrency(overallCostPerKg),
     ]);
 
     autoTable(doc, {
       startY: doc.lastAutoTable.finalY + 10,
-      head: [['Product', 'HS Code', 'Pack Size', 'Pack Type', 'Weight', 'Rate/kg', 'Curr', 'Invoice Val', 'Share', 'Duties']],
+      head: [['Product', 'HS Code', 'Weight', 'Rate/kg', 'Curr', 'Invoice Val', 'Customs Val (ZAR)', 'Cost/kg']],
       body: productRows,
       theme: 'grid',
       headStyles: { fillColor: [245, 158, 11] },
       styles: { fontSize: 8 },
+      columnStyles: {
+        2: { halign: 'right' },
+        3: { halign: 'right' },
+        5: { halign: 'right' },
+        6: { halign: 'right' },
+        7: { halign: 'right', fontStyle: 'bold' },
+      },
     });
   }
 };
@@ -151,7 +196,7 @@ export function generateEstimatePDF(estimate) {
   const totals = calculateAllTotals(estimate);
   const productTotals = getProductTotals(estimate);
 
-  buildEstimateHeader(doc, estimate, productTotals);
+  buildEstimateHeader(doc, estimate, productTotals, totals);
 
   // Ocean Freight
   const oceanFreightRows = filterZeroRows([
@@ -295,7 +340,7 @@ export function generateEstimatePDFBase64(estimate) {
   const totals = calculateAllTotals(estimate);
   const productTotals = getProductTotals(estimate);
 
-  buildEstimateHeader(doc, estimate, productTotals);
+  buildEstimateHeader(doc, estimate, productTotals, totals);
 
   // Summary (simplified for email)
   const summaryRows = filterZeroRows([
@@ -345,7 +390,7 @@ export async function generateReportPDF({ chartData, selectedProduct, selectedSu
   doc.setFontSize(10);
   doc.text(`Supplier: ${supplierLabel}`, 14, 25);
   doc.text(`Product: ${productLabel}`, 14, 33);
-  doc.text(`Generated: ${new Date().toLocaleDateString()}`, 140, 33);
+  doc.text(`Generated: ${formatDate(new Date().toISOString())}`, 140, 33);
 
   // Try to capture chart as image
   if (chartRef?.current) {
@@ -464,7 +509,7 @@ export async function generateReportPDF({ chartData, selectedProduct, selectedSu
 
     // ROE info per estimate
     doc.setTextColor(0, 102, 204);
-    doc.text(`ROE Date: ${est.costing_date || '-'}`, 14, currentY + 19);
+    doc.text(`ROE Date: ${formatDate(est.costing_date)}`, 14, currentY + 19);
     doc.text(`USD/ZAR: ${formatNumber(est.roe_origin || 0, 4)}`, 80, currentY + 19);
     doc.text(`EUR/ZAR: ${formatNumber(est.roe_eur || 0, 4)}`, 130, currentY + 19);
 
