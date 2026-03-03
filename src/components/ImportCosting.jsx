@@ -466,31 +466,11 @@ function ImportCosting() {
   const removeProduct = (index) => {
     setFormData(prev => {
       const newProducts = prev.products.filter((_, i) => i !== index);
-      const totals = calculateProductTotals(newProducts);
       return {
         ...prev,
         products: newProducts,
-        origin_charge_usd: totals.totalUSD,
-        origin_charge_eur: totals.totalEUR,
       };
     });
-  };
-
-  // Calculate totals by currency from products
-  const calculateProductTotals = (products) => {
-    let totalUSD = 0;
-    let totalEUR = 0;
-    let totalZAR = 0;
-
-    (products || []).forEach(p => {
-      const invoiceValue = parseFloat(p.invoice_value) || 0;
-      const currency = p.currency || 'USD';
-      if (currency === 'USD') totalUSD += invoiceValue;
-      else if (currency === 'EUR') totalEUR += invoiceValue;
-      else if (currency === 'ZAR') totalZAR += invoiceValue;
-    });
-
-    return { totalUSD, totalEUR, totalZAR };
   };
 
   const updateProduct = (index, field, value) => {
@@ -510,14 +490,9 @@ function ImportCosting() {
         return updatedItem;
       });
 
-      // Calculate totals and update origin charges
-      const totals = calculateProductTotals(newProducts);
-
       return {
         ...prev,
         products: newProducts,
-        origin_charge_usd: totals.totalUSD,
-        origin_charge_eur: totals.totalEUR,
       };
     });
   };
@@ -1184,7 +1159,7 @@ function ImportCosting() {
                   <div>
                     <h4 style={{ margin: 0, color: '#92400e', fontSize: '1rem' }}>Products in Container <InfoTip text="List all products in this shipment. Invoice value auto-calculates from weight × rate/kg." /></h4>
                     <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#b45309' }}>
-                      Enter weight and rate/kg to auto-calculate invoice value. Totals populate Origin Charges.
+                      Enter weight and rate/kg to auto-calculate invoice value.
                     </p>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
@@ -1194,11 +1169,11 @@ function ImportCosting() {
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: '0.75rem', color: '#92400e' }}>Total USD</div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: '700', color: '#78350f' }}>{formatCurrency(formData.origin_charge_usd || 0, 'USD')}</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: '700', color: '#78350f' }}>{formatCurrency((formData.products || []).reduce((sum, p) => sum + (p.currency === 'USD' ? (parseFloat(p.invoice_value) || 0) : 0), 0), 'USD')}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: '0.75rem', color: '#92400e' }}>Total EUR</div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: '700', color: '#78350f' }}>{formatCurrency(formData.origin_charge_eur || 0, 'EUR')}</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: '700', color: '#78350f' }}>{formatCurrency((formData.products || []).reduce((sum, p) => sum + (p.currency === 'EUR' ? (parseFloat(p.invoice_value) || 0) : 0), 0), 'EUR')}</div>
                     </div>
                   </div>
                 </div>
@@ -1640,7 +1615,11 @@ function ImportCosting() {
                           <td style={{ padding: '10px 8px', textAlign: 'center' }}>100%</td>
                           <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(getCustomsTotals().totalCustomsValue)}</td>
                           <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(getCustomsTotals().totalDuties + getCustomsTotals().totalSchedule1Duty)}</td>
-                          <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(calculatedTotals.total_shipping_cost_zar)}</td>
+                          <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(
+                            ['CIF', 'CIP', 'CFR'].includes((formData.inco_terms || '').toUpperCase())
+                              ? (calculatedTotals.local_charges_subtotal_zar || 0) + (calculatedTotals.destination_charges_subtotal_zar || 0)
+                              : calculatedTotals.total_shipping_cost_zar
+                          )}</td>
                           <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(calculatedTotals.total_landed_cost_zar)}</td>
                           <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(calculatedTotals.all_in_warehouse_cost_per_kg_zar)}</td>
                         </tr>

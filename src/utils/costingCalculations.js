@@ -193,11 +193,19 @@ export const calculateAllTotals = (data) => {
   // Total shipping cost (ocean freight + origin + local + destination charges)
   const totalShippingCostZar = totalOceanFreightZar + totalOriginChargesZar + localChargesSubtotalZar + destinationChargesSubtotalZar;
 
-  // Total in warehouse cost (shipping + customs overhead) - VAT excluded
-  const totalInWarehouseCostZar = totalShippingCostZar + customsSubtotalZar;
+  // For CIF/CIP/CFR, ocean freight and origin charges are in the product price —
+  // only local + destination charges are additional shipping costs
+  const incoTerms = (data.inco_terms || '').toUpperCase();
+  const freightIncluded = ['CIF', 'CIP', 'CFR'].includes(incoTerms);
+  const shippingToAllocateZar = freightIncluded
+    ? localChargesSubtotalZar + destinationChargesSubtotalZar
+    : totalShippingCostZar;
 
-  // Total landed cost (product value + duties + shipping) - true all-in cost
-  const totalLandedCostZar = customsItemsTotals.totalCustomsValue + customsItemsTotals.totalDuties + customsItemsTotals.totalSchedule1Duty + totalShippingCostZar;
+  // Total in warehouse cost (shipping + customs overhead) - VAT excluded
+  const totalInWarehouseCostZar = shippingToAllocateZar + customsSubtotalZar;
+
+  // Total landed cost (product value + duties + allocated shipping) - true all-in cost
+  const totalLandedCostZar = customsItemsTotals.totalCustomsValue + customsItemsTotals.totalDuties + customsItemsTotals.totalSchedule1Duty + shippingToAllocateZar;
 
   // Cost per KG (based on total landed cost including product value)
   const allInWarehouseCostPerKgZar = totalGrossWeightKg > 0
