@@ -294,8 +294,17 @@ export class CostingRepository {
       all_in_warehouse_cost_per_kg_zar: data.all_in_warehouse_cost_per_kg_zar || 0,
     };
 
-    const keys = Object.keys(insertData);
-    const values = Object.values(insertData);
+    // Filter to only known database columns to prevent errors from extra frontend fields
+    const allowedKeys = new Set(COST_ESTIMATE_COLUMNS);
+    const filteredData: Record<string, any> = {};
+    for (const key of Object.keys(insertData)) {
+      if (allowedKeys.has(key)) {
+        filteredData[key] = insertData[key];
+      }
+    }
+
+    const keys = Object.keys(filteredData);
+    const values = Object.values(filteredData);
     const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
 
     const sql = `
@@ -324,8 +333,19 @@ export class CostingRepository {
       updateData.products = JSON.stringify(updateData.products);
     }
 
-    const keys = Object.keys(updateData);
-    const values = [...Object.values(updateData), id];
+    // Filter to only known database columns to prevent errors from extra frontend fields
+    const allowedKeys = new Set(COST_ESTIMATE_COLUMNS);
+    allowedKeys.delete('id');
+    allowedKeys.delete('created_at');
+    const filteredUpdate: Record<string, any> = {};
+    for (const key of Object.keys(updateData)) {
+      if (allowedKeys.has(key)) {
+        filteredUpdate[key] = updateData[key];
+      }
+    }
+
+    const keys = Object.keys(filteredUpdate);
+    const values = [...Object.values(filteredUpdate), id];
     const setClause = keys.map((key, i) => `${key} = $${i + 1}`).join(', ');
 
     const sql = `
