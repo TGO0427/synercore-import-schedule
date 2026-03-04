@@ -44,7 +44,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
   const [warehouseData, setWarehouseData] = useState([]);
   const [newsHeadlines, setNewsHeadlines] = useState([]);
 
-  // Fetch freight news headlines
+  // Fetch supply chain news headlines (polls every 30 min to match backend cache)
   useEffect(() => {
     const fetchNews = async () => {
       try {
@@ -56,6 +56,8 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       } catch (err) { /* silently ignore */ }
     };
     fetchNews();
+    const interval = setInterval(fetchNews, 30 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   // Fetch warehouse capacity data

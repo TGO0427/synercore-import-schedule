@@ -18,7 +18,7 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
   const [refreshPulse, setRefreshPulse] = useState(false);
   const [newsHeadlines, setNewsHeadlines] = useState([]);
 
-  // Fetch freight news
+  // Fetch supply chain news (polls every 30 min to match backend cache)
   useEffect(() => {
     const fetchNews = async () => {
       try {
@@ -30,6 +30,8 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
       } catch (err) { /* silently ignore */ }
     };
     fetchNews();
+    const interval = setInterval(fetchNews, 30 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   // Clock tick every second
