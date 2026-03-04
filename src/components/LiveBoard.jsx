@@ -468,48 +468,104 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
         <div
           onClick={() => setViewingAnnouncement(null)}
           style={{
-            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)',
+            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10100,
           }}
         >
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              background: '#1a1a2e', borderRadius: 12, padding: '1.5rem',
-              width: '90%', maxWidth: 480, maxHeight: '60vh', overflowY: 'auto',
-              boxShadow: '0 12px 40px rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)',
-              color: '#e0e0e0',
+              background: '#111827', borderRadius: 14, overflow: 'hidden',
+              width: '90%', maxWidth: 520, maxHeight: '80vh',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
-              <span style={{
-                fontSize: '0.65rem', fontWeight: 700, padding: '2px 8px',
-                borderRadius: 4, background: '#d97706', color: '#fff',
-              }}>Synercore</span>
-              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#fff', flex: 1 }}>
-                {viewingAnnouncement.title}
-              </h3>
-              <button
-                onClick={() => setViewingAnnouncement(null)}
-                style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'rgba(255,255,255,0.5)', lineHeight: 1 }}
-              >x</button>
-            </div>
-            <p style={{
-              fontSize: 14, lineHeight: 1.6, color: 'rgba(255,255,255,0.75)',
-              margin: 0, whiteSpace: 'pre-wrap',
+            {/* Gold header bar */}
+            <div style={{
+              background: 'linear-gradient(135deg, #d97706, #b45309)',
+              padding: '20px 24px', color: '#fff',
             }}>
-              {viewingAnnouncement.description}
-            </p>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <span style={{
+                      fontSize: '0.6rem', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase',
+                      padding: '2px 8px', borderRadius: 3, background: 'rgba(255,255,255,0.2)', color: '#fff',
+                    }}>Advisory</span>
+                    <span style={{ fontSize: '0.6rem', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase', opacity: 0.8 }}>
+                      Synercore Holdings
+                    </span>
+                  </div>
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, lineHeight: 1.3 }}>
+                    {viewingAnnouncement.title}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setViewingAnnouncement(null)}
+                  style={{
+                    background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 6,
+                    width: 28, height: 28, cursor: 'pointer', color: '#fff', fontSize: 16,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  }}
+                >&#x2715;</button>
+              </div>
+              {viewingAnnouncement.pubDate && (
+                <div style={{ fontSize: '0.7rem', opacity: 0.75, marginTop: 8 }}>
+                  Published {new Date(viewingAnnouncement.pubDate).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </div>
+              )}
+            </div>
+            {/* Body */}
+            <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+              {(viewingAnnouncement.description || '').split('\n\n').map((block, bi) => {
+                const trimmed = block.trim();
+                if (!trimmed) return null;
+                const lines = trimmed.split('\n');
+                const isHeading = lines.length === 1 && trimmed.length < 60 && !trimmed.endsWith('.') && !trimmed.endsWith(',');
+                if (isHeading) {
+                  return (
+                    <h4 key={bi} style={{
+                      margin: bi === 0 ? '0 0 12px' : '20px 0 10px',
+                      fontSize: 14, fontWeight: 700, color: '#f1f5f9',
+                      borderBottom: '2px solid #d97706', paddingBottom: 6, display: 'inline-block',
+                    }}>{trimmed}</h4>
+                  );
+                }
+                return (
+                  <p key={bi} style={{
+                    margin: '0 0 14px',
+                    fontSize: 14, lineHeight: 1.7, color: 'rgba(255,255,255,0.7)',
+                  }}>
+                    {lines.map((line, li) => (
+                      <React.Fragment key={li}>
+                        {li > 0 && <br />}
+                        {line}
+                      </React.Fragment>
+                    ))}
+                  </p>
+                );
+              })}
+            </div>
+            {/* Footer */}
             {viewingAnnouncement.link && (
-              <a
-                href={viewingAnnouncement.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'inline-block', marginTop: '1rem', fontSize: 13, fontWeight: 600,
-                  color: '#d97706', textDecoration: 'underline',
-                }}
-              >Open link</a>
+              <div style={{
+                padding: '14px 24px', borderTop: '1px solid rgba(255,255,255,0.08)',
+                background: 'rgba(255,255,255,0.03)',
+              }}>
+                <a
+                  href={viewingAnnouncement.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    fontSize: 13, fontWeight: 600, color: '#fbbf24',
+                    textDecoration: 'none', padding: '8px 16px',
+                    background: 'rgba(217,119,6,0.15)', borderRadius: 6, border: '1px solid rgba(217,119,6,0.3)',
+                  }}
+                >
+                  Read full article &#8594;
+                </a>
+              </div>
             )}
           </div>
         </div>
