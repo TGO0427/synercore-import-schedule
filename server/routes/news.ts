@@ -50,15 +50,15 @@ router.get('/announcements', authenticateToken, requireAdmin, async (_req: Reque
 // Create announcement
 router.post('/announcements', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
   try {
-    const { title, link, expires_at } = req.body;
+    const { title, description, link, expires_at } = req.body;
     if (!title || !title.trim()) {
       return res.status(400).json({ error: 'Title is required' });
     }
     const result = await pool.query(
-      `INSERT INTO announcements (title, link, expires_at, created_by)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO announcements (title, description, link, expires_at, created_by)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [title.trim(), link?.trim() || null, expires_at || null, (req as any).user?.id || null]
+      [title.trim(), description?.trim() || null, link?.trim() || null, expires_at || null, (req as any).user?.id || null]
     );
     res.status(201).json(result.rows[0]);
   } catch (err: any) {
@@ -71,17 +71,18 @@ router.post('/announcements', authenticateToken, requireAdmin, async (req: Reque
 router.put('/announcements/:id', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { title, link, active, expires_at } = req.body;
+    const { title, description, link, active, expires_at } = req.body;
     const result = await pool.query(
       `UPDATE announcements
        SET title = COALESCE($1, title),
-           link = $2,
-           active = COALESCE($3, active),
-           expires_at = $4,
+           description = $2,
+           link = $3,
+           active = COALESCE($4, active),
+           expires_at = $5,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $5
+       WHERE id = $6
        RETURNING *`,
-      [title?.trim(), link?.trim() || null, active, expires_at || null, id]
+      [title?.trim(), description?.trim() || null, link?.trim() || null, active, expires_at || null, id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Announcement not found' });
@@ -116,7 +117,7 @@ router.get('/', async (_req: Request, res: Response) => {
     let announcements: any[] = [];
     try {
       const annResult = await pool.query(
-        `SELECT id, title, link, 'Synercore' AS source, created_at AS "pubDate"
+        `SELECT id, title, description, link, 'Synercore' AS source, created_at AS "pubDate"
          FROM announcements
          WHERE active = true
            AND (expires_at IS NULL OR expires_at > NOW())

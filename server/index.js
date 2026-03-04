@@ -368,6 +368,7 @@ async function start() {
         CREATE TABLE IF NOT EXISTS announcements (
           id SERIAL PRIMARY KEY,
           title TEXT NOT NULL,
+          description TEXT,
           link TEXT,
           active BOOLEAN DEFAULT true,
           expires_at TIMESTAMP WITH TIME ZONE,
@@ -377,6 +378,7 @@ async function start() {
         );
         CREATE INDEX IF NOT EXISTS idx_announcements_active ON announcements(active) WHERE active = true;
         CREATE INDEX IF NOT EXISTS idx_announcements_expires ON announcements(expires_at);
+        ALTER TABLE announcements ADD COLUMN IF NOT EXISTS description TEXT;
       `);
       console.log('✓ Announcements table ready');
     } catch (error) {

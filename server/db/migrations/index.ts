@@ -1137,6 +1137,7 @@ export const migrations: Migration[] = [
         CREATE TABLE IF NOT EXISTS announcements (
           id SERIAL PRIMARY KEY,
           title TEXT NOT NULL,
+          description TEXT,
           link TEXT,
           active BOOLEAN DEFAULT true,
           expires_at TIMESTAMP WITH TIME ZONE,

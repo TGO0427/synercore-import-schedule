@@ -45,7 +45,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
   const [newsHeadlines, setNewsHeadlines] = useState([]);
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [announcements, setAnnouncements] = useState([]);
-  const [annForm, setAnnForm] = useState({ title: '', link: '', expires_at: '' });
+  const [annForm, setAnnForm] = useState({ title: '', description: '', link: '', expires_at: '' });
   const [editingAnnId, setEditingAnnId] = useState(null);
 
   const isAdmin = authUtils.getUser()?.role === 'admin';
@@ -72,7 +72,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
         body: JSON.stringify(annForm),
       });
       if (res.ok) {
-        setAnnForm({ title: '', link: '', expires_at: '' });
+        setAnnForm({ title: '', description: '', link: '', expires_at: '' });
         setEditingAnnId(null);
         fetchAnnouncements();
       }
@@ -534,6 +534,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
                     <Tag
                       key={i}
                       {...linkProps}
+                      title={item.description || ''}
                       style={{
                         color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem',
                         textDecoration: 'none', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px',
@@ -929,6 +930,17 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
                   color: 'var(--text-900)',
                 }}
               />
+              <textarea
+                placeholder="Description / details (optional — shows on hover)"
+                value={annForm.description}
+                onChange={e => setAnnForm(f => ({ ...f, description: e.target.value }))}
+                rows={2}
+                style={{
+                  width: '100%', padding: '8px 10px', fontSize: 13,
+                  border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface-2)',
+                  color: 'var(--text-900)', resize: 'vertical',
+                }}
+              />
               <input
                 placeholder="Link (optional)"
                 value={annForm.link}
@@ -962,7 +974,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
               </button>
               {editingAnnId && (
                 <button
-                  onClick={() => { setEditingAnnId(null); setAnnForm({ title: '', link: '', expires_at: '' }); }}
+                  onClick={() => { setEditingAnnId(null); setAnnForm({ title: '', description: '', link: '', expires_at: '' }); }}
                   style={{ padding: '8px 12px', fontSize: 13, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-700)' }}
                 >Cancel</button>
               )}
@@ -1001,7 +1013,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
                     <button
                       onClick={() => {
                         setEditingAnnId(a.id);
-                        setAnnForm({ title: a.title, link: a.link || '', expires_at: a.expires_at ? a.expires_at.split('T')[0] : '' });
+                        setAnnForm({ title: a.title, description: a.description || '', link: a.link || '', expires_at: a.expires_at ? a.expires_at.split('T')[0] : '' });
                       }}
                       style={{ padding: '4px 8px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-700)' }}
                     >Edit</button>

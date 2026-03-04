@@ -21,7 +21,7 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
   const [newsHeadlines, setNewsHeadlines] = useState([]);
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [announcements, setAnnouncements] = useState([]);
-  const [annForm, setAnnForm] = useState({ title: '', link: '', expires_at: '' });
+  const [annForm, setAnnForm] = useState({ title: '', description: '', link: '', expires_at: '' });
   const [editingAnnId, setEditingAnnId] = useState(null);
 
   const isAdmin = authUtils.getUser()?.role === 'admin';
@@ -48,7 +48,7 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
         body: JSON.stringify(annForm),
       });
       if (res.ok) {
-        setAnnForm({ title: '', link: '', expires_at: '' });
+        setAnnForm({ title: '', description: '', link: '', expires_at: '' });
         setEditingAnnId(null);
         fetchAnnouncements();
       }
@@ -333,6 +333,7 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
                   <Tag
                     key={i}
                     {...linkProps}
+                    title={item.description || ''}
                     style={{
                       color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem',
                       textDecoration: 'none', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px',
@@ -498,6 +499,17 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
                   color: '#fff',
                 }}
               />
+              <textarea
+                placeholder="Description / details (optional — shows on hover)"
+                value={annForm.description}
+                onChange={e => setAnnForm(f => ({ ...f, description: e.target.value }))}
+                rows={2}
+                style={{
+                  width: '100%', padding: '8px 10px', fontSize: 13,
+                  border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, background: 'rgba(255,255,255,0.06)',
+                  color: '#fff', resize: 'vertical',
+                }}
+              />
               <input
                 placeholder="Link (optional)"
                 value={annForm.link}
@@ -531,7 +543,7 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
               </button>
               {editingAnnId && (
                 <button
-                  onClick={() => { setEditingAnnId(null); setAnnForm({ title: '', link: '', expires_at: '' }); }}
+                  onClick={() => { setEditingAnnId(null); setAnnForm({ title: '', description: '', link: '', expires_at: '' }); }}
                   style={{ padding: '8px 12px', fontSize: 13, borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', cursor: 'pointer', color: 'rgba(255,255,255,0.7)' }}
                 >Cancel</button>
               )}
@@ -570,7 +582,7 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
                     <button
                       onClick={() => {
                         setEditingAnnId(a.id);
-                        setAnnForm({ title: a.title, link: a.link || '', expires_at: a.expires_at ? a.expires_at.split('T')[0] : '' });
+                        setAnnForm({ title: a.title, description: a.description || '', link: a.link || '', expires_at: a.expires_at ? a.expires_at.split('T')[0] : '' });
                       }}
                       style={{ padding: '4px 8px', fontSize: 11, borderRadius: 4, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', cursor: 'pointer', color: 'rgba(255,255,255,0.7)' }}
                     >Edit</button>
