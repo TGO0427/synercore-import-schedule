@@ -113,7 +113,8 @@ body { margin: 0; font-family: 'Poppins', ui-sans-serif, system-ui, -apple-syste
 .container {
   display: grid;
   grid-template-columns: 260px 1fr;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   transition: grid-template-columns 0.2s ease;
 }
 .container.sidebar-collapsed { grid-template-columns: 64px 1fr; }
@@ -421,6 +422,7 @@ body { margin: 0; font-family: 'Poppins', ui-sans-serif, system-ui, -apple-syste
 .main-content {
   padding: var(--sp-5);
   overflow-y: auto;
+  height: 100vh;
 }
 
 /* Header strip (logo + actions) */
