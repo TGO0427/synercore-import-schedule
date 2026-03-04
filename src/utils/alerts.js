@@ -13,6 +13,9 @@ export function computeShipmentAlerts(shipments) {
   startOfNextWeek.setHours(0,0,0,0);
 
   for (const s of shipments) {
+    // Skip archived shipments — they should not generate alerts
+    if (s.latestStatus === 'archived') continue;
+
     const base = {
       id: `ship-${s.id}-${s.latestStatus}-${s.weekNumber || 'no-week'}`,
       ts: now,
