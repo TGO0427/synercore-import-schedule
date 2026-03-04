@@ -248,7 +248,7 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
             fontSize: '0.65rem', fontWeight: 700, color: '#f59e0b',
             textTransform: 'uppercase', letterSpacing: '0.5px', flexShrink: 0,
           }}>
-            Freight News
+            Supply Chain
           </span>
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <div className="news-ticker-lb" style={{
@@ -263,11 +263,21 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
                   rel="noopener noreferrer"
                   style={{
                     color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem',
-                    textDecoration: 'none', flexShrink: 0,
+                    textDecoration: 'none', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px',
                   }}
                   onMouseEnter={e => e.currentTarget.style.color = '#f59e0b'}
                   onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
                 >
+                  {item.source && (
+                    <span style={{
+                      fontSize: '0.55rem', fontWeight: 600, padding: '1px 4px',
+                      borderRadius: '3px', flexShrink: 0,
+                      background: item.source === 'Freight News' ? '#2563eb' :
+                        item.source === 'The Loadstar' ? '#7c3aed' :
+                        item.source === 'gCaptain' ? '#0891b2' : '#059669',
+                      color: '#fff',
+                    }}>{item.source}</span>
+                  )}
                   {item.title}
                 </a>
               ))}
