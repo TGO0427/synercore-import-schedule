@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ShipmentStatus, PRE_ARRIVAL_STATUSES, getCurrentWeek, isDelayedStatus } from '../types/shipment';
 import { getApiUrl } from '../config/api';
+import { authFetch } from '../utils/authFetch';
+import { authUtils } from '../utils/auth';
 import {
   Chart as ChartJS,
   ArcElement,
@@ -17,6 +19,59 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
   const [detailShipment, setDetailShipment] = useState(null);
   const [refreshPulse, setRefreshPulse] = useState(false);
   const [newsHeadlines, setNewsHeadlines] = useState([]);
+  const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+  const [announcements, setAnnouncements] = useState([]);
+  const [annForm, setAnnForm] = useState({ title: '', link: '', expires_at: '' });
+  const [editingAnnId, setEditingAnnId] = useState(null);
+
+  const isAdmin = authUtils.getUser()?.role === 'admin';
+
+  const fetchAnnouncements = useCallback(async () => {
+    try {
+      const res = await authFetch(getApiUrl('/api/news/announcements'));
+      if (res.ok) {
+        const result = await res.json();
+        setAnnouncements(result.data || []);
+      }
+    } catch {}
+  }, []);
+
+  const saveAnnouncement = async () => {
+    if (!annForm.title.trim()) return;
+    try {
+      const url = editingAnnId
+        ? getApiUrl(`/api/news/announcements/${editingAnnId}`)
+        : getApiUrl('/api/news/announcements');
+      const res = await authFetch(url, {
+        method: editingAnnId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(annForm),
+      });
+      if (res.ok) {
+        setAnnForm({ title: '', link: '', expires_at: '' });
+        setEditingAnnId(null);
+        fetchAnnouncements();
+      }
+    } catch {}
+  };
+
+  const toggleAnnouncement = async (id, active) => {
+    try {
+      await authFetch(getApiUrl(`/api/news/announcements/${id}`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: !active }),
+      });
+      fetchAnnouncements();
+    } catch {}
+  };
+
+  const deleteAnnouncement = async (id) => {
+    try {
+      await authFetch(getApiUrl(`/api/news/announcements/${id}`), { method: 'DELETE' });
+      fetchAnnouncements();
+    } catch {}
+  };
 
   // Fetch supply chain news (polls every 30 min to match backend cache)
   useEffect(() => {
@@ -246,6 +301,16 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
           padding: '6px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)',
           overflow: 'hidden', display: 'flex', alignItems: 'center', gap: '12px',
         }}>
+          {isAdmin && (
+            <button
+              onClick={() => { setShowAnnouncementModal(true); fetchAnnouncements(); }}
+              title="Manage Announcements"
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: '2px',
+                fontSize: '0.9rem', lineHeight: 1, flexShrink: 0, color: '#f59e0b',
+              }}
+            >&#128226;</button>
+          )}
           <span style={{
             fontSize: '0.65rem', fontWeight: 700, color: '#f59e0b',
             textTransform: 'uppercase', letterSpacing: '0.5px', flexShrink: 0,
@@ -257,32 +322,36 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
               display: 'flex', gap: '3rem', whiteSpace: 'nowrap',
               animation: `news-scroll-lb ${newsHeadlines.length * 4}s linear infinite`,
             }}>
-              {newsHeadlines.map((item, i) => (
-                <a
-                  key={i}
-                  href={item.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem',
-                    textDecoration: 'none', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.color = '#f59e0b'}
-                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
-                >
-                  {item.source && (
-                    <span style={{
-                      fontSize: '0.55rem', fontWeight: 600, padding: '1px 4px',
-                      borderRadius: '3px', flexShrink: 0,
-                      background: item.source === 'Freight News' ? '#2563eb' :
-                        item.source === 'The Loadstar' ? '#7c3aed' :
-                        item.source === 'gCaptain' ? '#0891b2' : '#059669',
-                      color: '#fff',
-                    }}>{item.source}</span>
-                  )}
-                  {item.title}
-                </a>
-              ))}
+              {newsHeadlines.map((item, i) => {
+                const Tag = item.link ? 'a' : 'span';
+                const linkProps = item.link ? { href: item.link, target: '_blank', rel: 'noopener noreferrer' } : {};
+                const badgeBg = item.source === 'Synercore' ? '#d97706' :
+                  item.source === 'Freight News' ? '#2563eb' :
+                  item.source === 'The Loadstar' ? '#7c3aed' :
+                  item.source === 'gCaptain' ? '#0891b2' : '#059669';
+                return (
+                  <Tag
+                    key={i}
+                    {...linkProps}
+                    style={{
+                      color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem',
+                      textDecoration: 'none', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px',
+                      cursor: item.link ? 'pointer' : 'default',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#f59e0b'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+                  >
+                    {item.source && (
+                      <span style={{
+                        fontSize: '0.55rem', fontWeight: 600, padding: '1px 4px',
+                        borderRadius: '3px', flexShrink: 0,
+                        background: badgeBg, color: '#fff',
+                      }}>{item.source}</span>
+                    )}
+                    {item.title}
+                  </Tag>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -389,6 +458,134 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
           </div>
         </div>
       </div>
+      {/* Announcement Management Modal */}
+      {showAnnouncementModal && (
+        <div
+          onClick={() => setShowAnnouncementModal(false)}
+          style={{
+            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10100,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#1a1a2e', borderRadius: 12, padding: '1.5rem',
+              width: '90%', maxWidth: 640, maxHeight: '80vh', overflowY: 'auto',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)',
+              color: '#e0e0e0',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#fff' }}>
+                Manage Announcements
+              </h3>
+              <button
+                onClick={() => setShowAnnouncementModal(false)}
+                style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'rgba(255,255,255,0.5)', lineHeight: 1 }}
+              >x</button>
+            </div>
+
+            {/* Add / Edit form */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: '1rem', flexWrap: 'wrap' }}>
+              <input
+                placeholder="Announcement title *"
+                value={annForm.title}
+                onChange={e => setAnnForm(f => ({ ...f, title: e.target.value }))}
+                style={{
+                  flex: 2, minWidth: 180, padding: '8px 10px', fontSize: 13,
+                  border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, background: 'rgba(255,255,255,0.06)',
+                  color: '#fff',
+                }}
+              />
+              <input
+                placeholder="Link (optional)"
+                value={annForm.link}
+                onChange={e => setAnnForm(f => ({ ...f, link: e.target.value }))}
+                style={{
+                  flex: 1, minWidth: 140, padding: '8px 10px', fontSize: 13,
+                  border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, background: 'rgba(255,255,255,0.06)',
+                  color: '#fff',
+                }}
+              />
+              <input
+                type="date"
+                title="Expiry date (optional)"
+                value={annForm.expires_at}
+                onChange={e => setAnnForm(f => ({ ...f, expires_at: e.target.value }))}
+                style={{
+                  width: 140, padding: '8px 10px', fontSize: 13,
+                  border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, background: 'rgba(255,255,255,0.06)',
+                  color: '#fff',
+                }}
+              />
+              <button
+                onClick={saveAnnouncement}
+                disabled={!annForm.title.trim()}
+                style={{
+                  padding: '8px 16px', fontSize: 13, fontWeight: 600, borderRadius: 6, border: 'none',
+                  background: annForm.title.trim() ? '#d97706' : '#555', color: '#fff', cursor: annForm.title.trim() ? 'pointer' : 'default',
+                }}
+              >
+                {editingAnnId ? 'Update' : 'Add'}
+              </button>
+              {editingAnnId && (
+                <button
+                  onClick={() => { setEditingAnnId(null); setAnnForm({ title: '', link: '', expires_at: '' }); }}
+                  style={{ padding: '8px 12px', fontSize: 13, borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', cursor: 'pointer', color: 'rgba(255,255,255,0.7)' }}
+                >Cancel</button>
+              )}
+            </div>
+
+            {/* Existing announcements */}
+            {announcements.length === 0 ? (
+              <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, textAlign: 'center', padding: '1rem 0' }}>No announcements yet</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {announcements.map(a => (
+                  <div key={a.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
+                    background: 'rgba(255,255,255,0.04)', borderRadius: 6,
+                    opacity: a.active ? 1 : 0.5,
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {a.title}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', display: 'flex', gap: 8 }}>
+                        {a.link && <span>Has link</span>}
+                        {a.expires_at && <span>Expires {new Date(a.expires_at).toLocaleDateString()}</span>}
+                        {!a.active && <span style={{ color: '#ef4444' }}>Inactive</span>}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => toggleAnnouncement(a.id, a.active)}
+                      title={a.active ? 'Deactivate' : 'Activate'}
+                      style={{
+                        padding: '4px 8px', fontSize: 11, borderRadius: 4, border: '1px solid rgba(255,255,255,0.15)',
+                        background: a.active ? 'transparent' : '#059669', color: '#fff',
+                        cursor: 'pointer', fontWeight: 600,
+                      }}
+                    >{a.active ? 'Off' : 'On'}</button>
+                    <button
+                      onClick={() => {
+                        setEditingAnnId(a.id);
+                        setAnnForm({ title: a.title, link: a.link || '', expires_at: a.expires_at ? a.expires_at.split('T')[0] : '' });
+                      }}
+                      style={{ padding: '4px 8px', fontSize: 11, borderRadius: 4, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', cursor: 'pointer', color: 'rgba(255,255,255,0.7)' }}
+                    >Edit</button>
+                    <button
+                      onClick={() => deleteAnnouncement(a.id)}
+                      style={{ padding: '4px 8px', fontSize: 11, borderRadius: 4, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', cursor: 'pointer', color: '#ef4444' }}
+                    >Del</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Order Detail Card */}
       {detailShipment && (
         <div

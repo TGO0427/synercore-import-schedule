@@ -1,4 +1,6 @@
 import { Router, Request, Response } from 'express';
+import pool from '../db/connection.js';
+import { authenticateToken, requireAdmin } from '../middleware/auth.ts';
 
 const router = Router();
 
@@ -30,11 +32,105 @@ function parseRSSItems(xml: string, source: string, limit = 6): any[] {
   return items;
 }
 
+// ── Announcement CRUD (admin-only) ──────────────────────────────
+
+// List all announcements (for admin management)
+router.get('/announcements', authenticateToken, requireAdmin, async (_req: Request, res: Response) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM announcements ORDER BY created_at DESC'
+    );
+    res.json({ data: result.rows });
+  } catch (err: any) {
+    console.error('Failed to fetch announcements:', err);
+    res.status(500).json({ error: 'Failed to fetch announcements' });
+  }
+});
+
+// Create announcement
+router.post('/announcements', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { title, link, expires_at } = req.body;
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+    const result = await pool.query(
+      `INSERT INTO announcements (title, link, expires_at, created_by)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [title.trim(), link?.trim() || null, expires_at || null, (req as any).user?.id || null]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err: any) {
+    console.error('Failed to create announcement:', err);
+    res.status(500).json({ error: 'Failed to create announcement' });
+  }
+});
+
+// Update announcement
+router.put('/announcements/:id', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { title, link, active, expires_at } = req.body;
+    const result = await pool.query(
+      `UPDATE announcements
+       SET title = COALESCE($1, title),
+           link = $2,
+           active = COALESCE($3, active),
+           expires_at = $4,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $5
+       RETURNING *`,
+      [title?.trim(), link?.trim() || null, active, expires_at || null, id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Announcement not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (err: any) {
+    console.error('Failed to update announcement:', err);
+    res.status(500).json({ error: 'Failed to update announcement' });
+  }
+});
+
+// Delete announcement
+router.delete('/announcements/:id', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query('DELETE FROM announcements WHERE id = $1 RETURNING id', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Announcement not found' });
+    }
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Failed to delete announcement:', err);
+    res.status(500).json({ error: 'Failed to delete announcement' });
+  }
+});
+
+// ── Main news feed (public) ─────────────────────────────────────
+
 router.get('/', async (_req: Request, res: Response) => {
   try {
-    // Return cached data if fresh
+    // Fetch active, non-expired announcements from DB
+    let announcements: any[] = [];
+    try {
+      const annResult = await pool.query(
+        `SELECT id, title, link, 'Synercore' AS source, created_at AS "pubDate"
+         FROM announcements
+         WHERE active = true
+           AND (expires_at IS NULL OR expires_at > NOW())
+         ORDER BY created_at DESC`
+      );
+      announcements = annResult.rows;
+    } catch {
+      // Table may not exist yet — ignore
+    }
+
+    // Return cached RSS + fresh announcements if RSS cache is still valid
     if (cache && Date.now() - cache.fetchedAt < CACHE_TTL) {
-      return res.json({ data: cache.data, cached: true });
+      const merged = [...announcements, ...cache.data];
+      return res.json({ data: merged, cached: true });
     }
 
     // Fetch all feeds in parallel — one failure doesn't break the others
@@ -60,17 +156,20 @@ router.get('/', async (_req: Request, res: Response) => {
     });
 
     // Interleave round-robin across sources for variety
-    const merged: any[] = [];
+    const rssItems: any[] = [];
     const maxLen = Math.max(...feedItems.map((f) => f.length), 0);
-    for (let idx = 0; idx < maxLen && merged.length < 15; idx++) {
+    for (let idx = 0; idx < maxLen && rssItems.length < 15; idx++) {
       for (const items of feedItems) {
-        if (idx < items.length && merged.length < 15) {
-          merged.push(items[idx]);
+        if (idx < items.length && rssItems.length < 15) {
+          rssItems.push(items[idx]);
         }
       }
     }
 
-    cache = { data: merged, fetchedAt: Date.now() };
+    cache = { data: rssItems, fetchedAt: Date.now() };
+
+    // Announcements first, then RSS
+    const merged = [...announcements, ...rssItems];
     res.json({ data: merged, cached: false });
   } catch (err) {
     console.error('News feed error:', err);
