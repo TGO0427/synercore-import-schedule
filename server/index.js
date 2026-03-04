@@ -361,6 +361,28 @@ async function start() {
       console.warn('⚠️  Performance indexes warning:', error.message);
     }
 
+    // Create announcements table if it doesn't exist
+    try {
+      const { getPool } = await import('./db/connection.js');
+      await getPool().query(`
+        CREATE TABLE IF NOT EXISTS announcements (
+          id SERIAL PRIMARY KEY,
+          title TEXT NOT NULL,
+          link TEXT,
+          active BOOLEAN DEFAULT true,
+          expires_at TIMESTAMP WITH TIME ZONE,
+          created_by TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_announcements_active ON announcements(active) WHERE active = true;
+        CREATE INDEX IF NOT EXISTS idx_announcements_expires ON announcements(expires_at);
+      `);
+      console.log('✓ Announcements table ready');
+    } catch (error) {
+      console.warn('⚠️  Announcements table warning:', error.message);
+    }
+
     // Initialize notification scheduler
     try {
       const { default: NotificationScheduler } = await import('./jobs/notificationScheduler.js');

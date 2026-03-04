@@ -790,6 +790,34 @@ const migrations = [
       return true;
     },
   },
+
+  // Phase 8: Company Announcements
+  {
+    name: 'create-announcements-table',
+    version: '021',
+    description: 'Create announcements table for company news ticker items',
+    depends_on: ['schema-creation'],
+    execute: async () => {
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS announcements (
+          id SERIAL PRIMARY KEY,
+          title TEXT NOT NULL,
+          link TEXT,
+          active BOOLEAN DEFAULT true,
+          expires_at TIMESTAMP WITH TIME ZONE,
+          created_by TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_announcements_active ON announcements(active) WHERE active = true;
+        CREATE INDEX IF NOT EXISTS idx_announcements_expires ON announcements(expires_at);
+      `);
+
+      logInfo('✓ Announcements table created');
+      return true;
+    },
+  },
 ];
 
 /**
