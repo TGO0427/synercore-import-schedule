@@ -20,6 +20,7 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
   const [refreshPulse, setRefreshPulse] = useState(false);
   const [newsHeadlines, setNewsHeadlines] = useState([]);
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+  const [viewingAnnouncement, setViewingAnnouncement] = useState(null);
   const [announcements, setAnnouncements] = useState([]);
   const [annForm, setAnnForm] = useState({ title: '', description: '', link: '', expires_at: '' });
   const [editingAnnId, setEditingAnnId] = useState(null);
@@ -323,9 +324,11 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
               animation: `news-scroll-lb ${newsHeadlines.length * 4}s linear infinite`,
             }}>
               {newsHeadlines.map((item, i) => {
-                const Tag = item.link ? 'a' : 'span';
-                const linkProps = item.link ? { href: item.link, target: '_blank', rel: 'noopener noreferrer' } : {};
-                const badgeBg = item.source === 'Synercore' ? '#d97706' :
+                const isSynercore = item.source === 'Synercore';
+                const hasDetail = isSynercore && item.description;
+                const Tag = item.link && !hasDetail ? 'a' : 'span';
+                const linkProps = item.link && !hasDetail ? { href: item.link, target: '_blank', rel: 'noopener noreferrer' } : {};
+                const badgeBg = isSynercore ? '#d97706' :
                   item.source === 'Freight News' ? '#2563eb' :
                   item.source === 'The Loadstar' ? '#7c3aed' :
                   item.source === 'gCaptain' ? '#0891b2' : '#059669';
@@ -333,11 +336,12 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
                   <Tag
                     key={i}
                     {...linkProps}
-                    title={item.description || ''}
+                    title={!hasDetail && item.description ? item.description : ''}
+                    onClick={hasDetail ? (e) => { e.preventDefault(); setViewingAnnouncement(item); } : undefined}
                     style={{
                       color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem',
                       textDecoration: 'none', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px',
-                      cursor: item.link ? 'pointer' : 'default',
+                      cursor: item.link || hasDetail ? 'pointer' : 'default',
                     }}
                     onMouseEnter={e => e.currentTarget.style.color = '#f59e0b'}
                     onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
@@ -459,6 +463,58 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
           </div>
         </div>
       </div>
+      {/* Announcement Detail Popup */}
+      {viewingAnnouncement && (
+        <div
+          onClick={() => setViewingAnnouncement(null)}
+          style={{
+            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10100,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#1a1a2e', borderRadius: 12, padding: '1.5rem',
+              width: '90%', maxWidth: 480, maxHeight: '60vh', overflowY: 'auto',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)',
+              color: '#e0e0e0',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
+              <span style={{
+                fontSize: '0.65rem', fontWeight: 700, padding: '2px 8px',
+                borderRadius: 4, background: '#d97706', color: '#fff',
+              }}>Synercore</span>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#fff', flex: 1 }}>
+                {viewingAnnouncement.title}
+              </h3>
+              <button
+                onClick={() => setViewingAnnouncement(null)}
+                style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'rgba(255,255,255,0.5)', lineHeight: 1 }}
+              >x</button>
+            </div>
+            <p style={{
+              fontSize: 14, lineHeight: 1.6, color: 'rgba(255,255,255,0.75)',
+              margin: 0, whiteSpace: 'pre-wrap',
+            }}>
+              {viewingAnnouncement.description}
+            </p>
+            {viewingAnnouncement.link && (
+              <a
+                href={viewingAnnouncement.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-block', marginTop: '1rem', fontSize: 13, fontWeight: 600,
+                  color: '#d97706', textDecoration: 'underline',
+                }}
+              >Open link</a>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Announcement Management Modal */}
       {showAnnouncementModal && (
         <div
