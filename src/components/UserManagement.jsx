@@ -67,6 +67,11 @@ function UserManagement() {
         return;
       }
 
+      if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(newUser.password)) {
+        setMessage({ type: 'error', text: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' });
+        return;
+      }
+
       setLoading(true);
       const response = await fetch(`${apiUrl}/api/auth/admin/create-user`, {
         method: 'POST',
@@ -80,6 +85,10 @@ function UserManagement() {
       const data = await response.json();
 
       if (!response.ok) {
+        const details = data.details;
+        if (details && details.length > 0) {
+          throw new Error(details.map(d => d.msg || d.message).join('. '));
+        }
         throw new Error(data.error || 'Failed to create user');
       }
 
@@ -192,6 +201,11 @@ function UserManagement() {
 
       if (newPassword.length < 6) {
         setMessage({ type: 'error', text: 'Password must be at least 6 characters' });
+        return;
+      }
+
+      if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(newPassword)) {
+        setMessage({ type: 'error', text: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' });
         return;
       }
 
@@ -380,7 +394,7 @@ function UserManagement() {
                       fontSize: '14px',
                       outline: 'none'
                     }}
-                    placeholder="Min 6 characters"
+                    placeholder="Min 6 chars, upper + lower + number"
                   />
                   <button
                     type="button"
@@ -989,7 +1003,7 @@ function UserManagement() {
                       fontSize: '14px',
                       outline: 'none'
                     }}
-                    placeholder="Min 6 characters"
+                    placeholder="Min 6 chars, upper + lower + number"
                   />
                   <button
                     type="button"
