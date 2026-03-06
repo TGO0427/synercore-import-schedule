@@ -48,6 +48,7 @@ export function MobileShipmentCard({
       'moored': '⚓ Moored',
       'berth_working': '⚙️ Berth - Working',
       'berth_complete': '✅ Berth - Complete',
+      'gated_in_port': '🛣️ Gated In Port',
       'arrived_pta': '📦 Arrived - PTA',
       'arrived_klm': '📦 Arrived - KLM',
       'arrived_offsite': '📦 Arrived - Offsite',

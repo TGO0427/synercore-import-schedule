@@ -147,7 +147,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
     const transitStatuses = [
       ShipmentStatus.IN_TRANSIT_AIRFREIGHT, ShipmentStatus.AIR_CUSTOMS_CLEARANCE,
       ShipmentStatus.IN_TRANSIT_ROADWAY, ShipmentStatus.IN_TRANSIT_SEAWAY,
-      ShipmentStatus.MOORED, ShipmentStatus.BERTH_WORKING, ShipmentStatus.BERTH_COMPLETE,
+      ShipmentStatus.MOORED, ShipmentStatus.BERTH_WORKING, ShipmentStatus.BERTH_COMPLETE, ShipmentStatus.GATED_IN_PORT,
     ];
     const storedStatuses = [
       ShipmentStatus.ARRIVED_PTA, ShipmentStatus.ARRIVED_KLM, ShipmentStatus.ARRIVED_OFFSITE,
@@ -204,6 +204,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
         case ShipmentStatus.MOORED:
         case ShipmentStatus.BERTH_WORKING:
         case ShipmentStatus.BERTH_COMPLETE:
+        case ShipmentStatus.GATED_IN_PORT:
           if (isOverdue) {
             statusOrderRefs.delayed.add(orderRef); statusKey = 'delayed';
           } else {
@@ -434,7 +435,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       ShipmentStatus.PLANNED_AIRFREIGHT, ShipmentStatus.PLANNED_SEAFREIGHT,
       ShipmentStatus.IN_TRANSIT_AIRFREIGHT, ShipmentStatus.IN_TRANSIT_SEAWAY,
       ShipmentStatus.IN_TRANSIT_ROADWAY, ShipmentStatus.AIR_CUSTOMS_CLEARANCE,
-      ShipmentStatus.MOORED, ShipmentStatus.BERTH_WORKING, ShipmentStatus.BERTH_COMPLETE,
+      ShipmentStatus.MOORED, ShipmentStatus.BERTH_WORKING, ShipmentStatus.BERTH_COMPLETE, ShipmentStatus.GATED_IN_PORT,
       ...DELAYED_STATUSES,
     ];
     return shipments

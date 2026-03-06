@@ -60,6 +60,7 @@ const validateUpdateShipment = [
       'moored',
       'berth_working',
       'berth_complete',
+      'gated_in_port',
       'arrived_pta',
       'arrived_klm',
       'arrived_offsite',

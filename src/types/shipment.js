@@ -8,6 +8,7 @@ export const ShipmentStatus = {
   MOORED: 'moored',
   BERTH_WORKING: 'berth_working',
   BERTH_COMPLETE: 'berth_complete',
+  GATED_IN_PORT: 'gated_in_port',
   ARRIVED_PTA: 'arrived_pta',
   ARRIVED_KLM: 'arrived_klm',
   ARRIVED_OFFSITE: 'arrived_offsite',
@@ -90,6 +91,7 @@ export const IN_TRANSIT_STATUSES = [
   ShipmentStatus.MOORED,
   ShipmentStatus.BERTH_WORKING,
   ShipmentStatus.BERTH_COMPLETE,
+  ShipmentStatus.GATED_IN_PORT,
   ...DELAYED_STATUSES,
 ];
 
@@ -111,6 +113,7 @@ export const PRE_ARRIVAL_STATUSES = [
   ShipmentStatus.MOORED,
   ShipmentStatus.BERTH_WORKING,
   ShipmentStatus.BERTH_COMPLETE,
+  ShipmentStatus.GATED_IN_PORT,
 ];
 
 /** Current week number (non-ISO, matches Dashboard formula) */
@@ -149,6 +152,7 @@ export const STATUS_LABELS = {
   [ShipmentStatus.MOORED]: 'Moored',
   [ShipmentStatus.BERTH_WORKING]: 'Berth Working',
   [ShipmentStatus.BERTH_COMPLETE]: 'Berth Complete',
+  [ShipmentStatus.GATED_IN_PORT]: 'Gated In Port',
   [ShipmentStatus.ARRIVED_PTA]: 'Arrived PTA',
   [ShipmentStatus.ARRIVED_KLM]: 'Arrived KLM',
   [ShipmentStatus.ARRIVED_OFFSITE]: 'Arrived Offsite',
@@ -180,6 +184,7 @@ export const STATUS_COLORS = {
   [ShipmentStatus.MOORED]: '#AB47BC',
   [ShipmentStatus.BERTH_WORKING]: '#8E24AA',
   [ShipmentStatus.BERTH_COMPLETE]: '#17a2b8',
+  [ShipmentStatus.GATED_IN_PORT]: '#0097A7',
   [ShipmentStatus.ARRIVED_PTA]: '#28a745',
   [ShipmentStatus.ARRIVED_KLM]: '#28a745',
   [ShipmentStatus.ARRIVED_OFFSITE]: '#28a745',

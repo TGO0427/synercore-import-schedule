@@ -60,7 +60,7 @@ const getShippingProgress = (status) => {
   const stages = {
     planned_airfreight: 1, planned_seafreight: 1,
     in_transit_airfreight: 2, in_transit_roadway: 2, in_transit_seaway: 2, air_customs_clearance: 2,
-    moored: 3, berth_working: 3, berth_complete: 3,
+    moored: 3, berth_working: 3, berth_complete: 3, gated_in_port: 3,
     arrived_pta: 4, arrived_klm: 4, arrived_offsite: 4,
     received: 5, stored: 5, archived: 5,
   };
@@ -980,6 +980,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
           <option value={ShipmentStatus.MOORED}>Moored</option>
           <option value={ShipmentStatus.BERTH_WORKING}>Berth Working</option>
           <option value={ShipmentStatus.BERTH_COMPLETE}>Berth Complete</option>
+          <option value={ShipmentStatus.GATED_IN_PORT}>Gated In Port</option>
           <option value={ShipmentStatus.ARRIVED_PTA}>Arrived PTA</option>
           <option value={ShipmentStatus.ARRIVED_KLM}>Arrived KLM</option>
           <option value={ShipmentStatus.ARRIVED_OFFSITE}>Arrived OffSite</option>
@@ -1592,6 +1593,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   <option value="moored">Moored</option>
                   <option value="berth_working">Berth Working</option>
                   <option value="berth_complete">Berth Complete</option>
+                  <option value="gated_in_port">Gated In Port</option>
                   <option value="arrived_pta">Arrived PTA</option>
                   <option value="arrived_klm">Arrived KLM</option>
                   <option value="arrived_offsite">Arrived OffSite</option>
@@ -2009,6 +2011,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   <option value="moored">Moored</option>
                   <option value="berth_working">Berth Working</option>
                   <option value="berth_complete">Berth Complete</option>
+                  <option value="gated_in_port">Gated In Port</option>
                   <option value="arrived_pta">Arrived PTA</option>
                   <option value="arrived_klm">Arrived KLM</option>
                   <option value="arrived_offsite">Arrived OffSite</option>

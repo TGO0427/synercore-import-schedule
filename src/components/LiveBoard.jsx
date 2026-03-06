@@ -145,6 +145,7 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
         case ShipmentStatus.MOORED:
         case ShipmentStatus.BERTH_WORKING:
         case ShipmentStatus.BERTH_COMPLETE:
+        case ShipmentStatus.GATED_IN_PORT:
           if (isOverdue) { delayed++; } else { port++; } break;
         case ShipmentStatus.ARRIVED_PTA:
         case ShipmentStatus.ARRIVED_KLM:
