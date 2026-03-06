@@ -209,6 +209,11 @@ export class ExcelProcessor {
             const o = {};
             headers.forEach((h, i) => { o[h] = row[i]; });
             return o;
+          }).filter((row) => {
+            // Skip empty rows (no supplier and no order ref)
+            const supplier = (row['SUPPLIER'] || row['Supplier'] || '').toString().trim();
+            const orderRef = (row['ORDER/REF'] || row['Order/Ref'] || '').toString().trim();
+            return supplier || orderRef;
           });
 
           const palletQtyHeader = this._detectPalletQtyHeader(headers);

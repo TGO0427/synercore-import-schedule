@@ -249,6 +249,9 @@ export class ShipmentsController {
   static async bulkImport(shipmentsData) {
     const client = await db.getPool().connect();
 
+    // Filter out empty rows (no supplier)
+    const validData = shipmentsData.filter(s => s.supplier && s.supplier.trim());
+
     try {
       await client.query('BEGIN');
 
@@ -257,8 +260,8 @@ export class ShipmentsController {
       const existingRefs = new Set(existingResult.rows.map(r => r.order_ref));
 
       // Split incoming shipments into new vs duplicates
-      const newShipments = shipmentsData.filter(s => !s.orderRef || !existingRefs.has(s.orderRef));
-      const skipped = shipmentsData.length - newShipments.length;
+      const newShipments = validData.filter(s => !s.orderRef || !existingRefs.has(s.orderRef));
+      const skipped = validData.length - newShipments.length;
 
       // Insert only new shipments
       for (const shipment of newShipments) {
