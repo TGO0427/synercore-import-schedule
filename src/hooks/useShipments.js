@@ -123,7 +123,9 @@ export function useShipments() {
         discrepancies: s.discrepancies,
         rejectionDate: s.rejection_date || s.rejectionDate,
         rejectionReason: s.rejection_reason || s.rejectionReason,
-        rejectedBy: s.rejected_by || s.rejectedBy
+        rejectedBy: s.rejected_by || s.rejectedBy,
+        reminderDate: s.reminder_date || s.reminderDate || null,
+        reminderNote: s.reminder_note || s.reminderNote || '',
       }));
 
       setShipments(normalized);
