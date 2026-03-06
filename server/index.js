@@ -385,6 +385,57 @@ async function start() {
       console.warn('⚠️  Announcements table warning:', error.message);
     }
 
+    // Create audit_log table if it doesn't exist
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS audit_log (
+          id SERIAL PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          username VARCHAR(255) NOT NULL,
+          action VARCHAR(50) NOT NULL,
+          entity_type VARCHAR(50) NOT NULL,
+          entity_id TEXT NOT NULL,
+          entity_label TEXT,
+          changes JSONB,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_audit_log_entity_type ON audit_log(entity_type);
+        CREATE INDEX IF NOT EXISTS idx_audit_log_entity_id ON audit_log(entity_id);
+        CREATE INDEX IF NOT EXISTS idx_audit_log_user_id ON audit_log(user_id);
+        CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at);
+        CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action);
+      `);
+      console.log('✓ Audit log table ready');
+    } catch (error) {
+      console.warn('⚠️  Audit log table warning:', error.message);
+    }
+
+    // Create costing_requests table if it doesn't exist
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS costing_requests (
+          id SERIAL PRIMARY KEY,
+          requested_by TEXT NOT NULL,
+          requested_by_username VARCHAR(255) NOT NULL,
+          supplier_name VARCHAR(255),
+          product_description TEXT,
+          priority VARCHAR(20) DEFAULT 'normal',
+          notes TEXT,
+          status VARCHAR(20) DEFAULT 'pending',
+          admin_notes TEXT,
+          handled_by TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_costing_requests_status ON costing_requests(status);
+        CREATE INDEX IF NOT EXISTS idx_costing_requests_user ON costing_requests(requested_by);
+        CREATE INDEX IF NOT EXISTS idx_costing_requests_created ON costing_requests(created_at);
+      `);
+      console.log('✓ Costing requests table ready');
+    } catch (error) {
+      console.warn('⚠️  Costing requests table warning:', error.message);
+    }
+
     // Initialize notification scheduler
     try {
       const { default: NotificationScheduler } = await import('./jobs/notificationScheduler.js');
