@@ -206,16 +206,17 @@ router.post(
 
 /**
  * POST /api/shipments/bulk-import
- * Bulk import shipments (replaces existing data)
+ * Bulk import shipments (merges with existing, skips duplicates by order_ref)
  */
 router.post(
   '/bulk-import',
   asyncHandler(async (req: Request, res: Response) => {
-    const count = await ShipmentsController.bulkImport(req.body);
+    const result = await ShipmentsController.bulkImport(req.body);
     res.status(200).json({
       success: true,
-      message: `Successfully imported ${count} shipments`,
-      count: count
+      message: `Imported ${result.imported} new shipments, skipped ${result.skipped} duplicates`,
+      imported: result.imported,
+      skipped: result.skipped
     });
   })
 );

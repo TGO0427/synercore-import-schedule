@@ -234,7 +234,7 @@ export function useShipments() {
         throw new Error(`Failed bulk import: ${response.status}`);
       }
 
-      await response.json();
+      const result = await response.json();
 
       // Auto-create suppliers from imported shipments
       const uniqueSuppliers = [...new Set(processedShipments.map(s => s.supplier).filter(Boolean))];
@@ -246,7 +246,10 @@ export function useShipments() {
         }
       }
 
-      showSuccess(`Successfully imported ${payload.length} shipments and ${uniqueSuppliers.length} suppliers`);
+      const parts = [];
+      if (result.imported > 0) parts.push(`${result.imported} new shipments imported`);
+      if (result.skipped > 0) parts.push(`${result.skipped} duplicates skipped`);
+      showSuccess(parts.join(', ') || 'No new shipments to import');
       await fetchShipments();
 
       // Ensure palletQty is preserved in UI after import (match by orderRef)

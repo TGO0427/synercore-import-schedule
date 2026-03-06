@@ -252,22 +252,16 @@ export class ShipmentsController {
     try {
       await client.query('BEGIN');
 
-      // Archive existing data before importing
-      const existingResult = await client.query('SELECT * FROM shipments');
-      if (existingResult.rows.length > 0) {
-        try {
-          const existingShipments = existingResult.rows.map(dbRowToShipment);
-          archiveService.archiveCurrentData(existingShipments);
-        } catch (error) {
-          // Archive failed - continue with import anyway
-        }
-      }
+      // Get existing order_refs to skip duplicates
+      const existingResult = await client.query('SELECT order_ref FROM shipments WHERE order_ref IS NOT NULL');
+      const existingRefs = new Set(existingResult.rows.map(r => r.order_ref));
 
-      // Delete all existing shipments
-      await client.query('DELETE FROM shipments');
+      // Split incoming shipments into new vs duplicates
+      const newShipments = shipmentsData.filter(s => !s.orderRef || !existingRefs.has(s.orderRef));
+      const skipped = shipmentsData.length - newShipments.length;
 
-      // Insert new shipments
-      for (const shipment of shipmentsData) {
+      // Insert only new shipments
+      for (const shipment of newShipments) {
         await client.query(
           `INSERT INTO shipments (
             id, supplier, order_ref, final_pod, latest_status, week_number,
@@ -297,7 +291,7 @@ export class ShipmentsController {
       }
 
       await client.query('COMMIT');
-      return shipmentsData.length;
+      return { imported: newShipments.length, skipped };
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -308,11 +302,12 @@ export class ShipmentsController {
 
   static async bulkImportEndpoint(req, res) {
     try {
-      const count = await ShipmentsController.bulkImport(req.body);
+      const result = await ShipmentsController.bulkImport(req.body);
       res.json({
         success: true,
-        message: `Successfully imported ${count} shipments`,
-        count: count
+        message: `Imported ${result.imported} new shipments, skipped ${result.skipped} duplicates`,
+        imported: result.imported,
+        skipped: result.skipped
       });
     } catch (error) {
       console.error('Bulk import endpoint error:', error);
