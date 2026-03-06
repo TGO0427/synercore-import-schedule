@@ -387,7 +387,7 @@ async function start() {
 
     // Create audit_log table if it doesn't exist
     try {
-      await pool.query(`
+      await getPool().query(`
         CREATE TABLE IF NOT EXISTS audit_log (
           id SERIAL PRIMARY KEY,
           user_id TEXT NOT NULL,
@@ -412,7 +412,7 @@ async function start() {
 
     // Create costing_requests table if it doesn't exist
     try {
-      await pool.query(`
+      await getPool().query(`
         CREATE TABLE IF NOT EXISTS costing_requests (
           id SERIAL PRIMARY KEY,
           requested_by TEXT NOT NULL,
