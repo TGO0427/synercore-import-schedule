@@ -177,9 +177,11 @@ router.post('/', validateSupplierCreate, ...supplierCreateValidators, async (req
 
     const id: string = req.body.id || Date.now().toString();
 
-    await db.query(
+    const insertResult = await db.query(
       `INSERT INTO suppliers (id, name, contact_person, email, phone, address, country, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       ON CONFLICT (name) DO NOTHING
+       RETURNING *`,
       [
         id,
         req.body.name,
@@ -192,7 +194,10 @@ router.post('/', validateSupplierCreate, ...supplierCreateValidators, async (req
       ]
     );
 
-    const result = await db.query('SELECT * FROM suppliers WHERE id = $1', [id]);
+    // If supplier already existed, fetch it
+    const result = insertResult.rows.length > 0
+      ? insertResult
+      : await db.query('SELECT * FROM suppliers WHERE name = $1', [req.body.name]);
     const supplier = dbRowToSupplier(result.rows[0] as SupplierRow);
 
     const user = (req as any).user;
