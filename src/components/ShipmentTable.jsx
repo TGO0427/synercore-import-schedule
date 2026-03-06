@@ -1109,6 +1109,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                       <option value={ShipmentStatus.MOORED}>Moored</option>
                       <option value={ShipmentStatus.BERTH_WORKING}>Berth Working</option>
                       <option value={ShipmentStatus.BERTH_COMPLETE}>Berth Complete</option>
+                      <option value={ShipmentStatus.GATED_IN_PORT}>Gated In Port</option>
                       <option value={ShipmentStatus.ARRIVED_PTA}>Arrived PTA</option>
                       <option value={ShipmentStatus.ARRIVED_KLM}>Arrived KLM</option>
                       <option value={ShipmentStatus.ARRIVED_OFFSITE}>Arrived OffSite</option>
@@ -1283,6 +1284,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                       <option value={ShipmentStatus.MOORED}>Moored</option>
                       <option value={ShipmentStatus.BERTH_WORKING}>Berth Working</option>
                       <option value={ShipmentStatus.BERTH_COMPLETE}>Berth Complete</option>
+                      <option value={ShipmentStatus.GATED_IN_PORT}>Gated In Port</option>
                       <option value={ShipmentStatus.ARRIVED_PTA}>Arrived PTA</option>
                       <option value={ShipmentStatus.ARRIVED_KLM}>Arrived KLM</option>
                       <option value={ShipmentStatus.ARRIVED_OFFSITE}>Arrived OffSite</option>
