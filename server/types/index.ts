@@ -125,6 +125,9 @@ export interface Shipment {
   rejection_date?: Date;
   rejection_reason?: string;
   rejected_by?: string;
+  // Reminder fields
+  reminder_date?: string | null;
+  reminder_note?: string | null;
 }
 
 /**

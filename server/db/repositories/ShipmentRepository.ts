@@ -56,7 +56,9 @@ export class ShipmentRepository extends BaseRepository<Shipment> {
     'discrepancies',
     'rejection_date',
     'rejection_reason',
-    'rejected_by'
+    'rejected_by',
+    'reminder_date',
+    'reminder_note'
   ];
 
   /**
