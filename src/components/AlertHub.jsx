@@ -3,11 +3,23 @@ import { useNavigate } from 'react-router-dom';
 
 const SEVERITY_ORDER = { critical: 3, warning: 2, info: 1 };
 
-function relativeDate(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
+function parseReminderDate(dateStr) {
+  if (!dateStr) return new Date(NaN);
+  // Handle both "YYYY-MM-DD" and full ISO strings like "2026-03-20T00:00:00.000Z"
+  const str = String(dateStr).split('T')[0];
+  return new Date(str + 'T00:00:00');
+}
+
+function reminderDaysDiff(dateStr) {
+  const d = parseReminderDate(dateStr);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const diff = Math.round((d - today) / 86400000);
+  return Math.round((d - today) / 86400000);
+}
+
+function relativeDate(dateStr) {
+  const diff = reminderDaysDiff(dateStr);
+  if (isNaN(diff)) return '';
   if (diff < -1) return `${Math.abs(diff)} days ago`;
   if (diff === -1) return 'yesterday';
   if (diff === 0) return 'today';
@@ -16,11 +28,8 @@ function relativeDate(dateStr) {
 }
 
 function reminderBorderColor(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const diff = Math.round((d - today) / 86400000);
-  if (diff < 0) return '#ef4444';   // overdue — red
+  const diff = reminderDaysDiff(dateStr);
+  if (isNaN(diff) || diff < 0) return '#ef4444'; // overdue or invalid — red
   if (diff === 0) return '#eab308'; // today — yellow
   if (diff <= 3) return '#3b82f6';  // upcoming ≤3 days — blue
   return '#9ca3af';                 // future >3 days — gray
@@ -244,7 +253,7 @@ export default function AlertHub({
                   {s.supplier}{s.productName ? ` — ${s.productName}` : ''}
                 </div>
                 <div style={{ fontSize: 12, color: '#666', marginBottom: s.reminderNote ? 6 : 0 }}>
-                  Reminder: {new Date(s.reminderDate + 'T00:00:00').toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  Reminder: {parseReminderDate(s.reminderDate).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </div>
                 {s.reminderNote && (
                   <div style={{ fontSize: 12, color: '#555', background: '#f7f7f7', padding: 8, borderRadius: 6, marginTop: 4 }}>
