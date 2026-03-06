@@ -655,6 +655,7 @@ function App() {
         alerts={alerts}
         onDismiss={handleAlertDismiss}
         onMarkRead={handleAlertMarkRead}
+        shipments={shipments}
       />
       {settingsOpen && (
         <UserSettings

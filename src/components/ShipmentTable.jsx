@@ -1192,6 +1192,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               {[
                 { key: 'supplier', label: 'Supplier' },
                 { key: 'orderRef', label: 'Order / Ref' },
+                { key: 'productName', label: 'Product' },
                 { key: 'finalPod', label: 'Final POD' },
                 { key: 'latestStatus', label: 'Status' },
                 { key: null, label: 'Progress', style: { minWidth: 90 } },
@@ -1217,7 +1218,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
           <tbody>
             {filteredAndSortedShipments.length === 0 ? (
               <tr>
-                <td colSpan="12" style={{ textAlign: 'center', padding: '2rem' }}>
+                <td colSpan="13" style={{ textAlign: 'center', padding: '2rem' }}>
                   No shipments found
                 </td>
               </tr>
@@ -1260,6 +1261,12 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                       </button>
                       {isDelayed(shipment) && <span style={{ color: 'var(--danger)', marginLeft: 2, fontSize: 12 }}>⚠️</span>}
                     </div>
+                  </td>
+                  <td>
+                    <span style={{ fontSize: 13, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}
+                      title={shipment.productName || ''}>
+                      {shipment.productName || '—'}
+                    </span>
                   </td>
                   <td><span style={{ fontSize: 13 }}>{shipment.finalPod}</span></td>
                   <td>
