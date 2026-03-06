@@ -482,7 +482,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
   };
 
   return (
-    <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
+    <div style={{ padding: '1rem' }}>
       <div className="brand-strip" />
 
       {/* Freight News Ticker */}
@@ -589,8 +589,6 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
         ))}
       </div>
 
-      {/* Scrollable content area */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
       {/* Charts Grid */}
       <div className="charts-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem', marginTop: '1.5rem' }}>
 
@@ -897,7 +895,6 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
           </button>
         )}
       </div>
-      </div>{/* end scrollable content area */}
       {/* Announcement Detail Popup */}
       {viewingAnnouncement && (
         <div
