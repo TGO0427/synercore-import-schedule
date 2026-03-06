@@ -361,6 +361,18 @@ async function start() {
       console.warn('⚠️  Performance indexes warning:', error.message);
     }
 
+    // Add reminder columns to shipments
+    try {
+      await getPool().query(`
+        ALTER TABLE shipments ADD COLUMN IF NOT EXISTS reminder_date DATE;
+        ALTER TABLE shipments ADD COLUMN IF NOT EXISTS reminder_note TEXT;
+        CREATE INDEX IF NOT EXISTS idx_shipments_reminder_date ON shipments(reminder_date) WHERE reminder_date IS NOT NULL;
+      `);
+      console.log('✓ Reminder columns ready');
+    } catch (error) {
+      console.warn('⚠️  Reminder columns migration warning:', error.message);
+    }
+
     // Create announcements table if it doesn't exist
     try {
       const { getPool } = await import('./db/connection.js');

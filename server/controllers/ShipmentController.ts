@@ -48,6 +48,8 @@ export interface UpdateShipmentRequest {
   incoterm?: string;
   selectedWeekDate?: string;
   updatedAt?: string;
+  reminderDate?: string | null;
+  reminderNote?: string | null;
 }
 
 /**
@@ -226,6 +228,12 @@ export class ShipmentController {
     }
     if ((data as any).receivingDate !== undefined) {
       dbData.receiving_date = (data as any).receivingDate;
+    }
+    if (data.reminderDate !== undefined) {
+      dbData.reminder_date = data.reminderDate || null;
+    }
+    if (data.reminderNote !== undefined) {
+      dbData.reminder_note = data.reminderNote || null;
     }
 
     // Update shipment

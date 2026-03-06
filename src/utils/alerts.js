@@ -158,6 +158,43 @@ export function computeShipmentAlerts(shipments) {
       }
     }
 
+    // Reminder-based alerts
+    if (s.reminderDate) {
+      const reminderDate = new Date(s.reminderDate);
+      reminderDate.setHours(0,0,0,0);
+      const todayStart = new Date();
+      todayStart.setHours(0,0,0,0);
+      const diffDays = Math.round((reminderDate - todayStart) / (24 * 60 * 60 * 1000));
+      const noteText = s.reminderNote || 'Reminder';
+      const label = s.orderRef || s.productName || s.supplier;
+
+      if (diffDays < 0) {
+        alerts.push({
+          ...base,
+          id: `ship-${s.id}-reminder-overdue`,
+          severity: 'critical',
+          title: 'Overdue Reminder',
+          description: `${label}: ${noteText} (was due ${Math.abs(diffDays)} day${Math.abs(diffDays) !== 1 ? 's' : ''} ago)`
+        });
+      } else if (diffDays === 0) {
+        alerts.push({
+          ...base,
+          id: `ship-${s.id}-reminder-today`,
+          severity: 'warning',
+          title: 'Reminder Due Today',
+          description: `${label}: ${noteText}`
+        });
+      } else if (diffDays <= 3) {
+        alerts.push({
+          ...base,
+          id: `ship-${s.id}-reminder-upcoming`,
+          severity: 'info',
+          title: 'Upcoming Reminder',
+          description: `${label}: ${noteText} (due in ${diffDays} day${diffDays !== 1 ? 's' : ''})`
+        });
+      }
+    }
+
     // High value shipments (based on pallet quantity)
     const palletQty = s.palletQty || s.cbm;
     if (palletQty && parseFloat(palletQty) > 50) {

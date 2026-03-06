@@ -42,7 +42,10 @@ function dbRowToShipment(row) {
     // Rejection/Return fields
     rejectionDate: row.rejection_date,
     rejectionReason: row.rejection_reason,
-    rejectedBy: row.rejected_by
+    rejectedBy: row.rejected_by,
+    // Reminder fields
+    reminderDate: row.reminder_date,
+    reminderNote: row.reminder_note
   };
 }
 
@@ -128,8 +131,9 @@ export class ShipmentsController {
         `INSERT INTO shipments (
           id, supplier, order_ref, final_pod, latest_status, week_number,
           product_name, quantity, cbm, pallet_qty, receiving_warehouse, notes,
-          forwarding_agent, incoterm, vessel_name, selected_week_date
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+          forwarding_agent, incoterm, vessel_name, selected_week_date,
+          reminder_date, reminder_note
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
         [
           id,
           shipmentData.supplier,
@@ -146,7 +150,9 @@ export class ShipmentsController {
           shipmentData.forwardingAgent || null,
           shipmentData.incoterm || null,
           shipmentData.vesselName || null,
-          shipmentData.selectedWeekDate || null
+          shipmentData.selectedWeekDate || null,
+          shipmentData.reminderDate || null,
+          shipmentData.reminderNote || null
         ]
       );
 
@@ -180,8 +186,10 @@ export class ShipmentsController {
           vessel_name = COALESCE($14, vessel_name),
           selected_week_date = COALESCE($15, selected_week_date),
           receiving_date = COALESCE($16, receiving_date),
+          reminder_date = COALESCE($17, reminder_date),
+          reminder_note = COALESCE($18, reminder_note),
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = $17`,
+        WHERE id = $19`,
         [
           data.supplier,
           data.orderRef,
@@ -199,6 +207,8 @@ export class ShipmentsController {
           data.vesselName,
           data.selectedWeekDate,
           data.receivingDate,
+          data.reminderDate || null,
+          data.reminderNote || null,
           id
         ]
       );
@@ -269,8 +279,9 @@ export class ShipmentsController {
           `INSERT INTO shipments (
             id, supplier, order_ref, final_pod, latest_status, week_number,
             product_name, quantity, cbm, pallet_qty, receiving_warehouse, notes, updated_at,
-            forwarding_agent, incoterm, vessel_name, selected_week_date
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+            forwarding_agent, incoterm, vessel_name, selected_week_date,
+            reminder_date, reminder_note
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
           [
             shipment.id,
             shipment.supplier,
@@ -288,7 +299,9 @@ export class ShipmentsController {
             shipment.forwardingAgent || null,
             shipment.incoterm || null,
             shipment.vesselName || null,
-            shipment.selectedWeekDate || null
+            shipment.selectedWeekDate || null,
+            shipment.reminderDate || null,
+            shipment.reminderNote || null
           ]
         );
       }

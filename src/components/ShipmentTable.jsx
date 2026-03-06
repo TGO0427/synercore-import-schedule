@@ -122,7 +122,9 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
     forwardingAgent: '',
     vesselName: '',
     incoterm: '',
-    notes: ''
+    notes: '',
+    reminderDate: '',
+    reminderNote: ''
   });
 
   // Mobile responsiveness
@@ -1854,8 +1856,34 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                   placeholder="Additional notes or comments"
                 />
               </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
+                  Reminder Date
+                </label>
+                <input
+                  type="date"
+                  value={newShipment.reminderDate || ''}
+                  onChange={(e) => handleInputChange('reminderDate', e.target.value)}
+                  className="input"
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
+                  Reminder Note
+                </label>
+                <input
+                  type="text"
+                  value={newShipment.reminderNote || ''}
+                  onChange={(e) => handleInputChange('reminderNote', e.target.value)}
+                  className="input"
+                  style={{ width: '100%' }}
+                  placeholder="e.g., Payment due, Follow up with supplier..."
+                />
+              </div>
             </div>
-            
+
             <div style={{
               display: 'flex',
               gap: '0.75rem',
@@ -2224,6 +2252,32 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                     resize: 'vertical'
                   }}
                   placeholder="Additional notes or comments"
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
+                  Reminder Date
+                </label>
+                <input
+                  type="date"
+                  value={amendingShipment.reminderDate ? amendingShipment.reminderDate.split('T')[0] : ''}
+                  onChange={(e) => handleAmendInputChange('reminderDate', e.target.value)}
+                  className="input"
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
+                  Reminder Note
+                </label>
+                <input
+                  type="text"
+                  value={amendingShipment.reminderNote || ''}
+                  onChange={(e) => handleAmendInputChange('reminderNote', e.target.value)}
+                  className="input"
+                  style={{ width: '100%' }}
+                  placeholder="e.g., Payment due, Follow up with supplier..."
                 />
               </div>
             </div>
@@ -2609,6 +2663,15 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Notes</label>
                 <span style={{ fontSize: '1rem', color: '#222', whiteSpace: 'pre-wrap' }}>{orderDetailsShipment.notes}</span>
+              </div>
+            )}
+            {orderDetailsShipment.reminderDate && (
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Reminder</label>
+                <span style={{ fontSize: '1rem', color: '#222' }}>
+                  {new Date(orderDetailsShipment.reminderDate).toLocaleDateString()}
+                  {orderDetailsShipment.reminderNote ? ` — ${orderDetailsShipment.reminderNote}` : ''}
+                </span>
               </div>
             )}
           </div>

@@ -100,7 +100,9 @@ const validateUpdateShipment = [
   body('vesselName').optional().trim(),
   body('incoterm').optional().trim(),
   body('selectedWeekDate').optional(),
-  body('updatedAt').optional()
+  body('updatedAt').optional(),
+  body('reminderDate').optional({ nullable: true, checkFalsy: true }).isISO8601().withMessage('Invalid reminder date'),
+  body('reminderNote').optional({ nullable: true }).trim()
 ];
 
 /**

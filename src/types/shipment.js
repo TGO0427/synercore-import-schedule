@@ -247,7 +247,10 @@ export class Shipment {
     receivedQuantity = null,
     discrepancies = [],
     unloadingStartDate = null,
-    unloadingCompletedDate = null
+    unloadingCompletedDate = null,
+    // Reminder fields
+    reminderDate = null,
+    reminderNote = ''
   }) {
     this.id = id;
     this.supplier = supplier;
@@ -278,6 +281,10 @@ export class Shipment {
     this.discrepancies = discrepancies;
     this.unloadingStartDate = unloadingStartDate;
     this.unloadingCompletedDate = unloadingCompletedDate;
+
+    // Reminder fields
+    this.reminderDate = reminderDate;
+    this.reminderNote = reminderNote;
 
     this.createdAt = new Date();
     this.updatedAt = new Date();
