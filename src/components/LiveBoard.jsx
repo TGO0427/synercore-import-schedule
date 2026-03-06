@@ -386,18 +386,18 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
       <div style={{
         display: 'grid', gridTemplateColumns: '1fr 1fr',
         gap: '12px', padding: '0 24px 24px',
-        flex: 1, minHeight: 0,
+        flex: 1, minHeight: 0, overflow: 'hidden',
       }}>
         {/* Donut Chart */}
         <div style={{
           background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: '8px', padding: '14px',
-          display: 'flex', flexDirection: 'column',
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}>
           <h3 style={{ margin: '0 0 10px', fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
             Status Distribution
           </h3>
-          <div style={{ flex: 1, minHeight: 0 }}>
+          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
             <Doughnut data={donutData} options={donutOptions} />
           </div>
         </div>
@@ -406,7 +406,7 @@ function LiveBoard({ shipments, onClose, onRefresh }) {
         <div style={{
           background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: '8px', padding: '14px',
-          display: 'flex', flexDirection: 'column',
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}>
           <h3 style={{ margin: '0 0 10px', fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
             Recent Activity
