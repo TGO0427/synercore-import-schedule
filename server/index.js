@@ -52,6 +52,7 @@ import costingRouter from './routes/costing.ts';
 import costingRequestsRouter from './routes/costingRequests.ts';
 import auditRouter from './routes/audit.ts';
 import newsRouter from './routes/news.ts';
+import bolAuditRouter from './routes/bolAudit.ts';
 
 import { helmetConfig, apiRateLimiter, authRateLimiter, createRateLimiter, authenticateToken } from './middleware/security.js';
 import { csrfProtection } from './middleware/csrf.js';
@@ -178,6 +179,7 @@ app.use('/api/supplier', supplierPortalRouter); // Supplier portal routes (auth 
 app.use('/api/costing', costingRouter); // Import costing routes (auth within router)
 app.use('/api/costing-requests', costingRequestsRouter); // Costing request routes (auth within router)
 app.use('/api/audit', authenticateToken, auditRouter);
+app.use('/api/bol-audit', authenticateToken, bolAuditRouter);
 app.use('/api/news', newsRouter); // Public - freight news feed proxy
 
 /* ---------------- Endpoints ---------------- */
@@ -442,6 +444,57 @@ async function start() {
       logger.info('Costing requests table ready');
     } catch (error) {
       logWarn('Costing requests table warning', { error: error.message });
+    }
+
+    // Create bol_audits table for Bill of Lading auditing
+    try {
+      await getPool().query(`
+        CREATE TABLE IF NOT EXISTS bol_audits (
+          id SERIAL PRIMARY KEY,
+          bol_number VARCHAR(100) NOT NULL,
+          shipment_id TEXT REFERENCES shipments(id) ON DELETE SET NULL,
+          supplier_name VARCHAR(255),
+          carrier_name VARCHAR(255),
+          vessel_name VARCHAR(255),
+          voyage_number VARCHAR(100),
+          port_of_loading VARCHAR(255),
+          port_of_discharge VARCHAR(255),
+          consignee TEXT,
+          shipper TEXT,
+          notify_party TEXT,
+          description_of_goods TEXT,
+          container_numbers JSONB,
+          gross_weight_kg NUMERIC(12,3),
+          volume_cbm NUMERIC(10,3),
+          number_of_packages INTEGER,
+          freight_charges_usd NUMERIC(14,2),
+          declared_value_usd NUMERIC(14,2),
+          issue_date DATE,
+          ship_on_board_date DATE,
+          payment_terms VARCHAR(20),
+          incoterm VARCHAR(10),
+          notes TEXT,
+          audit_status VARCHAR(20) DEFAULT 'pending',
+          audit_notes TEXT,
+          discrepancies JSONB,
+          weight_verified BOOLEAN DEFAULT false,
+          charges_verified BOOLEAN DEFAULT false,
+          documents_verified BOOLEAN DEFAULT false,
+          created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+          audited_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+          audited_at TIMESTAMP WITH TIME ZONE,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_bol_audits_status ON bol_audits(audit_status);
+        CREATE INDEX IF NOT EXISTS idx_bol_audits_bol_number ON bol_audits(bol_number);
+        CREATE INDEX IF NOT EXISTS idx_bol_audits_supplier ON bol_audits(supplier_name);
+        CREATE INDEX IF NOT EXISTS idx_bol_audits_shipment ON bol_audits(shipment_id);
+        CREATE INDEX IF NOT EXISTS idx_bol_audits_created ON bol_audits(created_at);
+      `);
+      logger.info('BOL audits table ready');
+    } catch (error) {
+      logWarn('BOL audits table warning', { error: error.message });
     }
 
     // Initialize notification scheduler

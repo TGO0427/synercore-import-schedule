@@ -30,6 +30,7 @@ const CostingRequests = lazy(() => import('./components/CostingRequests'));
 const GlobalSearch = lazy(() => import('./components/GlobalSearch'));
 const LiveBoard = lazy(() => import('./components/LiveBoard'));
 const AuditLog = lazy(() => import('./components/AuditLog'));
+const BolAudit = lazy(() => import('./components/BolAudit'));
 import SupplierLogin from './pages/SupplierLogin';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -329,6 +330,7 @@ function App() {
             costingRequests: { label: 'Cost Requests', icon: '\u{1F4CB}', view: 'costing-requests', adminOnly: true, badge: costingRequestCount },
             reports: { label: 'Reports', icon: '\u{1F4CA}', view: 'reports' },
             advancedReports: { label: 'Advanced Reports', icon: '\u{1F4C8}', view: 'advanced-reports' },
+            bolAudit: { label: 'BOL Audit', icon: '\u{1F4DC}', view: 'bol-audit' },
             audit: { label: 'Activity Log', icon: '\u{1F4DD}', view: 'audit', adminOnly: true },
           };
 
@@ -411,7 +413,7 @@ function App() {
             <nav className="sidebar-nav">
               {match('Dashboard') && renderItem('dashboard')}
               {renderSection('Master Data', 'masterData', ['suppliers'])}
-              {renderSection('Operations', 'operations', ['shipping', 'workflow', 'capacity', 'stored', 'archives'])}
+              {renderSection('Operations', 'operations', ['shipping', 'workflow', 'capacity', 'stored', 'archives', 'bolAudit'])}
               {renderSection('Finance', 'finance', ['rates', 'costing', 'costingRequests'])}
               {renderSection('Reports', 'reports', ['reports', 'advancedReports', 'audit'])}
 
@@ -618,6 +620,9 @@ function App() {
             } />
             <Route path="/users" element={
               <Suspense fallback={<PageLoader />}><ErrorBoundary>{isAdmin ? <UserManagement /> : <AccessDenied />}</ErrorBoundary></Suspense>
+            } />
+            <Route path="/bol-audit" element={
+              <Suspense fallback={<PageLoader />}><ErrorBoundary><BolAudit /></ErrorBoundary></Suspense>
             } />
             <Route path="/audit" element={
               <Suspense fallback={<PageLoader />}><ErrorBoundary>{isAdmin ? <AuditLog /> : <AccessDenied />}</ErrorBoundary></Suspense>
