@@ -1263,7 +1263,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                     </div>
                   </td>
                   <td>
-                    <span style={{ fontSize: 13, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}
+                    <span style={{ fontSize: 13, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}
                       title={shipment.productName || ''}>
                       {shipment.productName || '—'}
                     </span>
@@ -1346,10 +1346,10 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                       type="number"
                       value={(localTextValues[`${shipment.id}-palletQty`] ?? (shipment.palletQty ? (Math.round(shipment.palletQty) || 1) : '')) || ''}
                       onChange={(e) => handleTextInputChange(shipment.id, 'palletQty', e.target.value)}
-                      placeholder="Pallet Qty"
+                      placeholder="Qty"
                       className="input"
                       style={{
-                        minWidth: '80px',
+                        width: '60px', minWidth: '50px', maxWidth: '70px',
                         border: edits[shipment.id]?.palletQty !== undefined ? '2px solid var(--warning)' : undefined,
                         backgroundColor: edits[shipment.id]?.palletQty !== undefined ? '#fff3e0' : undefined,
                       }}
