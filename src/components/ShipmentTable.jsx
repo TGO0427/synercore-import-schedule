@@ -162,7 +162,8 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
       const matchesSearch = searchTerm === '' ||
         shipment.orderRef?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         shipment.supplier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        shipment.finalPod?.toLowerCase().includes(searchTerm.toLowerCase());
+        shipment.finalPod?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        shipment.productName?.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesStatus = statusFilter.includes('all') ||
         statusFilter.includes(shipment.latestStatus) ||
@@ -954,7 +955,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
         {/* Search */}
         <input
           type="text"
-          placeholder="Search orders, suppliers..."
+          placeholder="Search orders, suppliers, products..."
           aria-label="Search shipments"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
