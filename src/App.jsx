@@ -656,6 +656,7 @@ function App() {
         onDismiss={handleAlertDismiss}
         onMarkRead={handleAlertMarkRead}
         shipments={shipments}
+        onDismissReminder={(shipmentId) => handleUpdateShipment(shipmentId, { reminderDate: null, reminderNote: null })}
       />
       {settingsOpen && (
         <UserSettings

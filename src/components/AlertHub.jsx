@@ -42,6 +42,7 @@ export default function AlertHub({
   onDismiss,
   onMarkRead,
   shipments = [],
+  onDismissReminder,
 }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
@@ -260,6 +261,14 @@ export default function AlertHub({
                     {s.reminderNote}
                   </div>
                 )}
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }} onClick={e => e.stopPropagation()}>
+                  <button
+                    onClick={() => onDismissReminder?.(s.id)}
+                    style={btnStyle('#059669')}
+                  >
+                    Dismiss
+                  </button>
+                </div>
               </article>
             );
           })}
