@@ -75,7 +75,7 @@ export const authUtils = {
     try {
       const response = await fetch(getApiUrl('/api/auth/refresh'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ refreshToken })
       });
 
