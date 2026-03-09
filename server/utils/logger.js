@@ -1,7 +1,9 @@
 /**
  * Structured logging utility
  * Provides consistent, structured logging across the application
- * Reduces console spam with appropriate log levels
+ * - JSON output in production for log aggregation tools
+ * - Pretty, human-readable format in development
+ * - Respects LOG_LEVEL env var (default: 'info')
  */
 
 const LOG_LEVELS = {
@@ -11,12 +13,14 @@ const LOG_LEVELS = {
   DEBUG: 3
 };
 
-// Determine current log level based on NODE_ENV
+// Determine current log level from LOG_LEVEL env var, falling back to env-based default
 const CURRENT_LOG_LEVEL = process.env.LOG_LEVEL
-  ? LOG_LEVELS[process.env.LOG_LEVEL.toUpperCase()] || LOG_LEVELS.INFO
+  ? LOG_LEVELS[process.env.LOG_LEVEL.toUpperCase()] ?? LOG_LEVELS.INFO
   : (process.env.NODE_ENV === 'production' ? LOG_LEVELS.INFO : LOG_LEVELS.DEBUG);
 
 const LOG_LEVEL_NAMES = Object.keys(LOG_LEVELS);
+
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 /**
  * Format timestamp for logs
@@ -26,7 +30,7 @@ function formatTimestamp() {
 }
 
 /**
- * Format context object for display
+ * Format context object for pretty (development) display
  */
 function formatContext(context = {}) {
   if (!context || Object.keys(context).length === 0) return '';
@@ -42,19 +46,46 @@ function formatContext(context = {}) {
 }
 
 /**
+ * Core log emitter - outputs JSON in production, pretty text in development
+ * @param {'error'|'warn'|'info'|'debug'} level
+ * @param {string} message
+ * @param {object} metadata - optional structured metadata
+ */
+function emit(level, message, metadata) {
+  const timestamp = formatTimestamp();
+  const consoleFn =
+    level === 'error' ? console.error :
+    level === 'warn'  ? console.warn  :
+    level === 'debug' ? console.debug :
+    console.log;
+
+  if (IS_PRODUCTION) {
+    // Structured JSON for log aggregation (Railway, Datadog, etc.)
+    const entry = { timestamp, level, message };
+    if (metadata && Object.keys(metadata).length > 0) {
+      entry.metadata = metadata;
+    }
+    consoleFn(JSON.stringify(entry));
+  } else {
+    // Human-readable pretty format for development
+    const contextStr = formatContext(metadata);
+    consoleFn(`[${timestamp}] [${level.toUpperCase()}] ${message}${contextStr}`);
+  }
+}
+
+/**
  * Error logger - Always logged
  * @param {string} message - Error message
  * @param {Error} error - Error object (optional)
  * @param {object} context - Additional context (optional)
  */
 export function logError(message, error = null, context = {}) {
-  const timestamp = formatTimestamp();
-  const contextStr = formatContext(context);
-  const errorStr = error ? `\n  ${error.stack || error.message}` : '';
-
-  console.error(
-    `[${timestamp}] [ERROR] ${message}${contextStr}${errorStr}`
-  );
+  const metadata = { ...context };
+  if (error) {
+    metadata.error = error.message;
+    metadata.stack = error.stack;
+  }
+  emit('error', message, metadata);
 }
 
 /**
@@ -64,13 +95,7 @@ export function logError(message, error = null, context = {}) {
  */
 export function logWarn(message, context = {}) {
   if (CURRENT_LOG_LEVEL < LOG_LEVELS.WARN) return;
-
-  const timestamp = formatTimestamp();
-  const contextStr = formatContext(context);
-
-  console.warn(
-    `[${timestamp}] [WARN] ${message}${contextStr}`
-  );
+  emit('warn', message, context);
 }
 
 /**
@@ -80,13 +105,7 @@ export function logWarn(message, context = {}) {
  */
 export function logInfo(message, context = {}) {
   if (CURRENT_LOG_LEVEL < LOG_LEVELS.INFO) return;
-
-  const timestamp = formatTimestamp();
-  const contextStr = formatContext(context);
-
-  console.log(
-    `[${timestamp}] [INFO] ${message}${contextStr}`
-  );
+  emit('info', message, context);
 }
 
 /**
@@ -96,13 +115,7 @@ export function logInfo(message, context = {}) {
  */
 export function logDebug(message, context = {}) {
   if (CURRENT_LOG_LEVEL < LOG_LEVELS.DEBUG) return;
-
-  const timestamp = formatTimestamp();
-  const contextStr = formatContext(context);
-
-  console.debug(
-    `[${timestamp}] [DEBUG] ${message}${contextStr}`
-  );
+  emit('debug', message, context);
 }
 
 /**
@@ -115,13 +128,12 @@ export function logDebug(message, context = {}) {
 export function logQuery(query, durationMs, rowCount, context = {}) {
   if (CURRENT_LOG_LEVEL < LOG_LEVELS.DEBUG) return;
 
-  const timestamp = formatTimestamp();
   const preview = query.replace(/\s+/g, ' ').slice(0, 100);
-  const contextStr = formatContext(context);
-
-  console.debug(
-    `[${timestamp}] [QUERY] ${preview}... (${durationMs}ms, ${rowCount} rows)${contextStr}`
-  );
+  emit('debug', `QUERY: ${preview}...`, {
+    durationMs,
+    rowCount,
+    ...context
+  });
 }
 
 /**
@@ -135,25 +147,28 @@ export function logQuery(query, durationMs, rowCount, context = {}) {
 export function logRequest(method, path, statusCode, durationMs, context = {}) {
   if (CURRENT_LOG_LEVEL < LOG_LEVELS.INFO) return;
 
-  const timestamp = formatTimestamp();
-  const contextStr = formatContext(context);
-  const statusColor = statusCode >= 400 ? '❌' : '✓';
-
-  console.log(
-    `[${timestamp}] [REQUEST] ${statusColor} ${method.padEnd(6)} ${path} ${statusCode} (${durationMs}ms)${contextStr}`
-  );
+  emit('info', `${method} ${path} ${statusCode}`, {
+    method,
+    path,
+    statusCode,
+    durationMs,
+    ...context
+  });
 }
 
 /**
  * Log server startup
  */
 export function logServerStart(port, environment) {
-  console.log('\n✓ Server started');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log(`  Port: ${port}`);
-  console.log(`  Environment: ${environment}`);
-  console.log(`  Log Level: ${LOG_LEVEL_NAMES[CURRENT_LOG_LEVEL]}`);
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+  if (IS_PRODUCTION) {
+    emit('info', 'Server started', { port, environment, logLevel: LOG_LEVEL_NAMES[CURRENT_LOG_LEVEL] });
+  } else {
+    console.log('\n--- Server started ---');
+    console.log(`  Port: ${port}`);
+    console.log(`  Environment: ${environment}`);
+    console.log(`  Log Level: ${LOG_LEVEL_NAMES[CURRENT_LOG_LEVEL]}`);
+    console.log('---------------------\n');
+  }
 }
 
 /**
@@ -178,6 +193,19 @@ export function getLogLevel() {
   return LOG_LEVEL_NAMES[CURRENT_LOG_LEVEL];
 }
 
+/**
+ * Convenience logger namespace with standard method names.
+ * Usage: import { logger } from './utils/logger.js';
+ *        logger.info('Server started', { port: 5001 });
+ *        logger.error('Failed to connect', { host: 'db.example.com' });
+ */
+export const logger = {
+  error(message, metadata = {}) { logError(message, null, metadata); },
+  warn(message, metadata = {})  { logWarn(message, metadata); },
+  info(message, metadata = {})  { logInfo(message, metadata); },
+  debug(message, metadata = {}) { logDebug(message, metadata); },
+};
+
 export default {
   logError,
   logWarn,
@@ -188,5 +216,6 @@ export default {
   logServerStart,
   logDatabaseConnected,
   logSocketConnection,
-  getLogLevel
+  getLogLevel,
+  logger
 };

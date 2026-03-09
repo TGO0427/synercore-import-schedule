@@ -16,14 +16,14 @@ import { validateEnvironment, logEnvironmentInfo } from './utils/envValidator.ts
 try {
   validateEnvironment();
 } catch (error) {
-  console.error(error.message);
+  logError('Environment validation failed', error);
   // Note: Not calling process.exit(1) immediately - let server start with health endpoint
 }
 
 // SSL certificate validation (only disable for local development)
 // Railway Postgres connections are handled securely in db/connection.js
 if (process.env.NODE_ENV === 'development' && process.env.DISABLE_SSL_VERIFY === 'true') {
-  console.warn('⚠️  WARNING: SSL certificate validation is disabled for development');
+  logWarn('SSL certificate validation is disabled for development');
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 }
 
@@ -54,9 +54,10 @@ import auditRouter from './routes/audit.ts';
 import newsRouter from './routes/news.ts';
 
 import { helmetConfig, apiRateLimiter, authRateLimiter, createRateLimiter, authenticateToken } from './middleware/security.js';
+import { csrfProtection } from './middleware/csrf.js';
 import { createSingleFileUpload, createMultipleFileUpload, handleUploadError, validateFilesPresent, verifyUploadPermission, generateSafeFilename } from './middleware/fileUpload.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
-import { logInfo, logServerStart } from './utils/logger.js';
+import { logger, logInfo, logWarn, logError, logServerStart } from './utils/logger.js';
 import { errorHandler } from './middleware/errorHandler.ts';
 import socketManager from './websocket/socketManager.ts';
 
@@ -80,7 +81,7 @@ const allowedOrigins = [
   ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [])
 ].filter(Boolean); // Remove any undefined/null values
 
-console.log('Allowed CORS origins:', allowedOrigins);
+logger.info('CORS origins configured', { origins: allowedOrigins });
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -90,7 +91,7 @@ const corsOptions = {
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.warn(`CORS request blocked from unlisted origin: ${origin}`);
+      logWarn('CORS request blocked from unlisted origin', { origin });
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -137,6 +138,9 @@ app.use(helmetConfig);
 
 // Apply rate limiting to all API routes
 app.use('/api', apiRateLimiter);
+
+// CSRF protection — require Authorization or X-Requested-With on state-changing requests
+app.use('/api', csrfProtection);
 
 /* ---------------- Parsers ---------------- */
 app.use(express.json({ limit: '50mb' }));
@@ -272,93 +276,83 @@ app.use(errorHandler);
 
 /* ---------------- Async boot ---------------- */
 async function start() {
-  console.log('=====================================');
-  console.log('🚀 SERVER STARTING - NEW VERSION');
-  console.log('=====================================');
+  logger.info('Server starting', { version: 'latest' });
   try {
     // Start listening IMMEDIATELY for Railway health checks
     // Bind to 0.0.0.0 to accept external connections on Railway
     httpServer.listen(PORT, '0.0.0.0', () => {
-      console.log('✓ Server listening on port', PORT);
-      console.log('✓ Environment:', process.env.NODE_ENV || 'production');
-      console.log('✓ Initializing database and services in background...');
+      logServerStart(PORT, process.env.NODE_ENV || 'production');
+      logger.info('Initializing database and services in background...');
     });
 
     // Handle server errors
     httpServer.on('error', (err) => {
-      console.error('❌ Server error:', err);
+      logError('Server error', err, { code: err.code });
       if (err.code === 'EADDRINUSE') {
-        console.error(`Port ${PORT} is already in use`);
+        logError('Port already in use', null, { port: PORT });
       }
     });
 
     // Initialize database connection pool
     const { getPool } = await import('./db/connection.js');
     getPool(); // Force pool creation on startup
-    console.log('✓ Database pool initialized');
+    logger.info('Database pool initialized');
 
     // Run database migrations on startup
     try {
       const addAvailableBinsColumn = await import('./db/add-available-bins.js');
       await addAvailableBinsColumn.default();
     } catch (error) {
-      console.warn('⚠️  Migration warning:', error.message);
-      // Don't fail startup if migration has issues, but log them
+      logWarn('Migration warning', { error: error.message });
     }
 
     try {
       const addTotalCapacityColumn = await import('./db/add-total-capacity.js');
       await addTotalCapacityColumn.default();
     } catch (error) {
-      console.warn('⚠️  Migration warning:', error.message);
-      // Don't fail startup if migration has issues, but log them
+      logWarn('Migration warning', { error: error.message });
     }
 
     try {
       const addRefreshTokensTable = await import('./db/add-refresh-tokens-table.js');
       await addRefreshTokensTable.default();
     } catch (error) {
-      console.warn('⚠️  Migration warning:', error.message);
-      // Don't fail startup if migration has issues, but log them
+      logWarn('Migration warning', { error: error.message });
     }
 
     try {
       const addNotificationsTables = await import('./db/add-notifications-tables.js');
       await addNotificationsTables.default();
     } catch (error) {
-      console.warn('⚠️  Migration warning:', error.message);
-      // Don't fail startup if migration has issues, but log them
+      logWarn('Migration warning', { error: error.message });
     }
 
     try {
       const addSupplierAccountsTables = await import('./db/add-supplier-accounts.js');
       await addSupplierAccountsTables.default();
     } catch (error) {
-      console.warn('⚠️  Migration warning:', error.message);
-      // Don't fail startup if migration has issues, but log them
+      logWarn('Migration warning', { error: error.message });
     }
 
     try {
       const addCostingColumns = await import('./db/add-costing-columns.js');
       await addCostingColumns.default();
     } catch (error) {
-      console.warn('⚠️  Costing migration warning:', error.message);
-      // Don't fail startup if migration has issues, but log them
+      logWarn('Costing migration warning', { error: error.message });
     }
 
     try {
       const addCostingRequestsTable = await import('./db/add-costing-requests-table.js');
       await addCostingRequestsTable.default();
     } catch (error) {
-      console.warn('⚠️  Costing requests migration warning:', error.message);
-      // Don't fail startup if migration has issues, but log them
+      logWarn('Costing requests migration warning', { error: error.message });
     }
 
     try {
       const { addPerformanceIndexes } = await import('./db/add-performance-indexes.js');
       await addPerformanceIndexes();
     } catch (error) {
-      console.warn('⚠️  Performance indexes warning:', error.message);
+      logWarn('Performance indexes warning', { error: error.message });
     }
 
     // Add reminder columns to shipments
@@ -368,9 +362,9 @@ async function start() {
         ALTER TABLE shipments ADD COLUMN IF NOT EXISTS reminder_note TEXT;
         CREATE INDEX IF NOT EXISTS idx_shipments_reminder_date ON shipments(reminder_date) WHERE reminder_date IS NOT NULL;
       `);
-      console.log('✓ Reminder columns ready');
+      logger.info('Reminder columns ready');
     } catch (error) {
-      console.warn('⚠️  Reminder columns migration warning:', error.message);
+      logWarn('Reminder columns migration warning', { error: error.message });
     }
 
     // Create announcements table if it doesn't exist
@@ -392,9 +386,9 @@ async function start() {
         CREATE INDEX IF NOT EXISTS idx_announcements_expires ON announcements(expires_at);
         ALTER TABLE announcements ADD COLUMN IF NOT EXISTS description TEXT;
       `);
-      console.log('✓ Announcements table ready');
+      logger.info('Announcements table ready');
     } catch (error) {
-      console.warn('⚠️  Announcements table warning:', error.message);
+      logWarn('Announcements table warning', { error: error.message });
     }
 
     // Create audit_log table if it doesn't exist
@@ -417,9 +411,9 @@ async function start() {
         CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at);
         CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action);
       `);
-      console.log('✓ Audit log table ready');
+      logger.info('Audit log table ready');
     } catch (error) {
-      console.warn('⚠️  Audit log table warning:', error.message);
+      logWarn('Audit log table warning', { error: error.message });
     }
 
     // Create costing_requests table if it doesn't exist
@@ -443,50 +437,45 @@ async function start() {
         CREATE INDEX IF NOT EXISTS idx_costing_requests_user ON costing_requests(requested_by);
         CREATE INDEX IF NOT EXISTS idx_costing_requests_created ON costing_requests(created_at);
       `);
-      console.log('✓ Costing requests table ready');
+      logger.info('Costing requests table ready');
     } catch (error) {
-      console.warn('⚠️  Costing requests table warning:', error.message);
+      logWarn('Costing requests table warning', { error: error.message });
     }
 
     // Initialize notification scheduler
     try {
       const { default: NotificationScheduler } = await import('./jobs/notificationScheduler.js');
       NotificationScheduler.initializeJobs();
-      console.log('✓ Notification scheduler initialized');
+      logger.info('Notification scheduler initialized');
     } catch (error) {
-      console.warn('⚠️  Notification scheduler warning:', error.message);
-      // Don't fail startup if scheduler has issues
+      logWarn('Notification scheduler warning', { error: error.message });
     }
 
     // Initialize Socket.io for real-time updates
     try {
       socketManager.initialize(httpServer);
-      console.log('✓ WebSocket (Socket.io) initialized');
+      logger.info('WebSocket (Socket.io) initialized');
     } catch (error) {
-      console.warn('⚠️  Socket.io initialization warning:', error.message);
-      // Don't fail startup if Socket.io has issues, but log them
+      logWarn('Socket.io initialization warning', { error: error.message });
     }
 
     isReady = true; // mark ready once init is done
-    console.log('✓ Full initialization complete');
-    logInfo('WebSocket support enabled');
+    logger.info('Full initialization complete');
 
     // Optional warm-up so first user hit isn't the initializer:
     // try { await fetch(`http://127.0.0.1:${PORT}/api/shipments`); } catch {}
   } catch (e) {
-    console.error('FATAL: failed to initialize:', e);
-    console.error('Stack trace:', e.stack);
+    logError('FATAL: failed to initialize', e);
     // Server is already listening from above, just mark as ready with degraded functionality
     isReady = true;
-    console.log('⚠️  Server running with degraded functionality');
+    logWarn('Server running with degraded functionality');
   }
 }
 start().catch(e => {
-  console.error('FATAL: start() promise rejected:', e);
-  console.error('Stack trace:', e.stack);
+  logError('FATAL: start() promise rejected', e);
   // Server should already be listening, just ensure isReady is set
   isReady = true;
-  console.log('⚠️  Server in emergency mode');
+  logWarn('Server in emergency mode');
 });
 
 export default app;

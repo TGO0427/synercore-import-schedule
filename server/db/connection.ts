@@ -5,7 +5,7 @@
 
 import pg from 'pg';
 import type { Pool, QueryResult, PoolClient } from 'pg';
-import { logInfo, logError, logQuery } from '../utils/logger.js';
+import { logger, logInfo, logError, logQuery } from '../utils/logger.js';
 
 const { Pool: PgPool } = pg;
 
@@ -56,7 +56,7 @@ export function getPool(): Pool {
     }
 
     connectionString = `postgresql://${PGUSER}:${encodeURIComponent(PGPASSWORD)}@${PGHOST}:${PGPORT}/${PGDATABASE}`;
-    console.log('Built DATABASE_URL from individual PG variables');
+    logger.info('Built DATABASE_URL from individual PG variables');
   }
 
   if (!connectionString) {
@@ -65,9 +65,11 @@ export function getPool(): Pool {
 
   // Debug: log connection details (hide password)
   const debugUrl = connectionString.replace(/:[^:@]+@/, ':****@');
-  console.log(`Connecting to: ${debugUrl}`);
-  console.log(`DATABASE_URL env var: ${process.env.DATABASE_URL ? 'SET' : 'NOT SET'}`);
-  console.log(`PGHOST env var: ${process.env.PGHOST || 'NOT SET'}`);
+  logger.debug('Database connection config', {
+    url: debugUrl,
+    DATABASE_URL: process.env.DATABASE_URL ? 'SET' : 'NOT SET',
+    PGHOST: process.env.PGHOST || 'NOT SET'
+  });
 
   const useSsl = mustUseSsl(connectionString);
 
@@ -99,7 +101,7 @@ export function getPool(): Pool {
     logError('Unexpected PG pool error', err);
   });
 
-  console.log(`✓ Database pool created (ssl=${useSsl ? 'on' : 'off'})`);
+  logger.info('Database pool created', { ssl: useSsl ? 'on' : 'off' });
   return pool;
 }
 

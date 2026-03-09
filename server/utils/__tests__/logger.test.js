@@ -8,6 +8,7 @@ import {
   logInfo,
   logDebug,
   getLogLevel,
+  logger,
 } from '../logger.js';
 
 describe('Logger', () => {
@@ -158,6 +159,38 @@ describe('Logger', () => {
       const call = console.log.mock.calls[0][0];
       // ISO format: 2024-01-01T12:00:00.000Z
       expect(call).toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+    });
+  });
+
+  describe('logger namespace', () => {
+    it('should expose error, warn, info, debug methods', () => {
+      expect(typeof logger.error).toBe('function');
+      expect(typeof logger.warn).toBe('function');
+      expect(typeof logger.info).toBe('function');
+      expect(typeof logger.debug).toBe('function');
+    });
+
+    it('logger.info should log with INFO level', () => {
+      logger.info('Test info via namespace');
+      expect(console.log).toHaveBeenCalled();
+      const call = console.log.mock.calls[0][0];
+      expect(call).toContain('Test info via namespace');
+      expect(call).toContain('[INFO]');
+    });
+
+    it('logger.error should log with ERROR level', () => {
+      logger.error('Test error via namespace', { code: 'ERR_001' });
+      expect(console.error).toHaveBeenCalled();
+      const call = console.error.mock.calls[0][0];
+      expect(call).toContain('Test error via namespace');
+      expect(call).toContain('[ERROR]');
+    });
+
+    it('logger.info should accept metadata', () => {
+      logger.info('Startup', { port: 5001 });
+      expect(console.log).toHaveBeenCalled();
+      const call = console.log.mock.calls[0][0];
+      expect(call).toContain('port');
     });
   });
 });

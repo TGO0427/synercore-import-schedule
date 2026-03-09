@@ -51,6 +51,7 @@ export async function authFetch(url, options = {}) {
       response = await fetch(url, {
         ...options,
         headers: {
+          'X-Requested-With': 'XMLHttpRequest',
           ...options.headers,
           ...authUtils.getAuthHeader()
         }
@@ -102,6 +103,7 @@ export async function authFetch(url, options = {}) {
           response = await fetch(url, {
             ...options,
             headers: {
+              'X-Requested-With': 'XMLHttpRequest',
               ...options.headers,
               ...authUtils.getAuthHeader()
             }
@@ -127,6 +129,7 @@ export async function authFetch(url, options = {}) {
       response = await fetch(url, {
         ...options,
         headers: {
+          'X-Requested-With': 'XMLHttpRequest',
           ...options.headers,
           ...authUtils.getAuthHeader()
         }
