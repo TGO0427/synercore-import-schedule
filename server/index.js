@@ -410,6 +410,8 @@ async function start() {
         CREATE INDEX IF NOT EXISTS idx_audit_log_user_id ON audit_log(user_id);
         CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at);
         CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action);
+        ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45);
+        ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS user_agent TEXT;
       `);
       logger.info('Audit log table ready');
     } catch (error) {

@@ -4,6 +4,17 @@ import * as XLSX from 'xlsx';
 import { isDelayedStatus } from '../types/shipment';
 
 /**
+ * Sanitize a value for safe Excel export (prevent formula injection)
+ */
+function sanitizeExcelValue(value) {
+  if (typeof value !== 'string') return value;
+  if (/^[=+\-@\t\r]/.test(value)) {
+    return "'" + value;
+  }
+  return value;
+}
+
+/**
  * Generate a PDF report for the given shipments.
  * @param {Array} shipments - The filtered/sorted shipments to include
  * @param {Object} filters - { searchTerm, statusFilter }
@@ -38,17 +49,17 @@ export function generatePDF(shipments, { searchTerm = '', statusFilter = ['all']
 
   // Prepare table data
   const tableData = shipments.map(shipment => [
-    shipment.supplier,
-    shipment.orderRef,
-    shipment.finalPod,
+    sanitizeExcelValue(shipment.supplier),
+    sanitizeExcelValue(shipment.orderRef),
+    sanitizeExcelValue(shipment.finalPod),
     shipment.latestStatus.charAt(0).toUpperCase() + shipment.latestStatus.slice(1).replace('_', ' '),
     shipment.weekNumber || '-',
-    shipment.productName || '-',
+    sanitizeExcelValue(shipment.productName || '-'),
     shipment.quantity || '-',
-    shipment.receivingWarehouse || '-',
-    shipment.forwardingAgent || '-',
-    shipment.vesselName || '-',
-    shipment.incoterm || '-',
+    sanitizeExcelValue(shipment.receivingWarehouse || '-'),
+    sanitizeExcelValue(shipment.forwardingAgent || '-'),
+    sanitizeExcelValue(shipment.vesselName || '-'),
+    sanitizeExcelValue(shipment.incoterm || '-'),
     shipment.palletQty ? (Math.round(shipment.palletQty) || 1) : '-'
   ]);
 
@@ -148,18 +159,18 @@ export function generateExcel(shipments) {
     ],
     // Data rows
     ...shipments.map(shipment => [
-      shipment.supplier || '',
-      shipment.orderRef || '',
-      shipment.finalPod || '',
-      shipment.latestStatus || '',
+      sanitizeExcelValue(shipment.supplier || ''),
+      sanitizeExcelValue(shipment.orderRef || ''),
+      sanitizeExcelValue(shipment.finalPod || ''),
+      sanitizeExcelValue(shipment.latestStatus || ''),
       shipment.weekNumber || '',
       shipment.estimatedArrival ? new Date(shipment.estimatedArrival).toLocaleDateString() : '',
-      shipment.product || '',
+      sanitizeExcelValue(shipment.product || ''),
       shipment.quantity || '',
-      shipment.warehouse || '',
-      shipment.forwardingAgent || '',
-      shipment.vesselName || '',
-      shipment.incoterm || '',
+      sanitizeExcelValue(shipment.warehouse || ''),
+      sanitizeExcelValue(shipment.forwardingAgent || ''),
+      sanitizeExcelValue(shipment.vesselName || ''),
+      sanitizeExcelValue(shipment.incoterm || ''),
       shipment.palletQty ? (Math.round(shipment.palletQty) || 1) : ''
     ])
   ];

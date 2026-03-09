@@ -22,6 +22,14 @@ export const apiRateLimiter = createRateLimiter(15 * 60 * 1000, 1000); // 1000 r
 
 // Helmet security headers configuration
 export const helmetConfig = helmet({
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true,
+  },
+  referrerPolicy: {
+    policy: 'strict-origin-when-cross-origin',
+  },
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],

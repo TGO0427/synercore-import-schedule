@@ -10,6 +10,8 @@ export interface AuditLogEntry {
   entity_id: string;
   entity_label: string;
   changes: Record<string, any> | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
   created_at?: string;
 }
 
@@ -21,13 +23,15 @@ export class AuditRepository {
     entityType: string,
     entityId: string,
     entityLabel: string,
-    changes: Record<string, any> | null = null
+    changes: Record<string, any> | null = null,
+    ipAddress: string | null = null,
+    userAgent: string | null = null
   ): Promise<void> {
     try {
       await pool.query(
-        `INSERT INTO audit_log (user_id, username, action, entity_type, entity_id, entity_label, changes)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [userId, username, action, entityType, entityId, entityLabel, changes ? JSON.stringify(changes) : null]
+        `INSERT INTO audit_log (user_id, username, action, entity_type, entity_id, entity_label, changes, ip_address, user_agent)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [userId, username, action, entityType, entityId, entityLabel, changes ? JSON.stringify(changes) : null, ipAddress, userAgent]
       );
     } catch (error) {
       logError('Failed to write audit log', error);

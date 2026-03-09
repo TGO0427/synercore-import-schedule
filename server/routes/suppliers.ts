@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import { body, validationResult } from 'express-validator';
 import db from '../db/connection.ts';
 import { validateSupplierCreate, validateSupplierUpdate, validateId, validate } from '../middleware/validation.js';
-import { requireAdmin } from '../middleware/auth.ts';
+import { authenticateToken, requireAdmin } from '../middleware/auth.ts';
 import { AuditRepository } from '../db/repositories/AuditRepository.ts';
 
 const router = Router();
@@ -334,9 +334,14 @@ router.post('/:id/import', requireAdmin, async (req: Request, res: Response) => 
 });
 
 // GET /api/suppliers/:id/documents - Get documents for supplier
-router.get('/:id/documents', async (req: Request, res: Response) => {
+router.get('/:id/documents', authenticateToken, async (req: Request, res: Response) => {
   try {
     const supplierId: string = req.params.id;
+
+    // Prevent path traversal
+    if (supplierId.includes('..') || supplierId.includes('/') || supplierId.includes('\\')) {
+      return res.status(400).json({ error: 'Invalid supplier ID' });
+    }
 
     // Read document metadata (you might want to store this in a separate file)
     // For now, we'll just list files in the supplier's directory
@@ -372,7 +377,7 @@ router.get('/:id/documents', async (req: Request, res: Response) => {
 });
 
 // GET /api/suppliers/:id/documents/:filename - Download specific document
-router.get('/:id/documents/:filename', async (req: Request, res: Response) => {
+router.get('/:id/documents/:filename', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id: supplierId, filename } = req.params;
     const baseDir: string = path.resolve(DOCUMENTS_DIR, supplierId);

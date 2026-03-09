@@ -28,7 +28,6 @@ const validate = (req: Request, res: Response, next: NextFunction) => {
   next();
 };
 
-// Minimal validation - just sanitize strings, let database handle type conversions
 const createCostEstimateValidation = [
   body('supplier_name').optional({ nullable: true }).trim(),
   body('port_of_discharge').optional({ nullable: true }).trim(),
@@ -37,8 +36,13 @@ const createCostEstimateValidation = [
   body('shipping_line').optional({ nullable: true }).trim(),
   body('commodity').optional({ nullable: true }).trim(),
   body('notes').optional({ nullable: true }).trim(),
-  // All other fields pass through without strict validation
-  // The database schema and server-side calculations handle type conversion
+  // Financial field validation - prevent unreasonable values
+  body('invoice_value_usd').optional({ nullable: true }).isFloat({ min: 0, max: 100000000 }).withMessage('Invoice value must be between 0 and 100,000,000'),
+  body('exchange_rate').optional({ nullable: true }).isFloat({ min: 0.01, max: 1000 }).withMessage('Exchange rate must be between 0.01 and 1,000'),
+  body('freight_cost_usd').optional({ nullable: true }).isFloat({ min: 0, max: 10000000 }).withMessage('Freight cost must be between 0 and 10,000,000'),
+  body('insurance_usd').optional({ nullable: true }).isFloat({ min: 0, max: 10000000 }).withMessage('Insurance must be between 0 and 10,000,000'),
+  body('customs_duty_percent').optional({ nullable: true }).isFloat({ min: 0, max: 100 }).withMessage('Customs duty must be between 0% and 100%'),
+  body('vat_rate').optional({ nullable: true }).isFloat({ min: 0, max: 100 }).withMessage('VAT rate must be between 0% and 100%'),
 ];
 
 const updateCostEstimateValidation = [

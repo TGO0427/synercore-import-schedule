@@ -34,6 +34,52 @@ if (!JWT_SECRET) {
 const ACCESS_TOKEN_EXPIRY: string = '15m'; // 15 minutes
 const REFRESH_TOKEN_EXPIRY: number = 7 * 24 * 60 * 60; // 7 days in seconds
 
+// Account lockout tracking
+const loginAttempts = new Map<string, { count: number; firstAttempt: number; lockedUntil: number }>();
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+
+function checkAccountLockout(username: string): { locked: boolean; remainingMs?: number } {
+  const record = loginAttempts.get(username);
+  if (!record) return { locked: false };
+
+  // Check if lockout has expired
+  if (record.lockedUntil && Date.now() < record.lockedUntil) {
+    return { locked: true, remainingMs: record.lockedUntil - Date.now() };
+  }
+
+  // Reset if window has expired
+  if (Date.now() - record.firstAttempt > LOCKOUT_WINDOW_MS) {
+    loginAttempts.delete(username);
+    return { locked: false };
+  }
+
+  return { locked: false };
+}
+
+function recordFailedLogin(username: string): void {
+  const record = loginAttempts.get(username) || { count: 0, firstAttempt: Date.now(), lockedUntil: 0 };
+
+  // Reset if window has expired
+  if (Date.now() - record.firstAttempt > LOCKOUT_WINDOW_MS) {
+    record.count = 0;
+    record.firstAttempt = Date.now();
+  }
+
+  record.count++;
+
+  if (record.count >= MAX_LOGIN_ATTEMPTS) {
+    record.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
+  }
+
+  loginAttempts.set(username, record);
+}
+
+function clearLoginAttempts(username: string): void {
+  loginAttempts.delete(username);
+}
+
 // JWT payload interface
 interface JwtTokenPayload {
   id: string;
@@ -249,6 +295,13 @@ router.post('/login', validateLogin, async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
+    // Check account lockout
+    const lockout = checkAccountLockout(username);
+    if (lockout.locked) {
+      const minutes = Math.ceil((lockout.remainingMs || 0) / 60000);
+      return res.status(429).json({ error: `Account temporarily locked. Try again in ${minutes} minute(s).` });
+    }
+
     // Find user (include password_hash for authentication)
     const result = await pool.query(
       'SELECT id, username, email, full_name, role, is_active, password_hash FROM users WHERE username = $1',
@@ -256,6 +309,7 @@ router.post('/login', validateLogin, async (req: Request, res: Response) => {
     );
 
     if (result.rows.length === 0) {
+      recordFailedLogin(username);
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
@@ -270,8 +324,11 @@ router.post('/login', validateLogin, async (req: Request, res: Response) => {
     const validPassword: boolean = await bcrypt.compare(password, user.password_hash);
 
     if (!validPassword) {
+      recordFailedLogin(username);
       return res.status(401).json({ error: 'Invalid username or password' });
     }
+
+    clearLoginAttempts(username);
 
     // Generate access token (short-lived)
     const accessToken: string = jwt.sign(
@@ -508,6 +565,16 @@ router.post('/admin/users/:id/reset-password', authenticateToken, requireAdmin, 
       [passwordHash, id]
     );
 
+    // Invalidate all refresh tokens for this user
+    try {
+      await pool.query(
+        'UPDATE refresh_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE user_id = $1 AND revoked_at IS NULL',
+        [id]
+      );
+    } catch (err) {
+      console.warn('Could not revoke refresh tokens:', (err as any).message);
+    }
+
     res.json({ message: 'Password reset successfully' });
   } catch (error: unknown) {
     console.error('Error resetting password:', error);
@@ -676,6 +743,17 @@ router.post('/change-password', authenticateToken, validateChangePassword, async
       'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
       [newPasswordHash, (req as any).user.id]
     );
+
+    // Invalidate all refresh tokens for this user
+    try {
+      await pool.query(
+        'UPDATE refresh_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE user_id = $1 AND revoked_at IS NULL',
+        [(req as any).user.id]
+      );
+    } catch (err) {
+      // Non-critical - tokens will expire naturally
+      console.warn('Could not revoke refresh tokens:', (err as any).message);
+    }
 
     res.json({ message: 'Password changed successfully' });
   } catch (error: unknown) {

@@ -344,6 +344,17 @@ class EmailImporter {
         data = XLSX.utils.sheet_to_json(worksheet);
       }
 
+      // Sanitize all cell values to prevent formula injection
+      if (data) {
+        data = data.map((row: any) => {
+          const sanitized: any = {};
+          for (const [key, value] of Object.entries(row)) {
+            sanitized[key] = this.sanitizeCellValue(value);
+          }
+          return sanitized;
+        });
+      }
+
       if (!data || data.length === 0) {
         console.log('❌ No data found in file');
         return false;
@@ -382,7 +393,7 @@ class EmailImporter {
       const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
       const row: any = {};
       headers.forEach((header, index) => {
-        row[header] = values[index] || '';
+        row[header] = this.sanitizeCellValue(values[index] || '');
       });
       data.push(row);
     }
@@ -549,6 +560,20 @@ class EmailImporter {
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Sanitize cell value to prevent CSV/formula injection
+   * Dangerous prefixes: =, +, -, @, \t, \r can trigger formula execution
+   */
+  sanitizeCellValue(value: any): any {
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim();
+    if (/^[=+\-@\t\r]/.test(trimmed)) {
+      // Prefix with single quote to neutralize formula
+      return "'" + trimmed;
+    }
+    return trimmed;
   }
 
   generateShipmentId(shipment: any): string {

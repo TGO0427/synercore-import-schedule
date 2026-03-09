@@ -16,6 +16,24 @@ const shipmentConnections = new Map<string, Set<string>>();
 class SocketManager {
   private io: Server | null = null;
 
+  // Rate limiting per socket
+  private socketRateLimits = new Map<string, { count: number; resetTime: number }>();
+  private readonly SOCKET_RATE_LIMIT = 60; // max events per window
+  private readonly SOCKET_RATE_WINDOW = 60000; // 1 minute window
+
+  private checkRateLimit(socketId: string): boolean {
+    const now = Date.now();
+    const record = this.socketRateLimits.get(socketId);
+
+    if (!record || now > record.resetTime) {
+      this.socketRateLimits.set(socketId, { count: 1, resetTime: now + this.SOCKET_RATE_WINDOW });
+      return true;
+    }
+
+    record.count++;
+    return record.count <= this.SOCKET_RATE_LIMIT;
+  }
+
   /**
    * Initialize Socket.io with Express server
    * @param httpServer - Express app wrapped in http.createServer()
@@ -134,9 +152,16 @@ class SocketManager {
    * @param data - { shipmentId }
    */
   handleJoinShipment(socket: AuthSocket, data: any): void {
-    const { shipmentId } = data;
+    // Rate limit check
+    if (!this.checkRateLimit(socket.id)) {
+      return socket.emit('error', { message: 'Rate limit exceeded' });
+    }
 
-    if (!shipmentId) return socket.emit('error', { message: 'shipmentId required' });
+    // Validate input
+    const shipmentId = typeof data?.shipmentId === 'string' ? data.shipmentId.trim() : null;
+    if (!shipmentId || shipmentId.length > 100 || !/^[\w\-]+$/.test(shipmentId)) {
+      return socket.emit('error', { message: 'Invalid shipmentId' });
+    }
 
     const roomName = `shipment:${shipmentId}`;
     socket.join(roomName);
@@ -177,9 +202,8 @@ class SocketManager {
    * @param data - { shipmentId }
    */
   handleLeaveShipment(socket: AuthSocket, data: any): void {
-    const { shipmentId } = data;
-
-    if (!shipmentId) return;
+    const shipmentId = typeof data?.shipmentId === 'string' ? data.shipmentId.trim() : null;
+    if (!shipmentId || shipmentId.length > 100 || !/^[\w\-]+$/.test(shipmentId)) return;
 
     const roomName = `shipment:${shipmentId}`;
     socket.leave(roomName);
@@ -216,6 +240,9 @@ class SocketManager {
    */
   handleDisconnect(socket: AuthSocket, reason: string): void {
     console.log(`[SocketManager] ✗ Disconnection: user=${socket.userId || 'guest'}, socketId=${socket.id}, reason=${reason}`);
+
+    // Clean up rate limit tracking
+    this.socketRateLimits.delete(socket.id);
 
     // Clean up all shipment tracking for this user
     if (userViewingShipments.has(socket.userId)) {
