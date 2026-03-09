@@ -1,0 +1,18 @@
+#!/bin/sh
+
+# Pre-commit hook: lint staged JS/JSX files
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(js|jsx)$' | head -20)
+
+# Exit early if no JS/JSX files are staged
+if [ -z "$STAGED_FILES" ]; then
+  exit 0
+fi
+
+echo "Running ESLint on staged files..."
+npx eslint --no-error-on-unmatched-pattern --max-warnings 50 $STAGED_FILES
+
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "ESLint check failed. Fix warnings above or commit with --no-verify to skip."
+  exit 1
+fi
