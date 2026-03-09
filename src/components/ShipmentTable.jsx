@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import useFormDraft from '../hooks/useFormDraft';
 import { ShipmentStatus, isDelayedStatus } from '../types/shipment';
 import { getCurrentWeekNumber } from '../utils/dateUtils';
-import { AIRFREIGHT_AGENTS, SEAFREIGHT_AGENTS, AIRFREIGHT_STATUSES, isAirfreight, getShippingProgress, isAirfreightStatus, getForwardingAgents } from '../utils/shipmentConstants';
+import { isAirfreight, getShippingProgress, getForwardingAgents } from '../utils/shipmentConstants';
 import { generatePDF as generateShipmentPDF, generateExcel as generateShipmentExcel } from '../utils/shipmentExport';
 import WeekCalendar from './WeekCalendar';
 import BulkStatusUpdate from './BulkStatusUpdate';
@@ -37,7 +37,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
   const [showManualArchiveDialog, setShowManualArchiveDialog] = useState(false);
   const [selectedShipments, setSelectedShipments] = useState([]);
   const [showBulkStatusUpdate, setShowBulkStatusUpdate] = useState(false);
-  const [bulkUpdateLoading, setBulkUpdateLoading] = useState(false);
+  const [, setBulkUpdateLoading] = useState(false);
   const [showOrderDetailsModal, setShowOrderDetailsModal] = useState(false);
   const [orderDetailsShipment, setOrderDetailsShipment] = useState(null);
   const [edits, setEdits] = useState({}); // Track unsaved changes per shipment
@@ -258,19 +258,6 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
     };
   }, []);
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  const getDaysUntilArrival = (estimatedArrival) => {
-    if (!estimatedArrival) return null;
-    const now = new Date();
-    const arrivalDate = new Date(estimatedArrival);
-    const diffTime = arrivalDate - now;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
 
   const isDelayed = (shipment) => {
     return isDelayedStatus(shipment.latestStatus);
@@ -457,11 +444,6 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
     } else {
       setSelectedShipments(prev => prev.filter(id => id !== shipmentId));
     }
-  };
-
-  const handleSelectAllArrived = () => {
-    const arrivedShipments = filteredAndSortedShipments.filter(s => s.latestStatus === 'arrived_pta' || s.latestStatus === 'arrived_klm' || s.latestStatus === 'arrived_offsite');
-    setSelectedShipments(arrivedShipments.map(s => s.id));
   };
 
   const handleSelectAll = () => {
