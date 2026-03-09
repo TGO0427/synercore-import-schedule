@@ -27,6 +27,8 @@ import {
   Legend
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
+import CostingEstimatesTable from './CostingEstimatesTable';
+import { EmailEstimateModal, RequestCostingModal } from './CostingModals';
 
 // Register Chart.js components
 ChartJS.register(
@@ -150,10 +152,6 @@ function ImportCosting() {
   const [newSupplierName, setNewSupplierName] = useState('');
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailEstimate, setEmailEstimate] = useState(null);
-  const [emailTo, setEmailTo] = useState('');
-  const [emailSending, setEmailSending] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortDirection, setSortDirection] = useState('desc'); // 'asc' or 'desc'
   const [showReports, setShowReports] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState('all');
   const [selectedSupplier, setSelectedSupplier] = useState('all');
@@ -161,8 +159,6 @@ function ImportCosting() {
 
   // Costing request state (for non-admin users)
   const [showRequestModal, setShowRequestModal] = useState(false);
-  const [requestForm, setRequestForm] = useState({ supplier_name: '', product_description: '', priority: 'normal', notes: '' });
-  const [requestSubmitting, setRequestSubmitting] = useState(false);
   const [myRequests, setMyRequests] = useState([]);
 
   // Get unique products from estimates - filtered by selected supplier
@@ -267,25 +263,8 @@ function ImportCosting() {
     };
   }, [estimates, selectedProduct, selectedSupplier]);
 
-  // Filter and sort estimates (exclude archived - those show under Suppliers)
-  const filteredEstimates = estimates
-    .filter(est => {
-      // Exclude archived estimates from main view
-      if (est.status === 'archived') return false;
-      if (!searchTerm) return true;
-      const ref = (est.reference_number || '').toLowerCase();
-      const supplier = (est.supplier_name || '').toLowerCase();
-      const search = searchTerm.toLowerCase();
-      return ref.includes(search) || supplier.includes(search);
-    })
-    .sort((a, b) => {
-      const refA = (a.reference_number || '').toLowerCase();
-      const refB = (b.reference_number || '').toLowerCase();
-      if (sortDirection === 'asc') {
-        return refA.localeCompare(refB);
-      }
-      return refB.localeCompare(refA);
-    });
+  // Non-archived estimates for report PDF generation
+  const filteredEstimates = estimates.filter(est => est.status !== 'archived');
 
   // Warn before leaving with unsaved form data
   useEffect(() => {
@@ -337,17 +316,15 @@ function ImportCosting() {
     }
   };
 
-  const handleSubmitRequest = async () => {
-    setRequestSubmitting(true);
+  const handleSubmitRequest = async (formData) => {
     try {
       const response = await authFetch(getApiUrl('/api/costing-requests'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestForm),
+        body: JSON.stringify(formData),
       });
       if (response.ok) {
         setShowRequestModal(false);
-        setRequestForm({ supplier_name: '', product_description: '', priority: 'normal', notes: '' });
         fetchMyRequests();
       } else {
         setError('Failed to submit costing request');
@@ -355,8 +332,6 @@ function ImportCosting() {
     } catch (err) {
       console.error('Failed to submit costing request:', err);
       setError('Failed to submit costing request');
-    } finally {
-      setRequestSubmitting(false);
     }
   };
 
@@ -687,14 +662,13 @@ function ImportCosting() {
   };
 
   // Send email with PDF attachment
-  const sendEstimateEmail = async () => {
-    if (!emailTo || !emailEstimate) return;
+  const sendEstimateEmail = async (emailTo, estimate) => {
+    if (!emailTo || !estimate) return;
 
-    setEmailSending(true);
     try {
-      const pdfBase64 = generatePDFBase64(emailEstimate);
+      const pdfBase64 = generatePDFBase64(estimate);
 
-      const response = await authFetch(getApiUrl(`/api/costing/${emailEstimate.id}/send-email`), {
+      const response = await authFetch(getApiUrl(`/api/costing/${estimate.id}/send-email`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -708,7 +682,6 @@ function ImportCosting() {
       if (response.ok) {
         showSuccess('Email sent successfully!');
         setShowEmailModal(false);
-        setEmailTo('');
         setEmailEstimate(null);
       } else {
         const data = await response.json();
@@ -717,8 +690,6 @@ function ImportCosting() {
     } catch (err) {
       console.error('Error sending email:', err);
       showError('Failed to send email. Please try again.');
-    } finally {
-      setEmailSending(false);
     }
   };
 
@@ -1713,334 +1684,30 @@ function ImportCosting() {
       )}
 
       {/* Estimates Table */}
-      <div className="dash-panel" style={{ overflow: 'hidden' }}>
-        {/* Search and Sort Controls */}
-        <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ flex: '1', minWidth: '200px', maxWidth: '300px' }}>
-            <input
-              type="text"
-              placeholder="Search by reference or supplier..."
-              aria-label="Search import costings"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
-                fontSize: '0.9rem',
-              }}
-            />
-          </div>
-          <button
-            onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
-            style={{
-              padding: '8px 12px',
-              backgroundColor: '#f3f4f6',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            Reference {sortDirection === 'asc' ? '↑ A-Z' : '↓ Z-A'}
-          </button>
-          <span style={{ color: '#6b7280', fontSize: '0.85rem' }}>
-            {filteredEstimates.length} of {estimates.length} estimates
-          </span>
-        </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f8fafc' }}>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Reference</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Supplier</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Port</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Container</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb', minWidth: '280px' }}>Products</th>
-                <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Total Landed</th>
-                <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Landed Cost/KG</th>
-                <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Status</th>
-                <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredEstimates.length === 0 ? (
-                <tr>
-                  <td colSpan={9} style={{ padding: '48px', textAlign: 'center', color: '#9ca3af' }}>
-                    {searchTerm ? 'No estimates match your search.' : 'No cost estimates yet. Create your first estimate to get started.'}
-                  </td>
-                </tr>
-              ) : (
-                filteredEstimates.map((est) => {
-                  const totals = calculateAllTotals(est);
-                  const products = est.products || [];
-                  return (
-                    <tr key={est.id} style={{ borderBottom: '1px solid #e5e7eb', verticalAlign: 'top' }}>
-                      <td style={{ padding: '12px 16px', color: '#111827' }}>{est.reference_number || est.id.slice(0, 8)}</td>
-                      <td style={{ padding: '12px 16px', color: '#374151' }}>{est.supplier_name || '-'}</td>
-                      <td style={{ padding: '12px 16px', color: '#374151' }}>{est.port_of_discharge || '-'}</td>
-                      <td style={{ padding: '12px 16px', color: '#374151' }}>{est.container_type || '-'}</td>
-                      <td style={{ padding: '12px 16px', color: '#374151' }}>
-                        {products.length === 0 ? (
-                          <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>No products</span>
-                        ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {products.map((p, idx) => (
-                              <div key={p._id || p.name || idx} style={{
-                                padding: '6px 8px',
-                                backgroundColor: '#fef3c7',
-                                borderRadius: '4px',
-                                borderLeft: '3px solid #f59e0b',
-                                fontSize: '0.8rem'
-                              }}>
-                                <div style={{ fontWeight: '600', color: '#92400e', marginBottom: '2px' }}>
-                                  {p.name || `Product ${idx + 1}`}
-                                </div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', color: '#78350f', fontSize: '0.75rem' }}>
-                                  {p.hs_code && <span>HS: {p.hs_code}</span>}
-                                  {p.pack_size && <span>Size: {p.pack_size}</span>}
-                                  {p.pack_type && <span>Type: {p.pack_type}</span>}
-                                  {p.weight_kg > 0 && <span>Wt: {formatNumber(p.weight_kg)}kg</span>}
-                                  {p.rate_per_kg > 0 && <span>Rate: {formatNumber(p.rate_per_kg)}/{p.currency || 'USD'}</span>}
-                                  {p.invoice_value > 0 && <span style={{ fontWeight: '600' }}>Val: {formatNumber(p.invoice_value)} {p.currency || 'USD'}</span>}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '600', color: '#059669' }}>
-                        {formatCurrency(totals.total_landed_cost_zar)}
-                      </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '500', color: '#d97706' }}>
-                        {formatCurrency(totals.all_in_warehouse_cost_per_kg_zar)}
-                      </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                        <span style={{
-                          padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '500',
-                          backgroundColor: est.status === 'final' ? '#dcfce7' : est.status === 'archived' ? '#f3f4f6' : '#fef3c7',
-                          color: est.status === 'final' ? '#166534' : est.status === 'archived' ? '#6b7280' : '#92400e'
-                        }}>
-                          {est.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-                          {isAdmin && (
-                            <button
-                              onClick={() => handleEdit(est)}
-                              style={{ padding: '6px 10px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
-                            >
-                              Edit
-                            </button>
-                          )}
-                          <button
-                            onClick={() => generatePDF(est)}
-                            style={{ padding: '6px 10px', backgroundColor: '#8b5cf6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
-                          >
-                            PDF
-                          </button>
-                          <button
-                            onClick={() => { setEmailEstimate(est); setShowEmailModal(true); }}
-                            style={{ padding: '6px 10px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
-                          >
-                            Email
-                          </button>
-                          {isAdmin && (
-                            <button
-                              onClick={() => handleDuplicate(est.id)}
-                              style={{ padding: '6px 10px', backgroundColor: '#6b7280', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
-                            >
-                              Copy
-                            </button>
-                          )}
-                          {isAdmin && (
-                            <button
-                              onClick={() => handleDelete(est.id)}
-                              style={{ padding: '6px 10px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
-                            >
-                              Del
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CostingEstimatesTable
+        estimates={estimates}
+        isAdmin={isAdmin}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onDuplicate={handleDuplicate}
+        onGeneratePDF={generatePDF}
+        onEmailEstimate={(est) => { setEmailEstimate(est); setShowEmailModal(true); }}
+      />
 
       {/* Email Modal */}
-      {showEmailModal && emailEstimate && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center',
-          alignItems: 'center', zIndex: 2000
-        }}>
-          <div style={{
-            backgroundColor: 'white', borderRadius: '12px', padding: '1.5rem',
-            width: '100%', maxWidth: '450px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
-          }}>
-            <h3 style={{ margin: '0 0 1rem', color: '#0f172a' }}>Send Cost Estimate via Email</h3>
-
-            <div style={{ marginBottom: '1rem', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-500)' }}>Reference</div>
-              <div style={{ fontWeight: '600' }}>{emailEstimate.reference_number || emailEstimate.id}</div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-500)', marginTop: '8px' }}>Supplier</div>
-              <div style={{ fontWeight: '600' }}>{emailEstimate.supplier_name || 'N/A'}</div>
-            </div>
-
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>
-                Send to Email Address
-              </label>
-              <input
-                type="email"
-                value={emailTo}
-                onChange={(e) => setEmailTo(e.target.value)}
-                placeholder="colleague@company.com"
-                style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '0.95rem' }}
-                autoFocus
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => { setShowEmailModal(false); setEmailTo(''); setEmailEstimate(null); }}
-                style={{ padding: '10px 20px', backgroundColor: '#f3f4f6', color: 'var(--text-900)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={sendEstimateEmail}
-                disabled={!emailTo || emailSending}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: emailSending ? '#9ca3af' : '#10b981',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: emailSending ? 'not-allowed' : 'pointer',
-                  fontSize: '0.9rem',
-                  fontWeight: '500'
-                }}
-              >
-                {emailSending ? 'Sending...' : 'Send Email'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <EmailEstimateModal
+        isOpen={showEmailModal}
+        estimate={emailEstimate}
+        onClose={() => { setShowEmailModal(false); setEmailEstimate(null); }}
+        onSend={sendEstimateEmail}
+      />
 
       {/* Request Costing Modal (non-admin) */}
-      {showRequestModal && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center',
-          alignItems: 'stretch', zIndex: 2000
-        }}>
-          <div style={{
-            backgroundColor: 'white', width: '100vw', height: '100vh',
-            overflow: 'auto',
-          }}>
-            {/* Header */}
-            <div style={{
-              padding: '1rem 1.5rem', borderBottom: '1px solid #e5e7eb',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              position: 'sticky', top: 0, backgroundColor: 'white', zIndex: 10
-            }}>
-              <div>
-                <h3 style={{ margin: 0, color: '#0f172a' }}>Request a Costing</h3>
-                <p style={{ color: 'var(--text-500)', fontSize: '0.85rem', margin: '0.25rem 0 0' }}>
-                  Submit a request and an admin will prepare the cost estimate for you.
-                </p>
-              </div>
-              <button
-                onClick={() => setShowRequestModal(false)}
-                style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#6b7280', lineHeight: 1 }}
-              >
-                ✕
-              </button>
-            </div>
-            <div style={{ padding: '1.5rem', maxWidth: '700px' }}>
-            <div style={{ display: 'grid', gap: '0.75rem' }}>
-              <div>
-                <label style={{ display: 'block', fontWeight: '500', fontSize: '0.85rem', marginBottom: '0.25rem' }}>Supplier Name</label>
-                <input
-                  type="text"
-                  value={requestForm.supplier_name}
-                  onChange={(e) => setRequestForm(prev => ({ ...prev, supplier_name: e.target.value }))}
-                  placeholder="e.g. ABC Trading Co."
-                  className="input"
-                  style={{ width: '100%' }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontWeight: '500', fontSize: '0.85rem', marginBottom: '0.25rem' }}>Product / Description</label>
-                <textarea
-                  value={requestForm.product_description}
-                  onChange={(e) => setRequestForm(prev => ({ ...prev, product_description: e.target.value }))}
-                  placeholder="Describe the product(s) you need costed..."
-                  rows={3}
-                  className="input"
-                  style={{ width: '100%', resize: 'vertical' }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontWeight: '500', fontSize: '0.85rem', marginBottom: '0.25rem' }}>Priority</label>
-                <select
-                  value={requestForm.priority}
-                  onChange={(e) => setRequestForm(prev => ({ ...prev, priority: e.target.value }))}
-                  className="select"
-                  style={{ width: '100%' }}
-                >
-                  <option value="low">Low</option>
-                  <option value="normal">Normal</option>
-                  <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ display: 'block', fontWeight: '500', fontSize: '0.85rem', marginBottom: '0.25rem' }}>Additional Notes</label>
-                <textarea
-                  value={requestForm.notes}
-                  onChange={(e) => setRequestForm(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Any additional context, deadlines, or details..."
-                  rows={2}
-                  className="input"
-                  style={{ width: '100%', resize: 'vertical' }}
-                />
-              </div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
-              <button
-                onClick={() => setShowRequestModal(false)}
-                style={{ padding: '10px 20px', backgroundColor: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', borderRadius: '6px', cursor: 'pointer' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmitRequest}
-                disabled={requestSubmitting}
-                style={{
-                  padding: '10px 20px', backgroundColor: requestSubmitting ? '#9ca3af' : '#f59e0b', color: 'white',
-                  border: 'none', borderRadius: '6px', cursor: requestSubmitting ? 'not-allowed' : 'pointer', fontWeight: '500'
-                }}
-              >
-                {requestSubmitting ? 'Submitting...' : 'Submit Request'}
-              </button>
-            </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <RequestCostingModal
+        isOpen={showRequestModal}
+        onClose={() => setShowRequestModal(false)}
+        onSubmit={handleSubmitRequest}
+      />
     </div>
   );
 }

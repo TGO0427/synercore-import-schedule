@@ -2,80 +2,19 @@ import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import useFormDraft from '../hooks/useFormDraft';
 import { ShipmentStatus, isDelayedStatus } from '../types/shipment';
 import { getCurrentWeekNumber } from '../utils/dateUtils';
+import { AIRFREIGHT_AGENTS, SEAFREIGHT_AGENTS, AIRFREIGHT_STATUSES, isAirfreight, getShippingProgress, isAirfreightStatus, getForwardingAgents } from '../utils/shipmentConstants';
+import { generatePDF as generateShipmentPDF, generateExcel as generateShipmentExcel } from '../utils/shipmentExport';
 import WeekCalendar from './WeekCalendar';
 import BulkStatusUpdate from './BulkStatusUpdate';
-import FilterPresetManager from './FilterPresetManager';
+import ShipmentTableToolbar from './ShipmentTableToolbar';
 import ResizableModal from './ResizableModal';
+import OrderDetailsModal from './OrderDetailsModal';
+import ArchiveDialogs from './ArchiveDialogs';
 import { SkeletonShipmentTable } from './SkeletonLoaders';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-import * as XLSX from 'xlsx';
 import { getApiUrl } from '../config/api';
 import { authFetch } from '../utils/authFetch';
-import filterPreferencesManager from '../utils/filterPreferences';
 import { copyToClipboard } from '../utils/clipboard';
 import { useNotification } from '../contexts/NotificationContext';
-
-// Forwarding agent options for airfreight (major passenger airlines with cargo divisions)
-const AIRFREIGHT_AGENTS = [
-  { value: 'Emirates SkyCargo', label: 'Emirates SkyCargo' },
-  { value: 'Qatar Airways Cargo', label: 'Qatar Airways Cargo' },
-  { value: 'Lufthansa Cargo', label: 'Lufthansa Cargo' },
-  { value: 'Singapore Airlines Cargo', label: 'Singapore Airlines Cargo' },
-  { value: 'Korean Air Cargo', label: 'Korean Air Cargo' },
-  { value: 'Turkish Airlines Cargo', label: 'Turkish Airlines Cargo' },
-  { value: 'Cathay Pacific Cargo', label: 'Cathay Pacific Cargo' },
-  { value: 'British Airways World Cargo', label: 'British Airways World Cargo' },
-  { value: 'Air France-KLM Cargo', label: 'Air France-KLM Cargo' },
-  { value: 'Ethiopian Airlines Cargo', label: 'Ethiopian Airlines Cargo' },
-  { value: 'SAA Cargo', label: 'SAA Cargo' },
-  { value: 'Kenya Airways Cargo', label: 'Kenya Airways Cargo' },
-];
-
-// Forwarding agent options for sea freight and other modes
-const SEAFREIGHT_AGENTS = [
-  { value: 'DHL', label: 'DHL' },
-  { value: 'DSV', label: 'DSV' },
-  { value: 'Afrigistics', label: 'Afrigistics' },
-  { value: 'MSC', label: 'MSC' },
-  { value: 'COSCO', label: 'COSCO' },
-  { value: 'ONE', label: 'ONE' },
-  { value: 'Hapag-Lloyd', label: 'Hapag-Lloyd' },
-  { value: 'Maersk', label: 'Maersk' },
-  { value: 'CMA CGM', label: 'CMA CGM' },
-  { value: 'Evergreen', label: 'Evergreen' },
-  { value: 'Yang Ming', label: 'Yang Ming' },
-  { value: 'HMM', label: 'HMM' },
-  { value: 'OOCL', label: 'OOCL' },
-];
-
-const AIRFREIGHT_STATUSES = [
-  ShipmentStatus.PLANNED_AIRFREIGHT,
-  ShipmentStatus.IN_TRANSIT_AIRFREIGHT,
-  ShipmentStatus.AIR_CUSTOMS_CLEARANCE,
-];
-const isAirfreight = (status) => AIRFREIGHT_STATUSES.includes(status);
-
-const getShippingProgress = (status) => {
-  const stages = {
-    planned_airfreight: 1, planned_seafreight: 1,
-    in_transit_airfreight: 2, in_transit_roadway: 2, in_transit_seaway: 2, air_customs_clearance: 2,
-    moored: 3, berth_working: 3, berth_complete: 3, gated_in_port: 3,
-    arrived_pta: 4, arrived_klm: 4, arrived_offsite: 4,
-    received: 5, stored: 5, archived: 5,
-  };
-  return { current: stages[status] || 0, total: 5 };
-};
-
-// Helper to check if status is airfreight-related
-const isAirfreightStatus = (status) => {
-  return status === 'planned_airfreight' || status === 'in_transit_airfreight' || status === 'air_customs_clearance';
-};
-
-// Get forwarding agents based on shipment status
-const getForwardingAgents = (status) => {
-  return isAirfreightStatus(status) ? AIRFREIGHT_AGENTS : SEAFREIGHT_AGENTS;
-};
 
 function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreateShipment, loading, globalSearchTerm, onClearGlobalSearch }) {
   const { showSuccess, showError, showWarning, confirm: confirmAction } = useNotification();
@@ -95,12 +34,8 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
   const [productLines, setProductLines] = useState([{ name: '', qty: '' }]);
   const [amendProductLines, setAmendProductLines] = useState([{ name: '', qty: '' }]);
   const [showAutoArchiveDialog, setShowAutoArchiveDialog] = useState(false);
-  const [autoArchiveStats, setAutoArchiveStats] = useState(null);
-  const [autoArchiveLoading, setAutoArchiveLoading] = useState(false);
-  const [autoArchiveDays, setAutoArchiveDays] = useState(30);
   const [showManualArchiveDialog, setShowManualArchiveDialog] = useState(false);
   const [selectedShipments, setSelectedShipments] = useState([]);
-  const [manualArchiveLoading, setManualArchiveLoading] = useState(false);
   const [showBulkStatusUpdate, setShowBulkStatusUpdate] = useState(false);
   const [bulkUpdateLoading, setBulkUpdateLoading] = useState(false);
   const [showOrderDetailsModal, setShowOrderDetailsModal] = useState(false);
@@ -342,196 +277,11 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
   };
 
   const generatePDF = () => {
-    const doc = new jsPDF();
-    
-    // Add title
-    doc.setFontSize(18);
-    doc.setFont(undefined, 'bold');
-    doc.text('Shipment Schedule Report', 14, 20);
-    
-    // Add generation date
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'normal');
-    doc.text(`Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, 14, 30);
-    
-    // Add summary info
-    doc.text(`Total Shipments: ${filteredAndSortedShipments.length}`, 14, 40);
-    const delayedCount = filteredAndSortedShipments.filter(isDelayed).length;
-    doc.text(`Delayed Shipments: ${delayedCount}`, 14, 47);
-    
-    if (searchTerm || !statusFilter.includes('all')) {
-      let filterText = 'Applied Filters: ';
-      if (searchTerm) filterText += `Search: "${searchTerm}"`;
-      if (!statusFilter.includes('all')) {
-        if (searchTerm) filterText += ', ';
-        filterText += `Status: ${statusFilter.join(', ')}`;
-      }
-      doc.text(filterText, 14, 54);
-    }
-    
-    // Prepare table data
-    const tableData = filteredAndSortedShipments.map(shipment => [
-      shipment.supplier,
-      shipment.orderRef,
-      shipment.finalPod,
-      shipment.latestStatus.charAt(0).toUpperCase() + shipment.latestStatus.slice(1).replace('_', ' '),
-      shipment.weekNumber || '-',
-      shipment.productName || '-',
-      shipment.quantity || '-',
-      shipment.receivingWarehouse || '-',
-      shipment.forwardingAgent || '-',
-      shipment.vesselName || '-',
-      shipment.incoterm || '-',
-      shipment.palletQty ? (Math.round(shipment.palletQty) || 1) : '-'
-    ]);
-
-    // Add table
-    doc.autoTable({
-      head: [[
-        'Supplier',
-        'Order/Ref',
-        'Final POD',
-        'Status',
-        'Week #',
-        'Product',
-        'Quantity',
-        'Warehouse',
-        'Forwarding Agent',
-        'Vessel Name',
-        'Incoterm',
-        'Pallet Qty'
-      ]],
-      body: tableData,
-      startY: searchTerm || !statusFilter.includes('all') ? 60 : 53,
-      styles: {
-        fontSize: 8,
-        cellPadding: 2,
-      },
-      headStyles: {
-        fillColor: [5, 150, 105],
-        textColor: 255,
-        fontStyle: 'bold',
-        fontSize: 9
-      },
-      alternateRowStyles: {
-        fillColor: [248, 249, 250]
-      },
-      columnStyles: {
-        0: { cellWidth: 20 }, // Supplier
-        1: { cellWidth: 25 }, // Order/Ref
-        2: { cellWidth: 20 }, // Final POD
-        3: { cellWidth: 18 }, // Status
-        4: { cellWidth: 12 }, // Week #
-        5: { cellWidth: 25 }, // Product
-        6: { cellWidth: 15 }, // Quantity
-        7: { cellWidth: 22 }, // Warehouse
-        8: { cellWidth: 20 }, // Forwarding Agent
-        9: { cellWidth: 12 }  // Pallet Qty
-      },
-      didParseCell: function(data) {
-        // Highlight delayed shipments
-        const shipment = filteredAndSortedShipments[data.row.index];
-        if (shipment && isDelayed(shipment) && data.section === 'body') {
-          data.cell.styles.fillColor = [255, 245, 245]; // Light red background
-          data.cell.styles.textColor = [211, 47, 47]; // Dark red text
-        }
-      }
-    });
-    
-    // Add footer
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.text(
-        `Import Supply Chain Management - Page ${i} of ${pageCount}`,
-        doc.internal.pageSize.getWidth() / 2,
-        doc.internal.pageSize.getHeight() - 10,
-        { align: 'center' }
-      );
-    }
-    
-    // Save the PDF
-    const fileName = `shipment-schedule-${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(fileName);
+    generateShipmentPDF(filteredAndSortedShipments, { searchTerm, statusFilter });
   };
 
   const generateExcel = () => {
-    // Create worksheet data
-    const worksheetData = [
-      // Header row
-      [
-        'Supplier',
-        'Order/Ref',
-        'Final POD',
-        'Latest Status',
-        'Week Number',
-        'Estimated Arrival',
-        'Product',
-        'Quantity',
-        'Warehouse',
-        'Forwarding Agent',
-        'Vessel Name',
-        'Incoterm',
-        'Pallet Qty'
-      ],
-      // Data rows
-      ...filteredAndSortedShipments.map(shipment => [
-        shipment.supplier || '',
-        shipment.orderRef || '',
-        shipment.finalPod || '',
-        shipment.latestStatus || '',
-        shipment.weekNumber || '',
-        shipment.estimatedArrival ? new Date(shipment.estimatedArrival).toLocaleDateString() : '',
-        shipment.product || '',
-        shipment.quantity || '',
-        shipment.warehouse || '',
-        shipment.forwardingAgent || '',
-        shipment.vesselName || '',
-        shipment.incoterm || '',
-        shipment.palletQty ? (Math.round(shipment.palletQty) || 1) : ''
-      ])
-    ];
-
-    // Create workbook and worksheet
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(worksheetData);
-
-    // Set column widths
-    const colWidths = [
-      { wch: 20 }, // Supplier
-      { wch: 15 }, // Order/Ref
-      { wch: 15 }, // Final POD
-      { wch: 15 }, // Latest Status
-      { wch: 12 }, // Week Number
-      { wch: 15 }, // Estimated Arrival
-      { wch: 20 }, // Product
-      { wch: 10 }, // Quantity
-      { wch: 15 }, // Warehouse
-      { wch: 18 }, // Forwarding Agent
-      { wch: 12 }  // Pallet Qty
-    ];
-    ws['!cols'] = colWidths;
-
-    // Add some basic styling to header row
-    const headerRange = XLSX.utils.decode_range(ws['!ref']);
-    for (let col = headerRange.s.c; col <= headerRange.e.c; col++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
-      if (!ws[cellAddress]) continue;
-      ws[cellAddress].s = {
-        font: { bold: true },
-        fill: { fgColor: { rgb: "CCCCCC" } }
-      };
-    }
-
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(wb, ws, 'Shipment Schedule');
-
-    // Generate filename with current date
-    const fileName = `shipment-schedule-${new Date().toISOString().split('T')[0]}.xlsx`;
-    
-    // Save the file
-    XLSX.writeFile(wb, fileName);
+    generateShipmentExcel(filteredAndSortedShipments);
   };
 
   const handleAddShipment = async () => {
@@ -700,62 +450,6 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
     }
   };
 
-  const fetchAutoArchiveStats = async () => {
-    try {
-      setAutoArchiveLoading(true);
-      const response = await fetch(getApiUrl(`/api/shipments/auto-archive/stats?daysOld=${autoArchiveDays}`));
-      if (response.ok) {
-        const stats = await response.json();
-        setAutoArchiveStats(stats);
-      } else {
-        console.error('Failed to fetch auto-archive stats');
-      }
-    } catch (error) {
-      console.error('Error fetching auto-archive stats:', error);
-    } finally {
-      setAutoArchiveLoading(false);
-    }
-  };
-
-  const performAutoArchive = async () => {
-    if (!autoArchiveStats?.eligibleForArchive) {
-      showWarning('No shipments eligible for auto-archive.');
-      return;
-    }
-
-    if (!(await confirmAction({ title: 'Archive Shipments', message: `Are you sure you want to archive ${autoArchiveStats.eligibleForArchive} old ARRIVED shipments?`, type: 'warning', confirmText: 'Archive' }))) {
-      return;
-    }
-
-    try {
-      setAutoArchiveLoading(true);
-      const response = await fetch(getApiUrl('/api/shipments/auto-archive/perform'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ daysOld: autoArchiveDays }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        showSuccess(`Successfully archived ${result.archivedCount} shipments`);
-        setShowAutoArchiveDialog(false);
-        setAutoArchiveStats(null);
-        // Trigger a reload of shipments
-        window.location.reload();
-      } else {
-        const error = await response.json();
-        console.error('Failed to perform auto-archive:', error);
-        showError('Failed to perform auto-archive. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error performing auto-archive:', error);
-      showError('Error performing auto-archive. Please try again.');
-    } finally {
-      setAutoArchiveLoading(false);
-    }
-  };
 
   const handleShipmentSelect = (shipmentId, isSelected) => {
     if (isSelected) {
@@ -827,53 +521,6 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
     }
   };
 
-  const performManualArchive = async () => {
-    if (selectedShipments.length === 0) {
-      showWarning('No shipments selected for archive.');
-      setShowManualArchiveDialog(false);
-      return;
-    }
-
-    const arrivedShipments = selectedShipments.filter(id => {
-      const shipment = shipments.find(s => s.id === id);
-      return shipment && (shipment.latestStatus === 'arrived_pta' || shipment.latestStatus === 'arrived_klm' || shipment.latestStatus === 'arrived_offsite');
-    });
-
-    if (arrivedShipments.length === 0) {
-      showWarning('No ARRIVED shipments selected for archive.');
-      setShowManualArchiveDialog(false);
-      return;
-    }
-
-    try {
-      setManualArchiveLoading(true);
-      const response = await fetch(getApiUrl('/api/shipments/manual-archive'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ shipmentIds: arrivedShipments }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        showSuccess(`Successfully archived ${result.archivedCount} shipments`);
-        setShowManualArchiveDialog(false);
-        setSelectedShipments([]);
-        // Trigger a reload of shipments
-        window.location.reload();
-      } else {
-        const error = await response.json();
-        console.error('Failed to perform manual archive:', error);
-        showError('Failed to perform manual archive. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error performing manual archive:', error);
-      showError('Error performing manual archive. Please try again.');
-    } finally {
-      setManualArchiveLoading(false);
-    }
-  };
 
   const handleBulkStatusUpdate = async (shipmentIds, newStatus) => {
     try {
@@ -918,167 +565,33 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
    <div className="shipments-table card">
       <div className="brand-strip" />
 
-      {/* ── Row 1: Title + primary actions ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem 0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--navy-900)' }}>Shipping Schedule</h2>
-          <span style={{ fontSize: 12, color: 'var(--text-500)', fontWeight: 500 }}>
-            {filteredAndSortedShipments.length} shipment{filteredAndSortedShipments.length !== 1 ? 's' : ''}
-          </span>
-          {unsavedCount > 0 && (
-            <button onClick={saveAllChanges} className="btn" style={{
-              background: 'var(--warning)', color: '#fff', fontSize: 12, padding: '5px 12px',
-              border: 'none', fontWeight: 700,
-            }}>
-              Save {unsavedCount} change{unsavedCount !== 1 ? 's' : ''}
-            </button>
-          )}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button className="btn btn-primary" onClick={() => setShowAddShipmentDialog(true)} style={{ fontSize: 13 }}>
-            + Add Shipment
-          </button>
-          <button className="btn btn-ghost" onClick={generatePDF} disabled={filteredAndSortedShipments.length === 0} style={{ fontSize: 13 }}>
-            PDF
-          </button>
-          <button className="btn btn-ghost" onClick={generateExcel} disabled={filteredAndSortedShipments.length === 0} style={{ fontSize: 13 }}>
-            Excel
-          </button>
-        </div>
-      </div>
-
-      {/* ── Row 2: Filters ── */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 10, padding: '0.75rem 1.25rem',
-        borderBottom: '1px solid var(--border)', flexWrap: 'wrap',
-      }}>
-        {/* Search */}
-        <input
-          type="text"
-          placeholder="Search orders, suppliers, products..."
-          aria-label="Search shipments"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="input"
-          style={{ width: 220, fontSize: 13 }}
-        />
-
-        {/* Status filter dropdown */}
-        <select
-          value={statusFilter.includes('all') ? 'all' : statusFilter[0] || 'all'}
-          onChange={(e) => {
-            const val = e.target.value;
-            setStatusFilter(val === 'all' ? ['all'] : [val]);
-          }}
-          className="select"
-          style={{ fontSize: 13, minWidth: 160 }}
-        >
-          <option value="all">All Statuses</option>
-          <option value={ShipmentStatus.PLANNED_AIRFREIGHT}>Planned Airfreight</option>
-          <option value={ShipmentStatus.PLANNED_SEAFREIGHT}>Planned Seafreight</option>
-          <option value={ShipmentStatus.IN_TRANSIT_AIRFREIGHT}>In Transit Airfreight</option>
-          <option value={ShipmentStatus.AIR_CUSTOMS_CLEARANCE}>Air Customs Clearance</option>
-          <option value={ShipmentStatus.IN_TRANSIT_ROADWAY}>In Transit Roadway</option>
-          <option value={ShipmentStatus.IN_TRANSIT_SEAWAY}>In Transit Seaway</option>
-          <option value={ShipmentStatus.MOORED}>Moored</option>
-          <option value={ShipmentStatus.BERTH_WORKING}>Berth Working</option>
-          <option value={ShipmentStatus.BERTH_COMPLETE}>Berth Complete</option>
-          <option value={ShipmentStatus.GATED_IN_PORT}>Gated In Port</option>
-          <option value={ShipmentStatus.ARRIVED_PTA}>Arrived PTA</option>
-          <option value={ShipmentStatus.ARRIVED_KLM}>Arrived KLM</option>
-          <option value={ShipmentStatus.ARRIVED_OFFSITE}>Arrived OffSite</option>
-          <optgroup label="Delayed">
-            <option value={ShipmentStatus.DELAYED_PORT}>Delayed - Port</option>
-            <option value={ShipmentStatus.DELAYED_CUSTOMS}>Delayed - Customs</option>
-            <option value={ShipmentStatus.DELAYED_DOCUMENTS}>Delayed - Documents</option>
-            <option value={ShipmentStatus.DELAYED_SUPPLIER}>Delayed - Supplier</option>
-          </optgroup>
-          <option value={ShipmentStatus.CANCELLED}>Cancelled</option>
-          <option value="arrived">Arrived (All)</option>
-        </select>
-
-        {/* Divider */}
-        <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
-
-        {/* Week range */}
-        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-500)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Wk</span>
-        <input type="number" value={weekFrom} onChange={(e) => setWeekFrom(parseInt(e.target.value) || 1)}
-          className="input" style={{ width: 56, textAlign: 'center', fontSize: 13 }} min="1" max="53" />
-        <span style={{ color: 'var(--text-400)', fontSize: 13 }}>–</span>
-        <input type="number" value={weekTo} onChange={(e) => setWeekTo(parseInt(e.target.value) || 53)}
-          className="input" style={{ width: 56, textAlign: 'center', fontSize: 13 }} min="1" max="53" />
-        <button className="btn btn-ghost" onClick={() => { setWeekFrom(currentWeek); setWeekTo(currentWeek + 2); }}
-          style={{ fontSize: 12, padding: '4px 8px' }}>Reset</button>
-        <button className="btn btn-ghost" onClick={() => { setWeekFrom(1); setWeekTo(53); }}
-          style={{ fontSize: 12, padding: '4px 8px' }}>All</button>
-
-        {/* Divider */}
-        <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
-
-        {/* Quick status pills */}
-        <button className={statusFilter.includes('all') ? 'btn btn-primary' : 'btn btn-ghost'}
-          onClick={() => setStatusFilter(['all'])} style={{ fontSize: 12, padding: '4px 10px' }}>
-          All ({shipments.length})
-        </button>
-        <button
-          className={(statusFilter.includes(ShipmentStatus.ARRIVED_PTA) || statusFilter.includes(ShipmentStatus.ARRIVED_KLM) || statusFilter.includes(ShipmentStatus.ARRIVED_OFFSITE) || statusFilter.includes('arrived')) ? 'btn btn-primary' : 'btn btn-ghost'}
-          onClick={() => {
-            if (statusFilter.includes('arrived') || statusFilter.includes(ShipmentStatus.ARRIVED_PTA) || statusFilter.includes(ShipmentStatus.ARRIVED_KLM) || statusFilter.includes(ShipmentStatus.ARRIVED_OFFSITE)) {
-              setStatusFilter(['all']);
-            } else {
-              setStatusFilter(['arrived']);
-            }
-          }}
-          style={{ fontSize: 12, padding: '4px 10px' }}
-        >
-          Arrived ({shipments.filter(s => s.latestStatus === ShipmentStatus.ARRIVED_PTA || s.latestStatus === ShipmentStatus.ARRIVED_KLM || s.latestStatus === ShipmentStatus.ARRIVED_OFFSITE).length})
-        </button>
-
-        <FilterPresetManager
-          viewName="shipments"
-          currentFilters={{ search: searchTerm, status: statusFilter }}
-          onLoadPreset={(filters) => {
-            if (filters.search) setSearchTerm(filters.search);
-            if (filters.status) setStatusFilter(filters.status);
-            filterPreferencesManager.addSearchHistory('shipments', filters.search || '');
-          }}
-          onSavePreset={() => {
-            if (searchTerm) filterPreferencesManager.addSearchHistory('shipments', searchTerm);
-          }}
-        />
-
-        {/* Spacer */}
-        <div style={{ flex: 1 }} />
-
-        {/* Secondary actions */}
-        <button className="btn btn-ghost" onClick={() => setShowAutoArchiveDialog(true)}
-          style={{ fontSize: 12, padding: '4px 10px' }}>Archive</button>
-        <button className="btn btn-ghost" onClick={() => setShowManualArchiveDialog(true)}
-          disabled={selectedShipments.length === 0} style={{ fontSize: 12, padding: '4px 10px' }}>
-          Manual Archive{selectedShipments.length > 0 ? ` (${selectedShipments.length})` : ''}
-        </button>
-        <button className="btn btn-ghost" onClick={() => setShowBulkStatusUpdate(true)}
-          disabled={filteredAndSortedShipments.length === 0} style={{ fontSize: 12, padding: '4px 10px' }}>
-          Bulk Update
-        </button>
-      </div>
-
-      {/* Bulk action toolbar */}
-      {selectedShipments.length > 0 && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px',
-          background: 'var(--accent-100, #dbeafe)', borderRadius: '8px', marginBottom: '12px',
-          border: '1px solid var(--accent, #3b82f6)'
-        }}>
-          <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{selectedShipments.length} selected</span>
-          <button className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '6px 12px' }}
-            onClick={handleBulkArchive}>Archive Selected</button>
-          <button className="btn btn-danger" style={{ fontSize: '0.8rem', padding: '6px 12px', background: '#dc2626', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}
-            onClick={handleBulkDelete}>Delete Selected</button>
-          <button className="btn btn-ghost" style={{ fontSize: '0.8rem', padding: '6px 12px' }}
-            onClick={handleClearSelection}>Clear Selection</button>
-        </div>
-      )}
+      <ShipmentTableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        weekFrom={weekFrom}
+        weekTo={weekTo}
+        onWeekFromChange={setWeekFrom}
+        onWeekToChange={setWeekTo}
+        totalCount={shipments.length}
+        filteredCount={filteredAndSortedShipments.length}
+        unsavedCount={unsavedCount}
+        onSaveAll={saveAllChanges}
+        onAddShipment={() => setShowAddShipmentDialog(true)}
+        onGeneratePDF={generatePDF}
+        onGenerateExcel={generateExcel}
+        onShowAutoArchive={() => setShowAutoArchiveDialog(true)}
+        onShowManualArchive={() => setShowManualArchiveDialog(true)}
+        onShowBulkUpdate={() => setShowBulkStatusUpdate(true)}
+        selectedCount={selectedShipments.length}
+        onBulkArchive={handleBulkArchive}
+        onBulkDelete={handleBulkDelete}
+        onClearSelection={handleClearSelection}
+        shipments={shipments}
+        currentFilters={{ search: searchTerm, status: statusFilter }}
+        currentWeek={currentWeek}
+      />
 
       {/* Mobile card layout */}
       {isMobile && (
@@ -2380,199 +1893,19 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
         </ResizableModal>
       )}
 
-      {/* Auto-Archive Dialog */}
-      {showAutoArchiveDialog && (
-        <ResizableModal
-          title="Auto-Archive Old ARRIVED Shipments"
-          isOpen={showAutoArchiveDialog}
-          onClose={() => {
-            setShowAutoArchiveDialog(false);
-            setAutoArchiveStats(null);
-          }}
-          initialWidth={600}
-          minWidth={400}
-          minHeight={300}
-        >
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-900)' }}>
-                Archive shipments older than (days):
-              </label>
-              <input
-                type="number"
-                value={autoArchiveDays}
-                onChange={(e) => setAutoArchiveDays(parseInt(e.target.value) || 30)}
-                className="input"
-                style={{
-                  width: '100px'
-                }}
-                min="1"
-                max="365"
-              />
-              <span style={{ marginLeft: '0.5rem', color: 'var(--text-500)', fontSize: '0.9rem' }}>
-                days
-              </span>
-            </div>
-
-            <div style={{ marginBottom: '1.5rem' }}>
-              <button
-                onClick={fetchAutoArchiveStats}
-                disabled={autoArchiveLoading}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: autoArchiveLoading ? '#ccc' : '#17a2b8',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: autoArchiveLoading ? 'not-allowed' : 'pointer',
-                  fontSize: '0.9rem',
-                  fontWeight: '500',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}
-              >
-                {autoArchiveLoading ? '🔄 Loading...' : '🔍 Check Eligible Shipments'}
-              </button>
-            </div>
-
-            {autoArchiveStats && (
-              <div style={{
-                backgroundColor: 'var(--surface-2)',
-                padding: '1rem',
-                borderRadius: '8px',
-                marginBottom: '1.5rem',
-                border: '1px solid #e9ecef'
-              }}>
-                <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-900)' }}>Archive Statistics</h4>
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <strong>Eligible for archive:</strong> {autoArchiveStats.eligibleForArchive} shipments
-                </div>
-                <div style={{ marginBottom: '1rem' }}>
-                  <strong>Total ARRIVED:</strong> {autoArchiveStats.totalArrived} shipments
-                </div>
-
-                {autoArchiveStats.eligibleShipments.length > 0 && (
-                  <div>
-                    <h5 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-500)' }}>Shipments to be archived:</h5>
-                    <div style={{ maxHeight: '200px', overflow: 'auto' }}>
-                      {autoArchiveStats.eligibleShipments.map((shipment, index) => (
-                        <div key={shipment.id || shipment.orderRef || index} style={{
-                          padding: '0.5rem',
-                          backgroundColor: 'white',
-                          border: '1px solid #e9ecef',
-                          borderRadius: '4px',
-                          marginBottom: '0.25rem',
-                          fontSize: '0.85rem'
-                        }}>
-                          <div><strong>{shipment.supplier}</strong> - {shipment.orderRef}</div>
-                          <div style={{ color: 'var(--text-500)' }}>
-                            Arrived: {new Date(shipment.arrivedDate).toLocaleDateString()}
-                            ({shipment.daysOld} days ago)
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div style={{
-              display: 'flex',
-              gap: '1rem',
-              justifyContent: 'flex-end'
-            }}>
-              <button
-                onClick={() => {
-                  setShowAutoArchiveDialog(false);
-                  setAutoArchiveStats(null);
-                }}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '0.9rem',
-                  fontWeight: '500'
-                }}
-              >
-                Cancel
-              </button>
-
-              {autoArchiveStats?.eligibleForArchive > 0 && (
-                <button
-                  onClick={performAutoArchive}
-                  disabled={autoArchiveLoading}
-                  style={{
-                    padding: '0.75rem 1.5rem',
-                    backgroundColor: autoArchiveLoading ? '#ccc' : 'var(--danger)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: autoArchiveLoading ? 'not-allowed' : 'pointer',
-                    fontSize: '0.9rem',
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}
-                >
-                  {autoArchiveLoading ? '🔄 Archiving...' : `📁 Archive ${autoArchiveStats.eligibleForArchive} Shipments`}
-                </button>
-              )}
-            </div>
-        </ResizableModal>
-      )}
-
-      {/* Manual Archive Dialog */}
-      {showManualArchiveDialog && (
-        <ResizableModal
-          title="Manual Archive Confirmation"
-          isOpen={showManualArchiveDialog}
-          onClose={() => setShowManualArchiveDialog(false)}
-          initialWidth={500}
-          minWidth={350}
-          minHeight={250}
-        >
-            <p>
-              You are about to archive <strong>{selectedShipments.length}</strong> selected ARRIVED shipments.
-              This action cannot be undone.
-            </p>
-            <p>The shipments will be removed from the active list and saved to an archive file.</p>
-
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '2rem' }}>
-              <button
-                onClick={() => setShowManualArchiveDialog(false)}
-                style={{
-                  padding: '0.5rem 1rem',
-                  border: '1px solid #ccc',
-                  backgroundColor: 'white',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-                disabled={manualArchiveLoading}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={performManualArchive}
-                disabled={manualArchiveLoading}
-                style={{
-                  padding: '0.5rem 1rem',
-                  backgroundColor: '#17a2b8',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: manualArchiveLoading ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {manualArchiveLoading ? '🔄 Archiving...' : `📁 Archive ${selectedShipments.length} Shipments`}
-              </button>
-            </div>
-        </ResizableModal>
-      )}
+      {/* Archive Dialogs */}
+      <ArchiveDialogs
+        showAutoArchive={showAutoArchiveDialog}
+        onCloseAutoArchive={() => setShowAutoArchiveDialog(false)}
+        showManualArchive={showManualArchiveDialog}
+        onCloseManualArchive={() => setShowManualArchiveDialog(false)}
+        selectedShipments={selectedShipments}
+        shipments={shipments}
+        onArchiveComplete={() => {
+          setSelectedShipments([]);
+          window.location.reload();
+        }}
+      />
 
       {/* Bulk Status Update Modal */}
       {showBulkStatusUpdate && (
@@ -2584,128 +1917,14 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
       )}
 
       {/* Order Details Modal */}
-      {showOrderDetailsModal && orderDetailsShipment && (
-        <ResizableModal
-          title={`Order Details — ${orderDetailsShipment.orderRef}`}
-          isOpen={showOrderDetailsModal}
-          onClose={() => {
-            setShowOrderDetailsModal(false);
-            setOrderDetailsShipment(null);
-          }}
-          initialWidth={600}
-          minWidth={400}
-          minHeight={350}
-        >
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Supplier</label>
-              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.supplier || '—'}</span>
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Order/Ref</label>
-              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.orderRef || '—'}</span>
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Product Name</label>
-              <span style={{ fontSize: '1rem', color: '#222' }}>
-                {orderDetailsShipment.productName
-                  ? orderDetailsShipment.productName.split(';').map((p, i) => (
-                      <span key={i}>{p.trim()}{i < orderDetailsShipment.productName.split(';').length - 1 && <br />}</span>
-                    ))
-                  : '—'}
-              </span>
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Status</label>
-              <span className={`status-badge status-${orderDetailsShipment.latestStatus}`} style={{
-                borderRadius: '20px',
-                padding: '4px 12px',
-                fontSize: '0.8rem',
-                fontWeight: '500',
-                textTransform: 'uppercase'
-              }}>
-                {orderDetailsShipment.latestStatus?.replace(/_/g, ' ') || '—'}
-              </span>
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Quantity</label>
-              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.quantity != null ? Number(orderDetailsShipment.quantity).toLocaleString() : '—'}</span>
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Pallet Qty</label>
-              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.palletQty ? (Math.round(orderDetailsShipment.palletQty) || 1) : '—'}</span>
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>CBM</label>
-              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.cbm || '—'}</span>
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Week Number</label>
-              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.weekNumber || '—'}</span>
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Final POD</label>
-              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.finalPod || '—'}</span>
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Receiving Warehouse</label>
-              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.receivingWarehouse || '—'}</span>
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Incoterm</label>
-              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.incoterm || '—'}</span>
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Forwarding Agent</label>
-              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.forwardingAgent || '—'}</span>
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>{isAirfreight(orderDetailsShipment.latestStatus) ? 'AWB Number' : 'Vessel Name'}</label>
-              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.vesselName || '—'}</span>
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Created</label>
-              <span style={{ fontSize: '1rem', color: '#222' }}>{orderDetailsShipment.createdAt ? new Date(orderDetailsShipment.createdAt).toLocaleDateString() : '—'}</span>
-            </div>
-            {orderDetailsShipment.notes && (
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Notes</label>
-                <span style={{ fontSize: '1rem', color: '#222', whiteSpace: 'pre-wrap' }}>{orderDetailsShipment.notes}</span>
-              </div>
-            )}
-            {orderDetailsShipment.reminderDate && (
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600', color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>Reminder</label>
-                <span style={{ fontSize: '1rem', color: '#222' }}>
-                  {new Date(orderDetailsShipment.reminderDate).toLocaleDateString()}
-                  {orderDetailsShipment.reminderNote ? ` — ${orderDetailsShipment.reminderNote}` : ''}
-                </span>
-              </div>
-            )}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
-            <button
-              onClick={() => {
-                setShowOrderDetailsModal(false);
-                setOrderDetailsShipment(null);
-              }}
-              style={{
-                padding: '0.6rem 1.5rem',
-                backgroundColor: '#6c757d',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '0.9rem'
-              }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#545b62'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#6c757d'}
-            >
-              Close
-            </button>
-          </div>
-        </ResizableModal>
-      )}
+      <OrderDetailsModal
+        isOpen={showOrderDetailsModal}
+        shipment={orderDetailsShipment}
+        onClose={() => {
+          setShowOrderDetailsModal(false);
+          setOrderDetailsShipment(null);
+        }}
+      />
     </div>
   );
 }
