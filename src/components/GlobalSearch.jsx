@@ -59,7 +59,8 @@ function GlobalSearch({ shipments }) {
           s.orderRef?.toLowerCase().includes(q) ||
           s.supplier?.toLowerCase().includes(q) ||
           s.finalPod?.toLowerCase().includes(q) ||
-          s.vesselName?.toLowerCase().includes(q);
+          s.vesselName?.toLowerCase().includes(q) ||
+          s.productName?.toLowerCase().includes(q);
         if (!match || seen.has(s.orderRef)) return false;
         seen.add(s.orderRef);
         return true;
@@ -166,7 +167,7 @@ function GlobalSearch({ shipments }) {
         }}
         onFocus={() => query.length >= 2 && setOpen(true)}
         onKeyDown={handleKeyDown}
-        placeholder="Search orders, suppliers, vessels..."
+        placeholder="Search orders, suppliers, products, vessels..."
         aria-label="Search shipments"
         aria-expanded={open && finalResults.length > 0}
         aria-controls="global-search-results"
@@ -229,7 +230,7 @@ function GlobalSearch({ shipments }) {
                       {highlight(shipment.orderRef, query)}
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-500)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {highlight(shipment.supplier, query)} {shipment.finalPod ? `\u2014 ${highlight(shipment.finalPod, query)}` : ''}
+                      {highlight(shipment.supplier, query)}{shipment.productName ? <> &mdash; {highlight(shipment.productName, query)}</> : ''}{shipment.finalPod ? <> &mdash; {highlight(shipment.finalPod, query)}</> : ''}
                     </div>
                   </div>
                   <span className={pill.cls} style={{ fontSize: '0.65rem', whiteSpace: 'nowrap' }}>
