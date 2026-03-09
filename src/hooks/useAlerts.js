@@ -6,7 +6,7 @@ export function useAlerts(shipments) {
   const [alerts, setAlerts] = useState([]);
   const [dismissedAlertIds, setDismissedAlertIds] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem('dismissedAlerts') || '[]')); }
-    catch { return new Set(); }
+    catch { localStorage.removeItem('dismissedAlerts'); return new Set(); }
   });
 
   // Whenever shipments change, recompute alerts

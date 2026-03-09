@@ -4,12 +4,24 @@
  */
 
 /**
+ * Default constants for costing calculations.
+ * Exported so they can be referenced or overridden elsewhere.
+ */
+export const COSTING_DEFAULTS = {
+  DAVIF_PERCENT: 0.0325,       // 3.25% of customs value
+  DAVIF_MINIMUM_ZAR: 125,      // Minimum DAVIF charge in ZAR
+  AGENCY_FEE_PERCENT: 3.5,     // Agency fee as % of (duties + import VAT)
+  AGENCY_FEE_MINIMUM_ZAR: 1187,// Minimum agency fee in ZAR
+  VAT_RATE: 0.15,              // South African import VAT (15%)
+};
+
+/**
  * Calculate DAVIF: 3.25% of customs value, minimum R125
  */
 export const calculateDAVIF = (customsValue) => {
   if (!customsValue || customsValue <= 0) return 0;
-  const percentage = customsValue * 0.0325;
-  return Math.max(percentage, 125);
+  const percentage = customsValue * COSTING_DEFAULTS.DAVIF_PERCENT;
+  return Math.max(percentage, COSTING_DEFAULTS.DAVIF_MINIMUM_ZAR);
 };
 
 /**
@@ -59,7 +71,7 @@ export const calculateDestinationSubtotal = (data) => {
 /**
  * Calculate agency fee: 3.5% of (duties + import VAT), minimum R1187
  */
-export const calculateAgencyFee = (dutiesAndVat, percentage = 3.5, min = 1187) => {
+export const calculateAgencyFee = (dutiesAndVat, percentage = COSTING_DEFAULTS.AGENCY_FEE_PERCENT, min = COSTING_DEFAULTS.AGENCY_FEE_MINIMUM_ZAR) => {
   if (!dutiesAndVat || dutiesAndVat <= 0) return min; // Always charge minimum
   const calculated = dutiesAndVat * (percentage / 100);
   return Math.max(calculated, min);
@@ -92,7 +104,7 @@ export const calculateCustomsItemsTotals = (data) => {
     const customsValue = invoiceValue * roe;
     const duties = customsValue * (dutyPercent / 100);
     const schedule1Duty = customsValue * (dutySchedule1Percent / 100);
-    const vat = (customsValue + duties + schedule1Duty) * 0.15;
+    const vat = (customsValue + duties + schedule1Duty) * COSTING_DEFAULTS.VAT_RATE;
 
     totalCustomsValue += customsValue;
     totalDuties += duties;
@@ -192,8 +204,8 @@ export const calculateAllTotals = (data) => {
   const totalDutiesAndVat = customsItemsTotals.totalDuties + customsItemsTotals.totalSchedule1Duty + importVatZar;
 
   // Agency fee: 3.5% of (duties + Import VAT), min R1187
-  const agencyFeePercent = parseFloat(data.agency_fee_percentage) || 3.5;
-  const agencyFeeMin = parseFloat(data.agency_fee_min) || 1187;
+  const agencyFeePercent = parseFloat(data.agency_fee_percentage) || COSTING_DEFAULTS.AGENCY_FEE_PERCENT;
+  const agencyFeeMin = parseFloat(data.agency_fee_min) || COSTING_DEFAULTS.AGENCY_FEE_MINIMUM_ZAR;
   const agencyFeeZar = calculateAgencyFee(totalDutiesAndVat, agencyFeePercent, agencyFeeMin);
 
   // Customs subtotal from items + declaration + agency (EXCLUDING Import VAT - not charged to clients)
@@ -492,6 +504,7 @@ export const LOAD_TYPES = [
 ];
 
 export default {
+  COSTING_DEFAULTS,
   calculateDAVIF,
   calculateOriginChargeZAR,
   calculateLocalChargesSubtotal,

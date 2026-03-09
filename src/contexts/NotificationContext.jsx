@@ -13,7 +13,7 @@ export function NotificationProvider({ children }) {
   const addNotification = useCallback((type, message, options = {}) => {
     setNotifications(prev => [
       ...prev,
-      { id: Date.now() + Math.random(), type, message, ...options }
+      { id: crypto.randomUUID?.() ?? (Date.now().toString(36) + Math.random().toString(36).substr(2, 9)), type, message, ...options }
     ]);
   }, []);
 

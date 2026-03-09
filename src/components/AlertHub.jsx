@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const SEVERITY_ORDER = { critical: 3, warning: 2, info: 1 };
@@ -49,13 +49,51 @@ export default function AlertHub({
   const [severity, setSeverity] = useState('all'); // all | critical | warning | info
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [tab, setTab] = useState('alerts'); // 'alerts' | 'reminders'
+  const asideRef = useRef(null);
+  const triggerRef = useRef(null);
 
-  React.useEffect(() => {
+  // Focus trap: move focus into dialog on open, trap Tab, restore on close
+  useEffect(() => {
     if (!open) return;
-    const handleKeyDown = (e) => { if (e.key === 'Escape') onClose?.(); };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [open, onClose]);
+    // Remember the element that had focus before the dialog opened
+    triggerRef.current = document.activeElement;
+
+    // Small delay so the aside is rendered before we query focusable elements
+    const raf = requestAnimationFrame(() => {
+      const el = asideRef.current;
+      if (!el) return;
+      const focusable = el.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if (focusable.length > 0) focusable[0].focus();
+    });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      // Restore focus to the element that opened the dialog
+      if (triggerRef.current && typeof triggerRef.current.focus === 'function') {
+        triggerRef.current.focus();
+      }
+    };
+  }, [open]);
+
+  // Keyboard handler: Escape to close + tab trapping
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Escape') { onClose?.(); return; }
+
+    if (e.key === 'Tab') {
+      const el = asideRef.current;
+      if (!el) return;
+      const focusable = el.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    }
+  }, [onClose]);
 
   const filtered = useMemo(() => {
     return alerts
@@ -85,9 +123,11 @@ export default function AlertHub({
 
   return (
     <aside
+      ref={asideRef}
       role="dialog"
       aria-modal="true"
       aria-label="Alert Hub"
+      onKeyDown={handleKeyDown}
       style={{
         position: 'fixed',
         top: 0, right: 0, height: '100vh', width: 420, maxWidth: '95vw',

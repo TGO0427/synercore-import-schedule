@@ -274,6 +274,7 @@ function ShipmentFormModal({ isOpen, onClose, onSubmit, onDelete, initialData, u
                     fontSize: '0.8rem'
                   }}
                   title="Back to dropdown"
+                  aria-label="Back to supplier dropdown"
                 >
                   &#8617;
                 </button>
@@ -443,6 +444,7 @@ function ShipmentFormModal({ isOpen, onClose, onSubmit, onDelete, initialData, u
                     lineHeight: 1
                   }}
                   title="Remove product"
+                  aria-label="Remove product line"
                 >
                   &times;
                 </button>

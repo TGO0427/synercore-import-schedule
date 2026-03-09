@@ -573,6 +573,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                         onClick={(e) => { e.stopPropagation(); copyToClipboard(shipment.orderRef, showSuccess); }}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', fontSize: '0.65rem', color: 'var(--text-500)', opacity: 0.4 }}
                         title="Copy order ref"
+                        aria-label="Copy order reference"
                         onMouseEnter={(e) => e.target.style.opacity = 1}
                         onMouseLeave={(e) => e.target.style.opacity = 0.4}
                       >
