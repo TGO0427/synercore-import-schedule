@@ -6,6 +6,8 @@
 import type { Shipment, ShipmentStatus } from '../types/index.js';
 import { AppError } from '../utils/AppError.ts';
 import { shipmentRepository } from '../db/repositories/index.js';
+import archiveService from '../services/archiveService.js';
+import { getPool, queryAll, queryOne, transaction } from '../db/connection.js';
 
 /**
  * Create shipment request body
@@ -63,6 +65,58 @@ export interface ShipmentFilterParams {
   limit?: number;
   sort?: string;
   search?: string;
+}
+
+/**
+ * Bulk import shipment data (camelCase from frontend/spreadsheet)
+ */
+export interface BulkImportShipment {
+  id?: string;
+  supplier: string;
+  orderRef?: string;
+  finalPod?: string;
+  latestStatus?: string;
+  weekNumber?: number;
+  productName?: string;
+  quantity?: number;
+  cbm?: number;
+  palletQty?: number;
+  receivingWarehouse?: string;
+  notes?: string;
+  forwardingAgent?: string;
+  incoterm?: string;
+  vesselName?: string;
+  selectedWeekDate?: string;
+  updatedAt?: string;
+  reminderDate?: string;
+  reminderNote?: string;
+}
+
+/**
+ * File archive metadata
+ */
+export interface FileArchiveInfo {
+  fileName: string;
+  archivedAt?: string;
+  totalShipments: number;
+}
+
+/**
+ * File archive data (full contents)
+ */
+export interface FileArchiveData {
+  archivedAt: string;
+  totalShipments: number;
+  data: Partial<Shipment>[];
+}
+
+/**
+ * Search result
+ */
+export interface SearchResult {
+  data: any[];
+  total: number;
+  query: string;
 }
 
 /**
@@ -547,6 +601,170 @@ export class ShipmentController {
     } as Partial<Shipment>);
 
     return updated;
+  }
+
+  // ─── File-based archive operations (migrated from shipmentsController.js) ───
+
+  /**
+   * Get list of file-based archives with metadata
+   */
+  static async getFileArchives(): Promise<FileArchiveInfo[]> {
+    const fileNames = await archiveService.getArchivedFiles();
+    const archives = await Promise.all(
+      fileNames.map(async (fileName) => {
+        const stats = await archiveService.getArchivedData(fileName);
+        return {
+          fileName,
+          archivedAt: stats?.archivedAt,
+          totalShipments: stats?.totalShipments || 0
+        };
+      })
+    );
+    return archives;
+  }
+
+  /**
+   * Get specific archive data by filename
+   */
+  static async getFileArchiveData(fileName: string): Promise<FileArchiveData> {
+    const archiveData = await archiveService.getArchivedData(fileName);
+    if (!archiveData) {
+      throw AppError.notFound(`Archive '${fileName}' not found`);
+    }
+    return archiveData;
+  }
+
+  /**
+   * Update archive data
+   */
+  static async updateFileArchive(
+    fileName: string,
+    data: Partial<Shipment>[]
+  ): Promise<{ fileName: string; totalShipments: number }> {
+    if (!data || !Array.isArray(data)) {
+      throw AppError.unprocessable('Invalid data format: expected an array');
+    }
+    return archiveService.updateArchiveData(fileName, data);
+  }
+
+  /**
+   * Rename archive
+   */
+  static async renameFileArchive(
+    fileName: string,
+    newName: string
+  ): Promise<{ oldFileName: string; newFileName: string; customName: string }> {
+    if (!newName || newName.trim() === '') {
+      throw AppError.unprocessable('New name is required');
+    }
+    return archiveService.renameArchiveFile(fileName, newName.trim());
+  }
+
+  // ─── Bulk import (migrated from shipmentsController.js) ───
+
+  /**
+   * Bulk import shipments, skipping duplicates by order_ref.
+   * Runs inside a transaction for atomicity.
+   */
+  static async bulkImport(
+    shipmentsData: BulkImportShipment[]
+  ): Promise<{ imported: number; skipped: number }> {
+    // Filter out empty rows (no supplier)
+    const validData = shipmentsData.filter(s => s.supplier && s.supplier.trim());
+
+    return transaction(async (client) => {
+      // Get existing order_refs to skip duplicates
+      const existingResult = await client.query(
+        'SELECT order_ref FROM shipments WHERE order_ref IS NOT NULL'
+      );
+      const existingRefs = new Set(existingResult.rows.map((r: any) => r.order_ref));
+
+      // Split incoming shipments into new vs duplicates
+      const newShipments = validData.filter(s => !s.orderRef || !existingRefs.has(s.orderRef));
+      const skipped = validData.length - newShipments.length;
+
+      // Insert only new shipments
+      for (const shipment of newShipments) {
+        const id = shipment.id || `ship_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        await client.query(
+          `INSERT INTO shipments (
+            id, supplier, order_ref, final_pod, latest_status, week_number,
+            product_name, quantity, cbm, pallet_qty, receiving_warehouse, notes, updated_at,
+            forwarding_agent, incoterm, vessel_name, selected_week_date,
+            reminder_date, reminder_note
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
+          [
+            id,
+            shipment.supplier,
+            shipment.orderRef || null,
+            shipment.finalPod || null,
+            shipment.latestStatus || null,
+            shipment.weekNumber || null,
+            shipment.productName || null,
+            shipment.quantity || null,
+            shipment.cbm || null,
+            shipment.palletQty || null,
+            shipment.receivingWarehouse || null,
+            shipment.notes || null,
+            shipment.updatedAt || new Date().toISOString(),
+            shipment.forwardingAgent || null,
+            shipment.incoterm || null,
+            shipment.vesselName || null,
+            shipment.selectedWeekDate || null,
+            shipment.reminderDate || null,
+            shipment.reminderNote || null
+          ]
+        );
+      }
+
+      return { imported: newShipments.length, skipped };
+    });
+  }
+
+  // ─── Full-text search (migrated from inline route handler) ───
+
+  /**
+   * Full-text search across shipments using PostgreSQL ts_vector + ILIKE fallback
+   */
+  static async searchShipments(
+    q: string,
+    limit: number = 20,
+    offset: number = 0
+  ): Promise<SearchResult> {
+    if (!q.trim()) {
+      return { data: [], total: 0, query: q };
+    }
+
+    const cappedLimit = Math.min(limit, 100);
+
+    const dataRows = await queryAll(
+      `SELECT *, ts_rank(search_vector, plainto_tsquery('english', $1)) AS rank
+       FROM shipments
+       WHERE search_vector @@ plainto_tsquery('english', $1)
+          OR order_ref ILIKE $2
+          OR supplier ILIKE $2
+          OR product_name ILIKE $2
+          OR vessel_name ILIKE $2
+       ORDER BY rank DESC, updated_at DESC
+       LIMIT $3 OFFSET $4`,
+      [q, `%${q}%`, cappedLimit, offset]
+    );
+
+    const countRow = await queryOne<{ count: string }>(
+      `SELECT COUNT(*) FROM shipments
+       WHERE search_vector @@ plainto_tsquery('english', $1)
+          OR order_ref ILIKE $2
+          OR supplier ILIKE $2
+          OR product_name ILIKE $2
+          OR vessel_name ILIKE $2`,
+      [q, `%${q}%`]
+    );
+
+    return {
+      data: dataRows,
+      total: parseInt(countRow?.count || '0', 10),
+      query: q
+    };
   }
 }
 

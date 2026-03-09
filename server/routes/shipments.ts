@@ -11,9 +11,9 @@ import { requireAdmin } from '../middleware/auth.ts';
 import ShipmentController, {
   type CreateShipmentRequest,
   type UpdateShipmentRequest,
-  type ShipmentFilterParams
+  type ShipmentFilterParams,
+  type BulkImportShipment
 } from '../controllers/ShipmentController.js';
-import { ShipmentsController } from '../controllers/shipmentsController.js';
 import type { BodyRequest } from '../types/api.js';
 import { AuditRepository } from '../db/repositories/AuditRepository.ts';
 
@@ -213,8 +213,8 @@ router.post(
  */
 router.post(
   '/bulk-import',
-  asyncHandler(async (req: Request, res: Response) => {
-    const result = await ShipmentsController.bulkImport(req.body);
+  asyncHandler(async (req: BodyRequest<BulkImportShipment[]>, res: Response) => {
+    const result = await ShipmentController.bulkImport(req.body);
     res.status(200).json({
       success: true,
       message: `Imported ${result.imported} new shipments, skipped ${result.skipped} duplicates`,
@@ -246,9 +246,8 @@ router.get(
 router.get(
   '/archives',
   asyncHandler(async (_req: Request, res: Response) => {
-    // Use the file-based archive system from shipmentsController
-    const { ShipmentsController } = await import('../controllers/shipmentsController.js');
-    await ShipmentsController.getArchives({ params: {}, query: {} } as any, res);
+    const archives = await ShipmentController.getFileArchives();
+    res.json(archives);
   })
 );
 
@@ -259,8 +258,8 @@ router.get(
 router.get(
   '/archives/:fileName',
   asyncHandler(async (req: Request, res: Response) => {
-    const { ShipmentsController } = await import('../controllers/shipmentsController.js');
-    await ShipmentsController.getArchiveData(req, res);
+    const archiveData = await ShipmentController.getFileArchiveData(req.params.fileName!);
+    res.json(archiveData);
   })
 );
 
@@ -271,8 +270,13 @@ router.get(
 router.put(
   '/archives/:fileName',
   asyncHandler(async (req: Request, res: Response) => {
-    const { ShipmentsController } = await import('../controllers/shipmentsController.js');
-    await ShipmentsController.updateArchive(req, res);
+    const result = await ShipmentController.updateFileArchive(req.params.fileName!, req.body.data);
+    res.json({
+      success: true,
+      message: 'Archive updated successfully',
+      fileName: result.fileName,
+      totalShipments: result.totalShipments
+    });
   })
 );
 
@@ -283,8 +287,14 @@ router.put(
 router.put(
   '/archives/:fileName/rename',
   asyncHandler(async (req: Request, res: Response) => {
-    const { ShipmentsController } = await import('../controllers/shipmentsController.js');
-    await ShipmentsController.renameArchive(req, res);
+    const result = await ShipmentController.renameFileArchive(req.params.fileName!, req.body.newName);
+    res.json({
+      success: true,
+      message: 'Archive renamed successfully',
+      oldFileName: result.oldFileName,
+      newFileName: result.newFileName,
+      customName: result.customName
+    });
   })
 );
 
@@ -308,44 +318,11 @@ router.get(
   '/search',
   asyncHandler(async (req: Request, res: Response) => {
     const q = (req.query.q as string || '').trim();
-    if (!q) {
-      return res.json({ data: [], total: 0 });
-    }
-
-    const limit = Math.min(parseInt(req.query.limit as string, 10) || 20, 100);
+    const limit = parseInt(req.query.limit as string, 10) || 20;
     const offset = parseInt(req.query.offset as string, 10) || 0;
 
-    // Use plainto_tsquery for user-friendly input (no special syntax required)
-    const pool = (await import('../db/connection.js')).default;
-
-    const result = await pool.query(
-      `SELECT *, ts_rank(search_vector, plainto_tsquery('english', $1)) AS rank
-       FROM shipments
-       WHERE search_vector @@ plainto_tsquery('english', $1)
-          OR order_ref ILIKE $2
-          OR supplier ILIKE $2
-          OR product_name ILIKE $2
-          OR vessel_name ILIKE $2
-       ORDER BY rank DESC, updated_at DESC
-       LIMIT $3 OFFSET $4`,
-      [q, `%${q}%`, limit, offset]
-    );
-
-    const countResult = await pool.query(
-      `SELECT COUNT(*) FROM shipments
-       WHERE search_vector @@ plainto_tsquery('english', $1)
-          OR order_ref ILIKE $2
-          OR supplier ILIKE $2
-          OR product_name ILIKE $2
-          OR vessel_name ILIKE $2`,
-      [q, `%${q}%`]
-    );
-
-    res.json({
-      data: result.rows,
-      total: parseInt(countResult.rows[0].count, 10),
-      query: q
-    });
+    const result = await ShipmentController.searchShipments(q, limit, offset);
+    res.json(result);
   })
 );
 

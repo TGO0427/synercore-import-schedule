@@ -1,3 +1,35 @@
+/**
+ * @deprecated This controller is being phased out in favor of server/controllers/ShipmentController.ts.
+ * The TS controller uses the repository pattern with proper error handling.
+ *
+ * Methods already migrated to ShipmentController.ts:
+ *   - getAllShipments      → getShipments
+ *   - getShipmentById      → getShipment
+ *   - createShipment       → createShipment
+ *   - updateShipment       → updateShipment
+ *   - deleteShipment       → deleteShipment
+ *   - getShipmentsByStatus → getShipmentsByStatus
+ *   - getPostArrivalShipments → getPostArrivalShipments
+ *   - getArchives          → getFileArchives
+ *   - getArchiveData       → getFileArchiveData
+ *   - updateArchive        → updateFileArchive
+ *   - renameArchive        → renameFileArchive
+ *   - bulkImport           → bulkImport
+ *   - startUnloading / completeUnloading / startInspection / etc. → (TS equivalents)
+ *
+ * Methods NOT yet migrated (still used elsewhere or have extra functionality):
+ *   - getDelayedShipments
+ *   - getAutoArchiveStats
+ *   - performAutoArchive
+ *   - performManualArchive
+ *   - markAsStored
+ *   - rejectShipment
+ *   - completeReceiving (JS version has discrepancy handling)
+ *   - startUnloading (JS version sends email notifications)
+ *   - completeInspection (JS version sends email notifications)
+ *
+ * DO NOT add new methods here. Add them to ShipmentController.ts instead.
+ */
 import { Shipment, ShipmentStatus, DELAYED_STATUSES } from '../../src/types/shipment.js';
 import archiveService from '../services/archiveService.js';
 import db from '../db/connection.js';
