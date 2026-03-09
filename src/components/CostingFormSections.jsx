@@ -96,7 +96,6 @@ function CostingFormSections({
   calculatedTotals,
   editingId,
   suppliers,
-  exchangeRate,
   onInputChange,
   onAddProduct,
   onRemoveProduct,

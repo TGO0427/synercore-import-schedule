@@ -16,7 +16,7 @@ import { copyToClipboard } from '../utils/clipboard';
 import { useNotification } from '../contexts/NotificationContext';
 
 function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreateShipment, loading, globalSearchTerm, onClearGlobalSearch }) {
-  const { showSuccess, showError, showWarning, confirm: confirmAction } = useNotification();
+  const { showSuccess, showError } = useNotification();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState(['all']);
   const [sortConfig, setSortConfig] = useState({ key: 'weekNumber', direction: 'asc' });
