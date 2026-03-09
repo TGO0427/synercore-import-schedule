@@ -49,12 +49,21 @@ function dbRowToShipment(row) {
   };
 }
 
+// Explicit column list for shipments table (avoids SELECT *)
+const SHIPMENT_COLUMNS = `id, supplier, order_ref, final_pod, latest_status, week_number,
+  product_name, quantity, cbm, pallet_qty, receiving_warehouse, notes, updated_at,
+  forwarding_agent, incoterm, vessel_name, selected_week_date, created_at,
+  unloading_start_date, unloading_completed_date, inspection_date, inspection_status,
+  inspection_notes, inspected_by, receiving_date, receiving_status, receiving_notes,
+  received_by, received_quantity, discrepancies, rejection_date, rejection_reason,
+  rejected_by, reminder_date, reminder_note`;
+
 export class ShipmentsController {
   static async getAllShipments(req, res) {
     try {
       const { sortBy = 'updated_at', order = 'asc', status, search } = req.query;
 
-      let query = 'SELECT * FROM shipments WHERE 1=1';
+      let query = `SELECT ${SHIPMENT_COLUMNS} FROM shipments WHERE 1=1`;
       const params = [];
 
       if (status) {
@@ -111,7 +120,7 @@ export class ShipmentsController {
 
   static async getShipmentById(req, res) {
     try {
-      const result = await db.query('SELECT * FROM shipments WHERE id = $1', [req.params.id]);
+      const result = await db.query(`SELECT ${SHIPMENT_COLUMNS} FROM shipments WHERE id = $1`, [req.params.id]);
       if (result.rows.length === 0) {
         throw Errors.NotFound('Shipment');
       }
@@ -156,7 +165,7 @@ export class ShipmentsController {
         ]
       );
 
-      const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      const result = await db.query(`SELECT ${SHIPMENT_COLUMNS} FROM shipments WHERE id = $1`, [id]);
       res.status(201).json(dbRowToShipment(result.rows[0]));
     } catch (error) {
       sendError(res, error instanceof AppError ? error : Errors.DatabaseError('shipment creation'), 'createShipment');
@@ -213,7 +222,7 @@ export class ShipmentsController {
         ]
       );
 
-      const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      const result = await db.query(`SELECT ${SHIPMENT_COLUMNS} FROM shipments WHERE id = $1`, [id]);
       if (result.rows.length === 0) {
         throw Errors.NotFound('Shipment');
       }
@@ -239,7 +248,7 @@ export class ShipmentsController {
   static async getShipmentsByStatus(req, res) {
     try {
       const { status } = req.params;
-      const result = await db.query('SELECT * FROM shipments WHERE latest_status = $1', [status]);
+      const result = await db.query(`SELECT ${SHIPMENT_COLUMNS} FROM shipments WHERE latest_status = $1`, [status]);
       res.json(result.rows.map(dbRowToShipment));
     } catch (error) {
       sendError(res, Errors.DatabaseError('shipment retrieval'), 'getShipmentsByStatus');
@@ -249,7 +258,7 @@ export class ShipmentsController {
   static async getDelayedShipments(req, res) {
     try {
       const placeholders = DELAYED_STATUSES.map((_, i) => `$${i + 1}`).join(',');
-      const result = await db.query(`SELECT * FROM shipments WHERE latest_status IN (${placeholders})`, DELAYED_STATUSES);
+      const result = await db.query(`SELECT ${SHIPMENT_COLUMNS} FROM shipments WHERE latest_status IN (${placeholders})`, DELAYED_STATUSES);
       res.json(result.rows.map(dbRowToShipment));
     } catch (error) {
       sendError(res, Errors.DatabaseError('shipment retrieval'), 'getDelayedShipments');
@@ -366,7 +375,7 @@ export class ShipmentsController {
   static async getAutoArchiveStats(req, res) {
     try {
       const { daysOld = 30 } = req.query;
-      const result = await db.query('SELECT * FROM shipments');
+      const result = await db.query(`SELECT ${SHIPMENT_COLUMNS} FROM shipments`);
       const shipments = result.rows.map(dbRowToShipment);
       const stats = archiveService.getAutoArchiveStats(shipments, parseInt(daysOld));
       res.json(stats);
@@ -383,7 +392,7 @@ export class ShipmentsController {
 
       const { daysOld = 30 } = req.body;
 
-      const result = await client.query('SELECT * FROM shipments');
+      const result = await client.query(`SELECT ${SHIPMENT_COLUMNS} FROM shipments`);
       const allShipments = result.rows.map(dbRowToShipment);
 
       const archiveResult = await archiveService.archiveOldArrivedShipments(allShipments, parseInt(daysOld));
@@ -478,7 +487,7 @@ export class ShipmentsController {
 
       // Find shipments to archive
       const result = await client.query(
-        `SELECT * FROM shipments WHERE id = ANY($1::text[]) AND latest_status IN ('arrived_pta', 'arrived_klm', 'arrived_offsite', 'stored')`,
+        `SELECT ${SHIPMENT_COLUMNS} FROM shipments WHERE id = ANY($1::text[]) AND latest_status IN ('arrived_pta', 'arrived_klm', 'arrived_offsite', 'stored')`,
         [shipmentIds]
       );
       const shipmentsToArchive = result.rows.map(dbRowToShipment);
@@ -529,7 +538,7 @@ export class ShipmentsController {
         [id]
       );
 
-      const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      const result = await db.query(`SELECT ${SHIPMENT_COLUMNS} FROM shipments WHERE id = $1`, [id]);
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Shipment not found or not in ARRIVED status' });
       }
@@ -568,7 +577,7 @@ export class ShipmentsController {
         [id]
       );
 
-      const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      const result = await db.query(`SELECT ${SHIPMENT_COLUMNS} FROM shipments WHERE id = $1`, [id]);
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Shipment not found or not in UNLOADING status' });
       }
@@ -596,7 +605,7 @@ export class ShipmentsController {
         [id, inspectedBy || '']
       );
 
-      const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      const result = await db.query(`SELECT ${SHIPMENT_COLUMNS} FROM shipments WHERE id = $1`, [id]);
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Shipment not found or not in INSPECTION_PENDING status' });
       }
@@ -624,7 +633,7 @@ export class ShipmentsController {
         [id, passed ? 'passed' : 'failed', passed ? 'inspection_passed' : 'inspection_failed', notes || '', inspectedBy]
       );
 
-      const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      const result = await db.query(`SELECT ${SHIPMENT_COLUMNS} FROM shipments WHERE id = $1`, [id]);
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Shipment not found or not in INSPECTING status' });
       }
@@ -669,7 +678,7 @@ export class ShipmentsController {
         [id, receivedBy || '']
       );
 
-      const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      const result = await db.query(`SELECT ${SHIPMENT_COLUMNS} FROM shipments WHERE id = $1`, [id]);
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Shipment not found or inspection not passed' });
       }
@@ -687,7 +696,7 @@ export class ShipmentsController {
       const { receivedQuantity, notes, receivedBy, discrepancies } = req.body;
 
       // Get current shipment to compare quantity
-      const current = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      const current = await db.query(`SELECT ${SHIPMENT_COLUMNS} FROM shipments WHERE id = $1`, [id]);
       if (current.rows.length === 0) {
         return res.status(404).json({ error: 'Shipment not found' });
       }
@@ -719,7 +728,7 @@ export class ShipmentsController {
         [id, receivedQuantity, notes || '', JSON.stringify(discrepancies || []), receivedBy, receivingStatus, latestStatus]
       );
 
-      const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      const result = await db.query(`SELECT ${SHIPMENT_COLUMNS} FROM shipments WHERE id = $1`, [id]);
       res.json(dbRowToShipment(result.rows[0]));
     } catch (error) {
       console.error('Error completing receiving:', error);
@@ -739,7 +748,7 @@ export class ShipmentsController {
         [id]
       );
 
-      const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      const result = await db.query(`SELECT ${SHIPMENT_COLUMNS} FROM shipments WHERE id = $1`, [id]);
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Shipment not found or not in RECEIVED status' });
       }
@@ -759,7 +768,7 @@ export class ShipmentsController {
       ];
 
       const result = await db.query(
-        `SELECT * FROM shipments WHERE latest_status = ANY($1::text[])`,
+        `SELECT ${SHIPMENT_COLUMNS} FROM shipments WHERE latest_status = ANY($1::text[])`,
         [postArrivalStates]
       );
 
@@ -780,7 +789,7 @@ export class ShipmentsController {
       }
 
       // Get current shipment
-      const current = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+      const current = await db.query(`SELECT ${SHIPMENT_COLUMNS} FROM shipments WHERE id = $1`, [id]);
       if (current.rows.length === 0) {
         return res.status(404).json({ error: 'Shipment not found' });
       }
@@ -845,7 +854,7 @@ export class ShipmentsController {
           [id, rejectionReason.trim(), rejectedBy || 'Unknown']
         );
 
-        const result = await db.query('SELECT * FROM shipments WHERE id = $1', [id]);
+        const result = await db.query(`SELECT ${SHIPMENT_COLUMNS} FROM shipments WHERE id = $1`, [id]);
         res.json({
           success: true,
           message: 'Shipment rejected successfully',

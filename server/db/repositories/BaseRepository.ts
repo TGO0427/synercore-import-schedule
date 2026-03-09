@@ -71,16 +71,27 @@ export abstract class BaseRepository<T extends { id: string }> {
       }
     }
 
-    // Apply sorting
+    // Apply sorting (validated against column whitelist)
     if (options?.sort) {
-      sql += ` ORDER BY ${options.sort.field} ${options.sort.direction}`;
+      const sortField = options.sort.field;
+      const sortDirection = options.sort.direction?.toUpperCase();
+      if (!this.columns.includes(sortField)) {
+        throw new Error(`Invalid sort field: ${sortField}`);
+      }
+      if (sortDirection !== 'ASC' && sortDirection !== 'DESC') {
+        throw new Error(`Invalid sort direction: ${sortDirection}`);
+      }
+      sql += ` ORDER BY ${sortField} ${sortDirection}`;
     }
 
-    // Apply pagination
+    // Apply pagination (parameterized)
     if (options?.pagination) {
       const limit = options.pagination.limit || 20;
       const offset = options.pagination.offset || ((options.pagination.page || 1) - 1) * limit;
-      sql += ` LIMIT ${limit} OFFSET ${offset}`;
+      const limitIdx = params.length + 1;
+      const offsetIdx = params.length + 2;
+      sql += ` LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
+      params.push(limit, offset);
     }
 
     return queryAll<T>(sql, params.length > 0 ? params : undefined);

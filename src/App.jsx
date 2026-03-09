@@ -552,69 +552,75 @@ function App() {
           <Routes>
             <Route path="/shipping" element={
               <Suspense fallback={<PageLoader />}>
-                <ShippingView
-                  shipments={shipments}
-                  onFileUpload={async (file) => {
-                    await handleFileUpload(file, handleAddSupplier);
-                    await fetchSuppliers();
-                  }}
-                  onUpdateShipment={handleUpdateShipment}
-                  onDeleteShipment={handleDeleteShipment}
-                  onCreateShipment={handleCreateShipment}
-                  loading={loading}
-                />
+                <ErrorBoundary>
+                  <ShippingView
+                    shipments={shipments}
+                    onFileUpload={async (file) => {
+                      await handleFileUpload(file, handleAddSupplier);
+                      await fetchSuppliers();
+                    }}
+                    onUpdateShipment={handleUpdateShipment}
+                    onDeleteShipment={handleDeleteShipment}
+                    onCreateShipment={handleCreateShipment}
+                    loading={loading}
+                  />
+                </ErrorBoundary>
               </Suspense>
             } />
             <Route path="/dashboard" element={
               <Suspense fallback={<PageLoader />}>
-                <Dashboard shipments={shipments} onOpenLiveBoard={() => setLiveBoardOpen(true)} />
+                <ErrorBoundary>
+                  <Dashboard shipments={shipments} onOpenLiveBoard={() => setLiveBoardOpen(true)} />
+                </ErrorBoundary>
               </Suspense>
             } />
             <Route path="/suppliers" element={
               <Suspense fallback={<PageLoader />}>
-                <SupplierManagement
-                  suppliers={suppliers}
-                  shipments={shipments}
-                  onAddSupplier={handleAddSupplier}
-                  onUpdateSupplier={handleUpdateSupplier}
-                  onDeleteSupplier={handleDeleteSupplier}
-                  onImportSchedule={handleImportSchedule}
-                  loading={loading}
-                />
+                <ErrorBoundary>
+                  <SupplierManagement
+                    suppliers={suppliers}
+                    shipments={shipments}
+                    onAddSupplier={handleAddSupplier}
+                    onUpdateSupplier={handleUpdateSupplier}
+                    onDeleteSupplier={handleDeleteSupplier}
+                    onImportSchedule={handleImportSchedule}
+                    loading={loading}
+                  />
+                </ErrorBoundary>
               </Suspense>
             } />
             <Route path="/workflow" element={
-              <Suspense fallback={<PageLoader />}><PostArrivalWorkflow /></Suspense>
+              <Suspense fallback={<PageLoader />}><ErrorBoundary><PostArrivalWorkflow /></ErrorBoundary></Suspense>
             } />
             <Route path="/capacity" element={
-              <Suspense fallback={<PageLoader />}><WarehouseCapacity shipments={shipments} /></Suspense>
+              <Suspense fallback={<PageLoader />}><ErrorBoundary><WarehouseCapacity shipments={shipments} /></ErrorBoundary></Suspense>
             } />
             <Route path="/stored" element={
-              <Suspense fallback={<PageLoader />}><StoredWrapper /></Suspense>
+              <Suspense fallback={<PageLoader />}><ErrorBoundary><StoredWrapper /></ErrorBoundary></Suspense>
             } />
             <Route path="/archives" element={
-              <Suspense fallback={<PageLoader />}><ArchiveView /></Suspense>
+              <Suspense fallback={<PageLoader />}><ErrorBoundary><ArchiveView /></ErrorBoundary></Suspense>
             } />
             <Route path="/rates" element={
-              <Suspense fallback={<PageLoader />}><RatesQuotes loading={loading} /></Suspense>
+              <Suspense fallback={<PageLoader />}><ErrorBoundary><RatesQuotes loading={loading} /></ErrorBoundary></Suspense>
             } />
             <Route path="/costing" element={
-              <Suspense fallback={<PageLoader />}><ImportCosting /></Suspense>
+              <Suspense fallback={<PageLoader />}><ErrorBoundary><ImportCosting /></ErrorBoundary></Suspense>
             } />
             <Route path="/costing-requests" element={
-              <Suspense fallback={<PageLoader />}>{isAdmin ? <CostingRequests /> : <AccessDenied />}</Suspense>
+              <Suspense fallback={<PageLoader />}><ErrorBoundary>{isAdmin ? <CostingRequests /> : <AccessDenied />}</ErrorBoundary></Suspense>
             } />
             <Route path="/reports" element={
-              <Suspense fallback={<PageLoader />}><ReportsView shipments={shipments} /></Suspense>
+              <Suspense fallback={<PageLoader />}><ErrorBoundary><ReportsView shipments={shipments} /></ErrorBoundary></Suspense>
             } />
             <Route path="/advanced-reports" element={
-              <Suspense fallback={<PageLoader />}><AdvancedReports /></Suspense>
+              <Suspense fallback={<PageLoader />}><ErrorBoundary><AdvancedReports /></ErrorBoundary></Suspense>
             } />
             <Route path="/users" element={
-              <Suspense fallback={<PageLoader />}>{isAdmin ? <UserManagement /> : <AccessDenied />}</Suspense>
+              <Suspense fallback={<PageLoader />}><ErrorBoundary>{isAdmin ? <UserManagement /> : <AccessDenied />}</ErrorBoundary></Suspense>
             } />
             <Route path="/audit" element={
-              <Suspense fallback={<PageLoader />}>{isAdmin ? <AuditLog /> : <AccessDenied />}</Suspense>
+              <Suspense fallback={<PageLoader />}><ErrorBoundary>{isAdmin ? <AuditLog /> : <AccessDenied />}</ErrorBoundary></Suspense>
             } />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

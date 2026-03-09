@@ -55,7 +55,7 @@ router.get('/history', asyncHandler(async (req: TypedAuthenticatedRequest, res: 
 
   const { limit = '50', offset = '0', eventType = null } = req.query;
 
-  let query = 'SELECT * FROM notification_log WHERE user_id = $1';
+  let query = 'SELECT id, user_id, event_type, shipment_id, subject, message, status, delivery_method, sent_at, error_message FROM notification_log WHERE user_id = $1';
   const params: any[] = [req.user.id];
 
   if (eventType) {
@@ -97,7 +97,7 @@ router.get('/history/:id', asyncHandler(async (req: TypedAuthenticatedRequest, r
   }
 
   const result = await db.query<any>(
-    'SELECT * FROM notification_log WHERE id = $1 AND user_id = $2',
+    'SELECT id, user_id, event_type, shipment_id, subject, message, status, delivery_method, sent_at, error_message FROM notification_log WHERE id = $1 AND user_id = $2',
     [req.params.id, req.user.id]
   );
 

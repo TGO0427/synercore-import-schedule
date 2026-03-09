@@ -17,6 +17,7 @@ import {
   validateLogin,
   validateChangePassword
 } from '../middleware/validation.js';
+import { requireAdmin } from '../middleware/auth.ts';
 
 const router = Router();
 
@@ -248,9 +249,9 @@ router.post('/login', validateLogin, async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
-    // Find user
+    // Find user (include password_hash for authentication)
     const result = await pool.query(
-      'SELECT * FROM users WHERE username = $1',
+      'SELECT id, username, email, full_name, role, is_active, password_hash FROM users WHERE username = $1',
       [username]
     );
 
@@ -342,13 +343,8 @@ router.get('/me', authenticateToken, async (req: Request, res: Response) => {
 });
 
 // POST /api/auth/admin/create-user - Create user (admin only)
-router.post('/admin/create-user', authenticateToken, validateRegister, async (req: Request, res: Response) => {
+router.post('/admin/create-user', authenticateToken, requireAdmin, validateRegister, async (req: Request, res: Response) => {
   try {
-    // Check if requester is admin
-    if ((req as any).user.role !== 'admin') {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
     const { username, email, password, fullName, role = 'user' } = req.body;
 
     if (!username || !password) {
@@ -397,13 +393,8 @@ router.post('/admin/create-user', authenticateToken, validateRegister, async (re
 });
 
 // GET /api/auth/admin/users - List all users (admin only)
-router.get('/admin/users', authenticateToken, async (req: Request, res: Response) => {
+router.get('/admin/users', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
   try {
-    // Check if requester is admin
-    if ((req as any).user.role !== 'admin') {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
     const result = await pool.query(
       'SELECT id, username, email, full_name, role, is_active, created_at FROM users ORDER BY created_at DESC'
     );
@@ -424,13 +415,8 @@ router.get('/admin/users', authenticateToken, async (req: Request, res: Response
 });
 
 // PUT /api/auth/admin/users/:id - Update user (admin only)
-router.put('/admin/users/:id', authenticateToken, validateUserUpdate, async (req: Request, res: Response) => {
+router.put('/admin/users/:id', authenticateToken, requireAdmin, validateUserUpdate, async (req: Request, res: Response) => {
   try {
-    // Check if requester is admin
-    if ((req as any).user.role !== 'admin') {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
     const { id } = req.params;
     const { username, email, fullName, role, isActive } = req.body;
 
@@ -489,13 +475,8 @@ router.put('/admin/users/:id', authenticateToken, validateUserUpdate, async (req
 });
 
 // POST /api/auth/admin/users/:id/reset-password - Reset user password (admin only)
-router.post('/admin/users/:id/reset-password', authenticateToken, validateResetPassword, async (req: Request, res: Response) => {
+router.post('/admin/users/:id/reset-password', authenticateToken, requireAdmin, validateResetPassword, async (req: Request, res: Response) => {
   try {
-    // Check if requester is admin
-    if ((req as any).user.role !== 'admin') {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
     const { id } = req.params;
     const { newPassword } = req.body;
 
@@ -535,13 +516,8 @@ router.post('/admin/users/:id/reset-password', authenticateToken, validateResetP
 });
 
 // DELETE /api/auth/admin/users/:id - Delete user (admin only)
-router.delete('/admin/users/:id', authenticateToken, validateId, async (req: Request, res: Response) => {
+router.delete('/admin/users/:id', authenticateToken, requireAdmin, validateId, async (req: Request, res: Response) => {
   try {
-    // Check if requester is admin
-    if ((req as any).user.role !== 'admin') {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
     const { id } = req.params;
 
     // Prevent admin from deleting themselves

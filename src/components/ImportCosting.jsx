@@ -116,7 +116,7 @@ const INITIAL_FORM_STATE = {
   jnb_turn_in_zar: 0,
   // Products - each product in the container
   products: [
-    { name: '', hs_code: '', pack_size: '', pack_type: '', weight_kg: 0, rate_per_kg: 0, duty_percent: 0, duty_schedule1_percent: 0, currency: 'USD', invoice_value: 0 }
+    { _id: Date.now(), name: '', hs_code: '', pack_size: '', pack_type: '', weight_kg: 0, rate_per_kg: 0, duty_percent: 0, duty_schedule1_percent: 0, currency: 'USD', invoice_value: 0 }
   ],
   // Customs & Duties
   roe_customs: '',  // ROE for customs calculation
@@ -458,7 +458,7 @@ function ImportCosting() {
       ...prev,
       products: [
         ...prev.products,
-        { name: '', hs_code: '', pack_size: '', pack_type: '', weight_kg: 0, rate_per_kg: 0, duty_percent: 0, duty_schedule1_percent: 0, currency: 'USD', invoice_value: 0 }
+        { _id: Date.now() + Math.random(), name: '', hs_code: '', pack_size: '', pack_type: '', weight_kg: 0, rate_per_kg: 0, duty_percent: 0, duty_schedule1_percent: 0, currency: 'USD', invoice_value: 0 }
       ]
     }));
   };
@@ -1213,7 +1213,7 @@ function ImportCosting() {
                         const productWeight = parseFloat(product.weight_kg) || 0;
                         const weightPercent = totalWeight > 0 ? (productWeight / totalWeight * 100) : 0;
                         return (
-                          <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#fffbeb' : '#fef3c7' }}>
+                          <tr key={product._id || index} style={{ backgroundColor: index % 2 === 0 ? '#fffbeb' : '#fef3c7' }}>
                             <td style={{ padding: '6px 8px' }}>
                               <input
                                 type="text"
@@ -1591,7 +1591,7 @@ function ImportCosting() {
                           const customs = calculateProductCustomsValues(product);
                           const productWeight = parseFloat(product.weight_kg) || 0;
                           return (
-                            <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#ecfdf5' : '#d1fae5' }}>
+                            <tr key={product._id || index} style={{ backgroundColor: index % 2 === 0 ? '#ecfdf5' : '#d1fae5' }}>
                               <td style={{ padding: '8px', fontWeight: '500', color: '#065f46' }}>
                                 {product.name || `Product ${index + 1}`}
                               </td>
@@ -1790,7 +1790,7 @@ function ImportCosting() {
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             {products.map((p, idx) => (
-                              <div key={idx} style={{
+                              <div key={p._id || p.name || idx} style={{
                                 padding: '6px 8px',
                                 backgroundColor: '#fef3c7',
                                 borderRadius: '4px',

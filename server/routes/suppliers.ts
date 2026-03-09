@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { body, validationResult } from 'express-validator';
 import db from '../db/connection.ts';
 import { validateSupplierCreate, validateSupplierUpdate, validateId, validate } from '../middleware/validation.js';
+import { requireAdmin } from '../middleware/auth.ts';
 import { AuditRepository } from '../db/repositories/AuditRepository.ts';
 
 const router = Router();
@@ -111,7 +112,7 @@ function dbRowToSupplier(row: SupplierRow | null | undefined): Supplier | null {
 // GET /api/suppliers - Get all suppliers
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const result = await db.query('SELECT * FROM suppliers ORDER BY name');
+    const result = await db.query('SELECT id, name, contact_person, email, phone, address, country, notes, created_at, updated_at FROM suppliers ORDER BY name');
     res.json(result.rows.map((row: SupplierRow) => dbRowToSupplier(row)));
   } catch (error) {
     console.error('Error reading suppliers:', error);
@@ -122,7 +123,7 @@ router.get('/', async (req: Request, res: Response) => {
 // GET /api/suppliers/:id - Get specific supplier
 router.get('/:id', validateId, async (req: Request, res: Response) => {
   try {
-    const result = await db.query('SELECT * FROM suppliers WHERE id = $1', [req.params.id]);
+    const result = await db.query('SELECT id, name, contact_person, email, phone, address, country, notes, created_at, updated_at FROM suppliers WHERE id = $1', [req.params.id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Supplier not found' });
@@ -171,7 +172,7 @@ const supplierUpdateValidators = [
 ];
 
 // POST /api/suppliers - Create new supplier
-router.post('/', validateSupplierCreate, ...supplierCreateValidators, async (req: Request, res: Response) => {
+router.post('/', requireAdmin, validateSupplierCreate, ...supplierCreateValidators, async (req: Request, res: Response) => {
   try {
     if (!handleSupplierValidationErrors(req, res)) return;
 
@@ -181,7 +182,7 @@ router.post('/', validateSupplierCreate, ...supplierCreateValidators, async (req
       `INSERT INTO suppliers (id, name, contact_person, email, phone, address, country, notes)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        ON CONFLICT (name) DO NOTHING
-       RETURNING *`,
+       RETURNING id, name, contact_person, email, phone, address, country, notes, created_at, updated_at`,
       [
         id,
         req.body.name,
@@ -197,7 +198,7 @@ router.post('/', validateSupplierCreate, ...supplierCreateValidators, async (req
     // If supplier already existed, fetch it
     const result = insertResult.rows.length > 0
       ? insertResult
-      : await db.query('SELECT * FROM suppliers WHERE name = $1', [req.body.name]);
+      : await db.query('SELECT id, name, contact_person, email, phone, address, country, notes, created_at, updated_at FROM suppliers WHERE name = $1', [req.body.name]);
     const supplier = dbRowToSupplier(result.rows[0] as SupplierRow);
 
     const user = (req as any).user;
@@ -213,7 +214,7 @@ router.post('/', validateSupplierCreate, ...supplierCreateValidators, async (req
 });
 
 // PUT /api/suppliers/:id - Update supplier
-router.put('/:id', validateSupplierUpdate, ...supplierUpdateValidators, async (req: Request, res: Response) => {
+router.put('/:id', requireAdmin, validateSupplierUpdate, ...supplierUpdateValidators, async (req: Request, res: Response) => {
   try {
     if (!handleSupplierValidationErrors(req, res)) return;
 
@@ -240,7 +241,7 @@ router.put('/:id', validateSupplierUpdate, ...supplierUpdateValidators, async (r
       ]
     );
 
-    const result = await db.query('SELECT * FROM suppliers WHERE id = $1', [req.params.id]);
+    const result = await db.query('SELECT id, name, contact_person, email, phone, address, country, notes, created_at, updated_at FROM suppliers WHERE id = $1', [req.params.id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Supplier not found' });
     }
@@ -260,7 +261,7 @@ router.put('/:id', validateSupplierUpdate, ...supplierUpdateValidators, async (r
 });
 
 // DELETE /api/suppliers/:id - Delete supplier
-router.delete('/:id', validateId, async (req: Request, res: Response) => {
+router.delete('/:id', requireAdmin, validateId, async (req: Request, res: Response) => {
   try {
     const result = await db.query('DELETE FROM suppliers WHERE id = $1 RETURNING id, name', [req.params.id]);
 
@@ -281,7 +282,7 @@ router.delete('/:id', validateId, async (req: Request, res: Response) => {
 });
 
 // POST /api/suppliers/:id/import - Import schedule for specific supplier
-router.post('/:id/import', async (req: Request, res: Response) => {
+router.post('/:id/import', requireAdmin, async (req: Request, res: Response) => {
   try {
     const { scheduleData, documents = [] }: { scheduleData: ScheduleItem[]; documents: any[] } = req.body;
 
@@ -290,7 +291,7 @@ router.post('/:id/import', async (req: Request, res: Response) => {
     }
 
     // Get supplier info
-    const result = await db.query('SELECT * FROM suppliers WHERE id = $1', [req.params.id]);
+    const result = await db.query('SELECT id, name, contact_person, email, phone, address, country, notes, created_at, updated_at FROM suppliers WHERE id = $1', [req.params.id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Supplier not found' });
@@ -393,7 +394,7 @@ router.get('/:id/documents/:filename', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/suppliers/:id/documents/:filename - Delete specific document
-router.delete('/:id/documents/:filename', async (req: Request, res: Response) => {
+router.delete('/:id/documents/:filename', requireAdmin, async (req: Request, res: Response) => {
   try {
     const { id: supplierId, filename } = req.params;
     const baseDir: string = path.resolve(DOCUMENTS_DIR, supplierId);
@@ -420,7 +421,7 @@ router.delete('/:id/documents/:filename', async (req: Request, res: Response) =>
 });
 
 // PUT /api/suppliers/:id/documents/:filename/rename - Rename specific document
-router.put('/:id/documents/:filename/rename', async (req: Request, res: Response) => {
+router.put('/:id/documents/:filename/rename', requireAdmin, async (req: Request, res: Response) => {
   try {
     const { id: supplierId, filename } = req.params;
     const { newName }: { newName: string } = req.body;
@@ -558,7 +559,7 @@ router.get('/:id/metrics', validateId, async (req: Request, res: Response) => {
     const { id } = req.params;
 
     // Fetch supplier
-    const supplierResult = await db.query('SELECT * FROM suppliers WHERE id = $1', [id]);
+    const supplierResult = await db.query('SELECT id, name, contact_person, email, phone, address, country, notes, created_at, updated_at FROM suppliers WHERE id = $1', [id]);
     if (supplierResult.rows.length === 0) {
       return res.status(404).json({ error: 'Supplier not found' });
     }
@@ -567,7 +568,7 @@ router.get('/:id/metrics', validateId, async (req: Request, res: Response) => {
 
     // Fetch shipments for this supplier
     const shipmentsResult = await db.query(
-      'SELECT * FROM shipments WHERE LOWER(supplier) = LOWER($1)',
+      'SELECT id, latest_status, inspection_date, inspection_status, receiving_date, week_number, selected_week_date, quantity FROM shipments WHERE LOWER(supplier) = LOWER($1)',
       [supplier.name]
     );
     const shipments: any[] = shipmentsResult.rows;

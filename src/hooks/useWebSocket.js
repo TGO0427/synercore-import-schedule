@@ -22,12 +22,10 @@ export function useWebSocket() {
   // Initialize WebSocket on mount
   useEffect(() => {
     const handleConnect = () => {
-      console.log('[useWebSocket] Connected to server');
       setIsConnected(true);
     };
 
     const handleDisconnect = () => {
-      console.log('[useWebSocket] Disconnected from server');
       setIsConnected(false);
     };
 
@@ -54,7 +52,6 @@ export function useWebSocket() {
     socketClient.emit('join:shipment', { shipmentId }, (response) => {
       if (response?.shipmentId) {
         setActiveShipments(prev => new Set(prev).add(shipmentId));
-        console.log(`[useWebSocket] Joined shipment ${shipmentId}`);
       }
     });
   }, []);
@@ -72,7 +69,6 @@ export function useWebSocket() {
       updated.delete(shipmentId);
       return updated;
     });
-    console.log(`[useWebSocket] Left shipment ${shipmentId}`);
   }, []);
 
   /**

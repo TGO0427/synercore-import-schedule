@@ -58,7 +58,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
         const result = await res.json();
         setAnnouncements(result.data || []);
       }
-    } catch {}
+    } catch (err) { console.error('Failed to fetch announcements:', err); }
   }, []);
 
   const saveAnnouncement = async () => {
@@ -77,7 +77,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
         setEditingAnnId(null);
         fetchAnnouncements();
       }
-    } catch {}
+    } catch (err) { console.error('Failed to save announcement:', err); }
   };
 
   const toggleAnnouncement = async (id, active) => {
@@ -88,14 +88,14 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
         body: JSON.stringify({ active: !active }),
       });
       fetchAnnouncements();
-    } catch {}
+    } catch (err) { console.error('Failed to toggle announcement:', err); }
   };
 
   const deleteAnnouncement = async (id) => {
     try {
       await authFetch(getApiUrl(`/api/news/announcements/${id}`), { method: 'DELETE' });
       fetchAnnouncements();
-    } catch {}
+    } catch (err) { console.error('Failed to delete announcement:', err); }
   };
 
   // Fetch supply chain news headlines (polls every 30 min to match backend cache)

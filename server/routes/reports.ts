@@ -3,6 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import db from '../db/connection.ts';
+import { authenticateToken, requireAdmin } from '../middleware/auth.ts';
 
 const router = Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -84,7 +85,7 @@ const ensureReportsDir = async (): Promise<void> => {
 // --- Routes ---
 
 // Generate report snapshot
-router.post('/generate', async (req: Request, res: Response) => {
+router.post('/generate', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
   try {
     await ensureReportsDir();
 
@@ -139,7 +140,7 @@ router.post('/generate', async (req: Request, res: Response) => {
 });
 
 // Get all reports with pagination and filtering
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
     await ensureReportsDir();
 
@@ -228,7 +229,7 @@ router.get('/', async (req: Request, res: Response) => {
 /**
  * GET /api/reports/scheduled - Get user's scheduled reports
  */
-router.get('/scheduled', async (req: Request, res: Response) => {
+router.get('/scheduled', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.id;
     const result = await db.query(
@@ -245,7 +246,7 @@ router.get('/scheduled', async (req: Request, res: Response) => {
 /**
  * POST /api/reports/scheduled - Create a scheduled report
  */
-router.post('/scheduled', async (req: Request, res: Response) => {
+router.post('/scheduled', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.id;
     const { reportType, frequency, recipients, config } = req.body;
@@ -288,7 +289,7 @@ router.post('/scheduled', async (req: Request, res: Response) => {
 /**
  * PUT /api/reports/scheduled/:id - Update a scheduled report
  */
-router.put('/scheduled/:id', async (req: Request, res: Response) => {
+router.put('/scheduled/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.id;
     const { id } = req.params;
@@ -319,7 +320,7 @@ router.put('/scheduled/:id', async (req: Request, res: Response) => {
 /**
  * DELETE /api/reports/scheduled/:id - Delete a scheduled report
  */
-router.delete('/scheduled/:id', async (req: Request, res: Response) => {
+router.delete('/scheduled/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.id;
     const { id } = req.params;
@@ -341,7 +342,7 @@ router.delete('/scheduled/:id', async (req: Request, res: Response) => {
 });
 
 // Get specific report by ID
-router.get('/:reportId', async (req: Request, res: Response) => {
+router.get('/:reportId', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { reportId } = req.params;
     const filepath: string = path.resolve(REPORTS_DIR, `${reportId}.json`);
@@ -364,7 +365,7 @@ router.get('/:reportId', async (req: Request, res: Response) => {
 });
 
 // Delete report
-router.delete('/:reportId', async (req: Request, res: Response) => {
+router.delete('/:reportId', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
   try {
     const { reportId } = req.params;
     const filepath: string = path.resolve(REPORTS_DIR, `${reportId}.json`);
@@ -386,7 +387,7 @@ router.delete('/:reportId', async (req: Request, res: Response) => {
 });
 
 // Get workflow analytics for post-arrival shipments
-router.get('/analytics/workflow', async (req: Request, res: Response) => {
+router.get('/analytics/workflow', authenticateToken, async (req: Request, res: Response) => {
   try {
     // Read the current shipments data
     const shipmentsDataPath: string = path.join(__dirname, '../data/shipments.json');
@@ -482,7 +483,7 @@ router.get('/analytics/workflow', async (req: Request, res: Response) => {
 });
 
 // Get report analytics summary by date range
-router.get('/analytics/summary', async (req: Request, res: Response) => {
+router.get('/analytics/summary', authenticateToken, async (req: Request, res: Response) => {
   try {
     await ensureReportsDir();
 

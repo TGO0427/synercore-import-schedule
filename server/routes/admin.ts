@@ -7,6 +7,7 @@ import { Router, Request, Response } from 'express';
 import db from '../db/connection.ts';
 import { AppError } from '../utils/AppError.ts';
 import { asyncHandler } from '../middleware/errorHandler.ts';
+import { authenticateToken, requireAdmin } from '../middleware/auth.ts';
 import type { Supplier, Shipment } from '../types/index.js';
 
 const router = Router();
@@ -15,7 +16,7 @@ const router = Router();
  * POST /api/admin/import-data - One-time data import
  * Requires: shipments and/or suppliers array in request body
  */
-router.post('/import-data', asyncHandler(async (req: Request, res: Response) => {
+router.post('/import-data', authenticateToken, requireAdmin, asyncHandler(async (req: Request, res: Response) => {
   const client = await db.getPool().connect();
 
   try {

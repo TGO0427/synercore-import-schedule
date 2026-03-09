@@ -189,6 +189,7 @@ router.post(
 router.post(
   '/:id/link-shipment',
   authenticateToken,
+  requireAdmin,
   [
     param('id').isString().notEmpty(),
     body('shipmentId').isString().notEmpty(),
@@ -208,6 +209,7 @@ router.post(
 router.delete(
   '/:id/link-shipment',
   authenticateToken,
+  requireAdmin,
   [param('id').isString().notEmpty()],
   validate,
   asyncHandler(async (req: Request, res: Response) => {

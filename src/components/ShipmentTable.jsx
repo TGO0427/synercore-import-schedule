@@ -1204,7 +1204,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                 { key: 'forwardingAgent', label: 'Agent' },
                 { key: null, label: '' },
               ].map((col, i) => (
-                <th key={i}
+                <th key={col.key || col.label || i}
                   onClick={col.key ? () => handleSort(col.key) : undefined}
                   style={{ cursor: col.key ? 'pointer' : 'default', userSelect: 'none', ...col.style }}
                 >
@@ -2456,7 +2456,7 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
                     <h5 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-500)' }}>Shipments to be archived:</h5>
                     <div style={{ maxHeight: '200px', overflow: 'auto' }}>
                       {autoArchiveStats.eligibleShipments.map((shipment, index) => (
-                        <div key={index} style={{
+                        <div key={shipment.id || shipment.orderRef || index} style={{
                           padding: '0.5rem',
                           backgroundColor: 'white',
                           border: '1px solid #e9ecef',
