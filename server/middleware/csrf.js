@@ -11,13 +11,14 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 // Auth endpoints that are called before the user has a token
 // These are inherently CSRF-safe (no session cookie to exploit)
+// Note: paths are relative to mount point (app.use('/api', csrfProtection))
 const CSRF_EXEMPT_PATHS = new Set([
-  '/api/auth/login',
-  '/api/auth/register',
-  '/api/auth/setup',
-  '/api/auth/refresh',
-  '/api/auth/forgot-password',
-  '/api/auth/reset-password',
+  '/auth/login',
+  '/auth/register',
+  '/auth/setup',
+  '/auth/refresh',
+  '/auth/forgot-password',
+  '/auth/reset-password',
 ]);
 
 export function csrfProtection(req, res, next) {
