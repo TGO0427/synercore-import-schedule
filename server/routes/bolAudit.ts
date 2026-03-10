@@ -452,6 +452,148 @@ router.post(
   }
 );
 
+/**
+ * POST /api/bol-audit/benchmark-check
+ * Re-run benchmark comparison on all BOLs (or specific ones)
+ * Matches BOL freight charges against imported benchmark rates
+ */
+router.post(
+  '/benchmark-check',
+  authenticateToken,
+  asyncHandler(async (req: Request, res: Response) => {
+    const { bol_ids } = req.body; // optional: specific BOL IDs to check
+
+    // Get BOLs to check
+    let bols: any[];
+    if (bol_ids && Array.isArray(bol_ids) && bol_ids.length > 0) {
+      bols = await queryAll(
+        `SELECT id, bol_number, port_of_loading, port_of_discharge, carrier_name,
+                freight_charges_usd, gross_weight_kg, container_numbers
+         FROM bol_audits WHERE id = ANY($1)`,
+        [bol_ids]
+      );
+    } else {
+      bols = await queryAll(
+        `SELECT id, bol_number, port_of_loading, port_of_discharge, carrier_name,
+                freight_charges_usd, gross_weight_kg, container_numbers
+         FROM bol_audits WHERE freight_charges_usd IS NOT NULL`
+      );
+    }
+
+    let updated = 0;
+    for (const bol of bols) {
+      const freight = parseFloat(bol.freight_charges_usd);
+      if (!freight || freight <= 0) continue;
+
+      // Build benchmark lookup conditions
+      const conditions: string[] = [];
+      const params: any[] = [];
+      let idx = 1;
+
+      if (bol.port_of_loading) {
+        conditions.push(`LOWER(port_of_loading) LIKE LOWER($${idx++})`);
+        params.push(`%${bol.port_of_loading.substring(0, 30)}%`);
+      }
+      if (bol.port_of_discharge) {
+        conditions.push(`LOWER(port_of_discharge) LIKE LOWER($${idx++})`);
+        params.push(`%${bol.port_of_discharge.substring(0, 30)}%`);
+      }
+
+      if (conditions.length === 0) continue;
+
+      // Try carrier-specific match first
+      let benchmarks: any[] = [];
+      if (bol.carrier_name) {
+        benchmarks = await queryAll(
+          `SELECT rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd, carrier_name
+           FROM freight_benchmarks
+           WHERE ${conditions.join(' AND ')}
+             AND LOWER(carrier_name) LIKE LOWER($${idx})
+             AND (valid_until IS NULL OR valid_until >= CURRENT_DATE)
+           ORDER BY valid_from DESC NULLS LAST LIMIT 5`,
+          [...params, `%${bol.carrier_name.substring(0, 30)}%`]
+        );
+      }
+
+      // Fallback: route-only match
+      if (benchmarks.length === 0) {
+        benchmarks = await queryAll(
+          `SELECT rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd, carrier_name
+           FROM freight_benchmarks
+           WHERE ${conditions.join(' AND ')}
+             AND (valid_until IS NULL OR valid_until >= CURRENT_DATE)
+           ORDER BY valid_from DESC NULLS LAST LIMIT 5`,
+          params
+        );
+      }
+
+      if (benchmarks.length === 0) continue;
+
+      const rate = benchmarks[0];
+
+      // Detect container type from container numbers
+      const containerStr = (bol.container_numbers || '').toLowerCase();
+      let benchmarkRate: number | null = null;
+      let containerType = '';
+
+      if (/40\s*h[cq]|high\s*cube/i.test(containerStr)) {
+        benchmarkRate = parseFloat(rate.rate_40hc_usd) || null;
+        containerType = '40HC';
+      } else if (/40/i.test(containerStr)) {
+        benchmarkRate = parseFloat(rate.rate_40gp_usd) || null;
+        containerType = '40GP';
+      } else if (/20/i.test(containerStr)) {
+        benchmarkRate = parseFloat(rate.rate_20gp_usd) || null;
+        containerType = '20GP';
+      }
+
+      // Fallback: pick closest container rate to actual freight
+      if (!benchmarkRate) {
+        const options = [
+          { r: parseFloat(rate.rate_20gp_usd) || 0, t: '20GP' },
+          { r: parseFloat(rate.rate_40gp_usd) || 0, t: '40GP' },
+          { r: parseFloat(rate.rate_40hc_usd) || 0, t: '40HC' },
+        ].filter(o => o.r > 0);
+
+        if (options.length > 0) {
+          const closest = options.reduce((a, b) =>
+            Math.abs(a.r - freight) < Math.abs(b.r - freight) ? a : b
+          );
+          benchmarkRate = closest.r;
+          containerType = closest.t;
+        }
+      }
+
+      // Try per-kg rate
+      if (!benchmarkRate && bol.gross_weight_kg) {
+        const ratePerKg = parseFloat(rate.rate_per_kg_usd);
+        if (ratePerKg > 0) {
+          benchmarkRate = ratePerKg * parseFloat(bol.gross_weight_kg);
+          containerType = 'per-kg';
+        }
+      }
+
+      if (!benchmarkRate || benchmarkRate <= 0) continue;
+
+      const variance = Math.round((freight - benchmarkRate) * 100) / 100;
+
+      await queryOne(
+        `UPDATE bol_audits SET
+          benchmark_rate_per_kg = $1,
+          expected_freight_usd = $2,
+          freight_variance_usd = $3,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $4`,
+        [benchmarkRate, Math.round(benchmarkRate * 100) / 100, variance, bol.id]
+      );
+      updated++;
+    }
+
+    logInfo(`Benchmark check completed: ${updated}/${bols.length} BOLs updated`);
+    res.json({ message: `Benchmark check completed: ${updated} of ${bols.length} BOLs matched against rates`, updated, total: bols.length });
+  })
+);
+
 // ==================== PARAMETERIZED ROUTES (must be last) ====================
 
 /**

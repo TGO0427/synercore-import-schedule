@@ -604,6 +604,32 @@ function BolAudit() {
             <StatCard label="Weight Discrepancies" value={parseInt(stats.weight_discrepancy_count || 0)} color="#9333ea" />
           </div>
 
+          {/* Run benchmark check button */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+            <button
+              style={{ ...btnStyle('#3b82f6'), fontSize: '0.85rem' }}
+              onClick={async () => {
+                try {
+                  const res = await authFetch(getApiUrl('/api/bol-audit/benchmark-check'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({}),
+                  });
+                  const json = await res.json();
+                  if (res.ok) {
+                    showSuccess(json.message);
+                    fetchBols();
+                    fetchStats();
+                  } else {
+                    showError(json.error || 'Benchmark check failed');
+                  }
+                } catch (err) { showError('Failed to run benchmark check'); }
+              }}
+            >
+              Run Benchmark Check
+            </button>
+          </div>
+
           {/* Cost protection table — show BOLs with freight variances */}
           <div className="dash-panel" style={{ overflow: 'hidden' }}>
             <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-color, #e5e7eb)', fontWeight: 600, fontSize: '0.95rem' }}>
@@ -613,16 +639,17 @@ function BolAudit() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ backgroundColor: 'var(--surface-2, #f3f4f6)' }}>
-                    {['BOL #', 'Supplier', 'Route', 'Weight (kg)', 'Actual Freight', 'Benchmark Rate', 'Expected Freight', 'Variance', 'Status'].map(h => (
+                    {['BOL #', 'Supplier', 'Route', 'Weight (kg)', 'Actual Freight', 'Benchmark Rate', 'Expected', 'Variance', 'Status', ''].map(h => (
                       <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, borderBottom: '2px solid var(--border-color, #e5e7eb)', whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {bols.filter(b => b.freight_variance_usd != null || b.freight_charges_usd).length === 0 ? (
-                    <tr><td colSpan={9} style={{ padding: 30, textAlign: 'center', color: 'var(--text-500)' }}>No freight data to analyze. Upload BOL PDFs and set rate benchmarks to see variances.</td></tr>
+                    <tr><td colSpan={10} style={{ padding: 30, textAlign: 'center', color: 'var(--text-500)' }}>No freight data to analyze. Upload BOL PDFs and import rate benchmarks, then click "Run Benchmark Check".</td></tr>
                   ) : bols.filter(b => b.freight_charges_usd).map((bol, idx) => {
                     const variance = parseFloat(bol.freight_variance_usd || 0);
+                    const benchmarkVal = parseFloat(bol.benchmark_rate_per_kg || 0);
                     return (
                       <tr key={bol.id} style={{ backgroundColor: idx % 2 === 0 ? 'transparent' : 'var(--surface-2, #f9fafb)' }}>
                         <td style={{ padding: '10px 12px', fontWeight: 600 }}>{bol.bol_number}</td>
@@ -630,7 +657,7 @@ function BolAudit() {
                         <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>{bol.port_of_loading || '?'} → {bol.port_of_discharge || '?'}</td>
                         <td style={{ padding: '10px 12px' }}>{bol.gross_weight_kg ? parseFloat(bol.gross_weight_kg).toLocaleString() : '-'}</td>
                         <td style={{ padding: '10px 12px', fontWeight: 600 }}>{formatCurrency(bol.freight_charges_usd)}</td>
-                        <td style={{ padding: '10px 12px' }}>{bol.benchmark_rate_per_kg ? (parseFloat(bol.benchmark_rate_per_kg) > 100 ? formatCurrency(bol.benchmark_rate_per_kg) : `$${parseFloat(bol.benchmark_rate_per_kg).toFixed(4)}/kg`) : '-'}</td>
+                        <td style={{ padding: '10px 12px' }}>{benchmarkVal > 0 ? formatCurrency(benchmarkVal) : '-'}</td>
                         <td style={{ padding: '10px 12px' }}>{bol.expected_freight_usd ? formatCurrency(bol.expected_freight_usd) : '-'}</td>
                         <td style={{ padding: '10px 12px', fontWeight: 700, color: variance > 0 ? '#dc2626' : variance < 0 ? '#059669' : 'var(--text-500)' }}>
                           {bol.freight_variance_usd != null ? `${variance > 0 ? '+' : ''}${formatCurrency(bol.freight_variance_usd)}` : 'No benchmark'}
@@ -638,6 +665,24 @@ function BolAudit() {
                         <td style={{ padding: '10px 12px' }}>
                           {bol.is_duplicate && <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: '0.75rem', fontWeight: 600, backgroundColor: '#fef3c7', color: '#d97706', marginRight: 4 }}>DUP</span>}
                           <StatusBadge status={bol.audit_status} />
+                        </td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <button
+                            style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: 6, border: '1px solid #d1d5db', background: '#f9fafb', cursor: 'pointer' }}
+                            title="Re-check this BOL against benchmarks"
+                            onClick={async () => {
+                              try {
+                                const r = await authFetch(getApiUrl('/api/bol-audit/benchmark-check'), {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ bol_ids: [bol.id] }),
+                                });
+                                const j = await r.json();
+                                if (r.ok) { showSuccess(j.message); fetchBols(); fetchStats(); }
+                                else showError(j.error);
+                              } catch { showError('Check failed'); }
+                            }}
+                          >Check</button>
                         </td>
                       </tr>
                     );
