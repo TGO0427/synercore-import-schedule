@@ -179,7 +179,9 @@ function findAllContainers(text: string): string[] {
 // ─── Main parser ───
 
 export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
-  const pdf = (await import('pdf-parse')).default;
+  // Import pdf-parse/lib/pdf-parse.js directly to avoid the index.js
+  // debug mode check (!module.parent) which tries to load a test PDF file
+  const pdf = (await import('pdf-parse/lib/pdf-parse.js')).default;
   const pdfData = await pdf(pdfBuffer);
   const text = pdfData.text;
   const confidence: Record<string, number> = {};

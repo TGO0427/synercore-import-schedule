@@ -396,11 +396,19 @@ router.post(
  */
 router.post(
   '/upload-pdf',
-  pdfUpload.single('pdf'),
+  (req: Request, res: Response, next: NextFunction) => {
+    pdfUpload.single('pdf')(req, res, (err: any) => {
+      if (err) {
+        logError('Multer upload error', { error: err.message, code: err.code });
+        return res.status(400).json({ error: `Upload failed: ${err.message}` });
+      }
+      next();
+    });
+  },
   async (req: Request, res: Response) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: 'PDF file is required' });
+        return res.status(400).json({ error: 'PDF file is required. Ensure field name is "pdf".' });
       }
 
       const userId = (req as any).user?.id;
