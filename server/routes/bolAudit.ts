@@ -460,7 +460,8 @@ router.post(
 router.post(
   '/benchmark-check',
   authenticateToken,
-  asyncHandler(async (req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
+    try {
     const { bol_ids } = req.body; // optional: specific BOL IDs to check
 
     // Get BOLs to check
@@ -598,7 +599,11 @@ router.post(
 
     logInfo(`Benchmark check completed: ${updated}/${bols.length} BOLs updated`);
     res.json({ message: `Benchmark check completed: ${updated} of ${bols.length} BOLs matched against rates`, updated, total: bols.length });
-  })
+    } catch (err: any) {
+      logError('Benchmark check failed', { error: err.message, stack: err.stack });
+      res.status(500).json({ error: 'Benchmark check failed', details: err.message });
+    }
+  }
 );
 
 // ==================== PARAMETERIZED ROUTES (must be last) ====================
