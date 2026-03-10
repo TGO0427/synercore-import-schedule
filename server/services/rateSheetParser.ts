@@ -71,15 +71,26 @@ function isPortName(text: string): boolean {
 
 // ─── Excel Parser ───
 
-export async function parseExcelRateSheet(buffer: Buffer, filename: string): Promise<ExtractedRate[]> {
+export interface ParseResult {
+  rates: ExtractedRate[];
+  debug: { sheets: string[]; sampleRows: string[][] };
+}
+
+export async function parseExcelRateSheet(buffer: Buffer, filename: string): Promise<ParseResult> {
   const XLSX = await import('xlsx');
   const workbook = XLSX.read(buffer, { type: 'buffer' });
   let rates: ExtractedRate[] = [];
+  const debug: { sheets: string[]; sampleRows: string[][] } = { sheets: workbook.SheetNames, sampleRows: [] };
 
   for (const sheetName of workbook.SheetNames) {
     const sheet = workbook.Sheets[sheetName];
     const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
     if (rows.length < 2) continue;
+
+    // Capture first 12 rows for debug
+    for (let i = 0; i < Math.min(rows.length, 12); i++) {
+      debug.sampleRows.push(rows[i].map((c: any) => String(c)).slice(0, 12));
+    }
 
     // Try flat template format first (has POL + POD columns)
     const flatRates = parseFlatFormat(rows, sheetName, filename);
@@ -101,7 +112,7 @@ export async function parseExcelRateSheet(buffer: Buffer, filename: string): Pro
   }
 
   logInfo(`Rate sheet parsed: ${rates.length} rates extracted from ${filename}`);
-  return rates;
+  return { rates, debug };
 }
 
 // ─── Flat Template Format ───

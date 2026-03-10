@@ -359,7 +359,7 @@ function BolAudit() {
         fetchBenchmarks();
       } else {
         showError(json.error || 'Failed to process rate sheet');
-        if (json.hint) setRateUploadResult({ error: json.error, hint: json.hint });
+        if (json.hint || json.debug) setRateUploadResult({ error: json.error, hint: json.hint, debug: json.debug });
       }
     } catch (err) {
       showError('Failed to upload rate sheet');
@@ -677,6 +677,17 @@ function BolAudit() {
                   <div>
                     <strong style={{ color: '#dc2626' }}>{rateUploadResult.error}</strong>
                     {rateUploadResult.hint && <p style={{ margin: '4px 0 0', color: '#92400e' }}>{rateUploadResult.hint}</p>}
+                    {rateUploadResult.debug && (
+                      <details style={{ marginTop: 8 }}>
+                        <summary style={{ cursor: 'pointer', color: '#6b7280', fontSize: '0.8rem' }}>Debug: raw cell data</summary>
+                        <div style={{ marginTop: 4, fontSize: '0.72rem', fontFamily: 'monospace', whiteSpace: 'pre-wrap', maxHeight: 200, overflowY: 'auto', background: '#f9fafb', padding: 8, borderRadius: 6 }}>
+                          <div>Sheets: {rateUploadResult.debug.sheets?.join(', ')}</div>
+                          {rateUploadResult.debug.sampleRows?.map((row, i) => (
+                            <div key={i}>Row {i}: [{row.map(c => `"${c}"`).join(', ')}]</div>
+                          ))}
+                        </div>
+                      </details>
+                    )}
                   </div>
                 ) : (
                   <div>

@@ -379,12 +379,13 @@ router.post(
 
       logInfo(`Parsing rate sheet: ${filename} (${(req.file.size / 1024).toFixed(1)}KB)`);
 
-      const rates = await parseExcelRateSheet(req.file.buffer, filename);
+      const { rates, debug } = await parseExcelRateSheet(req.file.buffer, filename);
 
       if (rates.length === 0) {
         return res.status(400).json({
           error: 'No rates could be extracted from the file.',
           hint: 'Use the "Download Template" to see the expected format, or upload your rate sheet with port sections and 20GP/40GP/40HC columns.',
+          debug,
         });
       }
 
@@ -425,7 +426,7 @@ router.post(
       logInfo(`Rate sheet processed: ${inserted} inserted, ${skipped} skipped from ${filename}`);
       res.status(201).json({
         message: `Extracted ${rates.length} rates: ${inserted} new, ${skipped} duplicates skipped`,
-        data: { total_extracted: rates.length, inserted, skipped, rates },
+        data: { total_extracted: rates.length, inserted, skipped, rates, debug },
       });
     } catch (err: any) {
       logError('Rate sheet processing failed', { error: err.message, stack: err.stack });
