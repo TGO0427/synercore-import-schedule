@@ -220,6 +220,221 @@ router.get(
   })
 );
 
+// ==================== FREIGHT BENCHMARK ROUTES ====================
+// These MUST be before /:id to prevent Express treating "benchmarks" as an ID
+
+/**
+ * GET /api/bol-audit/benchmarks
+ * List all freight benchmarks
+ */
+router.get(
+  '/benchmarks',
+  authenticateToken,
+  asyncHandler(async (req: Request, res: Response) => {
+    const rows = await queryAll(
+      `SELECT * FROM freight_benchmarks ORDER BY carrier_name, port_of_loading, port_of_discharge`
+    );
+    res.json({ data: rows });
+  })
+);
+
+/**
+ * POST /api/bol-audit/benchmarks
+ * Create a new freight benchmark
+ */
+router.post(
+  '/benchmarks',
+  authenticateToken,
+  [
+    body('carrier_name').trim().notEmpty(),
+    body('port_of_loading').trim().notEmpty(),
+    body('port_of_discharge').trim().notEmpty(),
+    body('rate_per_kg_usd').optional({ nullable: true }).isFloat({ min: 0 }),
+    body('rate_per_cbm_usd').optional({ nullable: true }).isFloat({ min: 0 }),
+    body('min_charge_usd').optional({ nullable: true }).isFloat({ min: 0 }),
+    body('transport_mode').optional().isIn(['sea', 'air', 'road']),
+    body('valid_from').optional({ nullable: true }).isISO8601(),
+    body('valid_until').optional({ nullable: true }).isISO8601(),
+    body('notes').optional({ nullable: true }).trim(),
+  ],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user?.id;
+    const {
+      carrier_name, port_of_loading, port_of_discharge,
+      rate_per_kg_usd, rate_per_cbm_usd, min_charge_usd,
+      transport_mode, valid_from, valid_until, notes
+    } = req.body;
+
+    const result = await queryOne(
+      `INSERT INTO freight_benchmarks (
+        carrier_name, port_of_loading, port_of_discharge,
+        rate_per_kg_usd, rate_per_cbm_usd, min_charge_usd,
+        transport_mode, valid_from, valid_until, notes, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      RETURNING *`,
+      [
+        carrier_name, port_of_loading, port_of_discharge,
+        rate_per_kg_usd || null, rate_per_cbm_usd || null, min_charge_usd || null,
+        transport_mode || 'sea', valid_from || null, valid_until || null,
+        notes || null, userId
+      ]
+    );
+
+    logInfo(`Benchmark created: ${carrier_name} ${port_of_loading} → ${port_of_discharge}`);
+    res.status(201).json({ data: result, message: 'Benchmark rate created' });
+  })
+);
+
+/**
+ * PUT /api/bol-audit/benchmarks/:benchmarkId
+ * Update a freight benchmark
+ */
+router.put(
+  '/benchmarks/:benchmarkId',
+  authenticateToken,
+  [param('benchmarkId').isInt({ min: 1 })],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const { benchmarkId } = req.params;
+    const {
+      carrier_name, port_of_loading, port_of_discharge,
+      rate_per_kg_usd, rate_per_cbm_usd, min_charge_usd,
+      transport_mode, valid_from, valid_until, notes
+    } = req.body;
+
+    const result = await queryOne(
+      `UPDATE freight_benchmarks SET
+        carrier_name = COALESCE($1, carrier_name),
+        port_of_loading = COALESCE($2, port_of_loading),
+        port_of_discharge = COALESCE($3, port_of_discharge),
+        rate_per_kg_usd = $4, rate_per_cbm_usd = $5, min_charge_usd = $6,
+        transport_mode = COALESCE($7, transport_mode),
+        valid_from = $8, valid_until = $9, notes = $10,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $11 RETURNING *`,
+      [
+        carrier_name || null, port_of_loading || null, port_of_discharge || null,
+        rate_per_kg_usd ?? null, rate_per_cbm_usd ?? null, min_charge_usd ?? null,
+        transport_mode || null, valid_from || null, valid_until || null,
+        notes || null, benchmarkId
+      ]
+    );
+
+    if (!result) {
+      return res.status(404).json({ error: 'Benchmark not found' });
+    }
+
+    logInfo(`Benchmark updated: ID ${benchmarkId}`);
+    res.json({ data: result, message: 'Benchmark rate updated' });
+  })
+);
+
+/**
+ * DELETE /api/bol-audit/benchmarks/:benchmarkId
+ * Delete a freight benchmark
+ */
+router.delete(
+  '/benchmarks/:benchmarkId',
+  authenticateToken,
+  [param('benchmarkId').isInt({ min: 1 })],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const result = await queryOne(
+      'DELETE FROM freight_benchmarks WHERE id = $1 RETURNING id',
+      [req.params.benchmarkId]
+    );
+    if (!result) {
+      return res.status(404).json({ error: 'Benchmark not found' });
+    }
+    logInfo(`Benchmark deleted: ID ${req.params.benchmarkId}`);
+    res.json({ message: 'Benchmark deleted' });
+  })
+);
+
+/**
+ * POST /api/bol-audit/benchmarks/upload
+ * Upload a rate sheet (PDF or Excel) and auto-extract benchmark rates
+ */
+router.post(
+  '/benchmarks/upload',
+  (req: Request, res: Response, next: NextFunction) => {
+    rateSheetUpload.single('rateSheet')(req, res, (err: any) => {
+      if (err) {
+        logError('Rate sheet upload error', { error: err.message });
+        return res.status(400).json({ error: `Upload failed: ${err.message}` });
+      }
+      next();
+    });
+  },
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'Rate sheet file is required' });
+      }
+
+      const userId = (req as any).user?.id;
+      const filename = req.file.originalname;
+      const isPdf = req.file.mimetype === 'application/pdf' || filename.endsWith('.pdf');
+
+      logInfo(`Parsing rate sheet: ${filename} (${(req.file.size / 1024).toFixed(1)}KB)`);
+
+      const rates = isPdf
+        ? await parsePdfRateSheet(req.file.buffer, filename)
+        : await parseExcelRateSheet(req.file.buffer, filename);
+
+      if (rates.length === 0) {
+        return res.status(400).json({ error: 'No rates could be extracted from the file. Check format.' });
+      }
+
+      // Insert rates, skip duplicates
+      let inserted = 0;
+      let skipped = 0;
+      for (const rate of rates) {
+        const existing = await queryOne(
+          `SELECT id FROM freight_benchmarks
+           WHERE carrier_name = $1 AND port_of_loading = $2 AND port_of_discharge = $3
+             AND transport_mode = $4
+             AND (valid_from = $5 OR (valid_from IS NULL AND $5 IS NULL))`,
+          [rate.carrier_name, rate.port_of_loading, rate.port_of_discharge, rate.transport_mode, rate.valid_from]
+        );
+
+        if (existing) {
+          skipped++;
+          continue;
+        }
+
+        await queryOne(
+          `INSERT INTO freight_benchmarks (
+            carrier_name, port_of_loading, port_of_discharge,
+            rate_per_kg_usd, rate_per_cbm_usd, min_charge_usd,
+            transport_mode, valid_from, valid_until, notes, created_by
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          RETURNING id`,
+          [
+            rate.carrier_name, rate.port_of_loading, rate.port_of_discharge,
+            rate.rate_per_kg_usd, rate.rate_per_cbm_usd, rate.min_charge_usd,
+            rate.transport_mode, rate.valid_from, rate.valid_until,
+            rate.notes, userId
+          ]
+        );
+        inserted++;
+      }
+
+      logInfo(`Rate sheet processed: ${inserted} inserted, ${skipped} skipped from ${filename}`);
+      res.status(201).json({
+        message: `Extracted ${rates.length} rates: ${inserted} new, ${skipped} duplicates skipped`,
+        data: { total_extracted: rates.length, inserted, skipped, rates },
+      });
+    } catch (err: any) {
+      logError('Rate sheet processing failed', { error: err.message, stack: err.stack });
+      res.status(500).json({ error: 'Failed to process rate sheet', details: err.message });
+    }
+  }
+);
+
+// ==================== PARAMETERIZED ROUTES (must be last) ====================
+
 /**
  * GET /api/bol-audit/:id
  * Get single BOL details
@@ -528,186 +743,6 @@ router.post(
       res.status(500).json({ error: 'Failed to process PDF', details: err.message });
     }
   }
-);
-
-// ─── Freight Benchmark Routes ───
-
-/**
- * GET /api/bol-audit/benchmarks
- * List all freight benchmarks
- */
-router.get(
-  '/benchmarks',
-  authenticateToken,
-  asyncHandler(async (req: Request, res: Response) => {
-    const rows = await queryAll(
-      `SELECT b.*, u.username as created_by_name
-       FROM freight_benchmarks b
-       LEFT JOIN users u ON b.created_by = u.id
-       ORDER BY b.port_of_loading, b.port_of_discharge`,
-      []
-    );
-    res.json({ data: rows });
-  })
-);
-
-/**
- * POST /api/bol-audit/benchmarks
- * Create a freight benchmark rate
- */
-router.post(
-  '/benchmarks',
-  authenticateToken,
-  [
-    body('port_of_loading').trim().notEmpty().withMessage('Port of loading is required'),
-    body('port_of_discharge').trim().notEmpty().withMessage('Port of discharge is required'),
-    body('rate_per_kg_usd').optional({ nullable: true }).isFloat({ min: 0 }),
-    body('rate_per_cbm_usd').optional({ nullable: true }).isFloat({ min: 0 }),
-    body('min_charge_usd').optional({ nullable: true }).isFloat({ min: 0 }),
-  ],
-  validate,
-  asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).user?.id;
-    const { port_of_loading, port_of_discharge, rate_per_kg_usd, rate_per_cbm_usd, min_charge_usd, carrier_name, transport_mode, valid_from, valid_until, notes } = req.body;
-
-    const result = await queryOne(
-      `INSERT INTO freight_benchmarks (port_of_loading, port_of_discharge, rate_per_kg_usd, rate_per_cbm_usd, min_charge_usd, carrier_name, transport_mode, valid_from, valid_until, notes, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-       RETURNING *`,
-      [port_of_loading, port_of_discharge, rate_per_kg_usd || null, rate_per_cbm_usd || null, min_charge_usd || null, carrier_name || null, transport_mode || 'sea', valid_from || null, valid_until || null, notes || null, userId]
-    );
-    res.status(201).json({ data: result });
-  })
-);
-
-/**
- * PUT /api/bol-audit/benchmarks/:id
- * Update a freight benchmark rate
- */
-router.put(
-  '/benchmarks/:id',
-  authenticateToken,
-  [param('id').isInt({ min: 1 })],
-  validate,
-  asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { port_of_loading, port_of_discharge, rate_per_kg_usd, rate_per_cbm_usd, min_charge_usd, carrier_name, transport_mode, valid_from, valid_until, notes } = req.body;
-
-    const result = await queryOne(
-      `UPDATE freight_benchmarks SET
-        port_of_loading = COALESCE($1, port_of_loading),
-        port_of_discharge = COALESCE($2, port_of_discharge),
-        rate_per_kg_usd = $3, rate_per_cbm_usd = $4, min_charge_usd = $5,
-        carrier_name = $6, transport_mode = COALESCE($7, transport_mode),
-        valid_from = $8, valid_until = $9, notes = $10,
-        updated_at = CURRENT_TIMESTAMP
-       WHERE id = $11 RETURNING *`,
-      [port_of_loading, port_of_discharge, rate_per_kg_usd || null, rate_per_cbm_usd || null, min_charge_usd || null, carrier_name || null, transport_mode, valid_from || null, valid_until || null, notes || null, id]
-    );
-    if (!result) return res.status(404).json({ error: 'Benchmark not found' });
-    res.json({ data: result });
-  })
-);
-
-/**
- * POST /api/bol-audit/benchmarks/upload
- * Upload a rate sheet (PDF or Excel) and auto-extract benchmark rates
- */
-router.post(
-  '/benchmarks/upload',
-  authenticateToken,
-  (req: Request, res: Response, next: NextFunction) => {
-    rateSheetUpload.single('file')(req, res, (err: any) => {
-      if (err) {
-        logError('Rate sheet upload error', { error: err.message });
-        return res.status(400).json({ error: `Upload failed: ${err.message}` });
-      }
-      next();
-    });
-  },
-  async (req: Request, res: Response) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ error: 'File is required. Upload a PDF or Excel rate sheet.' });
-      }
-
-      const userId = (req as any).user?.id;
-      const filename = req.file.originalname;
-      const isPdf = req.file.mimetype === 'application/pdf' || filename.endsWith('.pdf');
-
-      logInfo(`Parsing rate sheet: ${filename} (${(req.file.size / 1024).toFixed(1)}KB)`);
-
-      const extractedRates = isPdf
-        ? await parsePdfRateSheet(req.file.buffer, filename)
-        : await parseExcelRateSheet(req.file.buffer, filename);
-
-      if (extractedRates.length === 0) {
-        return res.status(400).json({
-          error: 'No rates could be extracted from this file',
-          hint: 'Ensure the file has columns for Origin/POL, Destination/POD, and Rate. Supported formats: Excel with header row, or PDF with tabular rate data.',
-        });
-      }
-
-      // Insert all extracted rates
-      let inserted = 0;
-      let skipped = 0;
-      for (const rate of extractedRates) {
-        try {
-          // Check for existing duplicate (same route + carrier + dates)
-          const existing = await queryOne(
-            `SELECT id FROM freight_benchmarks
-             WHERE LOWER(port_of_loading) = LOWER($1)
-               AND LOWER(port_of_discharge) = LOWER($2)
-               AND COALESCE(LOWER(carrier_name), '') = COALESCE(LOWER($3), '')
-               AND COALESCE(rate_per_kg_usd, 0) = COALESCE($4, 0)`,
-            [rate.port_of_loading, rate.port_of_discharge, rate.carrier_name, rate.rate_per_kg_usd]
-          );
-
-          if (existing) {
-            skipped++;
-            continue;
-          }
-
-          await queryOne(
-            `INSERT INTO freight_benchmarks (port_of_loading, port_of_discharge, rate_per_kg_usd, rate_per_cbm_usd, min_charge_usd, carrier_name, transport_mode, valid_from, valid_until, notes, created_by)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-             RETURNING id`,
-            [rate.port_of_loading, rate.port_of_discharge, rate.rate_per_kg_usd, rate.rate_per_cbm_usd, rate.min_charge_usd, rate.carrier_name, rate.transport_mode, rate.valid_from, rate.valid_until, rate.notes, userId]
-          );
-          inserted++;
-        } catch (err: any) {
-          logWarn(`Failed to insert rate ${rate.port_of_loading} → ${rate.port_of_discharge}`, { error: err.message });
-          skipped++;
-        }
-      }
-
-      logInfo(`Rate sheet imported: ${inserted} inserted, ${skipped} skipped from ${filename}`);
-
-      res.status(201).json({
-        data: { inserted, skipped, total_extracted: extractedRates.length, rates: extractedRates },
-        message: `Imported ${inserted} rate${inserted !== 1 ? 's' : ''} from ${filename}${skipped > 0 ? ` (${skipped} duplicates skipped)` : ''}`,
-      });
-    } catch (err: any) {
-      logError('Rate sheet upload failed', { error: err.message, stack: err.stack });
-      res.status(500).json({ error: 'Failed to process rate sheet', details: err.message });
-    }
-  }
-);
-
-/**
- * DELETE /api/bol-audit/benchmarks/:id
- * Delete a freight benchmark
- */
-router.delete(
-  '/benchmarks/:id',
-  authenticateToken,
-  [param('id').isInt({ min: 1 })],
-  validate,
-  asyncHandler(async (req: Request, res: Response) => {
-    const result = await queryOne('DELETE FROM freight_benchmarks WHERE id = $1 RETURNING id', [req.params.id]);
-    if (!result) return res.status(404).json({ error: 'Benchmark not found' });
-    res.json({ message: 'Benchmark deleted' });
-  })
 );
 
 /**
