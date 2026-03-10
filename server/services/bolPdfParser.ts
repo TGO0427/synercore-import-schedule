@@ -41,13 +41,22 @@ export interface AuditFinding {
   shipment_value: string | null;
 }
 
+export interface CostProtection {
+  benchmark_rate_per_kg: number | null;
+  expected_freight_usd: number | null;
+  freight_variance_usd: number | null;
+  weight_variance_kg: number | null;
+  weight_variance_pct: number | null;
+  is_duplicate: boolean;
+}
+
 export interface BolParseResult {
   extracted: ParsedBolData;
   matched_shipment: any | null;
   auto_audit: {
     status: 'pending' | 'discrepancy' | 'approved';
     findings: AuditFinding[];
-    score: number; // 0-100 confidence that BOL is correct
+    score: number;
   };
 }
 
@@ -343,9 +352,17 @@ export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
 
 // ─── Auto-audit against shipments ───
 
-export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseResult['auto_audit'] & { matched_shipment: any | null }> {
+export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseResult['auto_audit'] & { matched_shipment: any | null; cost_protection: CostProtection }> {
   const findings: AuditFinding[] = [];
   let matchedShipment: any | null = null;
+  const costProtection: CostProtection = {
+    benchmark_rate_per_kg: null,
+    expected_freight_usd: null,
+    freight_variance_usd: null,
+    weight_variance_kg: null,
+    weight_variance_pct: null,
+    is_duplicate: false,
+  };
 
   // Try to find matching shipment by vessel name, order ref, or supplier
   try {
@@ -458,6 +475,106 @@ export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseRe
     logWarn('Auto-audit shipment matching failed', { error: (error as Error).message });
   }
 
+  // ── Cost protection: benchmark rate comparison ──
+  try {
+    if (extracted.port_of_loading || extracted.port_of_discharge) {
+      const benchmarkConditions: string[] = [];
+      const benchmarkParams: any[] = [];
+      let bIdx = 1;
+
+      if (extracted.port_of_loading) {
+        benchmarkConditions.push(`LOWER(port_of_loading) LIKE LOWER($${bIdx++})`);
+        benchmarkParams.push(`%${extracted.port_of_loading.substring(0, 30)}%`);
+      }
+      if (extracted.port_of_discharge) {
+        benchmarkConditions.push(`LOWER(port_of_discharge) LIKE LOWER($${bIdx++})`);
+        benchmarkParams.push(`%${extracted.port_of_discharge.substring(0, 30)}%`);
+      }
+
+      const benchmark = await queryAll(
+        `SELECT rate_per_kg_usd, rate_per_cbm_usd, min_charge_usd, carrier_name
+         FROM freight_benchmarks
+         WHERE ${benchmarkConditions.join(' AND ')}
+           AND (valid_until IS NULL OR valid_until >= CURRENT_DATE)
+         ORDER BY valid_from DESC NULLS LAST
+         LIMIT 1`,
+        benchmarkParams
+      );
+
+      if (benchmark.length > 0 && extracted.gross_weight_kg && extracted.freight_charges_usd) {
+        const rate = benchmark[0];
+        const ratePerKg = parseFloat(rate.rate_per_kg_usd);
+        if (ratePerKg > 0) {
+          const expectedFreight = Math.max(
+            ratePerKg * extracted.gross_weight_kg,
+            parseFloat(rate.min_charge_usd || '0')
+          );
+          const variance = extracted.freight_charges_usd - expectedFreight;
+
+          costProtection.benchmark_rate_per_kg = ratePerKg;
+          costProtection.expected_freight_usd = Math.round(expectedFreight * 100) / 100;
+          costProtection.freight_variance_usd = Math.round(variance * 100) / 100;
+
+          if (variance > 0) {
+            const pctOver = (variance / expectedFreight) * 100;
+            findings.push({
+              field: 'freight_charges_usd',
+              severity: pctOver > 15 ? 'error' : pctOver > 5 ? 'warning' : 'info',
+              message: `Freight $${extracted.freight_charges_usd.toFixed(2)} is $${variance.toFixed(2)} (${pctOver.toFixed(1)}%) above benchmark rate of $${ratePerKg.toFixed(4)}/kg (expected $${expectedFreight.toFixed(2)})`,
+              bol_value: String(extracted.freight_charges_usd),
+              shipment_value: String(expectedFreight.toFixed(2)),
+            });
+          } else if (variance < 0) {
+            findings.push({
+              field: 'freight_charges_usd',
+              severity: 'info',
+              message: `Freight $${extracted.freight_charges_usd.toFixed(2)} is $${Math.abs(variance).toFixed(2)} below benchmark ($${expectedFreight.toFixed(2)})`,
+              bol_value: String(extracted.freight_charges_usd),
+              shipment_value: String(expectedFreight.toFixed(2)),
+            });
+          }
+        }
+      }
+    }
+
+    // Weight variance against matched shipment
+    if (matchedShipment && extracted.gross_weight_kg && matchedShipment.quantity) {
+      const expectedWeight = parseFloat(matchedShipment.quantity);
+      if (expectedWeight > 0) {
+        const weightDiff = extracted.gross_weight_kg - expectedWeight;
+        const weightPct = (weightDiff / expectedWeight) * 100;
+        costProtection.weight_variance_kg = Math.round(weightDiff * 1000) / 1000;
+        costProtection.weight_variance_pct = Math.round(weightPct * 100) / 100;
+      }
+    }
+  } catch (error) {
+    logWarn('Cost protection check failed', { error: (error as Error).message });
+  }
+
+  // ── Duplicate BOL detection ──
+  try {
+    if (extracted.bol_number) {
+      const dupes = await queryAll(
+        `SELECT id, bol_number, supplier_name, created_at FROM bol_audits
+         WHERE LOWER(bol_number) = LOWER($1)
+         LIMIT 1`,
+        [extracted.bol_number]
+      );
+      if (dupes.length > 0) {
+        costProtection.is_duplicate = true;
+        findings.push({
+          field: 'bol_number',
+          severity: 'warning',
+          message: `Possible duplicate: BOL ${extracted.bol_number} already exists (ID ${dupes[0].id}, created ${new Date(dupes[0].created_at).toLocaleDateString()})`,
+          bol_value: extracted.bol_number,
+          shipment_value: String(dupes[0].id),
+        });
+      }
+    }
+  } catch (error) {
+    logWarn('Duplicate check failed', { error: (error as Error).message });
+  }
+
   // Check for missing critical fields — only BOL number is truly critical (error)
   // Others are informational since not all document types contain every field
   if (!extracted.bol_number) {
@@ -519,5 +636,5 @@ export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseRe
     status = 'discrepancy';
   }
 
-  return { status, findings, score, matched_shipment: matchedShipment };
+  return { status, findings, score, matched_shipment: matchedShipment, cost_protection: costProtection };
 }

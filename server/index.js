@@ -495,10 +495,44 @@ async function start() {
         ALTER TABLE bol_audits ADD COLUMN IF NOT EXISTS raw_pdf_text TEXT;
         ALTER TABLE bol_audits ADD COLUMN IF NOT EXISTS extraction_confidence JSONB;
         ALTER TABLE bol_audits ADD COLUMN IF NOT EXISTS pdf_filename VARCHAR(255);
+        ALTER TABLE bol_audits ADD COLUMN IF NOT EXISTS benchmark_rate_per_kg NUMERIC(10,4);
+        ALTER TABLE bol_audits ADD COLUMN IF NOT EXISTS expected_freight_usd NUMERIC(14,2);
+        ALTER TABLE bol_audits ADD COLUMN IF NOT EXISTS freight_variance_usd NUMERIC(14,2);
+        ALTER TABLE bol_audits ADD COLUMN IF NOT EXISTS weight_variance_kg NUMERIC(12,3);
+        ALTER TABLE bol_audits ADD COLUMN IF NOT EXISTS weight_variance_pct NUMERIC(8,2);
+        ALTER TABLE bol_audits ADD COLUMN IF NOT EXISTS is_duplicate BOOLEAN DEFAULT false;
       `);
       logger.info('BOL audits table ready');
     } catch (error) {
       logWarn('BOL audits table warning', { error: error.message });
+    }
+
+    // Create freight_benchmarks table for contracted rate comparison
+    try {
+      await getPool().query(`
+        CREATE TABLE IF NOT EXISTS freight_benchmarks (
+          id SERIAL PRIMARY KEY,
+          carrier_name VARCHAR(255),
+          port_of_loading VARCHAR(255) NOT NULL,
+          port_of_discharge VARCHAR(255) NOT NULL,
+          rate_per_kg_usd NUMERIC(10,4),
+          rate_per_cbm_usd NUMERIC(10,2),
+          min_charge_usd NUMERIC(12,2),
+          currency VARCHAR(10) DEFAULT 'USD',
+          transport_mode VARCHAR(20) DEFAULT 'sea',
+          valid_from DATE,
+          valid_until DATE,
+          notes TEXT,
+          created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_freight_benchmarks_route ON freight_benchmarks(port_of_loading, port_of_discharge);
+        CREATE INDEX IF NOT EXISTS idx_freight_benchmarks_carrier ON freight_benchmarks(carrier_name);
+      `);
+      logger.info('Freight benchmarks table ready');
+    } catch (error) {
+      logWarn('Freight benchmarks table warning', { error: error.message });
     }
 
     // Initialize notification scheduler

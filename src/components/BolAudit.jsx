@@ -82,6 +82,13 @@ function BolAudit() {
   const [showUploadResult, setShowUploadResult] = useState(false);
   const fileInputRef = React.useRef(null);
 
+  // Benchmarks
+  const [benchmarks, setBenchmarks] = useState([]);
+  const [showBenchmarks, setShowBenchmarks] = useState(false);
+  const [benchmarkForm, setBenchmarkForm] = useState({ port_of_loading: '', port_of_discharge: '', rate_per_kg_usd: '', rate_per_cbm_usd: '', min_charge_usd: '', carrier_name: '', transport_mode: 'sea', valid_from: '', valid_until: '', notes: '' });
+  const [editingBenchmark, setEditingBenchmark] = useState(null);
+  const [activeTab, setActiveTab] = useState('audit');
+
   // Fetch BOLs
   const fetchBols = useCallback(async (page = 1) => {
     try {
@@ -116,8 +123,20 @@ function BolAudit() {
     }
   }, []);
 
+  // Fetch benchmarks
+  const fetchBenchmarks = useCallback(async () => {
+    try {
+      const res = await authFetch(getApiUrl('/api/bol-audit/benchmarks'));
+      if (res.ok) {
+        const json = await res.json();
+        setBenchmarks(json.data || []);
+      }
+    } catch (err) { /* non-critical */ }
+  }, []);
+
   useEffect(() => { fetchBols(1); }, [fetchBols]);
   useEffect(() => { fetchStats(); }, [fetchStats]);
+  useEffect(() => { fetchBenchmarks(); }, [fetchBenchmarks]);
 
   // Create / Update
   const handleSave = async () => {
@@ -225,6 +244,63 @@ function BolAudit() {
     } catch (err) {
       showError('Failed to delete BOL');
     }
+  };
+
+  // Benchmark CRUD
+  const handleBenchmarkSave = async () => {
+    if (!benchmarkForm.port_of_loading.trim() || !benchmarkForm.port_of_discharge.trim()) {
+      showError('Port of Loading and Port of Discharge are required');
+      return;
+    }
+    setSaving(true);
+    try {
+      const url = editingBenchmark
+        ? getApiUrl(`/api/bol-audit/benchmarks/${editingBenchmark.id}`)
+        : getApiUrl('/api/bol-audit/benchmarks');
+      const res = await authFetch(url, {
+        method: editingBenchmark ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...benchmarkForm,
+          rate_per_kg_usd: benchmarkForm.rate_per_kg_usd ? parseFloat(benchmarkForm.rate_per_kg_usd) : null,
+          rate_per_cbm_usd: benchmarkForm.rate_per_cbm_usd ? parseFloat(benchmarkForm.rate_per_cbm_usd) : null,
+          min_charge_usd: benchmarkForm.min_charge_usd ? parseFloat(benchmarkForm.min_charge_usd) : null,
+        }),
+      });
+      if (res.ok) {
+        showSuccess(editingBenchmark ? 'Benchmark updated' : 'Benchmark created');
+        setEditingBenchmark(null);
+        setBenchmarkForm({ port_of_loading: '', port_of_discharge: '', rate_per_kg_usd: '', rate_per_cbm_usd: '', min_charge_usd: '', carrier_name: '', transport_mode: 'sea', valid_from: '', valid_until: '', notes: '' });
+        fetchBenchmarks();
+      } else {
+        const err = await res.json();
+        showError(err.error || 'Failed to save benchmark');
+      }
+    } catch (err) {
+      showError('Failed to save benchmark');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleBenchmarkDelete = async (bm) => {
+    const confirmed = await confirm({ title: 'Delete Benchmark', message: `Delete rate for ${bm.port_of_loading} → ${bm.port_of_discharge}?`, confirmText: 'Delete', type: 'danger' });
+    if (!confirmed) return;
+    try {
+      const res = await authFetch(getApiUrl(`/api/bol-audit/benchmarks/${bm.id}`), { method: 'DELETE' });
+      if (res.ok) { showSuccess('Benchmark deleted'); fetchBenchmarks(); }
+    } catch (err) { showError('Failed to delete benchmark'); }
+  };
+
+  const openEditBenchmark = (bm) => {
+    setEditingBenchmark(bm);
+    setBenchmarkForm({
+      port_of_loading: bm.port_of_loading || '', port_of_discharge: bm.port_of_discharge || '',
+      rate_per_kg_usd: bm.rate_per_kg_usd ?? '', rate_per_cbm_usd: bm.rate_per_cbm_usd ?? '',
+      min_charge_usd: bm.min_charge_usd ?? '', carrier_name: bm.carrier_name || '',
+      transport_mode: bm.transport_mode || 'sea', valid_from: bm.valid_from ? bm.valid_from.split('T')[0] : '',
+      valid_until: bm.valid_until ? bm.valid_until.split('T')[0] : '', notes: bm.notes || '',
+    });
   };
 
   // PDF Upload
@@ -409,8 +485,23 @@ function BolAudit() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 0, marginBottom: '1.2rem', borderBottom: '2px solid var(--border-color, #e5e7eb)' }}>
+        {[
+          { key: 'audit', label: 'BOL Audit' },
+          { key: 'cost', label: 'Cost Protection' },
+          { key: 'benchmarks', label: 'Rate Benchmarks' },
+        ].map(tab => (
+          <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
+            padding: '10px 20px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem',
+            backgroundColor: 'transparent', borderBottom: activeTab === tab.key ? '2px solid #3b82f6' : '2px solid transparent',
+            color: activeTab === tab.key ? '#3b82f6' : 'var(--text-500)', marginBottom: '-2px',
+          }}>{tab.label}</button>
+        ))}
+      </div>
+
       {/* Stats Cards */}
-      {stats && (
+      {stats && activeTab === 'audit' && (
         <div style={{ display: 'flex', gap: 12, marginBottom: '1.2rem', flexWrap: 'wrap' }}>
           <StatCard label="Total BOLs" value={parseInt(stats.total)} />
           <StatCard label="Pending" value={parseInt(stats.pending)} color="#f59e0b" />
@@ -421,7 +512,163 @@ function BolAudit() {
         </div>
       )}
 
-      {/* Filters */}
+      {/* Cost Protection Dashboard */}
+      {stats && activeTab === 'cost' && (
+        <div style={{ marginBottom: '1.2rem' }}>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+            <StatCard label="Total Freight Audited" value={formatCurrency(stats.total_freight_usd)} color="#3b82f6" />
+            <StatCard label="Overcharges Caught" value={formatCurrency(stats.total_overcharges_usd)} color="#dc2626" />
+            <StatCard label="Overcharge Count" value={parseInt(stats.overcharge_count || 0)} color="#dc2626" />
+            <StatCard label="Under-Benchmark" value={formatCurrency(stats.total_undercharges_usd)} color="#059669" />
+            <StatCard label="Avg Rate/kg" value={`$${parseFloat(stats.avg_freight_per_kg || 0).toFixed(4)}`} />
+            <StatCard label="Duplicates Found" value={parseInt(stats.duplicate_count || 0)} color="#f59e0b" />
+            <StatCard label="Weight Discrepancies" value={parseInt(stats.weight_discrepancy_count || 0)} color="#9333ea" />
+          </div>
+
+          {/* Cost protection table — show BOLs with freight variances */}
+          <div className="dash-panel" style={{ overflow: 'hidden' }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-color, #e5e7eb)', fontWeight: 600, fontSize: '0.95rem' }}>
+              Freight Variance Detail
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ backgroundColor: 'var(--surface-2, #f3f4f6)' }}>
+                    {['BOL #', 'Supplier', 'Route', 'Weight (kg)', 'Actual Freight', 'Benchmark Rate', 'Expected Freight', 'Variance', 'Status'].map(h => (
+                      <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, borderBottom: '2px solid var(--border-color, #e5e7eb)', whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {bols.filter(b => b.freight_variance_usd != null || b.freight_charges_usd).length === 0 ? (
+                    <tr><td colSpan={9} style={{ padding: 30, textAlign: 'center', color: 'var(--text-500)' }}>No freight data to analyze. Upload BOL PDFs and set rate benchmarks to see variances.</td></tr>
+                  ) : bols.filter(b => b.freight_charges_usd).map((bol, idx) => {
+                    const variance = parseFloat(bol.freight_variance_usd || 0);
+                    return (
+                      <tr key={bol.id} style={{ backgroundColor: idx % 2 === 0 ? 'transparent' : 'var(--surface-2, #f9fafb)' }}>
+                        <td style={{ padding: '10px 12px', fontWeight: 600 }}>{bol.bol_number}</td>
+                        <td style={{ padding: '10px 12px' }}>{bol.supplier_name || '-'}</td>
+                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>{bol.port_of_loading || '?'} → {bol.port_of_discharge || '?'}</td>
+                        <td style={{ padding: '10px 12px' }}>{bol.gross_weight_kg ? parseFloat(bol.gross_weight_kg).toLocaleString() : '-'}</td>
+                        <td style={{ padding: '10px 12px', fontWeight: 600 }}>{formatCurrency(bol.freight_charges_usd)}</td>
+                        <td style={{ padding: '10px 12px' }}>{bol.benchmark_rate_per_kg ? `$${parseFloat(bol.benchmark_rate_per_kg).toFixed(4)}/kg` : '-'}</td>
+                        <td style={{ padding: '10px 12px' }}>{bol.expected_freight_usd ? formatCurrency(bol.expected_freight_usd) : '-'}</td>
+                        <td style={{ padding: '10px 12px', fontWeight: 700, color: variance > 0 ? '#dc2626' : variance < 0 ? '#059669' : 'var(--text-500)' }}>
+                          {bol.freight_variance_usd != null ? `${variance > 0 ? '+' : ''}${formatCurrency(bol.freight_variance_usd)}` : 'No benchmark'}
+                        </td>
+                        <td style={{ padding: '10px 12px' }}>
+                          {bol.is_duplicate && <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: '0.75rem', fontWeight: 600, backgroundColor: '#fef3c7', color: '#d97706', marginRight: 4 }}>DUP</span>}
+                          <StatusBadge status={bol.audit_status} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rate Benchmarks Tab */}
+      {activeTab === 'benchmarks' && (
+        <div style={{ marginBottom: '1.2rem' }}>
+          {/* Benchmark Form */}
+          <div className="dash-panel" style={{ padding: 16, marginBottom: 16 }}>
+            <h3 style={{ margin: '0 0 12px', fontSize: '0.95rem' }}>{editingBenchmark ? 'Edit' : 'Add'} Contracted Rate</h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+              <div style={{ flex: '1 1 180px' }}>
+                <label style={labelStyle}>Port of Loading *</label>
+                <input style={inputStyle} value={benchmarkForm.port_of_loading} onChange={e => setBenchmarkForm(f => ({ ...f, port_of_loading: e.target.value }))} placeholder="e.g. Shanghai" />
+              </div>
+              <div style={{ flex: '1 1 180px' }}>
+                <label style={labelStyle}>Port of Discharge *</label>
+                <input style={inputStyle} value={benchmarkForm.port_of_discharge} onChange={e => setBenchmarkForm(f => ({ ...f, port_of_discharge: e.target.value }))} placeholder="e.g. Durban" />
+              </div>
+              <div style={{ flex: '1 1 120px' }}>
+                <label style={labelStyle}>Rate per kg (USD)</label>
+                <input style={inputStyle} type="number" step="0.0001" value={benchmarkForm.rate_per_kg_usd} onChange={e => setBenchmarkForm(f => ({ ...f, rate_per_kg_usd: e.target.value }))} />
+              </div>
+              <div style={{ flex: '1 1 120px' }}>
+                <label style={labelStyle}>Rate per CBM (USD)</label>
+                <input style={inputStyle} type="number" step="0.01" value={benchmarkForm.rate_per_cbm_usd} onChange={e => setBenchmarkForm(f => ({ ...f, rate_per_cbm_usd: e.target.value }))} />
+              </div>
+              <div style={{ flex: '1 1 120px' }}>
+                <label style={labelStyle}>Min Charge (USD)</label>
+                <input style={inputStyle} type="number" step="0.01" value={benchmarkForm.min_charge_usd} onChange={e => setBenchmarkForm(f => ({ ...f, min_charge_usd: e.target.value }))} />
+              </div>
+              <div style={{ flex: '1 1 150px' }}>
+                <label style={labelStyle}>Carrier</label>
+                <input style={inputStyle} value={benchmarkForm.carrier_name} onChange={e => setBenchmarkForm(f => ({ ...f, carrier_name: e.target.value }))} placeholder="Optional" />
+              </div>
+              <div style={{ flex: '1 1 100px' }}>
+                <label style={labelStyle}>Mode</label>
+                <select style={inputStyle} value={benchmarkForm.transport_mode} onChange={e => setBenchmarkForm(f => ({ ...f, transport_mode: e.target.value }))}>
+                  <option value="sea">Sea</option>
+                  <option value="air">Air</option>
+                  <option value="road">Road</option>
+                </select>
+              </div>
+              <div style={{ flex: '1 1 130px' }}>
+                <label style={labelStyle}>Valid From</label>
+                <input style={inputStyle} type="date" value={benchmarkForm.valid_from} onChange={e => setBenchmarkForm(f => ({ ...f, valid_from: e.target.value }))} />
+              </div>
+              <div style={{ flex: '1 1 130px' }}>
+                <label style={labelStyle}>Valid Until</label>
+                <input style={inputStyle} type="date" value={benchmarkForm.valid_until} onChange={e => setBenchmarkForm(f => ({ ...f, valid_until: e.target.value }))} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <button style={{ ...btnStyle('#059669'), opacity: saving ? 0.6 : 1 }} disabled={saving} onClick={handleBenchmarkSave}>
+                {saving ? 'Saving...' : editingBenchmark ? 'Update Rate' : 'Add Rate'}
+              </button>
+              {editingBenchmark && (
+                <button style={btnStyle('#6b7280')} onClick={() => { setEditingBenchmark(null); setBenchmarkForm({ port_of_loading: '', port_of_discharge: '', rate_per_kg_usd: '', rate_per_cbm_usd: '', min_charge_usd: '', carrier_name: '', transport_mode: 'sea', valid_from: '', valid_until: '', notes: '' }); }}>Cancel</button>
+              )}
+            </div>
+          </div>
+
+          {/* Benchmark List */}
+          <div className="dash-panel" style={{ overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ backgroundColor: 'var(--surface-2, #f3f4f6)' }}>
+                    {['POL', 'POD', 'Rate/kg', 'Rate/CBM', 'Min Charge', 'Carrier', 'Mode', 'Valid From', 'Valid Until', 'Actions'].map(h => (
+                      <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, borderBottom: '2px solid var(--border-color, #e5e7eb)', whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {benchmarks.length === 0 ? (
+                    <tr><td colSpan={10} style={{ padding: 30, textAlign: 'center', color: 'var(--text-500)' }}>No rate benchmarks set. Add contracted rates above to enable freight cost comparison.</td></tr>
+                  ) : benchmarks.map((bm, idx) => (
+                    <tr key={bm.id} style={{ backgroundColor: idx % 2 === 0 ? 'transparent' : 'var(--surface-2, #f9fafb)' }}>
+                      <td style={{ padding: '10px 12px', fontWeight: 600 }}>{bm.port_of_loading}</td>
+                      <td style={{ padding: '10px 12px', fontWeight: 600 }}>{bm.port_of_discharge}</td>
+                      <td style={{ padding: '10px 12px' }}>{bm.rate_per_kg_usd ? `$${parseFloat(bm.rate_per_kg_usd).toFixed(4)}` : '-'}</td>
+                      <td style={{ padding: '10px 12px' }}>{bm.rate_per_cbm_usd ? `$${parseFloat(bm.rate_per_cbm_usd).toFixed(2)}` : '-'}</td>
+                      <td style={{ padding: '10px 12px' }}>{bm.min_charge_usd ? `$${parseFloat(bm.min_charge_usd).toFixed(2)}` : '-'}</td>
+                      <td style={{ padding: '10px 12px' }}>{bm.carrier_name || '-'}</td>
+                      <td style={{ padding: '10px 12px', textTransform: 'capitalize' }}>{bm.transport_mode}</td>
+                      <td style={{ padding: '10px 12px' }}>{bm.valid_from ? new Date(bm.valid_from).toLocaleDateString() : '-'}</td>
+                      <td style={{ padding: '10px 12px' }}>{bm.valid_until ? new Date(bm.valid_until).toLocaleDateString() : '-'}</td>
+                      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                        <button style={{ ...btnStyle('#6b7280'), marginRight: 4, padding: '4px 10px' }} onClick={() => openEditBenchmark(bm)}>Edit</button>
+                        <button style={{ ...btnStyle('#dc2626'), padding: '4px 10px' }} onClick={() => handleBenchmarkDelete(bm)}>Del</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filters + Table — only on audit tab */}
+      {activeTab === 'audit' && (
+      <div>
       <div className="dash-panel" style={{ padding: '12px 16px', marginBottom: '1rem', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <input
           style={{ ...inputStyle, maxWidth: 280 }}
@@ -491,6 +738,8 @@ function BolAudit() {
           </div>
         )}
       </div>
+      </div>
+      )}
 
       {/* Create/Edit Modal */}
       {showForm && (

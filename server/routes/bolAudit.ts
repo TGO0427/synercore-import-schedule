@@ -186,7 +186,14 @@ router.get(
         COUNT(CASE WHEN audit_status = 'discrepancy' THEN 1 END) as discrepancy,
         COALESCE(SUM(freight_charges_usd), 0) as total_freight_usd,
         COALESCE(SUM(declared_value_usd), 0) as total_declared_value_usd,
-        COALESCE(SUM(CASE WHEN audit_status = 'discrepancy' THEN freight_charges_usd ELSE 0 END), 0) as flagged_freight_usd
+        COALESCE(SUM(CASE WHEN audit_status = 'discrepancy' THEN freight_charges_usd ELSE 0 END), 0) as flagged_freight_usd,
+        -- Cost protection metrics
+        COALESCE(SUM(CASE WHEN freight_variance_usd > 0 THEN freight_variance_usd ELSE 0 END), 0) as total_overcharges_usd,
+        COUNT(CASE WHEN freight_variance_usd > 0 THEN 1 END) as overcharge_count,
+        COALESCE(SUM(CASE WHEN freight_variance_usd < 0 THEN ABS(freight_variance_usd) ELSE 0 END), 0) as total_undercharges_usd,
+        COUNT(CASE WHEN is_duplicate THEN 1 END) as duplicate_count,
+        COUNT(CASE WHEN weight_variance_pct IS NOT NULL AND ABS(weight_variance_pct) > 5 THEN 1 END) as weight_discrepancy_count,
+        COALESCE(AVG(CASE WHEN freight_charges_usd > 0 AND gross_weight_kg > 0 THEN freight_charges_usd / gross_weight_kg END), 0) as avg_freight_per_kg
       FROM bol_audits
     `);
     res.json({ data: stats });
@@ -428,8 +435,9 @@ router.post(
         return isNaN(d.getTime()) ? null : val;
       };
 
-      // 4. Create BOL record with extracted data
+      // 4. Create BOL record with extracted data + cost protection
       const bolNumber = extracted.bol_number || `IMPORT_${Date.now()}`;
+      const cp = auditResult.cost_protection;
       const result = await queryOne(
         `INSERT INTO bol_audits (
           bol_number, shipment_id, supplier_name, carrier_name, vessel_name,
@@ -438,11 +446,14 @@ router.post(
           number_of_packages, freight_charges_usd, declared_value_usd,
           issue_date, ship_on_board_date, notify_party, payment_terms, incoterm,
           notes, created_by, audit_status, audit_notes, discrepancies,
-          raw_pdf_text, extraction_confidence, pdf_filename
+          raw_pdf_text, extraction_confidence, pdf_filename,
+          benchmark_rate_per_kg, expected_freight_usd, freight_variance_usd,
+          weight_variance_kg, weight_variance_pct, is_duplicate
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
           $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22,
-          $23, $24, $25, $26, $27, $28, $29, $30
+          $23, $24, $25, $26, $27, $28, $29, $30,
+          $31, $32, $33, $34, $35, $36
         ) RETURNING *`,
         [
           bolNumber,
@@ -466,6 +477,8 @@ router.post(
           extracted.raw_text || null,
           JSON.stringify(extracted.confidence || {}),
           req.file.originalname,
+          cp.benchmark_rate_per_kg, cp.expected_freight_usd, cp.freight_variance_usd,
+          cp.weight_variance_kg, cp.weight_variance_pct, cp.is_duplicate,
         ]
       );
 
@@ -486,6 +499,7 @@ router.post(
           matched_shipment: auditResult.matched_shipment
             ? { id: auditResult.matched_shipment.id, order_ref: auditResult.matched_shipment.order_ref, supplier: auditResult.matched_shipment.supplier }
             : null,
+          cost_protection: auditResult.cost_protection,
         },
         message: `BOL imported from PDF. Auto-audit: ${auditResult.status} (score: ${auditResult.score}/100)`,
       });
@@ -494,6 +508,101 @@ router.post(
       res.status(500).json({ error: 'Failed to process PDF', details: err.message });
     }
   }
+);
+
+// ─── Freight Benchmark Routes ───
+
+/**
+ * GET /api/bol-audit/benchmarks
+ * List all freight benchmarks
+ */
+router.get(
+  '/benchmarks',
+  authenticateToken,
+  asyncHandler(async (req: Request, res: Response) => {
+    const rows = await queryAll(
+      `SELECT b.*, u.username as created_by_name
+       FROM freight_benchmarks b
+       LEFT JOIN users u ON b.created_by = u.id
+       ORDER BY b.port_of_loading, b.port_of_discharge`,
+      []
+    );
+    res.json({ data: rows });
+  })
+);
+
+/**
+ * POST /api/bol-audit/benchmarks
+ * Create a freight benchmark rate
+ */
+router.post(
+  '/benchmarks',
+  authenticateToken,
+  [
+    body('port_of_loading').trim().notEmpty().withMessage('Port of loading is required'),
+    body('port_of_discharge').trim().notEmpty().withMessage('Port of discharge is required'),
+    body('rate_per_kg_usd').optional({ nullable: true }).isFloat({ min: 0 }),
+    body('rate_per_cbm_usd').optional({ nullable: true }).isFloat({ min: 0 }),
+    body('min_charge_usd').optional({ nullable: true }).isFloat({ min: 0 }),
+  ],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user?.id;
+    const { port_of_loading, port_of_discharge, rate_per_kg_usd, rate_per_cbm_usd, min_charge_usd, carrier_name, transport_mode, valid_from, valid_until, notes } = req.body;
+
+    const result = await queryOne(
+      `INSERT INTO freight_benchmarks (port_of_loading, port_of_discharge, rate_per_kg_usd, rate_per_cbm_usd, min_charge_usd, carrier_name, transport_mode, valid_from, valid_until, notes, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING *`,
+      [port_of_loading, port_of_discharge, rate_per_kg_usd || null, rate_per_cbm_usd || null, min_charge_usd || null, carrier_name || null, transport_mode || 'sea', valid_from || null, valid_until || null, notes || null, userId]
+    );
+    res.status(201).json({ data: result });
+  })
+);
+
+/**
+ * PUT /api/bol-audit/benchmarks/:id
+ * Update a freight benchmark rate
+ */
+router.put(
+  '/benchmarks/:id',
+  authenticateToken,
+  [param('id').isInt({ min: 1 })],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { port_of_loading, port_of_discharge, rate_per_kg_usd, rate_per_cbm_usd, min_charge_usd, carrier_name, transport_mode, valid_from, valid_until, notes } = req.body;
+
+    const result = await queryOne(
+      `UPDATE freight_benchmarks SET
+        port_of_loading = COALESCE($1, port_of_loading),
+        port_of_discharge = COALESCE($2, port_of_discharge),
+        rate_per_kg_usd = $3, rate_per_cbm_usd = $4, min_charge_usd = $5,
+        carrier_name = $6, transport_mode = COALESCE($7, transport_mode),
+        valid_from = $8, valid_until = $9, notes = $10,
+        updated_at = CURRENT_TIMESTAMP
+       WHERE id = $11 RETURNING *`,
+      [port_of_loading, port_of_discharge, rate_per_kg_usd || null, rate_per_cbm_usd || null, min_charge_usd || null, carrier_name || null, transport_mode, valid_from || null, valid_until || null, notes || null, id]
+    );
+    if (!result) return res.status(404).json({ error: 'Benchmark not found' });
+    res.json({ data: result });
+  })
+);
+
+/**
+ * DELETE /api/bol-audit/benchmarks/:id
+ * Delete a freight benchmark
+ */
+router.delete(
+  '/benchmarks/:id',
+  authenticateToken,
+  [param('id').isInt({ min: 1 })],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const result = await queryOne('DELETE FROM freight_benchmarks WHERE id = $1 RETURNING id', [req.params.id]);
+    if (!result) return res.status(404).json({ error: 'Benchmark not found' });
+    res.json({ message: 'Benchmark deleted' });
+  })
 );
 
 /**
