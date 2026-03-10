@@ -480,51 +480,58 @@ router.post(
       );
     }
 
+    // Helper: find benchmarks matching port conditions
+    async function findBenchmarks(pol: string | null, pod: string | null, carrier: string | null): Promise<any[]> {
+      const conds: string[] = [];
+      const prms: any[] = [];
+      let i = 1;
+      if (pol) { conds.push(`LOWER(port_of_loading) LIKE LOWER($${i++})`); prms.push(`%${pol.substring(0, 30)}%`); }
+      if (pod) { conds.push(`LOWER(port_of_discharge) LIKE LOWER($${i++})`); prms.push(`%${pod.substring(0, 30)}%`); }
+      if (conds.length === 0) return [];
+
+      const whereBase = `${conds.join(' AND ')} AND (valid_until IS NULL OR valid_until >= CURRENT_DATE)`;
+      const cols = `rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd, carrier_name`;
+
+      // Try carrier-specific first
+      if (carrier) {
+        const res = await queryAll(
+          `SELECT ${cols} FROM freight_benchmarks WHERE ${whereBase} AND LOWER(carrier_name) LIKE LOWER($${i})
+           ORDER BY valid_from DESC NULLS LAST LIMIT 5`,
+          [...prms, `%${carrier.substring(0, 30)}%`]
+        );
+        if (res.length > 0) return res;
+      }
+      return queryAll(
+        `SELECT ${cols} FROM freight_benchmarks WHERE ${whereBase} ORDER BY valid_from DESC NULLS LAST LIMIT 5`,
+        prms
+      );
+    }
+
     let updated = 0;
     for (const bol of bols) {
       const freight = parseFloat(bol.freight_charges_usd);
       if (!freight || freight <= 0) continue;
 
-      // Build benchmark lookup conditions
-      const conditions: string[] = [];
-      const params: any[] = [];
-      let idx = 1;
+      const pol = bol.port_of_loading || null;
+      const pod = bol.port_of_discharge || null;
+      if (!pol && !pod) continue;
 
-      if (bol.port_of_loading) {
-        conditions.push(`LOWER(port_of_loading) LIKE LOWER($${idx++})`);
-        params.push(`%${bol.port_of_loading.substring(0, 30)}%`);
-      }
-      if (bol.port_of_discharge) {
-        conditions.push(`LOWER(port_of_discharge) LIKE LOWER($${idx++})`);
-        params.push(`%${bol.port_of_discharge.substring(0, 30)}%`);
+      // Strategy 1: exact POL → POD match
+      let benchmarks = await findBenchmarks(pol, pod, bol.carrier_name);
+
+      // Strategy 2: swap POL/POD (PDF parser may have reversed them)
+      if (benchmarks.length === 0 && pol && pod) {
+        benchmarks = await findBenchmarks(pod, pol, bol.carrier_name);
       }
 
-      if (conditions.length === 0) continue;
-
-      // Try carrier-specific match first
-      let benchmarks: any[] = [];
-      if (bol.carrier_name) {
-        benchmarks = await queryAll(
-          `SELECT rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd, carrier_name
-           FROM freight_benchmarks
-           WHERE ${conditions.join(' AND ')}
-             AND LOWER(carrier_name) LIKE LOWER($${idx})
-             AND (valid_until IS NULL OR valid_until >= CURRENT_DATE)
-           ORDER BY valid_from DESC NULLS LAST LIMIT 5`,
-          [...params, `%${bol.carrier_name.substring(0, 30)}%`]
-        );
+      // Strategy 3: match by POL only (POD might be missing/wrong)
+      if (benchmarks.length === 0 && pol) {
+        benchmarks = await findBenchmarks(pol, null, bol.carrier_name);
       }
 
-      // Fallback: route-only match
-      if (benchmarks.length === 0) {
-        benchmarks = await queryAll(
-          `SELECT rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd, carrier_name
-           FROM freight_benchmarks
-           WHERE ${conditions.join(' AND ')}
-             AND (valid_until IS NULL OR valid_until >= CURRENT_DATE)
-           ORDER BY valid_from DESC NULLS LAST LIMIT 5`,
-          params
-        );
+      // Strategy 4: match by POD as POL (single port, PDF put it in wrong field)
+      if (benchmarks.length === 0 && pod) {
+        benchmarks = await findBenchmarks(pod, null, bol.carrier_name);
       }
 
       if (benchmarks.length === 0) continue;
