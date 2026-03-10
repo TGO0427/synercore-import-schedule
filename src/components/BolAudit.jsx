@@ -691,8 +691,104 @@ function BolAudit() {
               </div>
             </div>
 
-            {/* Confidence Scores */}
-            {uploadResult.extraction?.confidence && (
+            {/* Scoring Breakdown */}
+            {(() => {
+              const FIELD_WEIGHTS = [
+                { key: 'bol_number', label: 'BOL Number', weight: 20 },
+                { key: 'supplier_name', label: 'Supplier', weight: 10 },
+                { key: 'gross_weight_kg', label: 'Gross Weight', weight: 10 },
+                { key: 'consignee', label: 'Consignee', weight: 8 },
+                { key: 'shipper', label: 'Shipper', weight: 8 },
+                { key: 'vessel_name', label: 'Vessel', weight: 7 },
+                { key: 'port_of_loading', label: 'Port of Loading', weight: 7 },
+                { key: 'port_of_discharge', label: 'Port of Discharge', weight: 7 },
+                { key: 'incoterm', label: 'Incoterm', weight: 5 },
+                { key: 'payment_terms', label: 'Payment Terms', weight: 4 },
+                { key: 'container_numbers', label: 'Container Numbers', weight: 4 },
+                { key: 'freight_charges_usd', label: 'Freight Charges', weight: 4 },
+                { key: 'number_of_packages', label: 'Packages', weight: 3 },
+                { key: 'carrier_name', label: 'Carrier', weight: 3 },
+              ];
+              const totalWeight = FIELD_WEIGHTS.reduce((s, f) => s + f.weight, 0);
+              const bol = uploadResult.bol;
+              let earned = 0;
+              const rows = FIELD_WEIGHTS.map(f => {
+                const val = bol[f.key];
+                const hasValue = f.key === 'container_numbers'
+                  ? (Array.isArray(val) ? val.length > 0 : !!val)
+                  : !!val;
+                if (hasValue) earned += f.weight;
+                return { ...f, hasValue, pts: hasValue ? f.weight : 0 };
+              });
+              const baseScore = Math.round((earned / totalWeight) * 100);
+
+              return (
+                <div style={{ marginBottom: 16 }}>
+                  <h3 style={{ fontSize: '0.95rem', marginBottom: 8 }}>Scoring Breakdown</h3>
+                  <div style={{ backgroundColor: 'var(--surface-2, #f9fafb)', borderRadius: 8, padding: 14 }}>
+                    {/* Score bar */}
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-700)' }}>Extraction Score</span>
+                        <span style={{
+                          fontSize: '0.95rem', fontWeight: 700,
+                          color: baseScore >= 80 ? '#059669' : baseScore >= 50 ? '#d97706' : '#dc2626',
+                        }}>{baseScore}/100</span>
+                      </div>
+                      <div style={{ height: 8, backgroundColor: '#e5e7eb', borderRadius: 4, overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%', borderRadius: 4, transition: 'width 0.5s',
+                          width: `${baseScore}%`,
+                          backgroundColor: baseScore >= 80 ? '#059669' : baseScore >= 50 ? '#d97706' : '#dc2626',
+                        }} />
+                      </div>
+                    </div>
+                    {/* Field breakdown table */}
+                    <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid var(--border-color, #e5e7eb)' }}>
+                          <th style={{ textAlign: 'left', padding: '4px 6px', fontWeight: 600, color: 'var(--text-500)' }}>Field</th>
+                          <th style={{ textAlign: 'center', padding: '4px 6px', fontWeight: 600, color: 'var(--text-500)', width: 60 }}>Weight</th>
+                          <th style={{ textAlign: 'center', padding: '4px 6px', fontWeight: 600, color: 'var(--text-500)', width: 60 }}>Earned</th>
+                          <th style={{ textAlign: 'center', padding: '4px 6px', fontWeight: 600, color: 'var(--text-500)', width: 60 }}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map(r => (
+                          <tr key={r.key} style={{ borderBottom: '1px solid var(--border-color, #f0f0f0)' }}>
+                            <td style={{ padding: '4px 6px' }}>{r.label}</td>
+                            <td style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--text-500)' }}>{r.weight}</td>
+                            <td style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 600, color: r.hasValue ? '#059669' : '#dc2626' }}>{r.pts}</td>
+                            <td style={{ padding: '4px 6px', textAlign: 'center' }}>
+                              <span style={{
+                                display: 'inline-block', width: 18, height: 18, lineHeight: '18px', borderRadius: '50%',
+                                fontSize: '0.7rem', fontWeight: 700, textAlign: 'center',
+                                backgroundColor: r.hasValue ? '#d1fae5' : '#fee2e2',
+                                color: r.hasValue ? '#059669' : '#dc2626',
+                              }}>{r.hasValue ? '\u2713' : '\u2717'}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr style={{ borderTop: '2px solid var(--border-color, #d1d5db)' }}>
+                          <td style={{ padding: '6px', fontWeight: 700 }}>Total</td>
+                          <td style={{ padding: '6px', textAlign: 'center', fontWeight: 600, color: 'var(--text-500)' }}>{totalWeight}</td>
+                          <td style={{ padding: '6px', textAlign: 'center', fontWeight: 700, color: '#059669' }}>{earned}</td>
+                          <td style={{ padding: '6px', textAlign: 'center', fontWeight: 700, color: baseScore >= 80 ? '#059669' : baseScore >= 50 ? '#d97706' : '#dc2626' }}>{baseScore}%</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                    <div style={{ marginTop: 8, fontSize: '0.75rem', color: 'var(--text-400)' }}>
+                      Scores above 80% are rated Excellent, 50-79% Good, below 50% Needs Review. Deductions apply for shipment data mismatches.
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Extraction Confidence */}
+            {uploadResult.extraction?.confidence && Object.keys(uploadResult.extraction.confidence).length > 0 && (
               <div style={{ marginBottom: 16 }}>
                 <h3 style={{ fontSize: '0.95rem', marginBottom: 8 }}>Extraction Confidence</h3>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
