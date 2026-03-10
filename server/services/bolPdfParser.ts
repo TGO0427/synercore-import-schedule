@@ -491,27 +491,112 @@ export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseRe
         benchmarkParams.push(`%${extracted.port_of_discharge.substring(0, 30)}%`);
       }
 
-      const benchmark = await queryAll(
-        `SELECT rate_per_kg_usd, rate_per_cbm_usd, min_charge_usd, carrier_name
+      // Also try to match carrier if available
+      if (extracted.carrier_name) {
+        benchmarkConditions.push(`LOWER(carrier_name) LIKE LOWER($${bIdx++})`);
+        benchmarkParams.push(`%${extracted.carrier_name.substring(0, 30)}%`);
+      }
+
+      const benchmarks = await queryAll(
+        `SELECT rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd, carrier_name
          FROM freight_benchmarks
          WHERE ${benchmarkConditions.join(' AND ')}
            AND (valid_until IS NULL OR valid_until >= CURRENT_DATE)
          ORDER BY valid_from DESC NULLS LAST
-         LIMIT 1`,
+         LIMIT 5`,
         benchmarkParams
       );
 
-      if (benchmark.length > 0 && extracted.gross_weight_kg && extracted.freight_charges_usd) {
-        const rate = benchmark[0];
-        const ratePerKg = parseFloat(rate.rate_per_kg_usd);
-        if (ratePerKg > 0) {
-          const expectedFreight = Math.max(
-            ratePerKg * extracted.gross_weight_kg,
-            parseFloat(rate.min_charge_usd || '0')
+      // If no carrier-specific match, try without carrier
+      let matchedBenchmarks = benchmarks;
+      if (matchedBenchmarks.length === 0 && extracted.carrier_name) {
+        const fallbackConditions: string[] = [];
+        const fallbackParams: any[] = [];
+        let fbIdx = 1;
+        if (extracted.port_of_loading) {
+          fallbackConditions.push(`LOWER(port_of_loading) LIKE LOWER($${fbIdx++})`);
+          fallbackParams.push(`%${extracted.port_of_loading.substring(0, 30)}%`);
+        }
+        if (extracted.port_of_discharge) {
+          fallbackConditions.push(`LOWER(port_of_discharge) LIKE LOWER($${fbIdx++})`);
+          fallbackParams.push(`%${extracted.port_of_discharge.substring(0, 30)}%`);
+        }
+        if (fallbackConditions.length > 0) {
+          matchedBenchmarks = await queryAll(
+            `SELECT rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd, carrier_name
+             FROM freight_benchmarks
+             WHERE ${fallbackConditions.join(' AND ')}
+               AND (valid_until IS NULL OR valid_until >= CURRENT_DATE)
+             ORDER BY valid_from DESC NULLS LAST
+             LIMIT 5`,
+            fallbackParams
           );
+        }
+      }
+
+      if (matchedBenchmarks.length > 0 && extracted.freight_charges_usd) {
+        const rate = matchedBenchmarks[0];
+
+        // Detect container type from BOL text/container numbers
+        const bolText = (extracted.raw_text || '').toLowerCase();
+        const containerInfo = extracted.container_numbers.join(' ').toLowerCase();
+        const allText = `${bolText} ${containerInfo}`;
+
+        let benchmarkRate: number | null = null;
+        let containerType = '';
+
+        // Try to identify container type from BOL content
+        if (/40\s*h[cq]|40.*high\s*cube/i.test(allText)) {
+          benchmarkRate = parseFloat(rate.rate_40hc_usd) || null;
+          containerType = '40HC';
+        } else if (/40\s*(?:gp|ft|dc|')|40.*(?:dry|general|standard)/i.test(allText)) {
+          benchmarkRate = parseFloat(rate.rate_40gp_usd) || null;
+          containerType = '40GP';
+        } else if (/20\s*(?:gp|ft|dc|')|20.*(?:dry|general|standard)/i.test(allText)) {
+          benchmarkRate = parseFloat(rate.rate_20gp_usd) || null;
+          containerType = '20GP';
+        }
+
+        // Fallback: if freight charges are in container rate range, pick closest match
+        if (!benchmarkRate) {
+          const r20 = parseFloat(rate.rate_20gp_usd) || 0;
+          const r40 = parseFloat(rate.rate_40gp_usd) || 0;
+          const r40hc = parseFloat(rate.rate_40hc_usd) || 0;
+          const freight = extracted.freight_charges_usd;
+
+          // Use the rate closest to actual freight as best guess
+          const options = [
+            { rate: r20, type: '20GP' },
+            { rate: r40, type: '40GP' },
+            { rate: r40hc, type: '40HC' },
+          ].filter(o => o.rate > 0);
+
+          if (options.length > 0) {
+            const closest = options.reduce((a, b) =>
+              Math.abs(a.rate - freight) < Math.abs(b.rate - freight) ? a : b
+            );
+            benchmarkRate = closest.rate;
+            containerType = closest.type;
+          }
+        }
+
+        // Also try rate_per_kg if container rate not available
+        if (!benchmarkRate && extracted.gross_weight_kg) {
+          const ratePerKg = parseFloat(rate.rate_per_kg_usd);
+          if (ratePerKg > 0) {
+            benchmarkRate = ratePerKg * extracted.gross_weight_kg;
+            containerType = 'per-kg';
+            costProtection.benchmark_rate_per_kg = ratePerKg;
+          }
+        }
+
+        if (benchmarkRate && benchmarkRate > 0) {
+          const expectedFreight = containerType === 'per-kg' ? benchmarkRate : benchmarkRate;
           const variance = extracted.freight_charges_usd - expectedFreight;
 
-          costProtection.benchmark_rate_per_kg = ratePerKg;
+          if (containerType !== 'per-kg') {
+            costProtection.benchmark_rate_per_kg = benchmarkRate; // Store container rate for reference
+          }
           costProtection.expected_freight_usd = Math.round(expectedFreight * 100) / 100;
           costProtection.freight_variance_usd = Math.round(variance * 100) / 100;
 
@@ -520,7 +605,7 @@ export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseRe
             findings.push({
               field: 'freight_charges_usd',
               severity: pctOver > 15 ? 'error' : pctOver > 5 ? 'warning' : 'info',
-              message: `Freight $${extracted.freight_charges_usd.toFixed(2)} is $${variance.toFixed(2)} (${pctOver.toFixed(1)}%) above benchmark rate of $${ratePerKg.toFixed(4)}/kg (expected $${expectedFreight.toFixed(2)})`,
+              message: `Freight $${extracted.freight_charges_usd.toFixed(2)} is $${variance.toFixed(2)} (${pctOver.toFixed(1)}%) above ${containerType} benchmark of $${expectedFreight.toFixed(2)} (${rate.carrier_name || 'avg'})`,
               bol_value: String(extracted.freight_charges_usd),
               shipment_value: String(expectedFreight.toFixed(2)),
             });
@@ -528,7 +613,15 @@ export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseRe
             findings.push({
               field: 'freight_charges_usd',
               severity: 'info',
-              message: `Freight $${extracted.freight_charges_usd.toFixed(2)} is $${Math.abs(variance).toFixed(2)} below benchmark ($${expectedFreight.toFixed(2)})`,
+              message: `Freight $${extracted.freight_charges_usd.toFixed(2)} is $${Math.abs(variance).toFixed(2)} below ${containerType} benchmark of $${expectedFreight.toFixed(2)} (${rate.carrier_name || 'avg'})`,
+              bol_value: String(extracted.freight_charges_usd),
+              shipment_value: String(expectedFreight.toFixed(2)),
+            });
+          } else {
+            findings.push({
+              field: 'freight_charges_usd',
+              severity: 'info',
+              message: `Freight matches ${containerType} benchmark of $${expectedFreight.toFixed(2)} (${rate.carrier_name || 'avg'})`,
               bol_value: String(extracted.freight_charges_usd),
               shipment_value: String(expectedFreight.toFixed(2)),
             });

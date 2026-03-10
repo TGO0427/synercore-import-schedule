@@ -630,7 +630,7 @@ function BolAudit() {
                         <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>{bol.port_of_loading || '?'} → {bol.port_of_discharge || '?'}</td>
                         <td style={{ padding: '10px 12px' }}>{bol.gross_weight_kg ? parseFloat(bol.gross_weight_kg).toLocaleString() : '-'}</td>
                         <td style={{ padding: '10px 12px', fontWeight: 600 }}>{formatCurrency(bol.freight_charges_usd)}</td>
-                        <td style={{ padding: '10px 12px' }}>{bol.benchmark_rate_per_kg ? `$${parseFloat(bol.benchmark_rate_per_kg).toFixed(4)}/kg` : '-'}</td>
+                        <td style={{ padding: '10px 12px' }}>{bol.benchmark_rate_per_kg ? (parseFloat(bol.benchmark_rate_per_kg) > 100 ? formatCurrency(bol.benchmark_rate_per_kg) : `$${parseFloat(bol.benchmark_rate_per_kg).toFixed(4)}/kg`) : '-'}</td>
                         <td style={{ padding: '10px 12px' }}>{bol.expected_freight_usd ? formatCurrency(bol.expected_freight_usd) : '-'}</td>
                         <td style={{ padding: '10px 12px', fontWeight: 700, color: variance > 0 ? '#dc2626' : variance < 0 ? '#059669' : 'var(--text-500)' }}>
                           {bol.freight_variance_usd != null ? `${variance > 0 ? '+' : ''}${formatCurrency(bol.freight_variance_usd)}` : 'No benchmark'}
