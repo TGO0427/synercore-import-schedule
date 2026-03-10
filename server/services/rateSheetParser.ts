@@ -178,49 +178,65 @@ function parseFlatFormat(rows: any[][], sheetName: string, filename: string): Ex
 function parseGroupedFormat(rows: any[][], sheetName: string, filename: string): ExtractedRate[] {
   const rates: ExtractedRate[] = [];
   const mode = detectMode(sheetName, rows.slice(0, 5));
-
-  // Default POD — Synercore imports to Durban
   const defaultPod = 'Durban';
 
   let currentPort: string | null = null;
   let colMap: { carrier: number; gp20: number; gp40: number; hc40: number } | null = null;
 
+  // Log first few rows for debugging
+  logInfo(`Grouped format scan: ${rows.length} rows in sheet "${sheetName}"`);
+  for (let i = 0; i < Math.min(rows.length, 6); i++) {
+    logInfo(`  Row ${i}: ${JSON.stringify(rows[i].slice(0, 6))}`);
+  }
+
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     const cells = row.map((c: any) => String(c).trim());
 
-    // Check if this row is a container-type header (20GP, 40GP, 40HC)
+    // Check if this row contains container-type headers (20GP, 40GP, 40HC)
     const headerCheck = detectContainerHeader(cells);
     if (headerCheck) {
-      // The port name is usually in the row above or in the same row's first cell
-      // or a couple rows above
-      const portName = findPortAbove(rows, i) || findPortInRow(cells);
+      // Port name: check row above, same row (different col), or 2 rows above
+      const portName = findPortAbove(rows, i) || findPortInRow(cells, headerCheck);
       if (portName) {
         currentPort = normalizePort(portName);
         colMap = headerCheck;
-        logInfo(`Detected port section: ${currentPort} at row ${i + 1}`);
+        logInfo(`Port section: "${currentPort}" at row ${i + 1}, cols: 20GP=${headerCheck.gp20} 40GP=${headerCheck.gp40} 40HC=${headerCheck.hc40}`);
+      } else {
+        logWarn(`Found container headers at row ${i + 1} but no port name nearby`);
       }
       continue;
+    }
+
+    // Check if this row IS a port name (standalone row with just a port name)
+    const nonEmpty = cells.filter(c => c.length > 0);
+    if (nonEmpty.length <= 2) {
+      for (const cell of nonEmpty) {
+        if (cell.length >= 3 && isPortName(cell)) {
+          currentPort = normalizePort(cell);
+          colMap = null; // Wait for container header row
+          break;
+        }
+      }
     }
 
     // If we have a current port and column map, try to parse rate rows
     if (currentPort && colMap) {
       const carrierCell = String(row[colMap.carrier] || '').trim();
       if (!carrierCell || carrierCell.length < 2) continue;
-
-      // Skip if this looks like another port header or section break
       if (isPortName(carrierCell)) {
         currentPort = normalizePort(carrierCell);
+        colMap = null;
         continue;
       }
-      if (['total', 'subtotal', 'average', '20gp', '40gp', '40hc'].some(w => carrierCell.toLowerCase() === w)) continue;
+      const cl = carrierCell.toLowerCase();
+      if (['total', 'subtotal', 'average', '20gp', '40gp', '40hc'].some(w => cl === w)) continue;
 
       const rate20gp = parseRate(row[colMap.gp20]);
-      const rate40gp = parseRate(row[colMap.gp40]);
-      const rate40hc = parseRate(row[colMap.hc40]);
+      const rate40gp = colMap.gp40 >= 0 ? parseRate(row[colMap.gp40]) : null;
+      const rate40hc = colMap.hc40 >= 0 ? parseRate(row[colMap.hc40]) : null;
 
       if (rate20gp === null && rate40gp === null && rate40hc === null) {
-        // No rates — might be end of section
         colMap = null;
         continue;
       }
@@ -252,19 +268,22 @@ function detectContainerHeader(cells: string[]): { carrier: number; gp20: number
   let gp20 = -1, gp40 = -1, hc40 = -1;
 
   for (let i = 0; i < cells.length; i++) {
-    const c = cells[i].toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (/^20(gp|ft|dc)?$/.test(c)) gp20 = i;
-    else if (/^40(gp|ft|dc)?$/.test(c)) gp40 = i;
-    else if (/^40hc$|^40hq$/.test(c)) hc40 = i;
+    const c = cells[i].toLowerCase().replace(/[\s\-_'"]/g, '');
+    // Match: "20GP", "20", "20'", "20FT", "20DC", "20 GP"
+    if (/^20(gp|ft|dc|')?$/.test(c) && gp20 < 0) gp20 = i;
+    // Match: "40GP", "40", "40FT", "40DC" (but not if already matched as 40HC)
+    else if (/^40(gp|ft|dc|')?$/.test(c) && gp40 < 0) gp40 = i;
+    // Match: "40HC", "40HQ", "40'HC"
+    else if (/^40h[cq]$/.test(c)) hc40 = i;
   }
 
   // Need at least 20GP and one of 40GP/40HC
   if (gp20 >= 0 && (gp40 >= 0 || hc40 >= 0)) {
-    // Carrier column is the first column (usually col 0) before the rate columns
-    const carrier = Math.min(...[gp20, gp40, hc40].filter(n => n >= 0)) > 0 ? 0 : -1;
-    // If carrier couldn't be determined, skip
+    // Carrier column is before the first rate column
+    const firstRateCol = Math.min(...[gp20, gp40, hc40].filter(n => n >= 0));
+    const carrier = firstRateCol > 0 ? 0 : -1;
     if (carrier < 0) return null;
-    return { carrier, gp20, gp40: gp40 >= 0 ? gp40 : -1, hc40: hc40 >= 0 ? hc40 : -1 };
+    return { carrier, gp20, gp40, hc40 };
   }
 
   return null;
@@ -274,7 +293,6 @@ function detectContainerHeader(cells: string[]): { carrier: number; gp20: number
  * Look at the rows above a container header to find the port name
  */
 function findPortAbove(rows: any[][], headerRowIdx: number): string | null {
-  // Check up to 3 rows above
   for (let offset = 1; offset <= 3 && headerRowIdx - offset >= 0; offset++) {
     const row = rows[headerRowIdx - offset];
     for (const cell of row) {
@@ -286,11 +304,13 @@ function findPortAbove(rows: any[][], headerRowIdx: number): string | null {
 }
 
 /**
- * Check if any cell in the row is a port name (for merged-cell layouts)
+ * Check if any cell in the row is a port name, excluding container header columns
  */
-function findPortInRow(cells: string[]): string | null {
-  for (const cell of cells) {
-    if (cell.length >= 3 && isPortName(cell)) return cell;
+function findPortInRow(cells: string[], headerCols?: { gp20: number; gp40: number; hc40: number }): string | null {
+  const skipCols = new Set(headerCols ? [headerCols.gp20, headerCols.gp40, headerCols.hc40].filter(n => n >= 0) : []);
+  for (let i = 0; i < cells.length; i++) {
+    if (skipCols.has(i)) continue;
+    if (cells[i].length >= 3 && isPortName(cells[i])) return cells[i];
   }
   return null;
 }

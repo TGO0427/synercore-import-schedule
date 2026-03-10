@@ -382,7 +382,10 @@ router.post(
       const rates = await parseExcelRateSheet(req.file.buffer, filename);
 
       if (rates.length === 0) {
-        return res.status(400).json({ error: 'No rates could be extracted from the file. Check format.' });
+        return res.status(400).json({
+          error: 'No rates could be extracted from the file.',
+          hint: 'Use the "Download Template" to see the expected format, or upload your rate sheet with port sections and 20GP/40GP/40HC columns.',
+        });
       }
 
       // Insert rates, skip duplicates
