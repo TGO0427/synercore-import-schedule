@@ -175,74 +175,87 @@ function parseFlatFormat(rows: any[][], sheetName: string, filename: string): Ex
 // Port name as section header, then header row with 20GP/40GP/40HC,
 // then carrier rows with rates. POD defaults to Durban.
 
+interface SectionInfo {
+  port: string;
+  carrierCol: number;
+  gp20Col: number;
+  gp40Col: number;
+  hc40Col: number;
+}
+
 function parseGroupedFormat(rows: any[][], sheetName: string, filename: string): ExtractedRate[] {
   const rates: ExtractedRate[] = [];
   const mode = detectMode(sheetName, rows.slice(0, 5));
   const defaultPod = 'Durban';
 
-  let currentPort: string | null = null;
-  let colMap: { carrier: number; gp20: number; gp40: number; hc40: number } | null = null;
+  // Active sections — multiple can be active simultaneously (side-by-side layout)
+  let activeSections: SectionInfo[] = [];
+  // Pending ports found in a row, waiting for container headers in the next row
+  let pendingPorts: { name: string; col: number }[] = [];
 
-  // Log first few rows for debugging
   logInfo(`Grouped format scan: ${rows.length} rows in sheet "${sheetName}"`);
-  for (let i = 0; i < Math.min(rows.length, 6); i++) {
-    logInfo(`  Row ${i}: ${JSON.stringify(rows[i].slice(0, 6))}`);
+  for (let i = 0; i < Math.min(rows.length, 8); i++) {
+    logInfo(`  Row ${i}: ${JSON.stringify((rows[i] || []).slice(0, 10))}`);
   }
 
   for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
+    const row = rows[i] || [];
     const cells = row.map((c: any) => String(c).trim());
 
-    // Check if this row contains container-type headers (20GP, 40GP, 40HC)
-    const headerCheck = detectContainerHeader(cells);
-    if (headerCheck) {
-      // Port name: check row above, same row (different col), or 2 rows above
-      const portName = findPortAbove(rows, i) || findPortInRow(cells, headerCheck);
-      if (portName) {
-        currentPort = normalizePort(portName);
-        colMap = headerCheck;
-        logInfo(`Port section: "${currentPort}" at row ${i + 1}, cols: 20GP=${headerCheck.gp20} 40GP=${headerCheck.gp40} 40HC=${headerCheck.hc40}`);
-      } else {
-        logWarn(`Found container headers at row ${i + 1} but no port name nearby`);
+    // Detect ALL container header groups in this row (supports side-by-side sections)
+    const headerGroups = detectAllContainerHeaders(cells);
+
+    if (headerGroups.length > 0) {
+      // Match each header group with a port name (from row above or pending ports)
+      activeSections = [];
+      for (const hg of headerGroups) {
+        // Find port name for this group: check pending ports near this column, or look above
+        let portName = findPortForGroup(pendingPorts, hg.gp20);
+        if (!portName) portName = findPortAboveNearCol(rows, i, hg.gp20);
+        if (portName) {
+          activeSections.push({
+            port: normalizePort(portName),
+            carrierCol: hg.carrier,
+            gp20Col: hg.gp20,
+            gp40Col: hg.gp40,
+            hc40Col: hg.hc40,
+          });
+          logInfo(`Port section: "${normalizePort(portName)}" at row ${i + 1}, carrier=${hg.carrier} 20GP=${hg.gp20} 40GP=${hg.gp40} 40HC=${hg.hc40}`);
+        }
       }
+      pendingPorts = [];
       continue;
     }
 
-    // Check if this row IS a port name (standalone row with just a port name)
-    const nonEmpty = cells.filter(c => c.length > 0);
-    if (nonEmpty.length <= 2) {
-      for (const cell of nonEmpty) {
-        if (cell.length >= 3 && isPortName(cell)) {
-          currentPort = normalizePort(cell);
-          colMap = null; // Wait for container header row
-          break;
-        }
+    // Check if this row contains port names (for the next header row)
+    const portsInRow: { name: string; col: number }[] = [];
+    for (let c = 0; c < cells.length; c++) {
+      const cell = cells[c];
+      if (cell.length >= 3 && isPortName(cell)) {
+        portsInRow.push({ name: cell, col: c });
       }
     }
+    if (portsInRow.length > 0) {
+      pendingPorts = portsInRow;
+      // Don't clear activeSections yet — port name rows might interleave with data rows
+    }
 
-    // If we have a current port and column map, try to parse rate rows
-    if (currentPort && colMap) {
-      const carrierCell = String(row[colMap.carrier] || '').trim();
+    // Parse rate data from active sections
+    for (const section of activeSections) {
+      const carrierCell = String(row[section.carrierCol] || '').trim();
       if (!carrierCell || carrierCell.length < 2) continue;
-      if (isPortName(carrierCell)) {
-        currentPort = normalizePort(carrierCell);
-        colMap = null;
-        continue;
-      }
+      if (isPortName(carrierCell)) continue;
       const cl = carrierCell.toLowerCase();
-      if (['total', 'subtotal', 'average', '20gp', '40gp', '40hc'].some(w => cl === w)) continue;
+      if (['total', 'subtotal', 'average', '20gp', '40gp', '40hc', '20', '40'].some(w => cl === w)) continue;
 
-      const rate20gp = parseRate(row[colMap.gp20]);
-      const rate40gp = colMap.gp40 >= 0 ? parseRate(row[colMap.gp40]) : null;
-      const rate40hc = colMap.hc40 >= 0 ? parseRate(row[colMap.hc40]) : null;
+      const rate20gp = parseRate(row[section.gp20Col]);
+      const rate40gp = section.gp40Col >= 0 ? parseRate(row[section.gp40Col]) : null;
+      const rate40hc = section.hc40Col >= 0 ? parseRate(row[section.hc40Col]) : null;
 
-      if (rate20gp === null && rate40gp === null && rate40hc === null) {
-        colMap = null;
-        continue;
-      }
+      if (rate20gp === null && rate40gp === null && rate40hc === null) continue;
 
       rates.push({
-        port_of_loading: currentPort,
+        port_of_loading: section.port,
         port_of_discharge: defaultPod,
         rate_per_kg_usd: null,
         rate_20gp_usd: rate20gp,
@@ -255,9 +268,73 @@ function parseGroupedFormat(rows: any[][], sheetName: string, filename: string):
         notes: `Imported from ${filename}, sheet: ${sheetName}`,
       });
     }
+
+    // If we found port names and no rates were extracted, the sections may be resetting
+    if (portsInRow.length > 0 && activeSections.length > 0) {
+      // Check if port names are in different positions than active sections
+      const newArea = portsInRow.some(p => !activeSections.some(s => Math.abs(s.gp20Col - p.col) < 3));
+      if (newArea) activeSections = [];
+    }
   }
 
   return rates;
+}
+
+/** Detect ALL container header groups in a row (for side-by-side layouts) */
+function detectAllContainerHeaders(cells: string[]): { carrier: number; gp20: number; gp40: number; hc40: number }[] {
+  const groups: { carrier: number; gp20: number; gp40: number; hc40: number }[] = [];
+
+  // Find all 20GP positions
+  const gp20Positions: number[] = [];
+  for (let i = 0; i < cells.length; i++) {
+    const c = cells[i].toLowerCase().replace(/[\s\-_'"]/g, '');
+    if (/^20(gp|ft|dc|')?$/.test(c)) gp20Positions.push(i);
+  }
+
+  for (const gp20 of gp20Positions) {
+    // Look for 40GP and 40HC near this 20GP (within 3 columns)
+    let gp40 = -1, hc40 = -1;
+    for (let j = gp20 + 1; j < Math.min(gp20 + 4, cells.length); j++) {
+      const c = cells[j].toLowerCase().replace(/[\s\-_'"]/g, '');
+      if (/^40(gp|ft|dc|')?$/.test(c) && gp40 < 0) gp40 = j;
+      else if (/^40h[cq]$/.test(c)) hc40 = j;
+    }
+
+    if (gp40 >= 0 || hc40 >= 0) {
+      // Carrier column is the column just before 20GP (or col 0 if 20GP is at col 1)
+      const carrier = gp20 > 0 ? gp20 - 1 : -1;
+      if (carrier >= 0) {
+        groups.push({ carrier, gp20, gp40, hc40 });
+      }
+    }
+  }
+
+  return groups;
+}
+
+/** Find a pending port name that's near the given column */
+function findPortForGroup(pendingPorts: { name: string; col: number }[], gp20Col: number): string | null {
+  // The port name is usually in the same column as 20GP or the carrier col (gp20-1)
+  for (const p of pendingPorts) {
+    if (Math.abs(p.col - gp20Col) <= 2 || Math.abs(p.col - (gp20Col - 1)) <= 1) {
+      return p.name;
+    }
+  }
+  return null;
+}
+
+/** Find a port name in rows above, near the given column */
+function findPortAboveNearCol(rows: any[][], headerRowIdx: number, nearCol: number): string | null {
+  for (let offset = 1; offset <= 3 && headerRowIdx - offset >= 0; offset++) {
+    const row = rows[headerRowIdx - offset];
+    for (let c = 0; c < (row?.length || 0); c++) {
+      const text = String(row[c]).trim();
+      if (text.length >= 3 && isPortName(text) && Math.abs(c - nearCol) <= 2) {
+        return text;
+      }
+    }
+  }
+  return null;
 }
 
 /**
