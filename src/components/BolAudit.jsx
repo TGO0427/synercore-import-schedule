@@ -84,7 +84,6 @@ function BolAudit() {
 
   // Benchmarks
   const [benchmarks, setBenchmarks] = useState([]);
-  const [showBenchmarks, setShowBenchmarks] = useState(false);
   const [benchmarkForm, setBenchmarkForm] = useState({ port_of_loading: '', port_of_discharge: '', rate_per_kg_usd: '', rate_per_cbm_usd: '', min_charge_usd: '', carrier_name: '', transport_mode: 'sea', valid_from: '', valid_until: '', notes: '' });
   const [editingBenchmark, setEditingBenchmark] = useState(null);
   const [activeTab, setActiveTab] = useState('audit');
