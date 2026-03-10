@@ -415,8 +415,8 @@ function detectFlatColumns(headerRow: string[]): Record<string, number> {
     const h = headerRow[i];
     if (!h) continue;
 
-    if (/origin|pol|port\s*of\s*load|loading|from|departure/.test(h)) result.pol = i;
-    else if (/dest|pod|port\s*of\s*dis|discharge|to|arrival/.test(h)) result.pod = i;
+    if (/origin|^pol$|port\s*of\s*load|^loading|departure/.test(h)) result.pol = i;
+    else if (/dest|^pod$|port\s*of\s*dis|discharge|^arrival/.test(h)) result.pod = i;
     else if (/rate.*kg|per.*kg|usd.*kg|kg.*rate|freight.*kg/.test(h)) result.rateKg = i;
     else if (/20\s*gp|20\s*fcl|20.*ft|20.*container/.test(h)) result.rate20gp = i;
     else if (/40\s*gp|40\s*fcl|40.*ft|40.*container/.test(h)) result.rate40gp = i;
