@@ -268,6 +268,26 @@ function BolAudit() {
     }
   };
 
+  // View PDF extraction results for an existing BOL
+  const viewPdfResults = (bol) => {
+    const confidence = typeof bol.extraction_confidence === 'string'
+      ? JSON.parse(bol.extraction_confidence)
+      : bol.extraction_confidence;
+    const discrepancies = typeof bol.discrepancies === 'string'
+      ? JSON.parse(bol.discrepancies)
+      : bol.discrepancies;
+    setUploadResult({
+      bol,
+      extraction: {
+        confidence: confidence || {},
+        findings: Array.isArray(discrepancies) ? discrepancies : [],
+        score: null, // stored in audit_notes
+        matched_shipment: null,
+      },
+    });
+    setShowUploadResult(true);
+  };
+
   // Open edit
   const openEdit = (bol) => {
     setEditingBol(bol);
@@ -449,6 +469,9 @@ function BolAudit() {
                   <td style={{ padding: '10px 12px', whiteSpace: 'nowrap', fontWeight: 600 }}>{formatCurrency(bol.freight_charges_usd)}</td>
                   <td style={{ padding: '10px 12px' }}><StatusBadge status={bol.audit_status} /></td>
                   <td style={{ padding: '10px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                    {bol.pdf_filename && (
+                      <button style={{ ...btnStyle('#8b5cf6'), marginRight: 4, padding: '4px 10px' }} onClick={() => viewPdfResults(bol)} title="View PDF extraction results">PDF</button>
+                    )}
                     <button style={{ ...btnStyle('#3b82f6'), marginRight: 4, padding: '4px 10px' }} onClick={() => openAudit(bol)} title="Audit">Audit</button>
                     <button style={{ ...btnStyle('#6b7280'), marginRight: 4, padding: '4px 10px' }} onClick={() => openEdit(bol)} title="Edit">Edit</button>
                     <button style={{ ...btnStyle('#dc2626'), padding: '4px 10px' }} onClick={() => handleDelete(bol)} title="Delete">Del</button>
@@ -604,7 +627,14 @@ function BolAudit() {
         <div style={modalOverlay} onClick={() => setShowUploadResult(false)}>
           <div style={{ ...modalBox, maxWidth: 700 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h2 style={{ margin: 0, fontSize: '1.2rem' }}>PDF Extraction Results</h2>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '1.2rem' }}>PDF Extraction Results</h2>
+                {uploadResult.bol.pdf_filename && (
+                  <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'var(--text-500)' }}>
+                    Source: {uploadResult.bol.pdf_filename}
+                  </p>
+                )}
+              </div>
               <button style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: 'var(--text-500)' }} onClick={() => setShowUploadResult(false)}>&times;</button>
             </div>
 
@@ -616,9 +646,13 @@ function BolAudit() {
             }}>
               <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: 4 }}>
                 Auto-Audit: <StatusBadge status={uploadResult.bol.audit_status} />
-                {uploadResult.extraction?.score != null && (
+                {uploadResult.extraction?.score != null ? (
                   <span style={{ marginLeft: 12, fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-500)' }}>
                     Score: {uploadResult.extraction.score}/100
+                  </span>
+                ) : uploadResult.bol.audit_notes && /score:\s*(\d+)/i.test(uploadResult.bol.audit_notes) && (
+                  <span style={{ marginLeft: 12, fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-500)' }}>
+                    {uploadResult.bol.audit_notes}
                   </span>
                 )}
               </div>

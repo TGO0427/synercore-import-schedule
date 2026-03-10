@@ -458,33 +458,62 @@ export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseRe
     logWarn('Auto-audit shipment matching failed', { error: (error as Error).message });
   }
 
-  // Check for missing critical fields
+  // Check for missing critical fields — only BOL number is truly critical (error)
+  // Others are informational since not all document types contain every field
   if (!extracted.bol_number) {
     findings.push({ field: 'bol_number', severity: 'error', message: 'Could not extract BOL number from PDF', bol_value: null, shipment_value: null });
   }
   if (!extracted.vessel_name) {
-    findings.push({ field: 'vessel_name', severity: 'warning', message: 'Vessel name not found in PDF', bol_value: null, shipment_value: null });
+    findings.push({ field: 'vessel_name', severity: 'info', message: 'Vessel name not found in PDF', bol_value: null, shipment_value: null });
   }
   if (!extracted.gross_weight_kg) {
-    findings.push({ field: 'gross_weight_kg', severity: 'warning', message: 'Gross weight not found in PDF', bol_value: null, shipment_value: null });
+    findings.push({ field: 'gross_weight_kg', severity: 'info', message: 'Gross weight not found in PDF', bol_value: null, shipment_value: null });
   }
   if (extracted.container_numbers.length === 0) {
-    findings.push({ field: 'container_numbers', severity: 'warning', message: 'No container numbers found in PDF', bol_value: null, shipment_value: null });
+    findings.push({ field: 'container_numbers', severity: 'info', message: 'No container numbers found in PDF', bol_value: null, shipment_value: null });
   }
 
-  // Calculate confidence score
-  const criticalFields = ['bol_number', 'vessel_name', 'gross_weight_kg', 'port_of_loading', 'port_of_discharge'];
-  const extractedCount = criticalFields.filter(f => (extracted as any)[f]).length;
-  const baseScore = (extractedCount / criticalFields.length) * 70;
+  // Calculate confidence score based on how many fields were successfully extracted
+  // Weighted: essential fields worth more, optional fields less
+  const fieldWeights: [string, number][] = [
+    ['bol_number', 20],          // Essential
+    ['supplier_name', 10],       // Important
+    ['gross_weight_kg', 10],     // Important
+    ['consignee', 8],            // Important
+    ['shipper', 8],              // Important
+    ['vessel_name', 7],          // Useful but not always present (air freight, quotes)
+    ['port_of_loading', 7],      // Useful
+    ['port_of_discharge', 7],    // Useful
+    ['incoterm', 5],             // Useful
+    ['payment_terms', 4],        // Nice to have
+    ['container_numbers', 4],    // Nice to have (not present in air freight)
+    ['freight_charges_usd', 4],  // Nice to have
+    ['number_of_packages', 3],   // Nice to have
+    ['carrier_name', 3],         // Nice to have
+  ];
+  const totalWeight = fieldWeights.reduce((s, [, w]) => s + w, 0);
+  let earnedWeight = 0;
+  for (const [field, weight] of fieldWeights) {
+    const val = (extracted as any)[field];
+    if (field === 'container_numbers') {
+      if (val && val.length > 0) earnedWeight += weight;
+    } else if (val) {
+      earnedWeight += weight;
+    }
+  }
+  const baseScore = (earnedWeight / totalWeight) * 100;
+
+  // Penalize for actual discrepancies (errors/warnings from shipment cross-reference)
   const errorCount = findings.filter(f => f.severity === 'error').length;
   const warningCount = findings.filter(f => f.severity === 'warning').length;
-  const score = Math.max(0, Math.min(100, Math.round(baseScore + 30 - errorCount * 15 - warningCount * 5)));
+  const score = Math.max(0, Math.min(100, Math.round(baseScore - errorCount * 15 - warningCount * 5)));
 
   // Determine auto-audit status
+  // Only flag discrepancy for actual data mismatches, not missing optional fields
   let status: 'pending' | 'discrepancy' | 'approved' = 'pending';
   if (errorCount > 0) {
     status = 'discrepancy';
-  } else if (score >= 80 && warningCount === 0) {
+  } else if (score >= 50 && warningCount === 0) {
     status = 'approved';
   } else if (warningCount > 0) {
     status = 'discrepancy';
