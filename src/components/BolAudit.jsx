@@ -319,7 +319,7 @@ function BolAudit() {
     setRateUploadResult(null);
     try {
       const formPayload = new FormData();
-      formPayload.append('file', file);
+      formPayload.append('rateSheet', file);
 
       const res = await authFetch(getApiUrl('/api/bol-audit/benchmarks/upload'), {
         method: 'POST',
