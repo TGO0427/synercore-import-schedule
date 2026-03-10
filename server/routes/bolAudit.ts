@@ -12,6 +12,7 @@ import { logInfo, logError } from '../utils/logger.js';
 import { getPool, queryAll, queryOne, transaction } from '../db/connection.js';
 import { AuditRepository } from '../db/repositories/AuditRepository.ts';
 import { parseBolPdf, autoAuditBol } from '../services/bolPdfParser.ts';
+import { parseExcelRateSheet, parsePdfRateSheet } from '../services/rateSheetParser.ts';
 
 // PDF-only upload (10MB max)
 const pdfUpload = multer({
@@ -22,6 +23,25 @@ const pdfUpload = multer({
       cb(null, true);
     } else {
       cb(new Error('Only PDF files are accepted'));
+    }
+  },
+});
+
+// Rate sheet upload (PDF, Excel — 10MB max)
+const rateSheetUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+      'text/csv',
+    ];
+    if (allowed.includes(file.mimetype) || file.originalname.match(/\.(xlsx|xls|csv|pdf)$/i)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF, Excel (.xlsx/.xls), or CSV files are accepted'));
     }
   },
 });
@@ -587,6 +607,91 @@ router.put(
     if (!result) return res.status(404).json({ error: 'Benchmark not found' });
     res.json({ data: result });
   })
+);
+
+/**
+ * POST /api/bol-audit/benchmarks/upload
+ * Upload a rate sheet (PDF or Excel) and auto-extract benchmark rates
+ */
+router.post(
+  '/benchmarks/upload',
+  authenticateToken,
+  (req: Request, res: Response, next: NextFunction) => {
+    rateSheetUpload.single('file')(req, res, (err: any) => {
+      if (err) {
+        logError('Rate sheet upload error', { error: err.message });
+        return res.status(400).json({ error: `Upload failed: ${err.message}` });
+      }
+      next();
+    });
+  },
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'File is required. Upload a PDF or Excel rate sheet.' });
+      }
+
+      const userId = (req as any).user?.id;
+      const filename = req.file.originalname;
+      const isPdf = req.file.mimetype === 'application/pdf' || filename.endsWith('.pdf');
+
+      logInfo(`Parsing rate sheet: ${filename} (${(req.file.size / 1024).toFixed(1)}KB)`);
+
+      const extractedRates = isPdf
+        ? await parsePdfRateSheet(req.file.buffer, filename)
+        : await parseExcelRateSheet(req.file.buffer, filename);
+
+      if (extractedRates.length === 0) {
+        return res.status(400).json({
+          error: 'No rates could be extracted from this file',
+          hint: 'Ensure the file has columns for Origin/POL, Destination/POD, and Rate. Supported formats: Excel with header row, or PDF with tabular rate data.',
+        });
+      }
+
+      // Insert all extracted rates
+      let inserted = 0;
+      let skipped = 0;
+      for (const rate of extractedRates) {
+        try {
+          // Check for existing duplicate (same route + carrier + dates)
+          const existing = await queryOne(
+            `SELECT id FROM freight_benchmarks
+             WHERE LOWER(port_of_loading) = LOWER($1)
+               AND LOWER(port_of_discharge) = LOWER($2)
+               AND COALESCE(LOWER(carrier_name), '') = COALESCE(LOWER($3), '')
+               AND COALESCE(rate_per_kg_usd, 0) = COALESCE($4, 0)`,
+            [rate.port_of_loading, rate.port_of_discharge, rate.carrier_name, rate.rate_per_kg_usd]
+          );
+
+          if (existing) {
+            skipped++;
+            continue;
+          }
+
+          await queryOne(
+            `INSERT INTO freight_benchmarks (port_of_loading, port_of_discharge, rate_per_kg_usd, rate_per_cbm_usd, min_charge_usd, carrier_name, transport_mode, valid_from, valid_until, notes, created_by)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+             RETURNING id`,
+            [rate.port_of_loading, rate.port_of_discharge, rate.rate_per_kg_usd, rate.rate_per_cbm_usd, rate.min_charge_usd, rate.carrier_name, rate.transport_mode, rate.valid_from, rate.valid_until, rate.notes, userId]
+          );
+          inserted++;
+        } catch (err: any) {
+          logWarn(`Failed to insert rate ${rate.port_of_loading} → ${rate.port_of_discharge}`, { error: err.message });
+          skipped++;
+        }
+      }
+
+      logInfo(`Rate sheet imported: ${inserted} inserted, ${skipped} skipped from ${filename}`);
+
+      res.status(201).json({
+        data: { inserted, skipped, total_extracted: extractedRates.length, rates: extractedRates },
+        message: `Imported ${inserted} rate${inserted !== 1 ? 's' : ''} from ${filename}${skipped > 0 ? ` (${skipped} duplicates skipped)` : ''}`,
+      });
+    } catch (err: any) {
+      logError('Rate sheet upload failed', { error: err.message, stack: err.stack });
+      res.status(500).json({ error: 'Failed to process rate sheet', details: err.message });
+    }
+  }
 );
 
 /**

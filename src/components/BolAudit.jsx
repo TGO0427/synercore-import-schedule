@@ -87,6 +87,9 @@ function BolAudit() {
   const [benchmarkForm, setBenchmarkForm] = useState({ port_of_loading: '', port_of_discharge: '', rate_per_kg_usd: '', rate_per_cbm_usd: '', min_charge_usd: '', carrier_name: '', transport_mode: 'sea', valid_from: '', valid_until: '', notes: '' });
   const [editingBenchmark, setEditingBenchmark] = useState(null);
   const [activeTab, setActiveTab] = useState('audit');
+  const [uploadingRates, setUploadingRates] = useState(false);
+  const [rateUploadResult, setRateUploadResult] = useState(null);
+  const rateFileInputRef = React.useRef(null);
 
   // Fetch BOLs
   const fetchBols = useCallback(async (page = 1) => {
@@ -300,6 +303,44 @@ function BolAudit() {
       transport_mode: bm.transport_mode || 'sea', valid_from: bm.valid_from ? bm.valid_from.split('T')[0] : '',
       valid_until: bm.valid_until ? bm.valid_until.split('T')[0] : '', notes: bm.notes || '',
     });
+  };
+
+  // Rate sheet upload
+  const handleRateSheetUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'text/csv'];
+    if (!validTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls|csv|pdf)$/i)) {
+      showError('Please select a PDF, Excel (.xlsx/.xls), or CSV file');
+      return;
+    }
+
+    setUploadingRates(true);
+    setRateUploadResult(null);
+    try {
+      const formPayload = new FormData();
+      formPayload.append('file', file);
+
+      const res = await authFetch(getApiUrl('/api/bol-audit/benchmarks/upload'), {
+        method: 'POST',
+        body: formPayload,
+      });
+
+      const json = await res.json();
+      if (res.ok) {
+        setRateUploadResult(json);
+        showSuccess(json.message);
+        fetchBenchmarks();
+      } else {
+        showError(json.error || 'Failed to process rate sheet');
+        if (json.hint) setRateUploadResult({ error: json.error, hint: json.hint });
+      }
+    } catch (err) {
+      showError('Failed to upload rate sheet');
+    } finally {
+      setUploadingRates(false);
+      if (rateFileInputRef.current) rateFileInputRef.current.value = '';
+    }
   };
 
   // PDF Upload
@@ -572,9 +613,56 @@ function BolAudit() {
       {/* Rate Benchmarks Tab */}
       {activeTab === 'benchmarks' && (
         <div style={{ marginBottom: '1.2rem' }}>
+          {/* Upload Rate Sheet */}
+          <div className="dash-panel" style={{ padding: 16, marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Import Rate Sheet</h3>
+                <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'var(--text-500)' }}>
+                  Upload a forwarder rate sheet (Excel or PDF) to auto-extract rates
+                </p>
+              </div>
+              <div>
+                <input ref={rateFileInputRef} type="file" accept=".pdf,.xlsx,.xls,.csv" style={{ display: 'none' }} onChange={handleRateSheetUpload} />
+                <button
+                  style={{ ...btnStyle('#3b82f6'), opacity: uploadingRates ? 0.6 : 1 }}
+                  disabled={uploadingRates}
+                  onClick={() => rateFileInputRef.current?.click()}
+                >
+                  {uploadingRates ? 'Processing...' : 'Upload Rate Sheet'}
+                </button>
+              </div>
+            </div>
+
+            {/* Upload result */}
+            {rateUploadResult && (
+              <div style={{
+                padding: '10px 14px', borderRadius: 8, fontSize: '0.85rem', marginTop: 8,
+                backgroundColor: rateUploadResult.error ? '#fee2e2' : '#d1fae5',
+                border: `1px solid ${rateUploadResult.error ? '#fca5a5' : '#6ee7b7'}`,
+              }}>
+                {rateUploadResult.error ? (
+                  <div>
+                    <strong style={{ color: '#dc2626' }}>{rateUploadResult.error}</strong>
+                    {rateUploadResult.hint && <p style={{ margin: '4px 0 0', color: '#92400e' }}>{rateUploadResult.hint}</p>}
+                  </div>
+                ) : (
+                  <div>
+                    <strong style={{ color: '#059669' }}>{rateUploadResult.message}</strong>
+                    <div style={{ marginTop: 6, display: 'flex', gap: 16 }}>
+                      <span>Extracted: {rateUploadResult.data?.total_extracted}</span>
+                      <span>Inserted: {rateUploadResult.data?.inserted}</span>
+                      {rateUploadResult.data?.skipped > 0 && <span>Duplicates skipped: {rateUploadResult.data?.skipped}</span>}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Benchmark Form */}
           <div className="dash-panel" style={{ padding: 16, marginBottom: 16 }}>
-            <h3 style={{ margin: '0 0 12px', fontSize: '0.95rem' }}>{editingBenchmark ? 'Edit' : 'Add'} Contracted Rate</h3>
+            <h3 style={{ margin: '0 0 12px', fontSize: '0.95rem' }}>{editingBenchmark ? 'Edit' : 'Add'} Contracted Rate (Manual)</h3>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
               <div style={{ flex: '1 1 180px' }}>
                 <label style={labelStyle}>Port of Loading *</label>
