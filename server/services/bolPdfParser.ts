@@ -51,6 +51,48 @@ export interface BolParseResult {
   };
 }
 
+// ─── Validation helpers ───
+
+// Words that are common false positives when extracted as field values
+const STOP_WORDS = new Set([
+  'and', 'or', 'the', 'to', 'of', 'for', 'in', 'on', 'at', 'by', 'no', 'not',
+  'is', 'are', 'was', 'be', 'as', 'if', 'his', 'her', 'see', 'agent', 'clause',
+  'booking', 'ref', 'reference', 'number', 'date', 'port', 'name', 'above',
+  'below', 'said', 'other', 'such', 'any', 'all', 'this', 'that', 'from',
+  'with', 'shall', 'will', 'may', 'must', 'have', 'has', 'been', 'being',
+]);
+
+/** Reject values that are just stop words, too short, or look like clause fragments */
+function isValidExtraction(value: string | null, minLength = 3): boolean {
+  if (!value) return false;
+  const cleaned = value.trim();
+  if (cleaned.length < minLength) return false;
+  // Reject if it's just a stop word
+  if (STOP_WORDS.has(cleaned.toLowerCase())) return false;
+  // Reject if it starts with a lowercase conjunction/preposition (clause fragment)
+  if (/^(or|and|to|for|of|in|on|at|by|his|her|see|the|if)\s/i.test(cleaned)) return false;
+  // Reject if it looks like a sentence fragment (too many common English words)
+  const words = cleaned.split(/\s+/);
+  const stopCount = words.filter(w => STOP_WORDS.has(w.toLowerCase())).length;
+  if (words.length >= 3 && stopCount / words.length > 0.5) return false;
+  return true;
+}
+
+/** Clean up trailing noise from an extracted value */
+function cleanExtraction(value: string | null): string | null {
+  if (!value) return null;
+  let cleaned = value.trim();
+  // Remove trailing colons, periods, commas
+  cleaned = cleaned.replace(/[:\.,;]+$/, '').trim();
+  // Remove trailing stop words that got accidentally captured
+  const words = cleaned.split(/\s+/);
+  while (words.length > 1 && STOP_WORDS.has(words[words.length - 1].toLowerCase())) {
+    words.pop();
+  }
+  cleaned = words.join(' ');
+  return cleaned.length >= 2 ? cleaned : null;
+}
+
 // ─── Pattern definitions ───
 
 const BOL_NUMBER_PATTERNS = [
@@ -60,35 +102,44 @@ const BOL_NUMBER_PATTERNS = [
   /(?:MBOL|HBOL|MBL|HBL)\s*[:\s#]*([A-Z0-9][\w\-\/]{4,30})/i,
 ];
 
+// Vessel: require explicit label, capture name with 3+ chars, must look like a proper name
 const VESSEL_PATTERNS = [
-  /(?:Vessel|Ship|Motor\s*Vessel|M\/?V|V\.)\s*[:\s]*["']?([A-Z][A-Za-z\s\-\.]{2,40}?)["']?\s*(?:V\.|Voyage|$|\n)/i,
-  /(?:Ocean\s*Vessel)\s*[:\s]*([A-Z][A-Za-z\s\-\.]{2,40})/i,
+  /(?:Vessel\s*(?:Name)?|Motor\s*Vessel|M\/V|Ocean\s*Vessel)\s*[:\s]+([A-Z][A-Za-z0-9\s\-\.]{2,40}?)(?:\s*(?:Voyage|Voy|V\/|$|\n))/i,
+  /(?:Vessel\s*(?:Name)?|Motor\s*Vessel|M\/V)\s*[:\s]+([A-Z][A-Za-z0-9][A-Za-z0-9\s\-\.]{1,38})/i,
 ];
 
+// Voyage: require explicit "Voyage" or "Voy" label (NOT just "V." which is too ambiguous)
+// Voyage numbers typically have digits: e.g., 2401E, 025W, V.123
 const VOYAGE_PATTERNS = [
-  /(?:Voyage|Voy\.?|V\.)\s*(?:No\.?|#)?\s*[:\s]*([A-Z0-9][\w\-]{1,20})/i,
+  /(?:Voyage|Voy\.?)\s*(?:No\.?|#)?\s*[:\s]*([A-Z0-9][\w\-]{2,20})/i,
 ];
 
+// Ports: require the full label, capture only proper location names (not clause text)
+// Port names: typically capitalized words, city/country names, 4+ chars
 const PORT_LOADING_PATTERNS = [
-  /(?:Port\s+of\s+Loading|POL|Load(?:ing)?\s+Port)\s*[:\s]*([A-Za-z\s,\-\.]{3,50})/i,
-  /(?:Place\s+of\s+Receipt)\s*[:\s]*([A-Za-z\s,\-\.]{3,50})/i,
+  /(?:Port\s+of\s+Loading)\s*[:\s]+([A-Z][A-Za-z\s,]{3,45}?)(?:\s*(?:Port\s+of|Vessel|Voyage|Carrier|$|\n))/i,
+  /(?:Port\s+of\s+Loading)\s*[:\s]+([A-Z][A-Za-z][A-Za-z\s,\-]{2,40})/i,
+  /(?:Place\s+of\s+Receipt)\s*[:\s]+([A-Z][A-Za-z][A-Za-z\s,\-]{2,40})/i,
+  /(?:Loading\s+Port)\s*[:\s]+([A-Z][A-Za-z][A-Za-z\s,\-]{2,40})/i,
 ];
 
 const PORT_DISCHARGE_PATTERNS = [
-  /(?:Port\s+of\s+Discharge|POD|Discharge\s+Port)\s*[:\s]*([A-Za-z\s,\-\.]{3,50})/i,
-  /(?:Place\s+of\s+Delivery|Final\s+Destination)\s*[:\s]*([A-Za-z\s,\-\.]{3,50})/i,
+  /(?:Port\s+of\s+Discharge)\s*[:\s]+([A-Z][A-Za-z\s,]{3,45}?)(?:\s*(?:Port\s+of|Vessel|Notify|Consignee|$|\n))/i,
+  /(?:Port\s+of\s+Discharge)\s*[:\s]+([A-Z][A-Za-z][A-Za-z\s,\-]{2,40})/i,
+  /(?:Place\s+of\s+Delivery|Final\s+Destination)\s*[:\s]+([A-Z][A-Za-z][A-Za-z\s,\-]{2,40})/i,
+  /(?:Discharge\s+Port)\s*[:\s]+([A-Z][A-Za-z][A-Za-z\s,\-]{2,40})/i,
 ];
 
 const CONSIGNEE_PATTERNS = [
-  /(?:Consignee|Consigned\s+to)\s*[:\s]*([^\n]{5,100})/i,
+  /(?:Consignee|Consigned\s+to)\s*[:\s]+([A-Z][^\n]{4,100})/i,
 ];
 
 const SHIPPER_PATTERNS = [
-  /(?:Shipper|Exporter)\s*[:\s]*([^\n]{5,100})/i,
+  /(?:Shipper|Exporter)\s*[:\s]+([A-Z][^\n]{4,100})/i,
 ];
 
 const NOTIFY_PATTERNS = [
-  /(?:Notify\s+Party|Notify)\s*[:\s]*([^\n]{5,100})/i,
+  /(?:Notify\s+Party)\s*[:\s]+([A-Z][^\n]{4,100})/i,
 ];
 
 const CONTAINER_PATTERNS = [
@@ -96,9 +147,10 @@ const CONTAINER_PATTERNS = [
 ];
 
 const WEIGHT_PATTERNS = [
-  /(?:Gross\s*Weight|G\.?W\.?|Weight)\s*[:\s]*[\s]*([\d,\.]+)\s*(?:KG|KGS|Kgs|kg)/i,
-  /(?:Total\s*Weight)\s*[:\s]*([\d,\.]+)\s*(?:KG|KGS|Kgs|kg)/i,
+  /(?:Gross\s*Weight|G\.?W\.?)\s*[:\s]*([\d,\.]+)\s*(?:KGS?|Kgs?|kg)/i,
+  /(?:Total\s*Weight)\s*[:\s]*([\d,\.]+)\s*(?:KGS?|Kgs?|kg)/i,
   /([\d,\.]+)\s*(?:KGS|KG)\s*(?:Gross)/i,
+  /Weight\s*[:\s]*([\d,\.]+)\s*(?:KGS?|Kgs?|kg)/i,
 ];
 
 const VOLUME_PATTERNS = [
@@ -114,15 +166,16 @@ const PACKAGES_PATTERNS = [
 const FREIGHT_PATTERNS = [
   /(?:Freight|Freight\s+Charges?|Ocean\s+Freight)\s*[:\s]*(?:USD|US\$|\$)\s*([\d,\.]+)/i,
   /(?:USD|US\$|\$)\s*([\d,\.]+)\s*(?:Freight|as\s+agreed)/i,
+  /(?:Freight|Freight\s+Charges?)\s*[:\s]*([\d,\.]+)/i,
 ];
 
 const VALUE_PATTERNS = [
-  /(?:Declared\s+Value|Invoice\s+Value|Value)\s*[:\s]*(?:USD|US\$|\$)\s*([\d,\.]+)/i,
+  /(?:Declared\s+Value|Invoice\s+Value|Cargo\s+Value)\s*[:\s]*(?:USD|US\$|\$)\s*([\d,\.]+)/i,
 ];
 
 const DATE_PATTERNS = [
-  /(?:Date\s+of\s+Issue|Issued?\s+Date|Date)\s*[:\s]*(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i,
-  /(?:Date\s+of\s+Issue|Issued?\s+Date|Date)\s*[:\s]*(\d{1,2}\s+\w{3,9}\s+\d{4})/i,
+  /(?:Date\s+of\s+Issue|Issued?\s+Date)\s*[:\s]*(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i,
+  /(?:Date\s+of\s+Issue|Issued?\s+Date)\s*[:\s]*(\d{1,2}\s+\w{3,9}\s+\d{4})/i,
 ];
 
 const ONBOARD_DATE_PATTERNS = [
@@ -139,16 +192,19 @@ const INCOTERM_PATTERNS = [
 ];
 
 const DESCRIPTION_PATTERNS = [
-  /(?:Description\s+of\s+(?:Goods|Packages|Cargo)|Particulars)\s*[:\s]*([^\n]{5,500})/i,
-  /(?:Commodity|Goods)\s*[:\s]*([^\n]{5,200})/i,
+  /(?:Description\s+of\s+(?:Goods|Packages|Cargo)|Particulars)\s*[:\s]+([^\n]{5,500})/i,
+  /(?:Commodity|Nature\s+of\s+Goods)\s*[:\s]+([^\n]{5,200})/i,
 ];
 
 // ─── Helpers ───
 
-function firstMatch(text: string, patterns: RegExp[]): string | null {
+function firstMatch(text: string, patterns: RegExp[], minLen = 3): string | null {
   for (const pattern of patterns) {
     const m = text.match(pattern);
-    if (m && m[1]) return m[1].trim();
+    if (m && m[1]) {
+      const cleaned = cleanExtraction(m[1]);
+      if (cleaned && isValidExtraction(cleaned, minLen)) return cleaned;
+    }
   }
   return null;
 }
@@ -236,10 +292,21 @@ export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
   const incoterm = firstMatch(text, INCOTERM_PATTERNS);
   confidence['incoterm'] = incoterm ? 0.95 : 0;
 
-  // Carrier name — often at the top of the BOL or in the footer
+  // Carrier name — look for explicit "Carrier" label followed by a company name
   let carrierName: string | null = null;
-  const carrierMatch = text.match(/(?:Carrier|Shipping\s+Line|Line)\s*[:\s]*([A-Za-z\s\-\.&]{3,60})/i);
-  if (carrierMatch) carrierName = carrierMatch[1].trim();
+  const carrierPatterns = [
+    /(?:Carrier\s*(?:Name)?|Shipping\s+Line|Carrier\s*\/\s*Agent)\s*[:\s]+([A-Z][A-Za-z0-9\s\-\.&,()]{3,60})/i,
+  ];
+  for (const pat of carrierPatterns) {
+    const m = text.match(pat);
+    if (m && m[1]) {
+      const cleaned = cleanExtraction(m[1]);
+      if (cleaned && isValidExtraction(cleaned, 4)) {
+        carrierName = cleaned;
+        break;
+      }
+    }
+  }
   confidence['carrier_name'] = carrierName ? 0.7 : 0;
 
   // Supplier — try shipper as fallback
