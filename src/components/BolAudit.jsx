@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import * as XLSX from 'xlsx';
 import { useNotification } from '../contexts/NotificationContext';
 import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
@@ -303,6 +304,29 @@ function BolAudit() {
       transport_mode: bm.transport_mode || 'sea', valid_from: bm.valid_from ? bm.valid_from.split('T')[0] : '',
       valid_until: bm.valid_until ? bm.valid_until.split('T')[0] : '', notes: bm.notes || '',
     });
+  };
+
+  // Download rate sheet template
+  const downloadRateTemplate = () => {
+    const headers = [
+      'Port of Loading', 'Port of Discharge', 'Rate per kg (USD)', 'Rate per CBM (USD)',
+      'Min Charge (USD)', 'Carrier', 'Mode', 'Valid From', 'Valid Until', 'Notes'
+    ];
+    const sampleRows = [
+      ['Shanghai', 'Durban', 0.085, '', 150, 'DHL', 'sea', '2026-01-01', '2026-12-31', 'Standard rate'],
+      ['Ningbo', 'Cape Town', 0.092, '', 180, 'DSV', 'sea', '2026-01-01', '2026-06-30', ''],
+      ['Guangzhou', 'Johannesburg', '', 45, '', 'Maersk', 'sea', '', '', 'CBM rate'],
+      ['Shanghai', 'Durban', 2.50, '', 500, 'DHL', 'air', '2026-01-01', '2026-12-31', 'Airfreight'],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 16 },
+      { wch: 14 }, { wch: 14 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 24 }
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Rate Benchmarks');
+    XLSX.writeFile(wb, 'Rate_Benchmark_Template.xlsx');
   };
 
   // Rate sheet upload
@@ -619,11 +643,17 @@ function BolAudit() {
               <div>
                 <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Import Rate Sheet</h3>
                 <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'var(--text-500)' }}>
-                  Upload a forwarder rate sheet (Excel or PDF) to auto-extract rates
+                  Download the template, fill in your contracted rates, then upload to import
                 </p>
               </div>
-              <div>
-                <input ref={rateFileInputRef} type="file" accept=".pdf,.xlsx,.xls,.csv" style={{ display: 'none' }} onChange={handleRateSheetUpload} />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  style={btnStyle('#6b7280')}
+                  onClick={downloadRateTemplate}
+                >
+                  Download Template
+                </button>
+                <input ref={rateFileInputRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }} onChange={handleRateSheetUpload} />
                 <button
                   style={{ ...btnStyle('#3b82f6'), opacity: uploadingRates ? 0.6 : 1 }}
                   disabled={uploadingRates}

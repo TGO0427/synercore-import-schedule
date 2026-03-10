@@ -111,17 +111,22 @@ export async function parseExcelRateSheet(buffer: Buffer, filename: string): Pro
       if (colMap.validFrom >= 0) validFrom = parseExcelDate(row[colMap.validFrom]);
       if (colMap.validUntil >= 0) validUntil = parseExcelDate(row[colMap.validUntil]);
 
+      // Per-row carrier/mode override sheet-level detection
+      const rowCarrier = colMap.carrier >= 0 ? String(row[colMap.carrier] || '').trim() : '';
+      const rowMode = colMap.mode >= 0 ? String(row[colMap.mode] || '').trim().toLowerCase() : '';
+      const rowNotes = colMap.notes >= 0 ? String(row[colMap.notes] || '').trim() : '';
+
       rates.push({
         port_of_loading: normalizePort(pol),
         port_of_discharge: normalizePort(pod),
         rate_per_kg_usd: rateKg ?? genericRate,
         rate_per_cbm_usd: rateCbm,
         min_charge_usd: minCharge,
-        carrier_name: carrierName,
-        transport_mode: mode,
+        carrier_name: rowCarrier || carrierName,
+        transport_mode: (['sea', 'air', 'road'].includes(rowMode) ? rowMode : mode) as string,
         valid_from: validFrom,
         valid_until: validUntil,
-        notes: `Imported from ${filename}, sheet: ${sheetName}`,
+        notes: rowNotes || `Imported from ${filename}, sheet: ${sheetName}`,
       });
     }
   }
@@ -222,7 +227,7 @@ export async function parsePdfRateSheet(buffer: Buffer, filename: string): Promi
 // ─── Helpers ───
 
 function detectColumns(headerRow: string[]): Record<string, number> {
-  const result: Record<string, number> = { pol: -1, pod: -1, rateKg: -1, rateCbm: -1, rate: -1, minCharge: -1, validFrom: -1, validUntil: -1 };
+  const result: Record<string, number> = { pol: -1, pod: -1, rateKg: -1, rateCbm: -1, rate: -1, minCharge: -1, validFrom: -1, validUntil: -1, carrier: -1, mode: -1, notes: -1 };
 
   for (let i = 0; i < headerRow.length; i++) {
     const h = headerRow[i];
@@ -236,6 +241,9 @@ function detectColumns(headerRow: string[]): Record<string, number> {
     else if (/min.*charge|minimum|min\s*rate/.test(h)) result.minCharge = i;
     else if (/valid\s*from|effective|start\s*date/.test(h)) result.validFrom = i;
     else if (/valid\s*(?:to|until)|expir|end\s*date/.test(h)) result.validUntil = i;
+    else if (/^carrier$|carrier\s*name|forwarder|freight\s*agent/.test(h)) result.carrier = i;
+    else if (/^mode$|transport\s*mode|ship.*mode|freight\s*mode/.test(h)) result.mode = i;
+    else if (/^notes$|remarks|comment/.test(h)) result.notes = i;
   }
 
   return result;
