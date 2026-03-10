@@ -296,6 +296,19 @@ function BolAudit() {
     } catch (err) { showError('Failed to delete benchmark'); }
   };
 
+  const handleDeleteAllBenchmarks = async () => {
+    const confirmed = await confirm({ title: 'Delete All Rates', message: `Are you sure you want to delete all ${benchmarks.length} benchmark rates? This cannot be undone.`, confirmText: 'Delete All', type: 'danger' });
+    if (!confirmed) return;
+    try {
+      const res = await authFetch(getApiUrl('/api/bol-audit/benchmarks'), { method: 'DELETE' });
+      if (res.ok) {
+        const json = await res.json();
+        showSuccess(json.message);
+        fetchBenchmarks();
+      }
+    } catch (err) { showError('Failed to delete benchmarks'); }
+  };
+
   const openEditBenchmark = (bm) => {
     setEditingBenchmark(bm);
     setBenchmarkForm({
@@ -798,6 +811,16 @@ function BolAudit() {
 
           {/* Benchmark List */}
           <div className="dash-panel" style={{ overflow: 'hidden' }}>
+            {benchmarks.length > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 12px', borderBottom: '1px solid var(--border-color, #e5e7eb)' }}>
+                <button
+                  style={{ ...btnStyle('#dc2626'), fontSize: '0.8rem', padding: '6px 14px' }}
+                  onClick={handleDeleteAllBenchmarks}
+                >
+                  Delete All Rates
+                </button>
+              </div>
+            )}
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>

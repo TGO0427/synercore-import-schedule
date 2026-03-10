@@ -332,6 +332,23 @@ router.put(
 );
 
 /**
+ * DELETE /api/bol-audit/benchmarks
+ * Delete ALL freight benchmarks
+ */
+router.delete(
+  '/benchmarks',
+  authenticateToken,
+  asyncHandler(async (req: Request, res: Response) => {
+    const result = await queryOne<{ count: string }>(
+      'WITH deleted AS (DELETE FROM freight_benchmarks RETURNING id) SELECT COUNT(*) FROM deleted'
+    );
+    const count = parseInt(result?.count || '0', 10);
+    logInfo(`All benchmarks deleted: ${count} removed`);
+    res.json({ message: `${count} benchmark rates deleted` });
+  })
+);
+
+/**
  * DELETE /api/bol-audit/benchmarks/:benchmarkId
  * Delete a freight benchmark
  */
