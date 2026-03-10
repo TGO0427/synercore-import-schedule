@@ -12,7 +12,7 @@ import { logInfo, logError } from '../utils/logger.js';
 import { getPool, queryAll, queryOne, transaction } from '../db/connection.js';
 import { AuditRepository } from '../db/repositories/AuditRepository.ts';
 import { parseBolPdf, autoAuditBol } from '../services/bolPdfParser.ts';
-import { parseExcelRateSheet, parsePdfRateSheet } from '../services/rateSheetParser.ts';
+import { parseExcelRateSheet } from '../services/rateSheetParser.ts';
 
 // PDF-only upload (10MB max)
 const pdfUpload = multer({
@@ -250,9 +250,9 @@ router.post(
     body('port_of_loading').trim().notEmpty(),
     body('port_of_discharge').trim().notEmpty(),
     body('rate_per_kg_usd').optional({ nullable: true }).isFloat({ min: 0 }),
-    body('full_rate_usd').optional({ nullable: true }).isFloat({ min: 0 }),
-    body('rate_20fcl_usd').optional({ nullable: true }).isFloat({ min: 0 }),
-    body('rate_40fcl_usd').optional({ nullable: true }).isFloat({ min: 0 }),
+    body('rate_20gp_usd').optional({ nullable: true }).isFloat({ min: 0 }),
+    body('rate_40gp_usd').optional({ nullable: true }).isFloat({ min: 0 }),
+    body('rate_40hc_usd').optional({ nullable: true }).isFloat({ min: 0 }),
     body('transport_mode').optional().isIn(['sea', 'air', 'road']),
     body('valid_from').optional({ nullable: true }).isISO8601(),
     body('valid_until').optional({ nullable: true }).isISO8601(),
@@ -263,20 +263,20 @@ router.post(
     const userId = (req as any).user?.id;
     const {
       carrier_name, port_of_loading, port_of_discharge,
-      rate_per_kg_usd, full_rate_usd, rate_20fcl_usd, rate_40fcl_usd,
+      rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd,
       transport_mode, valid_from, valid_until, notes
     } = req.body;
 
     const result = await queryOne(
       `INSERT INTO freight_benchmarks (
         carrier_name, port_of_loading, port_of_discharge,
-        rate_per_kg_usd, full_rate_usd, rate_20fcl_usd, rate_40fcl_usd,
+        rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd,
         transport_mode, valid_from, valid_until, notes, created_by
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *`,
       [
         carrier_name, port_of_loading, port_of_discharge,
-        rate_per_kg_usd || null, full_rate_usd || null, rate_20fcl_usd || null, rate_40fcl_usd || null,
+        rate_per_kg_usd || null, rate_20gp_usd || null, rate_40gp_usd || null, rate_40hc_usd || null,
         transport_mode || 'sea', valid_from || null, valid_until || null,
         notes || null, userId
       ]
@@ -300,7 +300,7 @@ router.put(
     const { benchmarkId } = req.params;
     const {
       carrier_name, port_of_loading, port_of_discharge,
-      rate_per_kg_usd, full_rate_usd, rate_20fcl_usd, rate_40fcl_usd,
+      rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd,
       transport_mode, valid_from, valid_until, notes
     } = req.body;
 
@@ -309,14 +309,14 @@ router.put(
         carrier_name = COALESCE($1, carrier_name),
         port_of_loading = COALESCE($2, port_of_loading),
         port_of_discharge = COALESCE($3, port_of_discharge),
-        rate_per_kg_usd = $4, full_rate_usd = $5, rate_20fcl_usd = $6, rate_40fcl_usd = $7,
+        rate_per_kg_usd = $4, rate_20gp_usd = $5, rate_40gp_usd = $6, rate_40hc_usd = $7,
         transport_mode = COALESCE($8, transport_mode),
         valid_from = $9, valid_until = $10, notes = $11,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = $12 RETURNING *`,
       [
         carrier_name || null, port_of_loading || null, port_of_discharge || null,
-        rate_per_kg_usd ?? null, full_rate_usd ?? null, rate_20fcl_usd ?? null, rate_40fcl_usd ?? null,
+        rate_per_kg_usd ?? null, rate_20gp_usd ?? null, rate_40gp_usd ?? null, rate_40hc_usd ?? null,
         transport_mode || null, valid_from || null, valid_until || null,
         notes || null, benchmarkId
       ]
@@ -376,13 +376,10 @@ router.post(
 
       const userId = (req as any).user?.id;
       const filename = req.file.originalname;
-      const isPdf = req.file.mimetype === 'application/pdf' || filename.endsWith('.pdf');
 
       logInfo(`Parsing rate sheet: ${filename} (${(req.file.size / 1024).toFixed(1)}KB)`);
 
-      const rates = isPdf
-        ? await parsePdfRateSheet(req.file.buffer, filename)
-        : await parseExcelRateSheet(req.file.buffer, filename);
+      const rates = await parseExcelRateSheet(req.file.buffer, filename);
 
       if (rates.length === 0) {
         return res.status(400).json({ error: 'No rates could be extracted from the file. Check format.' });
@@ -408,13 +405,13 @@ router.post(
         await queryOne(
           `INSERT INTO freight_benchmarks (
             carrier_name, port_of_loading, port_of_discharge,
-            rate_per_kg_usd, full_rate_usd, rate_20fcl_usd, rate_40fcl_usd,
+            rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd,
             transport_mode, valid_from, valid_until, notes, created_by
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
           RETURNING id`,
           [
             rate.carrier_name, rate.port_of_loading, rate.port_of_discharge,
-            rate.rate_per_kg_usd, rate.full_rate_usd, rate.rate_20fcl_usd, rate.rate_40fcl_usd,
+            rate.rate_per_kg_usd, rate.rate_20gp_usd, rate.rate_40gp_usd, rate.rate_40hc_usd,
             rate.transport_mode, rate.valid_from, rate.valid_until,
             rate.notes, userId
           ]

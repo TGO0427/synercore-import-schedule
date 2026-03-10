@@ -535,6 +535,9 @@ async function start() {
         ALTER TABLE freight_benchmarks ADD COLUMN IF NOT EXISTS full_rate_usd NUMERIC(12,2);
         ALTER TABLE freight_benchmarks ADD COLUMN IF NOT EXISTS rate_20fcl_usd NUMERIC(12,2);
         ALTER TABLE freight_benchmarks ADD COLUMN IF NOT EXISTS rate_40fcl_usd NUMERIC(12,2);
+        ALTER TABLE freight_benchmarks ADD COLUMN IF NOT EXISTS rate_20gp_usd NUMERIC(12,2);
+        ALTER TABLE freight_benchmarks ADD COLUMN IF NOT EXISTS rate_40gp_usd NUMERIC(12,2);
+        ALTER TABLE freight_benchmarks ADD COLUMN IF NOT EXISTS rate_40hc_usd NUMERIC(12,2);
       `);
       logger.info('Freight benchmarks table ready');
     } catch (error) {
