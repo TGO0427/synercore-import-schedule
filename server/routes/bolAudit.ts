@@ -75,6 +75,7 @@ const createBolValidation = [
   body('shipper').optional({ nullable: true }).trim(),
   body('description_of_goods').optional({ nullable: true }).trim(),
   body('container_numbers').optional({ nullable: true }),
+  body('container_type').optional({ nullable: true }).isIn(['20GP', '40GP', '40HC']),
   body('gross_weight_kg').optional({ nullable: true }).isFloat({ min: 0, max: 100000000 }),
   body('volume_cbm').optional({ nullable: true }).isFloat({ min: 0, max: 1000000 }),
   body('number_of_packages').optional({ nullable: true }).isInt({ min: 0, max: 1000000 }),
@@ -469,14 +470,14 @@ router.post(
     if (bol_ids && Array.isArray(bol_ids) && bol_ids.length > 0) {
       bols = await queryAll(
         `SELECT id, bol_number, port_of_loading, port_of_discharge, carrier_name,
-                freight_charges_usd, gross_weight_kg, container_numbers
+                freight_charges_usd, gross_weight_kg, container_numbers, container_type
          FROM bol_audits WHERE id = ANY($1)`,
         [bol_ids]
       );
     } else {
       bols = await queryAll(
         `SELECT id, bol_number, port_of_loading, port_of_discharge, carrier_name,
-                freight_charges_usd, gross_weight_kg, container_numbers
+                freight_charges_usd, gross_weight_kg, container_numbers, container_type
          FROM bol_audits WHERE freight_charges_usd IS NOT NULL`
       );
     }
@@ -539,20 +540,31 @@ router.post(
 
       const rate = benchmarks[0];
 
-      // Detect container type from container numbers
-      const containerStr = (bol.container_numbers || '').toLowerCase();
+      // Use explicit container_type if set on the BOL
       let benchmarkRate: number | null = null;
-      let containerType = '';
+      let containerType = bol.container_type || '';
 
-      if (/40\s*h[cq]|high\s*cube/i.test(containerStr)) {
+      if (containerType === '40HC') {
         benchmarkRate = parseFloat(rate.rate_40hc_usd) || null;
-        containerType = '40HC';
-      } else if (/40/i.test(containerStr)) {
+      } else if (containerType === '40GP') {
         benchmarkRate = parseFloat(rate.rate_40gp_usd) || null;
-        containerType = '40GP';
-      } else if (/20/i.test(containerStr)) {
+      } else if (containerType === '20GP') {
         benchmarkRate = parseFloat(rate.rate_20gp_usd) || null;
-        containerType = '20GP';
+      }
+
+      // Fallback: try to detect from container numbers text
+      if (!benchmarkRate) {
+        const containerStr = (bol.container_numbers || '').toLowerCase();
+        if (/40\s*h[cq]|high\s*cube/i.test(containerStr)) {
+          benchmarkRate = parseFloat(rate.rate_40hc_usd) || null;
+          containerType = '40HC';
+        } else if (/40/i.test(containerStr)) {
+          benchmarkRate = parseFloat(rate.rate_40gp_usd) || null;
+          containerType = '40GP';
+        } else if (/20/i.test(containerStr)) {
+          benchmarkRate = parseFloat(rate.rate_20gp_usd) || null;
+          containerType = '20GP';
+        }
       }
 
       // Fallback: pick closest container rate to actual freight
@@ -569,15 +581,6 @@ router.post(
           );
           benchmarkRate = closest.r;
           containerType = closest.t;
-        }
-      }
-
-      // Try per-kg rate
-      if (!benchmarkRate && bol.gross_weight_kg) {
-        const ratePerKg = parseFloat(rate.rate_per_kg_usd);
-        if (ratePerKg > 0) {
-          benchmarkRate = ratePerKg * parseFloat(bol.gross_weight_kg);
-          containerType = 'per-kg';
         }
       }
 
@@ -649,7 +652,7 @@ router.post(
     const {
       bol_number, shipment_id, supplier_name, carrier_name, vessel_name,
       voyage_number, port_of_loading, port_of_discharge, consignee, shipper,
-      description_of_goods, container_numbers, gross_weight_kg, volume_cbm,
+      description_of_goods, container_numbers, container_type, gross_weight_kg, volume_cbm,
       number_of_packages, freight_charges_usd, declared_value_usd,
       issue_date, ship_on_board_date, notify_party, payment_terms, incoterm, notes
     } = req.body;
@@ -658,20 +661,21 @@ router.post(
       `INSERT INTO bol_audits (
         bol_number, shipment_id, supplier_name, carrier_name, vessel_name,
         voyage_number, port_of_loading, port_of_discharge, consignee, shipper,
-        description_of_goods, container_numbers, gross_weight_kg, volume_cbm,
+        description_of_goods, container_numbers, container_type, gross_weight_kg, volume_cbm,
         number_of_packages, freight_charges_usd, declared_value_usd,
         issue_date, ship_on_board_date, notify_party, payment_terms, incoterm,
         notes, created_by, audit_status
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-        $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, 'pending'
+        $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23,
+        $24, $25, 'pending'
       ) RETURNING *`,
       [
         bol_number, shipment_id || null, supplier_name || null, carrier_name || null,
         vessel_name || null, voyage_number || null, port_of_loading || null,
         port_of_discharge || null, consignee || null, shipper || null,
         description_of_goods || null, container_numbers ? JSON.stringify(container_numbers) : null,
-        gross_weight_kg || null, volume_cbm || null, number_of_packages || null,
+        container_type || null, gross_weight_kg || null, volume_cbm || null, number_of_packages || null,
         freight_charges_usd || null, declared_value_usd || null,
         issue_date || null, ship_on_board_date || null, notify_party || null,
         payment_terms || null, incoterm || null, notes || null, userId
@@ -710,7 +714,7 @@ router.put(
     const {
       bol_number, shipment_id, supplier_name, carrier_name, vessel_name,
       voyage_number, port_of_loading, port_of_discharge, consignee, shipper,
-      description_of_goods, container_numbers, gross_weight_kg, volume_cbm,
+      description_of_goods, container_numbers, container_type, gross_weight_kg, volume_cbm,
       number_of_packages, freight_charges_usd, declared_value_usd,
       issue_date, ship_on_board_date, notify_party, payment_terms, incoterm, notes
     } = req.body;
@@ -722,19 +726,19 @@ router.put(
         vessel_name = $5, voyage_number = $6, port_of_loading = $7,
         port_of_discharge = $8, consignee = $9, shipper = $10,
         description_of_goods = $11, container_numbers = $12,
-        gross_weight_kg = $13, volume_cbm = $14, number_of_packages = $15,
-        freight_charges_usd = $16, declared_value_usd = $17,
-        issue_date = $18, ship_on_board_date = $19, notify_party = $20,
-        payment_terms = $21, incoterm = $22, notes = $23,
+        container_type = $13, gross_weight_kg = $14, volume_cbm = $15,
+        number_of_packages = $16, freight_charges_usd = $17, declared_value_usd = $18,
+        issue_date = $19, ship_on_board_date = $20, notify_party = $21,
+        payment_terms = $22, incoterm = $23, notes = $24,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $24 RETURNING *`,
+      WHERE id = $25 RETURNING *`,
       [
         bol_number, shipment_id || null, supplier_name || null, carrier_name || null,
         vessel_name || null, voyage_number || null, port_of_loading || null,
         port_of_discharge || null, consignee || null, shipper || null,
         description_of_goods || null, container_numbers ? JSON.stringify(container_numbers) : null,
-        gross_weight_kg || null, volume_cbm || null, number_of_packages || null,
-        freight_charges_usd || null, declared_value_usd || null,
+        container_type || null, gross_weight_kg || null, volume_cbm || null,
+        number_of_packages || null, freight_charges_usd || null, declared_value_usd || null,
         issue_date || null, ship_on_board_date || null, notify_party || null,
         payment_terms || null, incoterm || null, notes || null, id
       ]

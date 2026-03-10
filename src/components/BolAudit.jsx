@@ -24,7 +24,7 @@ const emptyForm = {
   bol_number: '', shipment_id: '', supplier_name: '', carrier_name: '',
   vessel_name: '', voyage_number: '', port_of_loading: '', port_of_discharge: '',
   consignee: '', shipper: '', notify_party: '', description_of_goods: '',
-  container_numbers: '', gross_weight_kg: '', volume_cbm: '',
+  container_numbers: '', container_type: '', gross_weight_kg: '', volume_cbm: '',
   number_of_packages: '', freight_charges_usd: '', declared_value_usd: '',
   issue_date: '', ship_on_board_date: '', payment_terms: '', incoterm: '', notes: '',
 };
@@ -159,6 +159,7 @@ function BolAudit() {
         number_of_packages: formData.number_of_packages ? parseInt(formData.number_of_packages) : null,
         freight_charges_usd: formData.freight_charges_usd ? parseFloat(formData.freight_charges_usd) : null,
         declared_value_usd: formData.declared_value_usd ? parseFloat(formData.declared_value_usd) : null,
+        container_type: formData.container_type || null,
         issue_date: formData.issue_date || null,
         ship_on_board_date: formData.ship_on_board_date || null,
         shipment_id: formData.shipment_id || null,
@@ -464,6 +465,7 @@ function BolAudit() {
       notify_party: bol.notify_party || '',
       description_of_goods: bol.description_of_goods || '',
       container_numbers: Array.isArray(bol.container_numbers) ? bol.container_numbers.join(', ') : (bol.container_numbers || ''),
+      container_type: bol.container_type || '',
       gross_weight_kg: bol.gross_weight_kg ?? '',
       volume_cbm: bol.volume_cbm ?? '',
       number_of_packages: bol.number_of_packages ?? '',
@@ -643,14 +645,14 @@ function BolAudit() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ backgroundColor: 'var(--surface-2, #f3f4f6)' }}>
-                    {['BOL #', 'Supplier', 'Route', 'Weight (kg)', 'Actual Freight', 'Benchmark Rate', 'Expected', 'Variance', 'Status', ''].map(h => (
+                    {['BOL #', 'Supplier', 'Route', 'Container', 'Weight (kg)', 'Actual Freight', 'Benchmark Rate', 'Expected', 'Variance', 'Status', ''].map(h => (
                       <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, borderBottom: '2px solid var(--border-color, #e5e7eb)', whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {bols.filter(b => b.freight_variance_usd != null || b.freight_charges_usd).length === 0 ? (
-                    <tr><td colSpan={10} style={{ padding: 30, textAlign: 'center', color: 'var(--text-500)' }}>No freight data to analyze. Upload BOL PDFs and import rate benchmarks, then click "Run Benchmark Check".</td></tr>
+                    <tr><td colSpan={11} style={{ padding: 30, textAlign: 'center', color: 'var(--text-500)' }}>No freight data to analyze. Upload BOL PDFs and import rate benchmarks, then click "Run Benchmark Check".</td></tr>
                   ) : bols.filter(b => b.freight_charges_usd).map((bol, idx) => {
                     const variance = parseFloat(bol.freight_variance_usd || 0);
                     const benchmarkVal = parseFloat(bol.benchmark_rate_per_kg || 0);
@@ -659,6 +661,7 @@ function BolAudit() {
                         <td style={{ padding: '10px 12px', fontWeight: 600 }}>{bol.bol_number}</td>
                         <td style={{ padding: '10px 12px' }}>{bol.supplier_name || '-'}</td>
                         <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>{bol.port_of_loading || '?'} → {bol.port_of_discharge || '?'}</td>
+                        <td style={{ padding: '10px 12px', fontWeight: 600 }}>{bol.container_type || '-'}</td>
                         <td style={{ padding: '10px 12px' }}>{bol.gross_weight_kg ? parseFloat(bol.gross_weight_kg).toLocaleString() : '-'}</td>
                         <td style={{ padding: '10px 12px', fontWeight: 600 }}>{formatCurrency(bol.freight_charges_usd)}</td>
                         <td style={{ padding: '10px 12px' }}>{benchmarkVal > 0 ? formatCurrency(benchmarkVal) : '-'}</td>
@@ -1012,7 +1015,20 @@ function BolAudit() {
               {renderInput('Number of Packages', 'number_of_packages', 'number')}
               {renderInput('Freight Charges (USD)', 'freight_charges_usd', 'number', { step: '0.01' })}
               {renderInput('Declared Value (USD)', 'declared_value_usd', 'number', { step: '0.01' })}
-              {renderInput('Container Numbers', 'container_numbers', 'text', { flex: '1 1 100%', placeholder: 'Comma-separated: MSKU1234567, TGHU7654321' })}
+              <div style={{ flex: '1 1 150px' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: 4 }}>Container Type</label>
+                <select
+                  value={formData.container_type}
+                  onChange={e => setFormData(f => ({ ...f, container_type: e.target.value }))}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-color, #d1d5db)', fontSize: '0.85rem', backgroundColor: 'var(--surface-1, #fff)' }}
+                >
+                  <option value="">Select...</option>
+                  <option value="20GP">20GP</option>
+                  <option value="40GP">40GP</option>
+                  <option value="40HC">40HC</option>
+                </select>
+              </div>
+              {renderInput('Container Numbers', 'container_numbers', 'text', { flex: '1 1 calc(100% - 170px)', placeholder: 'Comma-separated: MSKU1234567, TGHU7654321' })}
               {renderInput('Description of Goods', 'description_of_goods', 'text', { type: 'textarea', flex: '1 1 100%' })}
               {renderInput('Notes', 'notes', 'text', { type: 'textarea', flex: '1 1 100%' })}
             </div>

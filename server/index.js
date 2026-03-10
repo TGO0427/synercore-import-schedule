@@ -501,6 +501,7 @@ async function start() {
         ALTER TABLE bol_audits ADD COLUMN IF NOT EXISTS weight_variance_kg NUMERIC(12,3);
         ALTER TABLE bol_audits ADD COLUMN IF NOT EXISTS weight_variance_pct NUMERIC(8,2);
         ALTER TABLE bol_audits ADD COLUMN IF NOT EXISTS is_duplicate BOOLEAN DEFAULT false;
+        ALTER TABLE bol_audits ADD COLUMN IF NOT EXISTS container_type VARCHAR(10);
       `);
       logger.info('BOL audits table ready');
     } catch (error) {
