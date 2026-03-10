@@ -159,6 +159,10 @@ function BolAudit() {
         number_of_packages: formData.number_of_packages ? parseInt(formData.number_of_packages) : null,
         freight_charges_usd: formData.freight_charges_usd ? parseFloat(formData.freight_charges_usd) : null,
         declared_value_usd: formData.declared_value_usd ? parseFloat(formData.declared_value_usd) : null,
+        issue_date: formData.issue_date || null,
+        ship_on_board_date: formData.ship_on_board_date || null,
+        shipment_id: formData.shipment_id || null,
+        payment_terms: formData.payment_terms || null,
       };
 
       const url = editingBol
