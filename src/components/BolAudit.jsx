@@ -625,7 +625,7 @@ function BolAudit() {
                     fetchBols();
                     fetchStats();
                   } else {
-                    showError(json.error || 'Benchmark check failed');
+                    showError(json.details ? `${json.error}: ${json.details}` : json.error || 'Benchmark check failed');
                   }
                 } catch (err) { showError('Failed to run benchmark check'); }
               }}
