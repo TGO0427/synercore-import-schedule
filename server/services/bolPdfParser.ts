@@ -4,7 +4,6 @@
  * Then cross-references against existing shipments to auto-flag discrepancies.
  */
 
-import pdf from 'pdf-parse';
 import { queryAll } from '../db/connection.js';
 import { logInfo, logWarn } from '../utils/logger.js';
 
@@ -180,6 +179,7 @@ function findAllContainers(text: string): string[] {
 // ─── Main parser ───
 
 export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
+  const pdf = (await import('pdf-parse')).default;
   const pdfData = await pdf(pdfBuffer);
   const text = pdfData.text;
   const confidence: Record<string, number> = {};
