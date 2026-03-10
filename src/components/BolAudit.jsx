@@ -76,6 +76,12 @@ function BolAudit() {
   });
   const [saving, setSaving] = useState(false);
 
+  // PDF Upload
+  const [uploading, setUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState(null);
+  const [showUploadResult, setShowUploadResult] = useState(false);
+  const fileInputRef = React.useRef(null);
+
   // Fetch BOLs
   const fetchBols = useCallback(async (page = 1) => {
     try {
@@ -221,6 +227,47 @@ function BolAudit() {
     }
   };
 
+  // PDF Upload
+  const handlePdfUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+      showError('Please select a PDF file');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      showError('File size must be under 10MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formPayload = new FormData();
+      formPayload.append('pdf', file);
+
+      const res = await authFetch(getApiUrl('/api/bol-audit/upload-pdf'), {
+        method: 'POST',
+        body: formPayload,
+      });
+
+      const json = await res.json();
+      if (res.ok) {
+        setUploadResult({ bol: json.data, extraction: json.extraction });
+        setShowUploadResult(true);
+        showSuccess(`BOL extracted and ${json.data.audit_status === 'approved' ? 'auto-approved' : 'flagged for review'}`);
+        fetchBols(1);
+        fetchStats();
+      } else {
+        showError(json.error || 'Failed to process PDF');
+      }
+    } catch (err) {
+      showError('Failed to upload PDF');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   // Open edit
   const openEdit = (bol) => {
     setEditingBol(bol);
@@ -321,9 +368,25 @@ function BolAudit() {
             Review, verify, and audit bills of lading for freight compliance
           </p>
         </div>
-        <button style={btnStyle('#059669')} onClick={() => { setEditingBol(null); setFormData(emptyForm); setShowForm(true); }}>
-          + New BOL
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf"
+            style={{ display: 'none' }}
+            onChange={handlePdfUpload}
+          />
+          <button
+            style={{ ...btnStyle('#3b82f6'), opacity: uploading ? 0.6 : 1 }}
+            disabled={uploading}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {uploading ? 'Processing...' : 'Upload BOL PDF'}
+          </button>
+          <button style={btnStyle('#059669')} onClick={() => { setEditingBol(null); setFormData(emptyForm); setShowForm(true); }}>
+            + New BOL
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -531,6 +594,120 @@ function BolAudit() {
                 disabled={saving} onClick={handleAuditSubmit}>
                 {saving ? 'Submitting...' : `Submit: ${STATUS_CONFIG[auditForm.audit_status]?.label || 'Audit'}`}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PDF Upload Result Modal */}
+      {showUploadResult && uploadResult && (
+        <div style={modalOverlay} onClick={() => setShowUploadResult(false)}>
+          <div style={{ ...modalBox, maxWidth: 700 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h2 style={{ margin: 0, fontSize: '1.2rem' }}>PDF Extraction Results</h2>
+              <button style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: 'var(--text-500)' }} onClick={() => setShowUploadResult(false)}>&times;</button>
+            </div>
+
+            {/* Auto-Audit Status */}
+            <div style={{
+              padding: '12px 16px', borderRadius: 8, marginBottom: 16,
+              backgroundColor: uploadResult.bol.audit_status === 'approved' ? '#d1fae5' : uploadResult.bol.audit_status === 'discrepancy' ? '#f3e8ff' : '#fef3c7',
+              border: `1px solid ${uploadResult.bol.audit_status === 'approved' ? '#059669' : uploadResult.bol.audit_status === 'discrepancy' ? '#9333ea' : '#f59e0b'}`,
+            }}>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: 4 }}>
+                Auto-Audit: <StatusBadge status={uploadResult.bol.audit_status} />
+                {uploadResult.extraction?.score != null && (
+                  <span style={{ marginLeft: 12, fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-500)' }}>
+                    Score: {uploadResult.extraction.score}/100
+                  </span>
+                )}
+              </div>
+              {uploadResult.extraction?.matched_shipment && (
+                <div style={{ fontSize: '0.85rem', marginTop: 4, color: 'var(--text-700)' }}>
+                  Matched shipment: {uploadResult.extraction.matched_shipment.order_ref} ({uploadResult.extraction.matched_shipment.supplier})
+                </div>
+              )}
+            </div>
+
+            {/* Extracted BOL Data */}
+            <div style={{ marginBottom: 16 }}>
+              <h3 style={{ fontSize: '0.95rem', marginBottom: 8 }}>Extracted Data</h3>
+              <div style={{ backgroundColor: 'var(--surface-2, #f9fafb)', borderRadius: 8, padding: 14, fontSize: '0.85rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                  {[
+                    ['BOL Number', uploadResult.bol.bol_number],
+                    ['Supplier', uploadResult.bol.supplier_name],
+                    ['Carrier', uploadResult.bol.carrier_name],
+                    ['Vessel', uploadResult.bol.vessel_name],
+                    ['Voyage', uploadResult.bol.voyage_number],
+                    ['Port of Loading', uploadResult.bol.port_of_loading],
+                    ['Port of Discharge', uploadResult.bol.port_of_discharge],
+                    ['Consignee', uploadResult.bol.consignee],
+                    ['Shipper', uploadResult.bol.shipper],
+                    ['Weight', uploadResult.bol.gross_weight_kg ? `${uploadResult.bol.gross_weight_kg} kg` : null],
+                    ['Volume', uploadResult.bol.volume_cbm ? `${uploadResult.bol.volume_cbm} CBM` : null],
+                    ['Packages', uploadResult.bol.number_of_packages],
+                    ['Freight', uploadResult.bol.freight_charges_usd ? `$${uploadResult.bol.freight_charges_usd}` : null],
+                    ['Payment Terms', uploadResult.bol.payment_terms],
+                    ['Incoterm', uploadResult.bol.incoterm],
+                  ].filter(([, v]) => v).map(([label, val]) => (
+                    <div key={label}><strong>{label}:</strong> {val}</div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Confidence Scores */}
+            {uploadResult.extraction?.confidence && (
+              <div style={{ marginBottom: 16 }}>
+                <h3 style={{ fontSize: '0.95rem', marginBottom: 8 }}>Extraction Confidence</h3>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {Object.entries(uploadResult.extraction.confidence).map(([field, score]) => (
+                    <span key={field} style={{
+                      padding: '3px 10px', borderRadius: 12, fontSize: '0.78rem', fontWeight: 600,
+                      backgroundColor: score >= 0.8 ? '#d1fae5' : score >= 0.5 ? '#fef3c7' : '#fee2e2',
+                      color: score >= 0.8 ? '#059669' : score >= 0.5 ? '#d97706' : '#dc2626',
+                    }}>
+                      {field.replace(/_/g, ' ')}: {Math.round(score * 100)}%
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Audit Findings */}
+            {uploadResult.extraction?.findings?.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <h3 style={{ fontSize: '0.95rem', marginBottom: 8 }}>Audit Findings</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {uploadResult.extraction.findings.map((f, i) => (
+                    <div key={i} style={{
+                      padding: '8px 12px', borderRadius: 6, fontSize: '0.85rem',
+                      backgroundColor: f.severity === 'error' ? '#fee2e2' : f.severity === 'warning' ? '#fef3c7' : '#dbeafe',
+                      border: `1px solid ${f.severity === 'error' ? '#fca5a5' : f.severity === 'warning' ? '#fcd34d' : '#93c5fd'}`,
+                    }}>
+                      <strong style={{ textTransform: 'uppercase', fontSize: '0.75rem', color: f.severity === 'error' ? '#dc2626' : f.severity === 'warning' ? '#d97706' : '#2563eb' }}>
+                        {f.severity}
+                      </strong>
+                      {' '}{f.message}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
+              {uploadResult.bol?.id && (
+                <button style={btnStyle('#3b82f6')} onClick={() => {
+                  setShowUploadResult(false);
+                  // Find the BOL in the list and open audit
+                  const bol = bols.find(b => b.id === uploadResult.bol.id);
+                  if (bol) openAudit(bol);
+                }}>
+                  Review & Audit
+                </button>
+              )}
+              <button style={btnStyle('#6b7280')} onClick={() => setShowUploadResult(false)}>Close</button>
             </div>
           </div>
         </div>

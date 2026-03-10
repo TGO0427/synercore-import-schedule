@@ -5,11 +5,26 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
+import multer from 'multer';
 import { authenticateToken } from '../middleware/security.js';
 import { requireAdmin } from '../middleware/auth.ts';
 import { logInfo, logError } from '../utils/logger.js';
 import { getPool, queryAll, queryOne, transaction } from '../db/connection.js';
 import { AuditRepository } from '../db/repositories/AuditRepository.ts';
+import { parseBolPdf, autoAuditBol } from '../services/bolPdfParser.ts';
+
+// PDF-only upload (10MB max)
+const pdfUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are accepted'));
+    }
+  },
+});
 
 const router = Router();
 
@@ -372,6 +387,93 @@ router.post(
 
     logInfo(`BOL ${id} audited: ${audit_status}`);
     res.json({ data: result, message: `Bill of Lading ${audit_status}` });
+  })
+);
+
+/**
+ * POST /api/bol-audit/upload-pdf
+ * Upload a BOL PDF, extract data, auto-audit, and create BOL record
+ */
+router.post(
+  '/upload-pdf',
+  authenticateToken,
+  pdfUpload.single('pdf'),
+  asyncHandler(async (req: Request, res: Response) => {
+    if (!req.file) {
+      return res.status(400).json({ error: 'PDF file is required' });
+    }
+
+    const userId = (req as any).user?.id;
+    const user = (req as any).user;
+
+    // 1. Extract data from PDF
+    logInfo(`Parsing BOL PDF: ${req.file.originalname} (${(req.file.size / 1024).toFixed(1)}KB)`);
+    const extracted = await parseBolPdf(req.file.buffer);
+
+    // 2. Auto-audit against shipments
+    const auditResult = await autoAuditBol(extracted);
+
+    // 3. Create BOL record with extracted data
+    const bolNumber = extracted.bol_number || `IMPORT_${Date.now()}`;
+    const result = await queryOne(
+      `INSERT INTO bol_audits (
+        bol_number, shipment_id, supplier_name, carrier_name, vessel_name,
+        voyage_number, port_of_loading, port_of_discharge, consignee, shipper,
+        description_of_goods, container_numbers, gross_weight_kg, volume_cbm,
+        number_of_packages, freight_charges_usd, declared_value_usd,
+        issue_date, ship_on_board_date, notify_party, payment_terms, incoterm,
+        notes, created_by, audit_status, audit_notes, discrepancies,
+        raw_pdf_text, extraction_confidence, pdf_filename
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22,
+        $23, $24, $25, $26, $27, $28, $29, $30
+      ) RETURNING *`,
+      [
+        bolNumber,
+        auditResult.matched_shipment?.id || null,
+        extracted.supplier_name, extracted.carrier_name, extracted.vessel_name,
+        extracted.voyage_number, extracted.port_of_loading, extracted.port_of_discharge,
+        extracted.consignee, extracted.shipper,
+        extracted.description_of_goods,
+        extracted.container_numbers.length > 0 ? JSON.stringify(extracted.container_numbers) : null,
+        extracted.gross_weight_kg, extracted.volume_cbm, extracted.number_of_packages,
+        extracted.freight_charges_usd, extracted.declared_value_usd,
+        extracted.issue_date, extracted.ship_on_board_date,
+        extracted.notify_party, extracted.payment_terms, extracted.incoterm,
+        `Imported from PDF: ${req.file.originalname}`,
+        userId,
+        auditResult.status,
+        auditResult.findings.length > 0
+          ? `Auto-audit score: ${auditResult.score}/100. ${auditResult.findings.filter(f => f.severity === 'error').length} errors, ${auditResult.findings.filter(f => f.severity === 'warning').length} warnings.`
+          : null,
+        auditResult.findings.length > 0 ? JSON.stringify(auditResult.findings) : null,
+        extracted.raw_text,
+        JSON.stringify(extracted.confidence),
+        req.file.originalname,
+      ]
+    );
+
+    AuditRepository.logAudit(
+      userId, user?.username || '', 'import_pdf', 'bol_audit',
+      String((result as any).id), bolNumber,
+      { filename: req.file.originalname, auto_status: auditResult.status, score: auditResult.score }
+    );
+
+    logInfo(`BOL PDF imported: ${bolNumber} (status: ${auditResult.status}, score: ${auditResult.score})`);
+
+    res.status(201).json({
+      data: result,
+      extraction: {
+        confidence: extracted.confidence,
+        findings: auditResult.findings,
+        score: auditResult.score,
+        matched_shipment: auditResult.matched_shipment
+          ? { id: auditResult.matched_shipment.id, order_ref: auditResult.matched_shipment.order_ref, supplier: auditResult.matched_shipment.supplier }
+          : null,
+      },
+      message: `BOL imported from PDF. Auto-audit: ${auditResult.status} (score: ${auditResult.score}/100)`,
+    });
   })
 );
 

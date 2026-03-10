@@ -491,6 +491,10 @@ async function start() {
         CREATE INDEX IF NOT EXISTS idx_bol_audits_supplier ON bol_audits(supplier_name);
         CREATE INDEX IF NOT EXISTS idx_bol_audits_shipment ON bol_audits(shipment_id);
         CREATE INDEX IF NOT EXISTS idx_bol_audits_created ON bol_audits(created_at);
+
+        ALTER TABLE bol_audits ADD COLUMN IF NOT EXISTS raw_pdf_text TEXT;
+        ALTER TABLE bol_audits ADD COLUMN IF NOT EXISTS extraction_confidence JSONB;
+        ALTER TABLE bol_audits ADD COLUMN IF NOT EXISTS pdf_filename VARCHAR(255);
       `);
       logger.info('BOL audits table ready');
     } catch (error) {
