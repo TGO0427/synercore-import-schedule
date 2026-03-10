@@ -250,8 +250,9 @@ router.post(
     body('port_of_loading').trim().notEmpty(),
     body('port_of_discharge').trim().notEmpty(),
     body('rate_per_kg_usd').optional({ nullable: true }).isFloat({ min: 0 }),
-    body('rate_per_cbm_usd').optional({ nullable: true }).isFloat({ min: 0 }),
-    body('min_charge_usd').optional({ nullable: true }).isFloat({ min: 0 }),
+    body('full_rate_usd').optional({ nullable: true }).isFloat({ min: 0 }),
+    body('rate_20fcl_usd').optional({ nullable: true }).isFloat({ min: 0 }),
+    body('rate_40fcl_usd').optional({ nullable: true }).isFloat({ min: 0 }),
     body('transport_mode').optional().isIn(['sea', 'air', 'road']),
     body('valid_from').optional({ nullable: true }).isISO8601(),
     body('valid_until').optional({ nullable: true }).isISO8601(),
@@ -262,20 +263,20 @@ router.post(
     const userId = (req as any).user?.id;
     const {
       carrier_name, port_of_loading, port_of_discharge,
-      rate_per_kg_usd, rate_per_cbm_usd, min_charge_usd,
+      rate_per_kg_usd, full_rate_usd, rate_20fcl_usd, rate_40fcl_usd,
       transport_mode, valid_from, valid_until, notes
     } = req.body;
 
     const result = await queryOne(
       `INSERT INTO freight_benchmarks (
         carrier_name, port_of_loading, port_of_discharge,
-        rate_per_kg_usd, rate_per_cbm_usd, min_charge_usd,
+        rate_per_kg_usd, full_rate_usd, rate_20fcl_usd, rate_40fcl_usd,
         transport_mode, valid_from, valid_until, notes, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *`,
       [
         carrier_name, port_of_loading, port_of_discharge,
-        rate_per_kg_usd || null, rate_per_cbm_usd || null, min_charge_usd || null,
+        rate_per_kg_usd || null, full_rate_usd || null, rate_20fcl_usd || null, rate_40fcl_usd || null,
         transport_mode || 'sea', valid_from || null, valid_until || null,
         notes || null, userId
       ]
@@ -299,7 +300,7 @@ router.put(
     const { benchmarkId } = req.params;
     const {
       carrier_name, port_of_loading, port_of_discharge,
-      rate_per_kg_usd, rate_per_cbm_usd, min_charge_usd,
+      rate_per_kg_usd, full_rate_usd, rate_20fcl_usd, rate_40fcl_usd,
       transport_mode, valid_from, valid_until, notes
     } = req.body;
 
@@ -308,14 +309,14 @@ router.put(
         carrier_name = COALESCE($1, carrier_name),
         port_of_loading = COALESCE($2, port_of_loading),
         port_of_discharge = COALESCE($3, port_of_discharge),
-        rate_per_kg_usd = $4, rate_per_cbm_usd = $5, min_charge_usd = $6,
-        transport_mode = COALESCE($7, transport_mode),
-        valid_from = $8, valid_until = $9, notes = $10,
+        rate_per_kg_usd = $4, full_rate_usd = $5, rate_20fcl_usd = $6, rate_40fcl_usd = $7,
+        transport_mode = COALESCE($8, transport_mode),
+        valid_from = $9, valid_until = $10, notes = $11,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $11 RETURNING *`,
+      WHERE id = $12 RETURNING *`,
       [
         carrier_name || null, port_of_loading || null, port_of_discharge || null,
-        rate_per_kg_usd ?? null, rate_per_cbm_usd ?? null, min_charge_usd ?? null,
+        rate_per_kg_usd ?? null, full_rate_usd ?? null, rate_20fcl_usd ?? null, rate_40fcl_usd ?? null,
         transport_mode || null, valid_from || null, valid_until || null,
         notes || null, benchmarkId
       ]
@@ -407,13 +408,13 @@ router.post(
         await queryOne(
           `INSERT INTO freight_benchmarks (
             carrier_name, port_of_loading, port_of_discharge,
-            rate_per_kg_usd, rate_per_cbm_usd, min_charge_usd,
+            rate_per_kg_usd, full_rate_usd, rate_20fcl_usd, rate_40fcl_usd,
             transport_mode, valid_from, valid_until, notes, created_by
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
           RETURNING id`,
           [
             rate.carrier_name, rate.port_of_loading, rate.port_of_discharge,
-            rate.rate_per_kg_usd, rate.rate_per_cbm_usd, rate.min_charge_usd,
+            rate.rate_per_kg_usd, rate.full_rate_usd, rate.rate_20fcl_usd, rate.rate_40fcl_usd,
             rate.transport_mode, rate.valid_from, rate.valid_until,
             rate.notes, userId
           ]

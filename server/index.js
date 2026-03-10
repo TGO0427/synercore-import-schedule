@@ -518,6 +518,9 @@ async function start() {
           rate_per_kg_usd NUMERIC(10,4),
           rate_per_cbm_usd NUMERIC(10,2),
           min_charge_usd NUMERIC(12,2),
+          full_rate_usd NUMERIC(12,2),
+          rate_20fcl_usd NUMERIC(12,2),
+          rate_40fcl_usd NUMERIC(12,2),
           currency VARCHAR(10) DEFAULT 'USD',
           transport_mode VARCHAR(20) DEFAULT 'sea',
           valid_from DATE,
@@ -529,6 +532,9 @@ async function start() {
         );
         CREATE INDEX IF NOT EXISTS idx_freight_benchmarks_route ON freight_benchmarks(port_of_loading, port_of_discharge);
         CREATE INDEX IF NOT EXISTS idx_freight_benchmarks_carrier ON freight_benchmarks(carrier_name);
+        ALTER TABLE freight_benchmarks ADD COLUMN IF NOT EXISTS full_rate_usd NUMERIC(12,2);
+        ALTER TABLE freight_benchmarks ADD COLUMN IF NOT EXISTS rate_20fcl_usd NUMERIC(12,2);
+        ALTER TABLE freight_benchmarks ADD COLUMN IF NOT EXISTS rate_40fcl_usd NUMERIC(12,2);
       `);
       logger.info('Freight benchmarks table ready');
     } catch (error) {

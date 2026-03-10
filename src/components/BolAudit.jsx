@@ -85,7 +85,7 @@ function BolAudit() {
 
   // Benchmarks
   const [benchmarks, setBenchmarks] = useState([]);
-  const [benchmarkForm, setBenchmarkForm] = useState({ port_of_loading: '', port_of_discharge: '', rate_per_kg_usd: '', rate_per_cbm_usd: '', min_charge_usd: '', carrier_name: '', transport_mode: 'sea', valid_from: '', valid_until: '', notes: '' });
+  const [benchmarkForm, setBenchmarkForm] = useState({ port_of_loading: '', port_of_discharge: '', rate_per_kg_usd: '', full_rate_usd: '', rate_20fcl_usd: '', rate_40fcl_usd: '', carrier_name: '', transport_mode: 'sea', valid_from: '', valid_until: '', notes: '' });
   const [editingBenchmark, setEditingBenchmark] = useState(null);
   const [activeTab, setActiveTab] = useState('audit');
   const [uploadingRates, setUploadingRates] = useState(false);
@@ -266,14 +266,15 @@ function BolAudit() {
         body: JSON.stringify({
           ...benchmarkForm,
           rate_per_kg_usd: benchmarkForm.rate_per_kg_usd ? parseFloat(benchmarkForm.rate_per_kg_usd) : null,
-          rate_per_cbm_usd: benchmarkForm.rate_per_cbm_usd ? parseFloat(benchmarkForm.rate_per_cbm_usd) : null,
-          min_charge_usd: benchmarkForm.min_charge_usd ? parseFloat(benchmarkForm.min_charge_usd) : null,
+          full_rate_usd: benchmarkForm.full_rate_usd ? parseFloat(benchmarkForm.full_rate_usd) : null,
+          rate_20fcl_usd: benchmarkForm.rate_20fcl_usd ? parseFloat(benchmarkForm.rate_20fcl_usd) : null,
+          rate_40fcl_usd: benchmarkForm.rate_40fcl_usd ? parseFloat(benchmarkForm.rate_40fcl_usd) : null,
         }),
       });
       if (res.ok) {
         showSuccess(editingBenchmark ? 'Benchmark updated' : 'Benchmark created');
         setEditingBenchmark(null);
-        setBenchmarkForm({ port_of_loading: '', port_of_discharge: '', rate_per_kg_usd: '', rate_per_cbm_usd: '', min_charge_usd: '', carrier_name: '', transport_mode: 'sea', valid_from: '', valid_until: '', notes: '' });
+        setBenchmarkForm({ port_of_loading: '', port_of_discharge: '', rate_per_kg_usd: '', full_rate_usd: '', rate_20fcl_usd: '', rate_40fcl_usd: '', carrier_name: '', transport_mode: 'sea', valid_from: '', valid_until: '', notes: '' });
         fetchBenchmarks();
       } else {
         const err = await res.json();
@@ -299,8 +300,9 @@ function BolAudit() {
     setEditingBenchmark(bm);
     setBenchmarkForm({
       port_of_loading: bm.port_of_loading || '', port_of_discharge: bm.port_of_discharge || '',
-      rate_per_kg_usd: bm.rate_per_kg_usd ?? '', rate_per_cbm_usd: bm.rate_per_cbm_usd ?? '',
-      min_charge_usd: bm.min_charge_usd ?? '', carrier_name: bm.carrier_name || '',
+      rate_per_kg_usd: bm.rate_per_kg_usd ?? '', full_rate_usd: bm.full_rate_usd ?? '',
+      rate_20fcl_usd: bm.rate_20fcl_usd ?? '', rate_40fcl_usd: bm.rate_40fcl_usd ?? '',
+      carrier_name: bm.carrier_name || '',
       transport_mode: bm.transport_mode || 'sea', valid_from: bm.valid_from ? bm.valid_from.split('T')[0] : '',
       valid_until: bm.valid_until ? bm.valid_until.split('T')[0] : '', notes: bm.notes || '',
     });
@@ -309,20 +311,19 @@ function BolAudit() {
   // Download rate sheet template
   const downloadRateTemplate = () => {
     const headers = [
-      'Port of Loading', 'Port of Discharge', 'Rate per kg (USD)', 'Rate per CBM (USD)',
-      'Min Charge (USD)', 'Carrier', 'Mode', 'Valid From', 'Valid Until', 'Notes'
+      'Port of Loading', 'Port of Discharge', 'Rate per kg (USD)', 'Full Rate (USD)',
+      '20FCL (USD)', '40FCL (USD)', 'Carrier', 'Mode', 'Valid From', 'Valid Until', 'Notes'
     ];
     const sampleRows = [
-      ['Shanghai', 'Durban', 0.085, '', 150, 'DHL', 'sea', '2026-01-01', '2026-12-31', 'Standard rate'],
-      ['Ningbo', 'Cape Town', 0.092, '', 180, 'DSV', 'sea', '2026-01-01', '2026-06-30', ''],
-      ['Guangzhou', 'Johannesburg', '', 45, '', 'Maersk', 'sea', '', '', 'CBM rate'],
-      ['Shanghai', 'Durban', 2.50, '', 500, 'DHL', 'air', '2026-01-01', '2026-12-31', 'Airfreight'],
+      ['Shanghai', 'Durban', 0.085, 1500, 2800, 4500, 'DHL', 'sea', '2026-01-01', '2026-12-31', 'Standard rate'],
+      ['Ningbo', 'Cape Town', 0.092, 1650, 3000, 4800, 'DSV', 'sea', '2026-01-01', '2026-06-30', ''],
+      ['Guangzhou', 'Johannesburg', '', 1400, 2600, 4200, 'Maersk', 'sea', '', '', 'Sea freight'],
+      ['Shanghai', 'Durban', 2.50, 8500, '', '', 'DHL', 'air', '2026-01-01', '2026-12-31', 'Airfreight'],
     ];
     const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
-    // Set column widths
     ws['!cols'] = [
-      { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 16 },
-      { wch: 14 }, { wch: 14 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 24 }
+      { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 14 },
+      { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 24 }
     ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Rate Benchmarks');
@@ -692,8 +693,9 @@ function BolAudit() {
                               <th style={{ padding: '4px 6px' }}>POL</th>
                               <th style={{ padding: '4px 6px' }}>POD</th>
                               <th style={{ padding: '4px 6px' }}>Rate/kg</th>
-                              <th style={{ padding: '4px 6px' }}>Rate/CBM</th>
-                              <th style={{ padding: '4px 6px' }}>Min Charge</th>
+                              <th style={{ padding: '4px 6px' }}>Full Rate</th>
+                              <th style={{ padding: '4px 6px' }}>20FCL</th>
+                              <th style={{ padding: '4px 6px' }}>40FCL</th>
                               <th style={{ padding: '4px 6px' }}>Carrier</th>
                               <th style={{ padding: '4px 6px' }}>Mode</th>
                               <th style={{ padding: '4px 6px' }}>Valid</th>
@@ -705,8 +707,9 @@ function BolAudit() {
                                 <td style={{ padding: '3px 6px' }}>{r.port_of_loading}</td>
                                 <td style={{ padding: '3px 6px' }}>{r.port_of_discharge}</td>
                                 <td style={{ padding: '3px 6px' }}>{r.rate_per_kg_usd ?? '-'}</td>
-                                <td style={{ padding: '3px 6px' }}>{r.rate_per_cbm_usd ?? '-'}</td>
-                                <td style={{ padding: '3px 6px' }}>{r.min_charge_usd ?? '-'}</td>
+                                <td style={{ padding: '3px 6px' }}>{r.full_rate_usd ?? '-'}</td>
+                                <td style={{ padding: '3px 6px' }}>{r.rate_20fcl_usd ?? '-'}</td>
+                                <td style={{ padding: '3px 6px' }}>{r.rate_40fcl_usd ?? '-'}</td>
                                 <td style={{ padding: '3px 6px' }}>{r.carrier_name ?? '-'}</td>
                                 <td style={{ padding: '3px 6px' }}>{r.transport_mode}</td>
                                 <td style={{ padding: '3px 6px' }}>{r.valid_from || '-'} → {r.valid_until || '-'}</td>
@@ -739,12 +742,16 @@ function BolAudit() {
                 <input style={inputStyle} type="number" step="0.0001" value={benchmarkForm.rate_per_kg_usd} onChange={e => setBenchmarkForm(f => ({ ...f, rate_per_kg_usd: e.target.value }))} />
               </div>
               <div style={{ flex: '1 1 120px' }}>
-                <label style={labelStyle}>Rate per CBM (USD)</label>
-                <input style={inputStyle} type="number" step="0.01" value={benchmarkForm.rate_per_cbm_usd} onChange={e => setBenchmarkForm(f => ({ ...f, rate_per_cbm_usd: e.target.value }))} />
+                <label style={labelStyle}>Full Rate (USD)</label>
+                <input style={inputStyle} type="number" step="0.01" value={benchmarkForm.full_rate_usd} onChange={e => setBenchmarkForm(f => ({ ...f, full_rate_usd: e.target.value }))} />
               </div>
               <div style={{ flex: '1 1 120px' }}>
-                <label style={labelStyle}>Min Charge (USD)</label>
-                <input style={inputStyle} type="number" step="0.01" value={benchmarkForm.min_charge_usd} onChange={e => setBenchmarkForm(f => ({ ...f, min_charge_usd: e.target.value }))} />
+                <label style={labelStyle}>20FCL (USD)</label>
+                <input style={inputStyle} type="number" step="0.01" value={benchmarkForm.rate_20fcl_usd} onChange={e => setBenchmarkForm(f => ({ ...f, rate_20fcl_usd: e.target.value }))} />
+              </div>
+              <div style={{ flex: '1 1 120px' }}>
+                <label style={labelStyle}>40FCL (USD)</label>
+                <input style={inputStyle} type="number" step="0.01" value={benchmarkForm.rate_40fcl_usd} onChange={e => setBenchmarkForm(f => ({ ...f, rate_40fcl_usd: e.target.value }))} />
               </div>
               <div style={{ flex: '1 1 150px' }}>
                 <label style={labelStyle}>Carrier</label>
@@ -772,7 +779,7 @@ function BolAudit() {
                 {saving ? 'Saving...' : editingBenchmark ? 'Update Rate' : 'Add Rate'}
               </button>
               {editingBenchmark && (
-                <button style={btnStyle('#6b7280')} onClick={() => { setEditingBenchmark(null); setBenchmarkForm({ port_of_loading: '', port_of_discharge: '', rate_per_kg_usd: '', rate_per_cbm_usd: '', min_charge_usd: '', carrier_name: '', transport_mode: 'sea', valid_from: '', valid_until: '', notes: '' }); }}>Cancel</button>
+                <button style={btnStyle('#6b7280')} onClick={() => { setEditingBenchmark(null); setBenchmarkForm({ port_of_loading: '', port_of_discharge: '', rate_per_kg_usd: '', full_rate_usd: '', rate_20fcl_usd: '', rate_40fcl_usd: '', carrier_name: '', transport_mode: 'sea', valid_from: '', valid_until: '', notes: '' }); }}>Cancel</button>
               )}
             </div>
           </div>
@@ -783,21 +790,22 @@ function BolAudit() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ backgroundColor: 'var(--surface-2, #f3f4f6)' }}>
-                    {['POL', 'POD', 'Rate/kg', 'Rate/CBM', 'Min Charge', 'Carrier', 'Mode', 'Valid From', 'Valid Until', 'Actions'].map(h => (
+                    {['POL', 'POD', 'Rate/kg', 'Full Rate', '20FCL', '40FCL', 'Carrier', 'Mode', 'Valid From', 'Valid Until', 'Actions'].map(h => (
                       <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, borderBottom: '2px solid var(--border-color, #e5e7eb)', whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {benchmarks.length === 0 ? (
-                    <tr><td colSpan={10} style={{ padding: 30, textAlign: 'center', color: 'var(--text-500)' }}>No rate benchmarks set. Add contracted rates above to enable freight cost comparison.</td></tr>
+                    <tr><td colSpan={11} style={{ padding: 30, textAlign: 'center', color: 'var(--text-500)' }}>No rate benchmarks set. Add contracted rates above to enable freight cost comparison.</td></tr>
                   ) : benchmarks.map((bm, idx) => (
                     <tr key={bm.id} style={{ backgroundColor: idx % 2 === 0 ? 'transparent' : 'var(--surface-2, #f9fafb)' }}>
                       <td style={{ padding: '10px 12px', fontWeight: 600 }}>{bm.port_of_loading}</td>
                       <td style={{ padding: '10px 12px', fontWeight: 600 }}>{bm.port_of_discharge}</td>
                       <td style={{ padding: '10px 12px' }}>{bm.rate_per_kg_usd ? `$${parseFloat(bm.rate_per_kg_usd).toFixed(4)}` : '-'}</td>
-                      <td style={{ padding: '10px 12px' }}>{bm.rate_per_cbm_usd ? `$${parseFloat(bm.rate_per_cbm_usd).toFixed(2)}` : '-'}</td>
-                      <td style={{ padding: '10px 12px' }}>{bm.min_charge_usd ? `$${parseFloat(bm.min_charge_usd).toFixed(2)}` : '-'}</td>
+                      <td style={{ padding: '10px 12px' }}>{bm.full_rate_usd ? `$${parseFloat(bm.full_rate_usd).toFixed(2)}` : '-'}</td>
+                      <td style={{ padding: '10px 12px' }}>{bm.rate_20fcl_usd ? `$${parseFloat(bm.rate_20fcl_usd).toFixed(2)}` : '-'}</td>
+                      <td style={{ padding: '10px 12px' }}>{bm.rate_40fcl_usd ? `$${parseFloat(bm.rate_40fcl_usd).toFixed(2)}` : '-'}</td>
                       <td style={{ padding: '10px 12px' }}>{bm.carrier_name || '-'}</td>
                       <td style={{ padding: '10px 12px', textTransform: 'capitalize' }}>{bm.transport_mode}</td>
                       <td style={{ padding: '10px 12px' }}>{bm.valid_from ? new Date(bm.valid_from).toLocaleDateString() : '-'}</td>

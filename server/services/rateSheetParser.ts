@@ -10,8 +10,9 @@ export interface ExtractedRate {
   port_of_loading: string;
   port_of_discharge: string;
   rate_per_kg_usd: number | null;
-  rate_per_cbm_usd: number | null;
-  min_charge_usd: number | null;
+  full_rate_usd: number | null;
+  rate_20fcl_usd: number | null;
+  rate_40fcl_usd: number | null;
   carrier_name: string | null;
   transport_mode: string;
   valid_from: string | null;
@@ -68,7 +69,7 @@ export async function parseExcelRateSheet(buffer: Buffer, filename: string): Pro
     for (let i = 0; i < Math.min(rows.length, 10); i++) {
       const row = rows[i].map((c: any) => String(c).toLowerCase().trim());
       const mapped = detectColumns(row);
-      if (mapped.pol >= 0 && mapped.pod >= 0 && (mapped.rateKg >= 0 || mapped.rateCbm >= 0 || mapped.rate >= 0)) {
+      if (mapped.pol >= 0 && mapped.pod >= 0 && (mapped.rateKg >= 0 || mapped.fullRate >= 0 || mapped.rate20fcl >= 0 || mapped.rate40fcl >= 0)) {
         headerIdx = i;
         colMap = mapped as any;
         break;
@@ -99,12 +100,12 @@ export async function parseExcelRateSheet(buffer: Buffer, filename: string): Pro
       if (['total', 'subtotal', 'average', 'notes', 'terms', 'conditions'].some(w => polLower.includes(w))) continue;
 
       const rateKg = parseRate(row[colMap.rateKg]);
-      const rateCbm = parseRate(row[colMap.rateCbm]);
-      const genericRate = parseRate(row[colMap.rate]);
-      const minCharge = parseRate(row[colMap.minCharge]);
+      const fullRate = parseRate(row[colMap.fullRate]);
+      const rate20fcl = parseRate(row[colMap.rate20fcl]);
+      const rate40fcl = parseRate(row[colMap.rate40fcl]);
 
       // Need at least one rate
-      if (rateKg === null && rateCbm === null && genericRate === null) continue;
+      if (rateKg === null && fullRate === null && rate20fcl === null && rate40fcl === null) continue;
 
       let validFrom: string | null = null;
       let validUntil: string | null = null;
@@ -119,9 +120,10 @@ export async function parseExcelRateSheet(buffer: Buffer, filename: string): Pro
       rates.push({
         port_of_loading: normalizePort(pol),
         port_of_discharge: normalizePort(pod),
-        rate_per_kg_usd: rateKg ?? genericRate,
-        rate_per_cbm_usd: rateCbm,
-        min_charge_usd: minCharge,
+        rate_per_kg_usd: rateKg,
+        full_rate_usd: fullRate,
+        rate_20fcl_usd: rate20fcl,
+        rate_40fcl_usd: rate40fcl,
         carrier_name: rowCarrier || carrierName,
         transport_mode: (['sea', 'air', 'road'].includes(rowMode) ? rowMode : mode) as string,
         valid_from: validFrom,
@@ -190,8 +192,9 @@ export async function parsePdfRateSheet(buffer: Buffer, filename: string): Promi
         port_of_loading: normalizePort(pol),
         port_of_discharge: normalizePort(pod),
         rate_per_kg_usd: isPerKg ? rateVal : null,
-        rate_per_cbm_usd: isPerCbm ? rateVal : null,
-        min_charge_usd: null,
+        full_rate_usd: (!isPerKg && !isPerCbm) ? rateVal : null,
+        rate_20fcl_usd: null,
+        rate_40fcl_usd: null,
         carrier_name: carrierName,
         transport_mode: mode,
         valid_from: null,
@@ -227,7 +230,7 @@ export async function parsePdfRateSheet(buffer: Buffer, filename: string): Promi
 // ─── Helpers ───
 
 function detectColumns(headerRow: string[]): Record<string, number> {
-  const result: Record<string, number> = { pol: -1, pod: -1, rateKg: -1, rateCbm: -1, rate: -1, minCharge: -1, validFrom: -1, validUntil: -1, carrier: -1, mode: -1, notes: -1 };
+  const result: Record<string, number> = { pol: -1, pod: -1, rateKg: -1, fullRate: -1, rate20fcl: -1, rate40fcl: -1, rate: -1, validFrom: -1, validUntil: -1, carrier: -1, mode: -1, notes: -1 };
 
   for (let i = 0; i < headerRow.length; i++) {
     const h = headerRow[i];
@@ -236,9 +239,9 @@ function detectColumns(headerRow: string[]): Record<string, number> {
     if (/origin|pol|port\s*of\s*load|loading|from|departure/.test(h)) result.pol = i;
     else if (/dest|pod|port\s*of\s*dis|discharge|to|arrival/.test(h)) result.pod = i;
     else if (/rate.*kg|per.*kg|usd.*kg|kg.*rate|freight.*kg/.test(h)) result.rateKg = i;
-    else if (/rate.*cbm|per.*cbm|usd.*cbm|cbm.*rate|per.*m3/.test(h)) result.rateCbm = i;
-    else if (/^rate$|freight\s*rate|ocean\s*freight|rate\s*usd|usd\s*rate|price/.test(h)) result.rate = i;
-    else if (/min.*charge|minimum|min\s*rate/.test(h)) result.minCharge = i;
+    else if (/20\s*fcl|20.*ft|20.*container/.test(h)) result.rate20fcl = i;
+    else if (/40\s*fcl|40.*ft|40.*container/.test(h)) result.rate40fcl = i;
+    else if (/full\s*rate|total\s*rate|flat\s*rate|^rate$|freight\s*rate|ocean\s*freight|rate\s*usd|usd\s*rate|price/.test(h)) result.fullRate = i;
     else if (/valid\s*from|effective|start\s*date/.test(h)) result.validFrom = i;
     else if (/valid\s*(?:to|until)|expir|end\s*date/.test(h)) result.validUntil = i;
     else if (/^carrier$|carrier\s*name|forwarder|freight\s*agent/.test(h)) result.carrier = i;
