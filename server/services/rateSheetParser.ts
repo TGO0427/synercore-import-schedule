@@ -157,7 +157,25 @@ export async function parsePdfRateSheet(buffer: Buffer, filename: string): Promi
 
       if (!rateVal || rateVal <= 0) continue;
       const polLower = pol.toLowerCase();
-      if (['total', 'subtotal', 'from', 'origin', 'port'].some(w => polLower === w)) continue;
+      const podLower = pod.toLowerCase();
+
+      // Reject common non-port words
+      const REJECT_WORDS = [
+        'total', 'subtotal', 'from', 'origin', 'port', 'notes', 'terms',
+        'environmental', 'fee', 'charge', 'surcharge', 'adjustment', 'fuel',
+        'currency', 'rate', 'description', 'service', 'type', 'code',
+        'subject', 'effective', 'valid', 'conditions', 'general', 'special',
+        'please', 'contact', 'note', 'important', 'additional', 'applicable',
+        'minimum', 'maximum', 'weight', 'volume', 'transit', 'schedule',
+        'amendment', 'revision', 'update', 'advisory', 'client', 'customer',
+      ];
+      if (REJECT_WORDS.some(w => polLower === w || podLower === w)) continue;
+
+      // POL/POD must look like place names — reject if both are common English words
+      const KNOWN_PORTS = Object.values(PORT_ALIASES);
+      const polIsKnown = KNOWN_PORTS.some(p => p.toLowerCase() === polLower);
+      const podIsKnown = KNOWN_PORTS.some(p => p.toLowerCase() === podLower);
+      if (!polIsKnown && !podIsKnown) continue; // At least one must be a recognized port
 
       // Determine if rate is per kg or per CBM based on context
       const isPerKg = /per\s*kg|\/kg|usd\/kg/i.test(line) || rateVal < 1;

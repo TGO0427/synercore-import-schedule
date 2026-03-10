@@ -654,6 +654,38 @@ function BolAudit() {
                       <span>Inserted: {rateUploadResult.data?.inserted}</span>
                       {rateUploadResult.data?.skipped > 0 && <span>Duplicates skipped: {rateUploadResult.data?.skipped}</span>}
                     </div>
+                    {rateUploadResult.data?.rates?.length > 0 && (
+                      <div style={{ marginTop: 10, maxHeight: 220, overflowY: 'auto' }}>
+                        <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ borderBottom: '1px solid #6ee7b7', textAlign: 'left' }}>
+                              <th style={{ padding: '4px 6px' }}>POL</th>
+                              <th style={{ padding: '4px 6px' }}>POD</th>
+                              <th style={{ padding: '4px 6px' }}>Rate/kg</th>
+                              <th style={{ padding: '4px 6px' }}>Rate/CBM</th>
+                              <th style={{ padding: '4px 6px' }}>Min Charge</th>
+                              <th style={{ padding: '4px 6px' }}>Carrier</th>
+                              <th style={{ padding: '4px 6px' }}>Mode</th>
+                              <th style={{ padding: '4px 6px' }}>Valid</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rateUploadResult.data.rates.map((r, i) => (
+                              <tr key={i} style={{ borderBottom: '1px solid #d1fae5' }}>
+                                <td style={{ padding: '3px 6px' }}>{r.port_of_loading}</td>
+                                <td style={{ padding: '3px 6px' }}>{r.port_of_discharge}</td>
+                                <td style={{ padding: '3px 6px' }}>{r.rate_per_kg_usd ?? '-'}</td>
+                                <td style={{ padding: '3px 6px' }}>{r.rate_per_cbm_usd ?? '-'}</td>
+                                <td style={{ padding: '3px 6px' }}>{r.min_charge_usd ?? '-'}</td>
+                                <td style={{ padding: '3px 6px' }}>{r.carrier_name ?? '-'}</td>
+                                <td style={{ padding: '3px 6px' }}>{r.transport_mode}</td>
+                                <td style={{ padding: '3px 6px' }}>{r.valid_from || '-'} → {r.valid_until || '-'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
