@@ -232,7 +232,7 @@ router.get(
   authenticateToken,
   asyncHandler(async (req: Request, res: Response) => {
     const rows = await queryAll(
-      `SELECT * FROM freight_benchmarks ORDER BY carrier_name, port_of_loading, port_of_discharge`
+      `SELECT * FROM freight_benchmarks ORDER BY port_of_loading, carrier_name, port_of_discharge`
     );
     res.json({ data: rows });
   })
