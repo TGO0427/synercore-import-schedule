@@ -483,6 +483,7 @@ router.post(
     }
 
     // Helper: find benchmarks matching port conditions
+    // Priority: 1) MSC Standard, 2) any other MSC rate, 3) BOL carrier, 4) any carrier
     async function findBenchmarks(pol: string | null, pod: string | null, carrier: string | null): Promise<any[]> {
       const conds: string[] = [];
       const prms: any[] = [];
@@ -494,15 +495,33 @@ router.post(
       const whereBase = `${conds.join(' AND ')} AND (valid_until IS NULL OR valid_until >= CURRENT_DATE)`;
       const cols = `rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd, carrier_name`;
 
-      // Try carrier-specific first
+      // 1) MSC Standard rate (default benchmark)
+      let res = await queryAll(
+        `SELECT ${cols} FROM freight_benchmarks WHERE ${whereBase} AND LOWER(carrier_name) = 'msc standard'
+         ORDER BY valid_from DESC NULLS LAST LIMIT 5`,
+        prms
+      );
+      if (res.length > 0) return res;
+
+      // 2) Any other MSC rate
+      res = await queryAll(
+        `SELECT ${cols} FROM freight_benchmarks WHERE ${whereBase} AND LOWER(carrier_name) LIKE 'msc%'
+         ORDER BY valid_from DESC NULLS LAST LIMIT 5`,
+        prms
+      );
+      if (res.length > 0) return res;
+
+      // 3) BOL's actual carrier
       if (carrier) {
-        const res = await queryAll(
+        res = await queryAll(
           `SELECT ${cols} FROM freight_benchmarks WHERE ${whereBase} AND LOWER(carrier_name) LIKE LOWER($${i})
            ORDER BY valid_from DESC NULLS LAST LIMIT 5`,
           [...prms, `%${carrier.substring(0, 30)}%`]
         );
         if (res.length > 0) return res;
       }
+
+      // 4) Any available rate
       return queryAll(
         `SELECT ${cols} FROM freight_benchmarks WHERE ${whereBase} ORDER BY valid_from DESC NULLS LAST LIMIT 5`,
         prms
