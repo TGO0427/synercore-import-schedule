@@ -470,14 +470,16 @@ router.post(
     if (bol_ids && Array.isArray(bol_ids) && bol_ids.length > 0) {
       bols = await queryAll(
         `SELECT id, bol_number, port_of_loading, port_of_discharge, carrier_name,
-                freight_charges_usd, gross_weight_kg, container_numbers, container_type
+                freight_charges_usd, gross_weight_kg, container_numbers, container_type,
+                ship_on_board_date, issue_date
          FROM bol_audits WHERE id = ANY($1)`,
         [bol_ids]
       );
     } else {
       bols = await queryAll(
         `SELECT id, bol_number, port_of_loading, port_of_discharge, carrier_name,
-                freight_charges_usd, gross_weight_kg, container_numbers, container_type
+                freight_charges_usd, gross_weight_kg, container_numbers, container_type,
+                ship_on_board_date, issue_date
          FROM bol_audits WHERE freight_charges_usd IS NOT NULL`
       );
     }
@@ -508,7 +510,8 @@ router.post(
 
     // Helper: find benchmarks matching port conditions
     // Priority: 1) MSC Standard, 2) any other MSC rate, 3) BOL carrier, 4) any carrier
-    async function findBenchmarks(pol: string | null, pod: string | null, carrier: string | null): Promise<any[]> {
+    // Uses the BOL's ship/issue date to find rates that were valid at the time of shipment
+    async function findBenchmarks(pol: string | null, pod: string | null, carrier: string | null, refDate: string | null): Promise<any[]> {
       const polParts = portParts(pol);
       const podParts = portParts(pod);
       if (polParts.length === 0 && podParts.length === 0) return [];
@@ -516,14 +519,14 @@ router.post(
       // Try each combination of POL/POD parts (most specific first)
       for (const polTerm of polParts.length > 0 ? polParts : [null]) {
         for (const podTerm of podParts.length > 0 ? podParts : [null]) {
-          const result = await findBenchmarksExact(polTerm, podTerm, carrier);
+          const result = await findBenchmarksExact(polTerm, podTerm, carrier, refDate);
           if (result.length > 0) return result;
         }
       }
       return [];
     }
 
-    async function findBenchmarksExact(pol: string | null, pod: string | null, carrier: string | null): Promise<any[]> {
+    async function findBenchmarksExact(pol: string | null, pod: string | null, carrier: string | null, refDate: string | null): Promise<any[]> {
       const conds: string[] = [];
       const prms: any[] = [];
       let i = 1;
@@ -531,7 +534,11 @@ router.post(
       if (pod) { conds.push(`LOWER(port_of_discharge) LIKE LOWER($${i++})`); prms.push(`%${pod.substring(0, 30)}%`); }
       if (conds.length === 0) return [];
 
-      const whereBase = `${conds.join(' AND ')} AND (valid_until IS NULL OR valid_until >= CURRENT_DATE)`;
+      // Use BOL's date to find rates valid at time of shipment, fallback to current date
+      const dateParam = refDate ? `$${i++}` : 'CURRENT_DATE';
+      if (refDate) prms.push(refDate);
+      const validityCond = `(valid_from IS NULL OR valid_from <= ${dateParam}) AND (valid_until IS NULL OR valid_until >= ${dateParam})`;
+      const whereBase = `${conds.join(' AND ')} AND (${validityCond})`;
       const cols = `rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd, carrier_name`;
 
       // 1) MSC Standard rate (default benchmark)
@@ -560,7 +567,7 @@ router.post(
         if (res.length > 0) return res;
       }
 
-      // 4) Any available rate
+      // 4) Any available rate (regardless of carrier)
       return queryAll(
         `SELECT ${cols} FROM freight_benchmarks WHERE ${whereBase} ORDER BY valid_from DESC NULLS LAST LIMIT 5`,
         prms
@@ -576,22 +583,25 @@ router.post(
       const pod = bol.port_of_discharge || null;
       if (!pol && !pod) continue;
 
+      // Use the BOL's ship date or issue date to find rates valid at time of shipment
+      const refDate = bol.ship_on_board_date || bol.issue_date || null;
+
       // Strategy 1: exact POL → POD match
-      let benchmarks = await findBenchmarks(pol, pod, bol.carrier_name);
+      let benchmarks = await findBenchmarks(pol, pod, bol.carrier_name, refDate);
 
       // Strategy 2: swap POL/POD (PDF parser may have reversed them)
       if (benchmarks.length === 0 && pol && pod) {
-        benchmarks = await findBenchmarks(pod, pol, bol.carrier_name);
+        benchmarks = await findBenchmarks(pod, pol, bol.carrier_name, refDate);
       }
 
       // Strategy 3: match by POL only (POD might be missing/wrong)
       if (benchmarks.length === 0 && pol) {
-        benchmarks = await findBenchmarks(pol, null, bol.carrier_name);
+        benchmarks = await findBenchmarks(pol, null, bol.carrier_name, refDate);
       }
 
       // Strategy 4: match by POD as POL (single port, PDF put it in wrong field)
       if (benchmarks.length === 0 && pod) {
-        benchmarks = await findBenchmarks(pod, null, bol.carrier_name);
+        benchmarks = await findBenchmarks(pod, null, bol.carrier_name, refDate);
       }
 
       if (benchmarks.length === 0) {
