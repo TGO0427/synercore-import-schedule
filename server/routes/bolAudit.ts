@@ -141,11 +141,11 @@ router.get(
       params.push(`%${req.query.carrier}%`);
     }
     if (req.query.date_from) {
-      conditions.push(`b.issue_date >= $${paramIndex++}`);
+      conditions.push(`COALESCE(b.issue_date, b.ship_on_board_date) >= $${paramIndex++}`);
       params.push(req.query.date_from);
     }
     if (req.query.date_to) {
-      conditions.push(`b.issue_date <= $${paramIndex++}`);
+      conditions.push(`COALESCE(b.issue_date, b.ship_on_board_date) <= $${paramIndex++}`);
       params.push(req.query.date_to);
     }
     if (req.query.search) {
@@ -189,14 +189,36 @@ router.get(
   })
 );
 
+// Helper: parse ?month=YYYY-MM into { monthStart, monthEnd } date strings
+function parseMonth(monthStr: string | undefined): { monthStart: string; monthEnd: string } | null {
+  if (!monthStr || !/^\d{4}-\d{2}$/.test(monthStr)) return null;
+  const [y, m] = monthStr.split('-').map(Number);
+  if (m < 1 || m > 12) return null;
+  const monthStart = `${y}-${String(m).padStart(2, '0')}-01`;
+  const lastDay = new Date(y, m, 0).getDate();
+  const monthEnd = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  return { monthStart, monthEnd };
+}
+
+// Helper: BOL date column for month filtering
+const BOL_DATE_COL = `COALESCE(issue_date, ship_on_board_date)`;
+
 /**
  * GET /api/bol-audit/stats
- * Get audit statistics/summary
+ * Get audit statistics/summary. Supports ?month=YYYY-MM filter.
  */
 router.get(
   '/stats',
   authenticateToken,
   asyncHandler(async (req: Request, res: Response) => {
+    const month = parseMonth(req.query.month as string);
+    let whereClause = '';
+    const params: any[] = [];
+    if (month) {
+      whereClause = `WHERE ${BOL_DATE_COL} >= $1 AND ${BOL_DATE_COL} <= $2`;
+      params.push(month.monthStart, month.monthEnd);
+    }
+
     const stats = await queryOne(`
       SELECT
         COUNT(*) as total,
@@ -215,8 +237,8 @@ router.get(
         COUNT(CASE WHEN is_duplicate THEN 1 END) as duplicate_count,
         COUNT(CASE WHEN weight_variance_pct IS NOT NULL AND ABS(weight_variance_pct) > 5 THEN 1 END) as weight_discrepancy_count,
         COALESCE(AVG(CASE WHEN freight_charges_usd > 0 AND gross_weight_kg > 0 THEN freight_charges_usd / gross_weight_kg END), 0) as avg_freight_per_kg
-      FROM bol_audits
-    `);
+      FROM bol_audits ${whereClause}
+    `, params);
     res.json({ data: stats });
   })
 );
@@ -226,14 +248,23 @@ router.get(
 
 /**
  * GET /api/bol-audit/benchmarks
- * List all freight benchmarks
+ * List freight benchmarks. Supports ?month=YYYY-MM to filter rates active during that month.
  */
 router.get(
   '/benchmarks',
   authenticateToken,
   asyncHandler(async (req: Request, res: Response) => {
+    const month = parseMonth(req.query.month as string);
+    let whereClause = '';
+    const params: any[] = [];
+    if (month) {
+      // Show rates whose validity overlaps the selected month (NULLs = always valid)
+      whereClause = `WHERE (valid_from IS NULL OR valid_from <= $2) AND (valid_until IS NULL OR valid_until >= $1)`;
+      params.push(month.monthStart, month.monthEnd);
+    }
     const rows = await queryAll(
-      `SELECT * FROM freight_benchmarks ORDER BY port_of_loading, carrier_name, port_of_discharge`
+      `SELECT * FROM freight_benchmarks ${whereClause} ORDER BY port_of_loading, carrier_name, port_of_discharge`,
+      params
     );
     res.json({ data: rows });
   })
@@ -399,6 +430,16 @@ router.post(
 
       const { rates, debug } = await parseExcelRateSheet(req.file.buffer, filename);
 
+      // If a month is specified, override valid_from/valid_until on all extracted rates
+      const uploadMonth = parseMonth(req.body?.month);
+      if (uploadMonth) {
+        for (const rate of rates) {
+          rate.valid_from = uploadMonth.monthStart;
+          rate.valid_until = uploadMonth.monthEnd;
+        }
+        logInfo(`Rate sheet month override: ${uploadMonth.monthStart} → ${uploadMonth.monthEnd}`);
+      }
+
       if (rates.length === 0) {
         return res.status(400).json({
           error: 'No rates could be extracted from the file.',
@@ -487,24 +528,29 @@ router.post(
   authenticateToken,
   async (req: Request, res: Response) => {
     try {
-    const { bol_ids } = req.body; // optional: specific BOL IDs to check
+    const { bol_ids, month } = req.body; // optional: specific BOL IDs or month filter
+    const monthRange = parseMonth(month);
 
     // Get BOLs to check
     let bols: any[];
+    const bolCols = `id, bol_number, port_of_loading, port_of_discharge, carrier_name,
+                freight_charges_usd, gross_weight_kg, container_numbers, container_type,
+                ship_on_board_date, issue_date`;
     if (bol_ids && Array.isArray(bol_ids) && bol_ids.length > 0) {
       bols = await queryAll(
-        `SELECT id, bol_number, port_of_loading, port_of_discharge, carrier_name,
-                freight_charges_usd, gross_weight_kg, container_numbers, container_type,
-                ship_on_board_date, issue_date
-         FROM bol_audits WHERE id = ANY($1)`,
+        `SELECT ${bolCols} FROM bol_audits WHERE id = ANY($1)`,
         [bol_ids]
+      );
+    } else if (monthRange) {
+      bols = await queryAll(
+        `SELECT ${bolCols} FROM bol_audits
+         WHERE freight_charges_usd IS NOT NULL
+           AND ${BOL_DATE_COL} >= $1 AND ${BOL_DATE_COL} <= $2`,
+        [monthRange.monthStart, monthRange.monthEnd]
       );
     } else {
       bols = await queryAll(
-        `SELECT id, bol_number, port_of_loading, port_of_discharge, carrier_name,
-                freight_charges_usd, gross_weight_kg, container_numbers, container_type,
-                ship_on_board_date, issue_date
-         FROM bol_audits WHERE freight_charges_usd IS NOT NULL`
+        `SELECT ${bolCols} FROM bol_audits WHERE freight_charges_usd IS NOT NULL`
       );
     }
 

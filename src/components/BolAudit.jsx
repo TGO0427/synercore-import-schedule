@@ -66,6 +66,23 @@ function BolAudit() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [pagination, setPagination] = useState({ page: 1, limit: 25, total: 0, pages: 0 });
 
+  // Month selector — defaults to current month
+  const getCurrentMonth = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  };
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
+  const monthStart = `${selectedMonth}-01`;
+  const monthEnd = (() => {
+    const [y, m] = selectedMonth.split('-').map(Number);
+    const last = new Date(y, m, 0).getDate();
+    return `${selectedMonth}-${String(last).padStart(2, '0')}`;
+  })();
+  const monthLabel = (() => {
+    const [y, m] = selectedMonth.split('-').map(Number);
+    return new Date(y, m - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+  })();
+
   // Modals
   const [showForm, setShowForm] = useState(false);
   const [showAuditModal, setShowAuditModal] = useState(false);
@@ -86,20 +103,23 @@ function BolAudit() {
 
   // Benchmarks
   const [benchmarks, setBenchmarks] = useState([]);
-  const [benchmarkForm, setBenchmarkForm] = useState({ port_of_loading: '', port_of_discharge: '', rate_per_kg_usd: '', rate_20gp_usd: '', rate_40gp_usd: '', rate_40hc_usd: '', carrier_name: '', transport_mode: 'sea', valid_from: '', valid_until: '', notes: '' });
+  const emptyBenchmarkForm = () => ({ port_of_loading: '', port_of_discharge: '', rate_per_kg_usd: '', rate_20gp_usd: '', rate_40gp_usd: '', rate_40hc_usd: '', carrier_name: '', transport_mode: 'sea', valid_from: monthStart, valid_until: monthEnd, notes: '' });
+  const [benchmarkForm, setBenchmarkForm] = useState(emptyBenchmarkForm());
   const [editingBenchmark, setEditingBenchmark] = useState(null);
   const [activeTab, setActiveTab] = useState('audit');
   const [uploadingRates, setUploadingRates] = useState(false);
   const [rateUploadResult, setRateUploadResult] = useState(null);
   const rateFileInputRef = React.useRef(null);
 
-  // Fetch BOLs
+  // Fetch BOLs — filtered by selected month
   const fetchBols = useCallback(async (page = 1) => {
     try {
       setLoading(true);
       const params = new URLSearchParams({ page: String(page), limit: '25' });
       if (statusFilter !== 'all') params.set('audit_status', statusFilter);
       if (search.trim()) params.set('search', search.trim());
+      params.set('date_from', monthStart);
+      params.set('date_to', monthEnd);
 
       const res = await authFetch(getApiUrl(`/api/bol-audit?${params}`));
       if (res.ok) {
@@ -112,12 +132,12 @@ function BolAudit() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, search]);
+  }, [statusFilter, search, monthStart, monthEnd]);
 
-  // Fetch stats
+  // Fetch stats — filtered by selected month
   const fetchStats = useCallback(async () => {
     try {
-      const res = await authFetch(getApiUrl('/api/bol-audit/stats'));
+      const res = await authFetch(getApiUrl(`/api/bol-audit/stats?month=${selectedMonth}`));
       if (res.ok) {
         const json = await res.json();
         setStats(json.data);
@@ -125,22 +145,24 @@ function BolAudit() {
     } catch (err) {
       // Non-critical
     }
-  }, []);
+  }, [selectedMonth]);
 
-  // Fetch benchmarks
+  // Fetch benchmarks — filtered by selected month
   const fetchBenchmarks = useCallback(async () => {
     try {
-      const res = await authFetch(getApiUrl('/api/bol-audit/benchmarks'));
+      const res = await authFetch(getApiUrl(`/api/bol-audit/benchmarks?month=${selectedMonth}`));
       if (res.ok) {
         const json = await res.json();
         setBenchmarks(json.data || []);
       }
     } catch (err) { /* non-critical */ }
-  }, []);
+  }, [selectedMonth]);
 
   useEffect(() => { fetchBols(1); }, [fetchBols]);
   useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { fetchBenchmarks(); }, [fetchBenchmarks]);
+  // Update benchmark form dates when month changes
+  useEffect(() => { if (!editingBenchmark) setBenchmarkForm(f => ({ ...f, valid_from: monthStart, valid_until: monthEnd })); }, [monthStart, monthEnd]);
 
   // Create / Update
   const handleSave = async () => {
@@ -281,7 +303,7 @@ function BolAudit() {
       if (res.ok) {
         showSuccess(editingBenchmark ? 'Benchmark updated' : 'Benchmark created');
         setEditingBenchmark(null);
-        setBenchmarkForm({ port_of_loading: '', port_of_discharge: '', rate_per_kg_usd: '', rate_20gp_usd: '', rate_40gp_usd: '', rate_40hc_usd: '', carrier_name: '', transport_mode: 'sea', valid_from: '', valid_until: '', notes: '' });
+        setBenchmarkForm(emptyBenchmarkForm());
         fetchBenchmarks();
       } else {
         const err = await res.json();
@@ -366,6 +388,7 @@ function BolAudit() {
     try {
       const formPayload = new FormData();
       formPayload.append('rateSheet', file);
+      formPayload.append('month', selectedMonth);
 
       const res = await authFetch(getApiUrl('/api/bol-audit/benchmarks/upload'), {
         method: 'POST',
@@ -548,10 +571,16 @@ function BolAudit() {
     </div>
   );
 
+  const changeMonth = (delta) => {
+    const [y, m] = selectedMonth.split('-').map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  };
+
   return (
     <div style={{ padding: '0' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', flexWrap: 'wrap', gap: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-900)' }}>Bill of Lading Audit</h1>
           <p style={{ margin: '4px 0 0', fontSize: '0.88rem', color: 'var(--text-500)' }}>
@@ -577,6 +606,46 @@ function BolAudit() {
             + New BOL
           </button>
         </div>
+      </div>
+
+      {/* Month Picker */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem',
+        padding: '10px 16px', borderRadius: 10,
+        backgroundColor: 'var(--surface-1, #fff)', border: '1px solid var(--border-color, #e5e7eb)',
+      }}>
+        <button onClick={() => changeMonth(-1)} style={{
+          padding: '6px 12px', border: '1px solid var(--border-color, #d1d5db)', borderRadius: 6,
+          background: 'var(--surface-2, #f3f4f6)', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
+        }}>&#9664;</button>
+        <input
+          type="month"
+          value={selectedMonth}
+          onChange={e => setSelectedMonth(e.target.value)}
+          style={{
+            padding: '6px 12px', border: '1px solid var(--border-color, #d1d5db)', borderRadius: 6,
+            fontSize: '0.95rem', fontWeight: 600, background: 'var(--surface-2, #f3f4f6)',
+            color: 'var(--text-900, #111)', cursor: 'pointer',
+          }}
+        />
+        <button onClick={() => changeMonth(1)} style={{
+          padding: '6px 12px', border: '1px solid var(--border-color, #d1d5db)', borderRadius: 6,
+          background: 'var(--surface-2, #f3f4f6)', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
+        }}>&#9654;</button>
+        <span style={{ fontSize: '0.85rem', color: 'var(--text-500, #6b7280)', marginLeft: 8 }}>
+          Showing data for <strong style={{ color: 'var(--text-900, #111)' }}>{monthLabel}</strong>
+        </span>
+        {selectedMonth !== getCurrentMonth() && (
+          <button
+            onClick={() => setSelectedMonth(getCurrentMonth())}
+            style={{
+              marginLeft: 'auto', padding: '4px 12px', fontSize: '0.8rem', borderRadius: 6,
+              border: '1px solid #d1d5db', background: '#f9fafb', cursor: 'pointer', color: '#3b82f6',
+            }}
+          >
+            Today
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
@@ -628,7 +697,7 @@ function BolAudit() {
                   const res = await authFetch(getApiUrl('/api/bol-audit/benchmark-check'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({}),
+                    body: JSON.stringify({ month: selectedMonth }),
                   });
                   const json = await res.json();
                   if (res.ok) {
@@ -641,7 +710,7 @@ function BolAudit() {
                 } catch (err) { showError('Failed to run benchmark check'); }
               }}
             >
-              Run Benchmark Check
+              Run Benchmark Check ({monthLabel})
             </button>
           </div>
 
@@ -717,9 +786,9 @@ function BolAudit() {
           <div className="dash-panel" style={{ padding: 16, marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Import Rate Sheet</h3>
+                <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Import Rate Sheet for {monthLabel}</h3>
                 <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'var(--text-500)' }}>
-                  Download the template, fill in your contracted rates, then upload to import
+                  Rates uploaded here will be assigned to <strong>{monthLabel}</strong>. Change the month above if needed.
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -865,7 +934,7 @@ function BolAudit() {
                 {saving ? 'Saving...' : editingBenchmark ? 'Update Rate' : 'Add Rate'}
               </button>
               {editingBenchmark && (
-                <button style={btnStyle('#6b7280')} onClick={() => { setEditingBenchmark(null); setBenchmarkForm({ port_of_loading: '', port_of_discharge: '', rate_per_kg_usd: '', rate_20gp_usd: '', rate_40gp_usd: '', rate_40hc_usd: '', carrier_name: '', transport_mode: 'sea', valid_from: '', valid_until: '', notes: '' }); }}>Cancel</button>
+                <button style={btnStyle('#6b7280')} onClick={() => { setEditingBenchmark(null); setBenchmarkForm(emptyBenchmarkForm()); }}>Cancel</button>
               )}
             </div>
           </div>
