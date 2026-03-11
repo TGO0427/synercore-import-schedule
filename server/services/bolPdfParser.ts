@@ -106,48 +106,73 @@ function cleanExtraction(value: string | null): string | null {
 
 const BOL_NUMBER_PATTERNS = [
   /B\/?L\s*(?:No\.?|Number|#|:)\s*[:\s]*([A-Z0-9][\w\-\/]{4,30})/i,
-  /(?:Bill\s+of\s+Lading|BOL)\s*(?:No\.?|Number|#|:)\s*[:\s]*([A-Z0-9][\w\-\/]{4,30})/i,
+  /(?:Bill\s+of\s+Lading|BOL)\s*(?:No\.?|Number|#|:)\s*[~:\s]*([A-Z0-9][\w\-\/]{4,30})/i,
+  // MSC BOL format: MEDU... number after "BILL OF LADING No."
+  /BILL\s+OF\s+LADING\s+No\.?\s*[~:\s]*(MEDU[A-Z0-9]{4,20})/i,
   /(?:Document\s*No\.?|Doc\s*#)\s*[:\s]*([A-Z0-9][\w\-\/]{4,30})/i,
   /(?:MBOL|HBOL|MBL|HBL)\s*[:\s#]*([A-Z0-9][\w\-\/]{4,30})/i,
+  // MSC-style BOL numbers standalone (e.g., MEDUHW533143, MEDUWA201799)
+  /\b(MEDU[A-Z]{1,3}\d{5,10})\b/,
 ];
 
 // Vessel: require explicit label, capture name with 3+ chars, must look like a proper name
 const VESSEL_PATTERNS = [
+  // MSC BOL: "VESSEL AND VOYAGE NO" on one line, then "MSC TARANTO - GA601W" on next
+  /VESSEL\s+AND\s+VOYAGE\s+NO[^\n]*\n([A-Z][A-Za-z0-9\s]{2,30}?)\s*[\-–]\s*[A-Z0-9]/i,
   /(?:Vessel\s*(?:Name)?|Motor\s*Vessel|M\/V|Ocean\s*Vessel)\s*[:\s]+([A-Z][A-Za-z0-9\s\-\.]{2,40}?)(?:\s*(?:Voyage|Voy|V\/|$|\n))/i,
   /(?:Vessel\s*(?:Name)?|Motor\s*Vessel|M\/V)\s*[:\s]+([A-Z][A-Za-z0-9][A-Za-z0-9\s\-\.]{1,38})/i,
 ];
 
 // Voyage: require explicit "Voyage" or "Voy" label (NOT just "V." which is too ambiguous)
-// Voyage numbers typically have digits: e.g., 2401E, 025W, V.123
+// Voyage numbers typically have digits: e.g., 2401E, 025W, V.123, GA601W
 const VOYAGE_PATTERNS = [
+  // MSC BOL: vessel and voyage on same line "MSC TARANTO - GA601W"
+  /VESSEL\s+AND\s+VOYAGE\s+NO[^\n]*\n[A-Za-z0-9\s]+[\-–]\s*([A-Z0-9]{3,15})/i,
   /(?:Voyage|Voy\.?)\s*(?:No\.?|#)?\s*[:\s]*([A-Z0-9][\w\-]{2,20})/i,
 ];
 
 // Ports: require the full label, capture only proper location names (not clause text)
 // Port names: typically capitalized words, city/country names, 4+ chars
 const PORT_LOADING_PATTERNS = [
-  /(?:Port\s+of\s+Loading)\s*[:\s]+([A-Z][A-Za-z\s,]{3,45}?)(?:\s*(?:Port\s+of|Vessel|Voyage|Carrier|$|\n))/i,
+  // MSC BOL OCR: vessel line has POL inline "MSC TARANTO - GA601W DALIAN.CHLNG XXXX"
+  // Match text between voyage number and XXXX placeholder
+  /[A-Z0-9]{3,10}W?\s+([A-Z][A-Za-z\.,\s]{3,30}?)\s+X{4,}/i,
+  // MSC BOL: "PORT OF LOADING" header line, then actual port on next line
+  /PORT\s+OF\s+LOADING[^\n]*\n[^\n]*?[A-Z0-9]+W?\s+([A-Z][A-Za-z\.,\s]{3,30}?)\s+X{4,}/im,
+  /(?:Port\s+of\s+Loading)\s*[:\s]+([A-Z][A-Za-z\s,]{3,45}?)(?:\s*(?:Port\s+of|Vessel|Voyage|Carrier|Place|$|\n))/i,
   /(?:Port\s+of\s+Loading)\s*[:\s]+([A-Z][A-Za-z][A-Za-z\s,\-]{2,40})/i,
-  /(?:Place\s+of\s+Receipt)\s*[:\s]+([A-Z][A-Za-z][A-Za-z\s,\-]{2,40})/i,
   /(?:Loading\s+Port)\s*[:\s]+([A-Z][A-Za-z][A-Za-z\s,\-]{2,40})/i,
 ];
 
 const PORT_DISCHARGE_PATTERNS = [
-  /(?:Port\s+of\s+Discharge)\s*[:\s]+([A-Z][A-Za-z\s,]{3,45}?)(?:\s*(?:Port\s+of|Vessel|Notify|Consignee|$|\n))/i,
+  // MSC BOL OCR: booking ref line "177DPPPED60245 Cape Town, South Africa OOOO XXXX"
+  /[A-Z0-9]{8,}\s+(.+?)\s+[OX]{4}/i,
+  /(?:Port\s+of\s+Discharge)\s*[:\s]+([A-Z][A-Za-z\s,]{3,45}?)(?:\s*(?:Port\s+of|Vessel|Notify|Consignee|Place|$|\n))/i,
   /(?:Port\s+of\s+Discharge)\s*[:\s]+([A-Z][A-Za-z][A-Za-z\s,\-]{2,40})/i,
   /(?:Place\s+of\s+Delivery|Final\s+Destination)\s*[:\s]+([A-Z][A-Za-z][A-Za-z\s,\-]{2,40})/i,
   /(?:Discharge\s+Port)\s*[:\s]+([A-Z][A-Za-z][A-Za-z\s,\-]{2,40})/i,
 ];
 
 const CONSIGNEE_PATTERNS = [
+  // MSC BOL: "CONSIGNEE:" followed by boilerplate, then company name on next line
+  // Stop at LTD/PTY boundary (OCR may misread PTY as "flap)" etc.)
+  /CONSIGNEE[:\s][^\n]*\n([A-Z][^\n]*?\b(?:PTY|LTD|INC|CORP|LLC)\b[^\n]{0,10}?\bLTD\b)/i,
+  /CONSIGNEE[:\s][^\n]*\n([A-Z][^\n]*?\bLTD\b)/i,
+  // Company name line after CONSIGNEE with address on next line
+  /CONSIGNEE[:\s][^\n]*\n([A-Z][^\n]{4,80})\n/i,
   /(?:Consignee|Consigned\s+to)\s*[:\s]+([A-Z][^\n]{4,100})/i,
 ];
 
 const SHIPPER_PATTERNS = [
+  // MSC BOL: "SHIPPER" followed by other column header on same line, company on next line
+  /SHIPPER\s+(?:CARRIER|AGENT)[^\n]*\n([A-Z][^\n]*?(?:CO\.?,?\s*LTD|PTY\)?\s*LTD|INC\.?|CORP\.?|LLC|GMBH|S\.?A\.?))/i,
+  /^SHIPPER\s*\n([A-Z][^\n]{4,100})/im,
   /(?:Shipper|Exporter)\s*[:\s]+([A-Z][^\n]{4,100})/i,
 ];
 
 const NOTIFY_PATTERNS = [
+  // MSC BOL: "NOTIFY PARTIES" with clause note, then company on next line
+  /NOTIFY\s+PART(?:Y|IES)\s*[:\s]*(?:\([^\)]*\)\s*\n)?([A-Z][A-Z\s]{3,}(?:PTY|LTD|INC|CO|FOOD|INDUSTRIES)[^\n]{0,80})/im,
   /(?:Notify\s+Party)\s*[:\s]+([A-Z][^\n]{4,100})/i,
 ];
 
@@ -156,20 +181,27 @@ const CONTAINER_PATTERNS = [
 ];
 
 const WEIGHT_PATTERNS = [
-  /(?:Gross\s*Weight|G\.?W\.?)\s*[:\s]*([\d,\.]+)\s*(?:KGS?|Kgs?|kg)/i,
+  // Total/Gross weight in summary line (prefer over individual tare/net weights)
+  /Total\s*[:\s|]*\s*([\d,\.]+)\s*(?:KGS?|Kgs?|kgs?)/i,
+  /(?:Gross\s*(?:Cargo\s*)?Weight|G\.?W\.?)\s*[:\s]*([\d,\.]+)\s*(?:KGS?|Kgs?|kg)/i,
   /(?:Total\s*Weight)\s*[:\s]*([\d,\.]+)\s*(?:KGS?|Kgs?|kg)/i,
   /([\d,\.]+)\s*(?:KGS|KG)\s*(?:Gross)/i,
-  /Weight\s*[:\s]*([\d,\.]+)\s*(?:KGS?|Kgs?|kg)/i,
+  // Standalone large weight values near "kgs" (skip tare weight which is smaller)
+  /([\d,]{5,}\.?\d*)\s*kgs?\./i,
 ];
 
 const VOLUME_PATTERNS = [
-  /(?:Volume|CBM|Measurement)\s*[:\s]*([\d,\.]+)\s*(?:CBM|M3|m3|cu\.?\s*m)/i,
-  /([\d,\.]+)\s*(?:CBM|M3)/i,
+  // OCR may read "cu. m." as "cum]" or "cu m" or "cu.m"
+  /(?:Volume|CBM|Measurement)\s*[:\s]*([\d,\.]+)\s*(?:CBM|M3|m3|cu\.?\s*m\.?)/i,
+  /([\d,\.]+)\s*(?:CBM|M3|cu\.?\s*m)/i,
+  // OCR garbled "cu. m." patterns
+  /([\d,\.]+)\s*cum?\]?/i,
 ];
 
 const PACKAGES_PATTERNS = [
   /(?:No\.?\s*of\s*(?:Packages|Pkgs|Pieces)|Packages|Quantity)\s*[:\s]*([\d,]+)/i,
-  /([\d,]+)\s*(?:Packages|Pkgs|Pieces|Cartons|Ctns|Pallets|Plts)/i,
+  /([\d,]+)\s*(?:Packages|Pkgs|Pieces|Cartons?|Ctns?|Pallets|Plts)/i,
+  /Total\s+Items[:\s]*([\d,]+)/i,
 ];
 
 const FREIGHT_PATTERNS = [
@@ -190,10 +222,15 @@ const DATE_PATTERNS = [
 const ONBOARD_DATE_PATTERNS = [
   /(?:Shipped\s+on\s+Board|On\s+Board\s+Date|Laden\s+on\s+Board)\s*[:\s]*(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i,
   /(?:Shipped\s+on\s+Board|On\s+Board\s+Date)\s*[:\s]*(\d{1,2}\s+\w{3,9}\s+\d{4})/i,
+  // MSC BOL: "SHIPPED ON BOARD DATE" then date on next/same line (dd-Mon-yyyy)
+  /SHIPPED\s+ON\s+BOARD\s+DATE\s*\n?\s*(\d{1,2}[\-\/]\w{3,9}[\-\/]\d{2,4})/i,
+  // Standalone date format dd-Mon-yyyy near "Board" or "Shipped"
+  /(\d{1,2}-(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-\d{4})/i,
 ];
 
 const PAYMENT_PATTERNS = [
   /(?:Freight|Payment)\s*[:\s]*(Prepaid|Collect|Third\s+Party)/i,
+  /\bFreight\s+(Prepaid|Collect)\b/i,
 ];
 
 const INCOTERM_PATTERNS = [
@@ -201,7 +238,13 @@ const INCOTERM_PATTERNS = [
 ];
 
 const DESCRIPTION_PATTERNS = [
-  /(?:Description\s+of\s+(?:Goods|Packages|Cargo)|Particulars)\s*[:\s]+([^\n]{5,500})/i,
+  // Specific goods patterns first (more reliable than generic label matching)
+  // Container line followed by goods description (e.g., "MSNU2831240 1759 Carton(s) of ...")
+  /[A-Z]{4}\d{7}\s+(\d+\s+(?:Cartons?|Pkgs?|Pallets?|Pieces?|Bags?|Drums?)\(?s?\)?\s+of\s+[^\n]{5,200})/i,
+  // HS CODE line has goods description before it
+  /(\d+\s+(?:Cartons?|Pkgs?)\(?s?\)?\s+of\s+[A-Z][^\n]{5,200}?)\s*(?:HS\s*CODE|$)/i,
+  // Generic label-based patterns
+  /(?:Description\s+of\s+(?:Goods|Packages|Cargo))\s*[:\s]+([^\n]{5,500})/i,
   /(?:Commodity|Nature\s+of\s+Goods)\s*[:\s]+([^\n]{5,200})/i,
 ];
 
@@ -228,7 +271,19 @@ function parseNumber(text: string | null): number | null {
 function parseDate(text: string | null): string | null {
   if (!text) return null;
   try {
-    const d = new Date(text);
+    // Handle dd-Mon-yyyy format (e.g., "07-Jan-2026") without timezone shift
+    const monthMap: Record<string, string> = {
+      jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+      jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'
+    };
+    const monMatch = text.match(/(\d{1,2})[\-\/\s]+(\w{3,9})[\-\/\s]+(\d{4})/);
+    if (monMatch) {
+      const mon = monthMap[monMatch[2].substring(0, 3).toLowerCase()];
+      if (mon) {
+        return `${monMatch[3]}-${mon}-${monMatch[1].padStart(2, '0')}`;
+      }
+    }
+    const d = new Date(text + 'T00:00:00');
     if (isNaN(d.getTime())) return null;
     return d.toISOString().split('T')[0];
   } catch {
@@ -241,6 +296,53 @@ function findAllContainers(text: string): string[] {
   return matches ? [...new Set(matches)] : [];
 }
 
+// ─── OCR fallback for scanned/image PDFs ───
+
+async function ocrPdfBuffer(pdfBuffer: Buffer): Promise<string> {
+  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const sharp = (await import('sharp')).default;
+  const Tesseract = (await import('tesseract.js')).default;
+
+  const doc = await (pdfjsLib as any).getDocument({ data: new Uint8Array(pdfBuffer) }).promise;
+  const allText: string[] = [];
+
+  // Process up to 3 pages (BOLs are typically 1-2 pages)
+  const pageCount = Math.min(doc.numPages, 3);
+  const worker = await Tesseract.createWorker('eng');
+
+  for (let p = 1; p <= pageCount; p++) {
+    const page = await doc.getPage(p);
+    const ops = await page.getOperatorList();
+
+    // Find embedded images in the page
+    for (let i = 0; i < ops.fnArray.length; i++) {
+      const fn = ops.fnArray[i];
+      if (fn === (pdfjsLib as any).OPS.paintImageXObject || fn === (pdfjsLib as any).OPS.paintJpegXObject) {
+        const imgName = ops.argsArray[i][0];
+        try {
+          const img = await page.objs.get(imgName);
+          if (!img || !img.data || img.width < 200 || img.height < 200) continue;
+          // kind=2 is RGB (3ch), kind=1 is RGBA (4ch), kind=3 is grayscale (1ch)
+          const channels = img.kind === 2 ? 3 : img.kind === 3 ? 1 : 4;
+          const pngBuf = await sharp(Buffer.from(img.data), {
+            raw: { width: img.width, height: img.height, channels }
+          }).greyscale().png().toBuffer();
+
+          const { data } = await worker.recognize(pngBuf);
+          if (data.text && data.text.trim().length > 20) {
+            allText.push(data.text);
+          }
+        } catch (e) {
+          logWarn('OCR image extraction failed', { imgName, error: (e as Error).message });
+        }
+      }
+    }
+  }
+
+  await worker.terminate();
+  return allText.join('\n');
+}
+
 // ─── Main parser ───
 
 export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
@@ -248,7 +350,19 @@ export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
   // debug mode check (!module.parent) which tries to load a test PDF file
   const pdf = (await import('pdf-parse/lib/pdf-parse.js')).default;
   const pdfData = await pdf(pdfBuffer);
-  const text = pdfData.text;
+  let text = pdfData.text;
+
+  // If text extraction returned minimal content, try OCR (scanned/image PDF)
+  if (text.trim().length < 50) {
+    logInfo('PDF has minimal text — attempting OCR for scanned document');
+    try {
+      text = await ocrPdfBuffer(pdfBuffer);
+      logInfo(`OCR extracted ${text.length} characters`);
+    } catch (err) {
+      logWarn('OCR fallback failed', { error: (err as Error).message });
+    }
+  }
+
   const confidence: Record<string, number> = {};
 
   // Helper that records confidence
@@ -301,18 +415,36 @@ export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
   const incoterm = firstMatch(text, INCOTERM_PATTERNS);
   confidence['incoterm'] = incoterm ? 0.95 : 0;
 
-  // Carrier name — look for explicit "Carrier" label followed by a company name
+  // Carrier name — detect from known carrier patterns or explicit label
   let carrierName: string | null = null;
-  const carrierPatterns = [
-    /(?:Carrier\s*(?:Name)?|Shipping\s+Line|Carrier\s*\/\s*Agent)\s*[:\s]+([A-Z][A-Za-z0-9\s\-\.&,()]{3,60})/i,
-  ];
-  for (const pat of carrierPatterns) {
-    const m = text.match(pat);
-    if (m && m[1]) {
-      const cleaned = cleanExtraction(m[1]);
-      if (cleaned && isValidExtraction(cleaned, 4)) {
-        carrierName = cleaned;
-        break;
+  // Check for well-known carriers first (reliable even with OCR)
+  if (/MEDITERRANEAN\s+SHIPPING\s+COMPANY|MSC\b.*\b(?:S\.?A\.?|shipping)/i.test(text)) {
+    carrierName = 'MSC';
+  } else if (/MAERSK/i.test(text)) {
+    carrierName = 'Maersk';
+  } else if (/CMA[\s\-]*CGM/i.test(text)) {
+    carrierName = 'CMA CGM';
+  } else if (/HAPAG[\s\-]*LLOYD/i.test(text)) {
+    carrierName = 'Hapag-Lloyd';
+  } else if (/EVERGREEN/i.test(text)) {
+    carrierName = 'Evergreen';
+  } else if (/COSCO/i.test(text)) {
+    carrierName = 'COSCO';
+  } else if (/ONE[\s\-]*(?:LINE|NETWORK)/i.test(text)) {
+    carrierName = 'ONE';
+  } else {
+    // Fallback: explicit label
+    const carrierPatterns = [
+      /(?:Carrier\s*(?:Name)?|Shipping\s+Line|Carrier\s*\/\s*Agent)\s*[:\s]+([A-Z][A-Za-z0-9\s\-\.&,()]{3,60})/i,
+    ];
+    for (const pat of carrierPatterns) {
+      const m = text.match(pat);
+      if (m && m[1]) {
+        const cleaned = cleanExtraction(m[1]);
+        if (cleaned && isValidExtraction(cleaned, 4)) {
+          carrierName = cleaned;
+          break;
+        }
       }
     }
   }
@@ -321,20 +453,43 @@ export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
   // Supplier — try shipper as fallback
   const supplierName = shipper;
 
+  // ── Post-processing: clean common OCR artifacts ──
+  const cleanOcrField = (val: string | null): string | null => {
+    if (!val) return null;
+    let v = val;
+    // Fix common OCR misreads of (PTY) → "flap)", "Jem)", etc.
+    v = v.replace(/\b(?:flap|Jem|lem|fem|flan)\)/gi, '(PTY)');
+    // Fix "CHLNG" → "CHINA" (common OCR misread)
+    v = v.replace(/\bCHLNG\b/g, 'CHINA');
+    // Replace dots between words with commas (e.g., "DALIAN.CHINA" → "DALIAN, CHINA")
+    v = v.replace(/([A-Z]{3,})\.([A-Z]{3,})/g, '$1, $2');
+    // Remove trailing weight/volume that leaked into descriptions
+    v = v.replace(/\s+[\d,]+\.?\d*\s*(?:kgs?|kg)\.?\s*$/i, '');
+    return v.trim();
+  };
+
+  const cleanedPOL = cleanOcrField(portOfLoading);
+  const cleanedPOD = cleanOcrField(portOfDischarge);
+  const cleanedConsignee = cleanOcrField(consignee);
+  const cleanedShipper = cleanOcrField(shipper);
+  const cleanedNotify = cleanOcrField(notifyParty);
+  const cleanedDesc = cleanOcrField(descriptionOfGoods);
+  const cleanedSupplier = cleanOcrField(supplierName);
+
   logInfo(`BOL PDF parsed: BOL#=${bolNumber || 'unknown'}, vessel=${vesselName || 'unknown'}, containers=${containers.length}`);
 
   return {
     bol_number: bolNumber,
-    supplier_name: supplierName,
+    supplier_name: cleanedSupplier,
     carrier_name: carrierName,
     vessel_name: vesselName,
     voyage_number: voyageNumber,
-    port_of_loading: portOfLoading,
-    port_of_discharge: portOfDischarge,
-    consignee: consignee,
-    shipper: shipper,
-    notify_party: notifyParty,
-    description_of_goods: descriptionOfGoods,
+    port_of_loading: cleanedPOL,
+    port_of_discharge: cleanedPOD,
+    consignee: cleanedConsignee,
+    shipper: cleanedShipper,
+    notify_party: cleanedNotify,
+    description_of_goods: cleanedDesc,
     container_numbers: containers,
     gross_weight_kg: grossWeightKg,
     volume_cbm: volumeCbm,
