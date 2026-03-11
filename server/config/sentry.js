@@ -3,14 +3,13 @@
  * Captures unhandled exceptions, API errors, and performance metrics
  */
 
-import * as Sentry from '@sentry/node';
-import * as Integrations from '@sentry/integrations';
-
+// Lazy-load Sentry to avoid blocking server startup (~20s import time)
+let Sentry = null;
 const SENTRY_DSN = process.env.SENTRY_DSN;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 /**
- * Initialize Sentry for backend error tracking
+ * Initialize Sentry for backend error tracking (async, non-blocking)
  */
 export function initializeSentry() {
   if (!SENTRY_DSN) {
@@ -18,73 +17,74 @@ export function initializeSentry() {
     return null;
   }
 
-  try {
-    Sentry.init({
-      dsn: SENTRY_DSN,
-      environment: NODE_ENV,
-      integrations: [
-        new Integrations.Http({ tracing: true }),
-        new Integrations.OnUncaughtException(),
-        new Integrations.OnUnhandledRejection(),
-      ],
-      tracesSampleRate: NODE_ENV === 'production' ? 0.1 : 1.0, // 10% in production, 100% in dev
-      maxBreadcrumbs: 50,
-      maxValueLength: 1024,
-      ignoreErrors: [
-        // Browser extensions
-        'chrome-extension://',
-        'moz-extension://',
-        // Network timeouts
-        'NetworkError',
-        'TimeoutError',
-      ],
-      beforeSend(event, hint) {
-        // Don't send 4xx errors (client errors) except for 401/403
-        if (event.request && event.request.url) {
-          const statusCode = event.exception?.values?.[0]?.value?.match?.(/\d{3}/)?.[0];
-          if (statusCode && statusCode.startsWith('4') && !['401', '403'].includes(statusCode)) {
-            return null;
+  // Load Sentry in background so server can start immediately
+  import('@sentry/node').then(async (SentryModule) => {
+    const Integrations = await import('@sentry/integrations');
+    Sentry = SentryModule;
+    try {
+      Sentry.init({
+        dsn: SENTRY_DSN,
+        environment: NODE_ENV,
+        integrations: [
+          new Integrations.Http({ tracing: true }),
+          new Integrations.OnUncaughtException(),
+          new Integrations.OnUnhandledRejection(),
+        ],
+        tracesSampleRate: NODE_ENV === 'production' ? 0.1 : 1.0,
+        maxBreadcrumbs: 50,
+        maxValueLength: 1024,
+        ignoreErrors: ['chrome-extension://', 'moz-extension://', 'NetworkError', 'TimeoutError'],
+        beforeSend(event) {
+          if (event.request && event.request.url) {
+            const statusCode = event.exception?.values?.[0]?.value?.match?.(/\d{3}/)?.[0];
+            if (statusCode && statusCode.startsWith('4') && !['401', '403'].includes(statusCode)) {
+              return null;
+            }
           }
-        }
-        return event;
-      },
-    });
+          return event;
+        },
+      });
+      console.log(`✓ Sentry initialized (${NODE_ENV})`);
+    } catch (error) {
+      console.error('Failed to initialize Sentry:', error);
+    }
+  }).catch(err => {
+    console.error('Failed to load Sentry module:', err.message);
+  });
 
-    console.log(`✓ Sentry initialized (${NODE_ENV})`);
-    return Sentry;
-  } catch (error) {
-    console.error('Failed to initialize Sentry:', error);
-    return null;
-  }
+  return null;
 }
 
 /**
  * Express middleware for Sentry request handling
  */
 export function getSentryRequestHandler() {
-  // Return no-op middleware if Sentry is not initialized
-  if (!SENTRY_DSN) {
-    return (req, res, next) => next();
-  }
-  return Sentry.Handlers.requestHandler();
+  // Return passthrough middleware — Sentry may not be loaded yet
+  return (req, res, next) => {
+    if (Sentry && Sentry.Handlers) {
+      return Sentry.Handlers.requestHandler()(req, res, next);
+    }
+    next();
+  };
 }
 
 /**
  * Express middleware for Sentry error handling
  */
 export function getSentryErrorHandler() {
-  // Return no-op middleware if Sentry is not initialized
-  if (!SENTRY_DSN) {
-    return (err, req, res, next) => next(err);
-  }
-  return Sentry.Handlers.errorHandler();
+  return (err, req, res, next) => {
+    if (Sentry && Sentry.Handlers) {
+      return Sentry.Handlers.errorHandler()(err, req, res, next);
+    }
+    next(err);
+  };
 }
 
 /**
  * Capture exception with context
  */
 export function captureException(error, context = {}) {
-  if (!SENTRY_DSN) return;
+  if (!Sentry) return;
 
   Sentry.withScope((scope) => {
     Object.entries(context).forEach(([key, value]) => {
@@ -98,7 +98,7 @@ export function captureException(error, context = {}) {
  * Capture message with level
  */
 export function captureMessage(message, level = 'info', context = {}) {
-  if (!SENTRY_DSN) return;
+  if (!Sentry) return;
 
   Sentry.withScope((scope) => {
     Object.entries(context).forEach(([key, value]) => {
@@ -108,4 +108,4 @@ export function captureMessage(message, level = 'info', context = {}) {
   });
 }
 
-export default Sentry;
+export default { get: () => Sentry };
