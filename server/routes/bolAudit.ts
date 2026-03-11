@@ -258,9 +258,16 @@ router.get(
     let whereClause = '';
     const params: any[] = [];
     if (month) {
-      // Show rates whose validity overlaps the selected month (NULLs = always valid)
-      whereClause = `WHERE (valid_from IS NULL OR valid_from <= $2) AND (valid_until IS NULL OR valid_until >= $1)`;
+      // Show rates whose validity overlaps the selected month
+      // Exclude NULL-dated rates if there are any dated rates (to avoid showing old duplicates)
+      whereClause = `WHERE valid_from IS NOT NULL AND valid_until IS NOT NULL AND valid_from <= $2 AND valid_until >= $1`;
       params.push(month.monthStart, month.monthEnd);
+      // Fallback: if no dated rates exist at all, show everything
+      const dated = await queryOne(`SELECT COUNT(*) as c FROM freight_benchmarks WHERE valid_from IS NOT NULL`, []);
+      if (parseInt(dated?.c || '0') === 0) {
+        whereClause = '';
+        params.length = 0;
+      }
     }
     const rows = await queryAll(
       `SELECT * FROM freight_benchmarks ${whereClause} ORDER BY port_of_loading, carrier_name, port_of_discharge`,
