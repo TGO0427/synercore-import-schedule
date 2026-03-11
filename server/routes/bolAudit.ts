@@ -482,9 +482,48 @@ router.post(
       );
     }
 
+    // Split port string into searchable parts: "DALIAN, CHINA" → ["DALIAN, CHINA", "DALIAN", "CHINA"]
+    // "Cape Town, South Africa" → ["Cape Town, South Africa", "Cape Town", "South Africa"]
+    function portParts(port: string | null): string[] {
+      if (!port) return [];
+      const parts = [port.trim()];
+      // Split on comma, dash, or slash
+      for (const sep of [',', '-', '/']) {
+        if (port.includes(sep)) {
+          port.split(sep).forEach(p => {
+            const t = p.trim();
+            if (t.length >= 3) parts.push(t);
+          });
+        }
+      }
+      return [...new Set(parts)];
+    }
+
+    // Log benchmark search for debugging
+    function logBenchmarkSearch(bolNumber: string, pol: string | null, pod: string | null, found: boolean): void {
+      if (!found) {
+        logWarn('Benchmark not found', { bol: bolNumber, pol, pod, polParts: portParts(pol), podParts: portParts(pod) });
+      }
+    }
+
     // Helper: find benchmarks matching port conditions
     // Priority: 1) MSC Standard, 2) any other MSC rate, 3) BOL carrier, 4) any carrier
     async function findBenchmarks(pol: string | null, pod: string | null, carrier: string | null): Promise<any[]> {
+      const polParts = portParts(pol);
+      const podParts = portParts(pod);
+      if (polParts.length === 0 && podParts.length === 0) return [];
+
+      // Try each combination of POL/POD parts (most specific first)
+      for (const polTerm of polParts.length > 0 ? polParts : [null]) {
+        for (const podTerm of podParts.length > 0 ? podParts : [null]) {
+          const result = await findBenchmarksExact(polTerm, podTerm, carrier);
+          if (result.length > 0) return result;
+        }
+      }
+      return [];
+    }
+
+    async function findBenchmarksExact(pol: string | null, pod: string | null, carrier: string | null): Promise<any[]> {
       const conds: string[] = [];
       const prms: any[] = [];
       let i = 1;
@@ -555,7 +594,10 @@ router.post(
         benchmarks = await findBenchmarks(pod, null, bol.carrier_name);
       }
 
-      if (benchmarks.length === 0) continue;
+      if (benchmarks.length === 0) {
+        logBenchmarkSearch(bol.bol_number, pol, pod, false);
+        continue;
+      }
 
       const rate = benchmarks[0];
 
