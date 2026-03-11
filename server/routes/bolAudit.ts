@@ -554,7 +554,7 @@ router.post(
 
       // Fallback: try to detect from container numbers text
       if (!benchmarkRate) {
-        const containerStr = (bol.container_numbers || '').toLowerCase();
+        const containerStr = (typeof bol.container_numbers === 'string' ? bol.container_numbers : JSON.stringify(bol.container_numbers || '')).toLowerCase();
         if (/40\s*h[cq]|high\s*cube/i.test(containerStr)) {
           benchmarkRate = parseFloat(rate.rate_40hc_usd) || null;
           containerType = '40HC';
