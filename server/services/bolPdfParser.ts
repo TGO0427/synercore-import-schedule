@@ -648,9 +648,9 @@ export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseRe
   try {
     if (extracted.bol_number) {
       const dupes = await queryAll(
-        `SELECT id, bol_number, supplier_name, created_at FROM bol_audits
+        `SELECT id, bol_number, supplier_name, pdf_filename, created_at FROM bol_audits
          WHERE LOWER(bol_number) = LOWER($1)
-         LIMIT 1`,
+         ORDER BY created_at DESC`,
         [extracted.bol_number]
       );
       if (dupes.length > 0) {
@@ -661,6 +661,7 @@ export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseRe
           message: `Possible duplicate: BOL ${extracted.bol_number} already exists (ID ${dupes[0].id}, created ${new Date(dupes[0].created_at).toLocaleDateString()})`,
           bol_value: extracted.bol_number,
           shipment_value: String(dupes[0].id),
+          existing_filenames: dupes.map((d: any) => d.pdf_filename).filter(Boolean),
         });
       }
     }

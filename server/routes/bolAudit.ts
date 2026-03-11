@@ -859,14 +859,28 @@ router.post(
       // 2. Auto-audit against shipments
       const auditResult = await autoAuditBol(extracted);
 
-      // 3. Validate date fields (must be valid or null for DATE columns)
+      // 3. Block exact duplicates (same BOL number + same filename)
+      if (auditResult.cost_protection.is_duplicate) {
+        const dupFinding = auditResult.findings.find((f: any) => f.field === 'bol_number' && f.existing_filenames);
+        const existingFiles: string[] = dupFinding?.existing_filenames || [];
+        if (existingFiles.includes(req.file.originalname)) {
+          return res.status(409).json({
+            error: `Exact duplicate: BOL "${extracted.bol_number}" from file "${req.file.originalname}" has already been uploaded`,
+            existing_id: dupFinding?.shipment_value,
+          });
+        }
+        // BOL number exists but from a different file — allow but escalate to discrepancy
+        auditResult.status = 'discrepancy';
+      }
+
+      // 4. Validate date fields (must be valid or null for DATE columns)
       const safeDate = (val: string | null): string | null => {
         if (!val) return null;
         const d = new Date(val);
         return isNaN(d.getTime()) ? null : val;
       };
 
-      // 4. Create BOL record with extracted data + cost protection
+      // 5. Create BOL record with extracted data + cost protection
       const bolNumber = extracted.bol_number || `IMPORT_${Date.now()}`;
       const cp = auditResult.cost_protection;
       const result = await queryOne(

@@ -414,9 +414,15 @@ function BolAudit() {
       if (res.ok) {
         setUploadResult({ bol: json.data, extraction: json.extraction });
         setShowUploadResult(true);
-        showSuccess(`BOL extracted and ${json.data.audit_status === 'approved' ? 'auto-approved' : 'flagged for review'}`);
+        const isDup = json.data.is_duplicate;
+        const statusMsg = json.data.audit_status === 'approved' ? 'auto-approved'
+          : json.data.audit_status === 'discrepancy' && isDup ? 'flagged as duplicate for review'
+          : 'flagged for review';
+        showSuccess(`BOL extracted and ${statusMsg}`);
         fetchBols(1);
         fetchStats();
+      } else if (res.status === 409) {
+        showError(json.error || 'This BOL has already been uploaded');
       } else {
         showError(json.error || 'Failed to process PDF');
       }
