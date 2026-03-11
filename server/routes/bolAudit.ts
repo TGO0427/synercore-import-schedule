@@ -8,7 +8,7 @@ import { body, param, query, validationResult } from 'express-validator';
 import multer from 'multer';
 import { authenticateToken } from '../middleware/security.js';
 import { requireAdmin } from '../middleware/auth.ts';
-import { logInfo, logError } from '../utils/logger.js';
+import { logInfo, logError, logWarn } from '../utils/logger.js';
 import { getPool, queryAll, queryOne, transaction } from '../db/connection.js';
 import { AuditRepository } from '../db/repositories/AuditRepository.ts';
 import { parseBolPdf, autoAuditBol } from '../services/bolPdfParser.ts';
@@ -454,6 +454,30 @@ router.post(
 );
 
 /**
+ * GET /api/bol-audit/benchmark-debug
+ * Debug endpoint: shows what's in freight_benchmarks and bol_audits for troubleshooting matching
+ */
+router.get(
+  '/benchmark-debug',
+  authenticateToken,
+  asyncHandler(async (req: Request, res: Response) => {
+    const benchmarks = await queryAll(
+      `SELECT id, carrier_name, port_of_loading, port_of_discharge,
+              rate_20gp_usd, rate_40gp_usd, rate_40hc_usd,
+              valid_from, valid_until
+       FROM freight_benchmarks ORDER BY carrier_name, port_of_loading LIMIT 100`
+    );
+    const bols = await queryAll(
+      `SELECT id, bol_number, port_of_loading, port_of_discharge, carrier_name,
+              freight_charges_usd, ship_on_board_date, issue_date, container_type,
+              benchmark_rate_per_kg, freight_variance_usd
+       FROM bol_audits ORDER BY created_at DESC LIMIT 50`
+    );
+    res.json({ benchmarks, bols });
+  })
+);
+
+/**
  * POST /api/bol-audit/benchmark-check
  * Re-run benchmark comparison on all BOLs (or specific ones)
  * Matches BOL freight charges against imported benchmark rates
@@ -575,18 +599,26 @@ router.post(
     }
 
     let updated = 0;
+    const debugLog: any[] = [];
     for (const bol of bols) {
       const freight = parseFloat(bol.freight_charges_usd);
-      if (!freight || freight <= 0) continue;
+      if (!freight || freight <= 0) {
+        debugLog.push({ bol: bol.bol_number, skip: 'no freight', freight: bol.freight_charges_usd });
+        continue;
+      }
 
       const pol = bol.port_of_loading || null;
       const pod = bol.port_of_discharge || null;
-      if (!pol && !pod) continue;
+      if (!pol && !pod) {
+        debugLog.push({ bol: bol.bol_number, skip: 'no ports' });
+        continue;
+      }
 
       // Use the BOL's ship date or issue date to find rates valid at time of shipment
       const refDate = bol.ship_on_board_date || bol.issue_date || null;
+      logInfo(`Benchmark check: BOL ${bol.bol_number} | POL="${pol}" POD="${pod}" | carrier="${bol.carrier_name}" | refDate=${refDate} | polParts=${JSON.stringify(portParts(pol))} podParts=${JSON.stringify(portParts(pod))}`);
 
-      // Strategy 1: exact POL → POD match
+      // Strategy 1: exact POL → POD match (with date range)
       let benchmarks = await findBenchmarks(pol, pod, bol.carrier_name, refDate);
 
       // Strategy 2: swap POL/POD (PDF parser may have reversed them)
@@ -604,10 +636,28 @@ router.post(
         benchmarks = await findBenchmarks(pod, null, bol.carrier_name, refDate);
       }
 
+      // Strategy 5: retry ALL strategies WITHOUT date filtering (use closest available rate)
+      if (benchmarks.length === 0 && refDate) {
+        logInfo(`  → No date-matched rate found, retrying without date filter`);
+        benchmarks = await findBenchmarks(pol, pod, bol.carrier_name, null);
+        if (benchmarks.length === 0 && pol && pod) {
+          benchmarks = await findBenchmarks(pod, pol, bol.carrier_name, null);
+        }
+        if (benchmarks.length === 0 && pol) {
+          benchmarks = await findBenchmarks(pol, null, bol.carrier_name, null);
+        }
+        if (benchmarks.length === 0 && pod) {
+          benchmarks = await findBenchmarks(pod, null, bol.carrier_name, null);
+        }
+      }
+
       if (benchmarks.length === 0) {
         logBenchmarkSearch(bol.bol_number, pol, pod, false);
+        debugLog.push({ bol: bol.bol_number, pol, pod, refDate, result: 'no match' });
         continue;
       }
+
+      logInfo(`  → Matched benchmark: carrier="${benchmarks[0].carrier_name}" rate20=${benchmarks[0].rate_20gp_usd} rate40=${benchmarks[0].rate_40gp_usd} rate40hc=${benchmarks[0].rate_40hc_usd}`);
 
       const rate = benchmarks[0];
 
@@ -672,7 +722,7 @@ router.post(
     }
 
     logInfo(`Benchmark check completed: ${updated}/${bols.length} BOLs updated`);
-    res.json({ message: `Benchmark check completed: ${updated} of ${bols.length} BOLs matched against rates`, updated, total: bols.length });
+    res.json({ message: `Benchmark check completed: ${updated} of ${bols.length} BOLs matched against rates`, updated, total: bols.length, debug: debugLog });
     } catch (err: any) {
       logError('Benchmark check failed', { error: err.message, stack: err.stack });
       res.status(500).json({ error: 'Benchmark check failed', details: err.message });
