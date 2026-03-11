@@ -787,8 +787,18 @@ router.put(
       voyage_number, port_of_loading, port_of_discharge, consignee, shipper,
       description_of_goods, container_numbers, container_type, gross_weight_kg, volume_cbm,
       number_of_packages, freight_charges_usd, declared_value_usd,
-      issue_date, ship_on_board_date, notify_party, payment_terms, incoterm, notes
+      issue_date, ship_on_board_date, notify_party, payment_terms, incoterm, notes,
+      benchmark_rate_per_kg
     } = req.body;
+
+    // If benchmark rate was provided, recalculate expected freight and variance
+    const hasBenchmark = benchmark_rate_per_kg !== undefined && benchmark_rate_per_kg !== '';
+    const benchmarkRate = hasBenchmark ? (parseFloat(benchmark_rate_per_kg) || null) : null;
+    const freightVal = freight_charges_usd ? parseFloat(freight_charges_usd) : null;
+    const expectedFreight = benchmarkRate ? Math.round(benchmarkRate * 100) / 100 : null;
+    const freightVariance = (freightVal && benchmarkRate)
+      ? Math.round((freightVal - benchmarkRate) * 100) / 100
+      : null;
 
     const result = await queryOne(
       `UPDATE bol_audits SET
@@ -801,6 +811,9 @@ router.put(
         number_of_packages = $16, freight_charges_usd = $17, declared_value_usd = $18,
         issue_date = $19, ship_on_board_date = $20, notify_party = $21,
         payment_terms = $22, incoterm = $23, notes = $24,
+        benchmark_rate_per_kg = CASE WHEN $26 THEN $27 ELSE benchmark_rate_per_kg END,
+        expected_freight_usd = CASE WHEN $26 THEN $28 ELSE expected_freight_usd END,
+        freight_variance_usd = CASE WHEN $26 THEN $29 ELSE freight_variance_usd END,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = $25 RETURNING *`,
       [
@@ -811,7 +824,8 @@ router.put(
         container_type || null, gross_weight_kg || null, volume_cbm || null,
         number_of_packages || null, freight_charges_usd || null, declared_value_usd || null,
         issue_date || null, ship_on_board_date || null, notify_party || null,
-        payment_terms || null, incoterm || null, notes || null, id
+        payment_terms || null, incoterm || null, notes || null, id,
+        hasBenchmark, benchmarkRate, expectedFreight, freightVariance,
       ]
     );
 

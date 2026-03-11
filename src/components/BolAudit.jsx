@@ -26,6 +26,7 @@ const emptyForm = {
   consignee: '', shipper: '', notify_party: '', description_of_goods: '',
   container_numbers: '', container_type: '', gross_weight_kg: '', volume_cbm: '',
   number_of_packages: '', freight_charges_usd: '', declared_value_usd: '',
+  benchmark_rate_per_kg: '',
   issue_date: '', ship_on_board_date: '', payment_terms: '', incoterm: '', notes: '',
 };
 
@@ -158,6 +159,7 @@ function BolAudit() {
         volume_cbm: formData.volume_cbm ? parseFloat(formData.volume_cbm) : null,
         number_of_packages: formData.number_of_packages ? parseInt(formData.number_of_packages) : null,
         freight_charges_usd: formData.freight_charges_usd ? parseFloat(formData.freight_charges_usd) : null,
+        benchmark_rate_per_kg: formData.benchmark_rate_per_kg ? parseFloat(formData.benchmark_rate_per_kg) : null,
         declared_value_usd: formData.declared_value_usd ? parseFloat(formData.declared_value_usd) : null,
         container_type: formData.container_type || null,
         issue_date: formData.issue_date || null,
@@ -482,6 +484,7 @@ function BolAudit() {
       payment_terms: bol.payment_terms || '',
       incoterm: bol.incoterm || '',
       notes: bol.notes || '',
+      benchmark_rate_per_kg: bol.benchmark_rate_per_kg ?? '',
     });
     setShowForm(true);
   };
@@ -1020,6 +1023,7 @@ function BolAudit() {
               {renderInput('Volume (CBM)', 'volume_cbm', 'number', { step: '0.001' })}
               {renderInput('Number of Packages', 'number_of_packages', 'number')}
               {renderInput('Freight Charges (USD)', 'freight_charges_usd', 'number', { step: '0.01' })}
+              {renderInput('Benchmark Rate (USD)', 'benchmark_rate_per_kg', 'number', { step: '0.01', placeholder: 'Override auto benchmark' })}
               {renderInput('Declared Value (USD)', 'declared_value_usd', 'number', { step: '0.01' })}
               <div style={{ flex: '1 1 150px' }}>
                 <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: 4 }}>Container Type</label>
