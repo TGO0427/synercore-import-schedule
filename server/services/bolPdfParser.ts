@@ -105,18 +105,21 @@ function cleanExtraction(value: string | null): string | null {
 // ─── Pattern definitions ───
 
 const BOL_NUMBER_PATTERNS = [
+  // MSC-style BOL numbers (e.g., MEDUHW533143, MEDUWA201799) — highest priority
+  /\b(MEDU[A-Z]{1,3}\d{5,10})\b/,
+  // OOCL-style BOL numbers (e.g., OOLU8881386790)
+  /\b(OOLU\d{7,15})\b/,
   // OOCL Sea Waybill: "SEA WAYBILL NO. (WAYBILL) OOLU8881386790"
-  /(?:SEA\s+)?WAYBILL\s+NO\.?\s*\(?[^)]*\)?\s*([A-Z0-9][\w\-\/]{4,30})/i,
+  /WAYBILL\s+NO\.?\s*\(WAYBILL\)\s*\n?\s*([A-Z]{4}\d{7,15})/i,
   // Customs Worksheet: "TRANSPORT DOCUMENT NUMBER : OOLU8881386790"
   /TRANSPORT\s+DOCUMENT\s+(?:NUMBER|NO\.?)\s*[:\s]*([A-Z0-9][\w\-\/]{4,30})/i,
   /B\/?L\s*(?:No\.?|Number|#|:)\s*[:\s]*([A-Z0-9][\w\-\/]{4,30})/i,
   /(?:Bill\s+of\s+Lading|BOL)\s*(?:No\.?|Number|#|:)\s*[~:\s]*([A-Z0-9][\w\-\/]{4,30})/i,
-  // MSC BOL format: MEDU... number after "BILL OF LADING No."
   /BILL\s+OF\s+LADING\s+No\.?\s*[~:\s]*(MEDU[A-Z0-9]{4,20})/i,
   /(?:Document\s*No\.?|Doc\s*#)\s*[:\s]*([A-Z0-9][\w\-\/]{4,30})/i,
   /(?:MBOL|HBOL|MBL|HBL)\s*[:\s#]*([A-Z0-9][\w\-\/]{4,30})/i,
-  // MSC-style BOL numbers standalone (e.g., MEDUHW533143, MEDUWA201799)
-  /\b(MEDU[A-Z]{1,3}\d{5,10})\b/,
+  // Generic: "SEA WAYBILL No." then BOL on next line
+  /SEA\s+WAYBILL\s+No\.?\s*\n\s*([A-Z]{4}\d{7,15})/i,
 ];
 
 // Vessel: require explicit label, capture name with 3+ chars, must look like a proper name
@@ -127,6 +130,8 @@ const VESSEL_PATTERNS = [
   /ORIGINALS\s+TO\s+BE\s+RELEASED\s+AT\s*\n[^\n]*\n\s*([A-Z][A-Za-z\s]+\w*\s+\d+\w*)\s*\n/i,
   // OOCL fallback: look for "VESSEL/VOYAGE/FLAG" then scan ahead for vessel-like name
   /VESSEL\s*\/\s*VOYAGE[^\n]*\n[\s\S]*?^([A-Z][A-Z\s]{2,20}\s+\d+\w{0,3})\s*$/im,
+  // MSC: standalone "MSC KALAMATA VII - ZF602A" (vessel name - voyage)
+  /\b(MSC\s+[A-Z][A-Z\s]{2,25}?\w+)\s*[\-–]\s*[A-Z0-9]{3,15}\b/,
   // MSC BOL: "VESSEL AND VOYAGE NO" on one line, then "MSC TARANTO - GA601W" on next
   /VESSEL\s+AND\s+VOYAGE\s+NO[^\n]*\n([A-Z][A-Za-z0-9\s]{2,30}?)\s*[\-–]\s*[A-Z0-9]/i,
   /(?:Vessel\s*(?:Name)?|Motor\s*Vessel|M\/V|Ocean\s*Vessel)\s*[:\s]+([A-Z][A-Za-z0-9\s\-\.]{2,40}?)(?:\s*(?:Voyage|Voy|V\/|$|\n))/i,
@@ -141,6 +146,8 @@ const VESSEL_BLACKLIST = /^(?:BILL\s+OF\s+LADING|BILL\s+OF\s+ENTRY|CUSTOMS\s+WOR
 const VOYAGE_PATTERNS = [
   // OOCL: vessel+voyage on one line "CHIBA C 91W" — voyage is trailing code with digits
   /ORIGINALS\s+TO\s+BE\s+RELEASED\s+AT\s*\n[^\n]*\n\s*[A-Z][A-Za-z\s]+?\s+(\d+\w{0,3})\s*\n/i,
+  // MSC: standalone "MSC KALAMATA VII - ZF602A" — extract voyage after dash
+  /\bMSC\s+[A-Z][A-Z\s]{2,25}?\w+\s*[\-–]\s*([A-Z0-9]{3,15})\b/,
   // MSC BOL: vessel and voyage on same line "MSC TARANTO - GA601W"
   /VESSEL\s+AND\s+VOYAGE\s+NO[^\n]*\n[A-Za-z0-9\s]+[\-–]\s*([A-Z0-9]{3,15})/i,
   /(?:Voyage|Voy\.?)\s*(?:No\.?|#)?\s*[:\s]*([A-Z0-9][\w\-]{2,20})/i,
@@ -239,11 +246,12 @@ const VOLUME_PATTERNS = [
 ];
 
 const PACKAGES_PATTERNS = [
+  // MSC: "Total Items :   600"
+  /Total\s+Items\s*[:\s]+(\d[\d,]*)/i,
   // OOCL TOTAL line: "TOTAL:  960"
   /TOTAL\s*:?\s*(\d{2,})\s+[\d,]+\.?\d*\s*KGS/i,
   /(?:No\.?\s*of\s*(?:Packages|Pkgs|Pieces)|Packages|Quantity)\s*[:\s]*([\d,]+)/i,
   /([\d,]+)\s*(?:Packages|Pkgs|Pieces|Cartons?|Ctns?|Bags?|Pallets|Plts)/i,
-  /Total\s+Items[:\s]*([\d,]+)/i,
 ];
 
 const FREIGHT_PATTERNS = [
@@ -446,8 +454,31 @@ export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
     confidence['vessel_name'] = 0;
   }
   const voyageNumber = extract('voyage_number', VOYAGE_PATTERNS);
-  const portOfLoading = extract('port_of_loading', PORT_LOADING_PATTERNS);
-  const portOfDischarge = extract('port_of_discharge', PORT_DISCHARGE_PATTERNS);
+  let portOfLoading = extract('port_of_loading', PORT_LOADING_PATTERNS);
+  let portOfDischarge = extract('port_of_discharge', PORT_DISCHARGE_PATTERNS);
+
+  // Post-processing: detect port swap from garbled multi-column PDF extraction
+  // If discharge port is a known Asian loading port and loading port looks South African, swap them
+  const ASIAN_PORTS = /^(?:QINGDAO|SHANGHAI|DALIAN|TIANJIN|NINGBO|SHENZHEN|XIAMEN|GUANGZHOU|JAKARTA|PORT\s+KELANG|BUSAN|HONG\s*KONG|YOKOHAMA|TOKYO|KAOHSIUNG)/i;
+  const SA_PORTS = /^(?:DURBAN|CAPE\s+TOWN|PORT\s+ELIZABETH|COEGA|NGQURA)/i;
+  if (portOfDischarge && portOfLoading && ASIAN_PORTS.test(portOfDischarge) && SA_PORTS.test(portOfLoading)) {
+    [portOfLoading, portOfDischarge] = [portOfDischarge, portOfLoading];
+    confidence['port_of_loading'] = 0.7;
+    confidence['port_of_discharge'] = 0.7;
+  }
+  // Also swap if discharge is Asian and loading is null/empty (MSC column order issue)
+  if (portOfDischarge && !portOfLoading && ASIAN_PORTS.test(portOfDischarge)) {
+    portOfLoading = portOfDischarge;
+    portOfDischarge = null;
+    confidence['port_of_loading'] = 0.6;
+    confidence['port_of_discharge'] = 0;
+    // Try to find SA port as discharge from text
+    const saMatch = text.match(/\b(Durban|Cape\s+Town|Port\s+Elizabeth)[,\s]+South\s+Africa\b/i);
+    if (saMatch) {
+      portOfDischarge = saMatch[1];
+      confidence['port_of_discharge'] = 0.7;
+    }
+  }
   let consignee = extract('consignee', CONSIGNEE_PATTERNS);
   let shipper = extract('shipper', SHIPPER_PATTERNS);
   const notifyParty = extract('notify_party', NOTIFY_PATTERNS);
