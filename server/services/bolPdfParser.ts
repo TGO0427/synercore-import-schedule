@@ -121,8 +121,11 @@ const BOL_NUMBER_PATTERNS = [
 
 // Vessel: require explicit label, capture name with 3+ chars, must look like a proper name
 const VESSEL_PATTERNS = [
-  // OOCL: "VESSEL/VOYAGE" header then vessel name on next line (e.g., "CHINA OIW")
-  /VESSEL\s*\/\s*VOYAGE[^\n]*\n([A-Z][A-Za-z0-9\s]{2,30})/i,
+  // OOCL: "VESSEL/VOYAGE/FLAG" then "CHIBA C 91W" + "LIBERIA" on next line
+  // Capture vessel name up to flag country or digits that look like voyage
+  /VESSEL\s*\/\s*VOYAGE\s*\/?\s*FLAG[^\n]*\n\s*([A-Z][A-Za-z\s]{2,25}?\s+[A-Z]?\s*\d+\w*)/i,
+  // OOCL: "VESSEL/VOYAGE" header then vessel name on next line — stop before port labels
+  /VESSEL\s*\/\s*VOYAGE[^\n]*\n\s*([A-Z][A-Za-z0-9\s]{2,25}?)(?:\s{2,}|\s+(?:LIBERIA|PANAMA|HONG\s*KONG|SINGAPORE|MARSHALL|BAHAMAS|BERMUDA)|\n)/i,
   // MSC BOL: "VESSEL AND VOYAGE NO" on one line, then "MSC TARANTO - GA601W" on next
   /VESSEL\s+AND\s+VOYAGE\s+NO[^\n]*\n([A-Z][A-Za-z0-9\s]{2,30}?)\s*[\-–]\s*[A-Z0-9]/i,
   /(?:Vessel\s*(?:Name)?|Motor\s*Vessel|M\/V|Ocean\s*Vessel)\s*[:\s]+([A-Z][A-Za-z0-9\s\-\.]{2,40}?)(?:\s*(?:Voyage|Voy|V\/|$|\n))/i,
@@ -130,13 +133,13 @@ const VESSEL_PATTERNS = [
 ];
 
 // Words that should never be extracted as vessel names
-const VESSEL_BLACKLIST = /^(?:BILL\s+OF\s+LADING|BILL\s+OF\s+ENTRY|CUSTOMS\s+WORKSHEET|SHIPPING\s+ORDER|DRAFT|ORIGINAL|COPY)$/i;
+const VESSEL_BLACKLIST = /^(?:BILL\s+OF\s+LADING|BILL\s+OF\s+ENTRY|CUSTOMS\s+WORKSHEET|SHIPPING\s+ORDER|DRAFT|ORIGINAL|COPY|SHANGHAI|DURBAN|CAPE\s+TOWN|PORT\s+KELANG|LOADING)$/i;
 
 // Voyage: require explicit "Voyage" or "Voy" label (NOT just "V." which is too ambiguous)
 // Voyage numbers typically have digits: e.g., 2401E, 025W, V.123, GA601W
 const VOYAGE_PATTERNS = [
-  // OOCL: "LIBERTY" label near vessel, voyage on the same line
-  /VESSEL\s*\/\s*VOYAGE[^\n]*\n[A-Za-z0-9\s]+?\n\s*([A-Z0-9][\w\-]{2,15})/i,
+  // OOCL: vessel line "CHIBA C 91W" — voyage is the trailing alphanumeric code with digits
+  /VESSEL\s*\/\s*VOYAGE[^\n]*\n\s*[A-Z][A-Za-z\s]+?\s+([A-Z]?\s*\d+\w{0,3})\b/i,
   // MSC BOL: vessel and voyage on same line "MSC TARANTO - GA601W"
   /VESSEL\s+AND\s+VOYAGE\s+NO[^\n]*\n[A-Za-z0-9\s]+[\-–]\s*([A-Z0-9]{3,15})/i,
   /(?:Voyage|Voy\.?)\s*(?:No\.?|#)?\s*[:\s]*([A-Z0-9][\w\-]{2,20})/i,
@@ -169,7 +172,10 @@ const PORT_DISCHARGE_PATTERNS = [
 ];
 
 const CONSIGNEE_PATTERNS = [
-  // OOCL/generic: "CONSIGNEE'S COMPLETE NAME AND ADDRESS" then company on next line
+  // OOCL: "CONSIGNEE (COMPLETE NAME AND ADDRESS)" then company on next line
+  /CONSIGNEE\s*\(?(?:COMPLETE\s+)?NAME\s+AND\s+ADDRESS\)?[^\n]*\n\s*([A-Z][^\n]*?(?:PTY|LTD|INC|CORP|LLC)[^\n]{0,20}?\bLTD\b)/i,
+  /CONSIGNEE\s*\(?(?:COMPLETE\s+)?NAME\s+AND\s+ADDRESS\)?[^\n]*\n\s*([A-Z][^\n]{4,100})/i,
+  // Generic: "CONSIGNEE'S COMPLETE NAME AND ADDRESS" then company on next line
   /CONSIGNEE'?S?\s+(?:COMPLETE\s+)?NAME\s+AND\s+ADDRESS[^\n]*\n\s*([A-Z][^\n]*?(?:PTY|LTD|INC|CORP|LLC)[^\n]{0,20}?\bLTD\b)/i,
   /CONSIGNEE'?S?\s+(?:COMPLETE\s+)?NAME\s+AND\s+ADDRESS[^\n]*\n\s*([A-Z][^\n]{4,100})/i,
   // Customs Worksheet: "IMPORTER : AFRICAN FOOD INDUSTRIES (PTY) LTD"
@@ -183,7 +189,10 @@ const CONSIGNEE_PATTERNS = [
 ];
 
 const SHIPPER_PATTERNS = [
-  // OOCL/generic: "SHIPPER'S COMPLETE NAME AND ADDRESS" then company on next line
+  // OOCL: "SHIPPER/EXPORTER (COMPLETE NAME AND ADDRESS)" then company on next line
+  /SHIPPER\s*\/\s*EXPORTER[^\n]*\n\s*([A-Z][^\n]*?(?:CO\.?,?\s*LTD|PTY\)?\s*LTD|INC\.?|CORP\.?|LLC|GMBH|S\.?A\.?))/i,
+  /SHIPPER\s*\/\s*EXPORTER[^\n]*\n\s*([A-Z][^\n]{4,100})/i,
+  // Generic: "SHIPPER'S COMPLETE NAME AND ADDRESS" then company on next line
   /SHIPPER'?S?\s+(?:COMPLETE\s+)?NAME\s+AND\s+ADDRESS[^\n]*\n\s*([A-Z][^\n]*?(?:CO\.?,?\s*LTD|PTY\)?\s*LTD|INC\.?|CORP\.?|LLC|GMBH|S\.?A\.?))/i,
   /SHIPPER'?S?\s+(?:COMPLETE\s+)?NAME\s+AND\s+ADDRESS[^\n]*\n\s*([A-Z][^\n]{4,100})/i,
   // MSC BOL: "SHIPPER" followed by other column header on same line, company on next line
@@ -432,7 +441,7 @@ export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
   const voyageNumber = extract('voyage_number', VOYAGE_PATTERNS);
   const portOfLoading = extract('port_of_loading', PORT_LOADING_PATTERNS);
   const portOfDischarge = extract('port_of_discharge', PORT_DISCHARGE_PATTERNS);
-  const consignee = extract('consignee', CONSIGNEE_PATTERNS);
+  let consignee = extract('consignee', CONSIGNEE_PATTERNS);
   let shipper = extract('shipper', SHIPPER_PATTERNS);
   const notifyParty = extract('notify_party', NOTIFY_PATTERNS);
   const descriptionOfGoods = extract('description_of_goods', DESCRIPTION_PATTERNS);
@@ -512,6 +521,13 @@ export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
   if (shipper && SHIPPER_BLACKLIST.test(shipper)) {
     shipper = null;
     confidence['shipper'] = 0;
+  }
+
+  // Reject consignee values that are form labels/noise
+  const CONSIGNEE_BLACKLIST = /^(?:TRANSPORT\s+CODE|TRANSPORT\s+DOCUMENT|CUSTOMS|DECLARATION|FORWARDING|FMC\s*NO)/i;
+  if (consignee && CONSIGNEE_BLACKLIST.test(consignee)) {
+    consignee = null;
+    confidence['consignee'] = 0;
   }
 
   // Supplier — try shipper as fallback, or consignee for customs worksheets (importer)
