@@ -682,35 +682,24 @@ function BolAudit() {
 
   // [#1] Chart data for Cost Protection
   const varianceChartData = useMemo(() => {
-    const byCarrier = {};
-    bols.filter(b => b.freight_variance_usd != null && b.carrier_name).forEach(b => {
-      const c = b.carrier_name;
-      if (!byCarrier[c]) byCarrier[c] = { over: 0, under: 0 };
-      const v = parseFloat(b.freight_variance_usd);
-      if (v > 0) byCarrier[c].over += v;
-      else byCarrier[c].under += Math.abs(v);
-    });
-    const labels = Object.keys(byCarrier);
+    const withVariance = bols
+      .filter(b => b.freight_variance_usd != null && b.freight_charges_usd)
+      .sort((a, b) => (a.issue_date || a.ship_on_board_date || '').localeCompare(b.issue_date || b.ship_on_board_date || ''));
+    if (withVariance.length === 0) return null;
+    const labels = withVariance.map(b => b.bol_number?.substring(0, 12) || `#${b.id}`);
+    const variances = withVariance.map(b => parseFloat(b.freight_variance_usd));
     return {
       labels,
-      datasets: [
-        {
-          label: 'Overcharges',
-          data: labels.map(l => byCarrier[l].over),
-          borderColor: '#dc2626',
-          backgroundColor: 'rgba(220,38,38,0.08)',
-          borderWidth: 2, pointRadius: 3, pointHoverRadius: 5,
-          tension: 0.3, fill: true,
-        },
-        {
-          label: 'Undercharges',
-          data: labels.map(l => byCarrier[l].under),
-          borderColor: '#059669',
-          backgroundColor: 'rgba(5,150,105,0.08)',
-          borderWidth: 2, pointRadius: 3, pointHoverRadius: 5,
-          tension: 0.3, fill: true,
-        },
-      ],
+      datasets: [{
+        label: 'Freight Variance (USD)',
+        data: variances,
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59,130,246,0.08)',
+        borderWidth: 2, pointRadius: 4, pointHoverRadius: 6,
+        tension: 0.3, fill: true,
+        pointBackgroundColor: variances.map(v => v > 0 ? '#dc2626' : '#059669'),
+        pointBorderColor: variances.map(v => v > 0 ? '#dc2626' : '#059669'),
+      }],
     };
   }, [bols]);
 
@@ -918,35 +907,42 @@ function BolAudit() {
             <StatCard label="Weight Discrepancies" value={parseInt(stats.weight_discrepancy_count || 0)} color="#9333ea" />
           </div>
 
-          {/* [#1] Charts */}
-          <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
-            {varianceChartData.labels.length > 0 && (
-              <div className="dash-panel" style={{ flex: '2 1 400px', padding: 16 }}>
-                <h3 style={{ margin: '0 0 12px', fontSize: '0.95rem' }}>Freight Variance by Carrier</h3>
-                <div style={{ height: 250 }}>
-                  <Line data={varianceChartData} options={{
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { position: 'top' } },
-                    scales: {
-                      x: { grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false }, ticks: { font: { size: 12 } } },
-                      y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false }, ticks: { callback: v => `$${v.toLocaleString()}`, font: { size: 11 } } },
-                    },
-                  }} />
-                </div>
+          {/* [#1] Charts — side by side */}
+          {(varianceChartData || statusChartData) && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 16, marginBottom: 16 }}>
+              <div className="dash-panel" style={{ padding: 16 }}>
+                <h3 style={{ margin: '0 0 12px', fontSize: '0.95rem' }}>Freight Variance by BOL</h3>
+                {varianceChartData ? (
+                  <div style={{ height: 240 }}>
+                    <Line data={varianceChartData} options={{
+                      responsive: true, maintainAspectRatio: false,
+                      plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.raw > 0 ? '+' : ''}$${ctx.raw.toLocaleString()}` } } },
+                      scales: {
+                        x: { grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false }, ticks: { font: { size: 11 }, maxRotation: 45 } },
+                        y: { grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false }, ticks: { callback: v => `$${v.toLocaleString()}`, font: { size: 11 } } },
+                      },
+                    }} />
+                  </div>
+                ) : (
+                  <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-400)', fontSize: '0.85rem' }}>
+                    Run Benchmark Check to see variance data
+                  </div>
+                )}
               </div>
-            )}
-            {statusChartData && (
-              <div className="dash-panel" style={{ flex: '1 1 250px', padding: 16 }}>
-                <h3 style={{ margin: '0 0 12px', fontSize: '0.95rem' }}>Audit Status Distribution</h3>
-                <div style={{ height: 250, display: 'flex', justifyContent: 'center' }}>
-                  <Doughnut data={statusChartData} options={{
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom' } },
-                  }} />
+              {statusChartData && (
+                <div className="dash-panel" style={{ padding: 16 }}>
+                  <h3 style={{ margin: '0 0 12px', fontSize: '0.95rem' }}>Audit Status</h3>
+                  <div style={{ height: 240, display: 'flex', justifyContent: 'center' }}>
+                    <Doughnut data={statusChartData} options={{
+                      responsive: true, maintainAspectRatio: false,
+                      cutout: '68%',
+                      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 10, font: { size: 11 } } } },
+                    }} />
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* [#10] Confidence Threshold Setting */}
           <div className="dash-panel" style={{ padding: '10px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
