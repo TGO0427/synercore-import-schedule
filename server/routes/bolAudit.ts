@@ -155,7 +155,8 @@ router.get(
         b.carrier_name ILIKE $${paramIndex} OR
         b.vessel_name ILIKE $${paramIndex} OR
         b.consignee ILIKE $${paramIndex} OR
-        b.description_of_goods ILIKE $${paramIndex}
+        b.description_of_goods ILIKE $${paramIndex} OR
+        b.container_numbers::text ILIKE $${paramIndex}
       )`);
       params.push(`%${req.query.search}%`);
       paramIndex++;
@@ -781,6 +782,122 @@ router.post(
       res.status(500).json({ error: 'Benchmark check failed', details: err.message });
     }
   }
+);
+
+// ==================== BULK AUDIT ====================
+
+/**
+ * POST /api/bol-audit/bulk-audit
+ * Bulk approve/reject/flag multiple BOLs at once
+ */
+router.post(
+  '/bulk-audit',
+  authenticateToken,
+  [
+    body('bol_ids').isArray({ min: 1 }).withMessage('At least one BOL ID is required'),
+    body('audit_status').isIn(['approved', 'rejected', 'discrepancy']).withMessage('Invalid audit status'),
+    body('audit_notes').optional({ nullable: true }).trim(),
+  ],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user?.id;
+    const user = (req as any).user;
+    const { bol_ids, audit_status, audit_notes } = req.body;
+
+    let updated = 0;
+    for (const bolId of bol_ids) {
+      const result = await queryOne(
+        `UPDATE bol_audits SET
+          audit_status = $1,
+          audit_notes = COALESCE($2, audit_notes),
+          audited_by = $3,
+          audited_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $4 RETURNING id, bol_number`,
+        [audit_status, audit_notes || null, userId, bolId]
+      );
+      if (result) {
+        updated++;
+        AuditRepository.logAudit(
+          userId, user?.username || '', 'audit', 'bol_audit', String(bolId),
+          (result as any).bol_number, { audit_status, bulk: true }
+        );
+      }
+    }
+
+    logInfo(`Bulk audit: ${updated}/${bol_ids.length} BOLs set to ${audit_status}`);
+    res.json({ message: `${updated} BOL(s) ${audit_status}`, updated });
+  })
+);
+
+// ==================== CARRIER STATS ====================
+
+/**
+ * GET /api/bol-audit/carrier-stats
+ * Carrier scorecards: aggregate cost protection data per carrier
+ */
+router.get(
+  '/carrier-stats',
+  authenticateToken,
+  asyncHandler(async (req: Request, res: Response) => {
+    const month = parseMonth(req.query.month as string);
+    let whereClause = '';
+    const params: any[] = [];
+    if (month) {
+      whereClause = `WHERE ${BOL_DATE_COL} >= $1 AND ${BOL_DATE_COL} <= $2`;
+      params.push(month.monthStart, month.monthEnd);
+    }
+
+    const rows = await queryAll(`
+      SELECT
+        carrier_name,
+        COUNT(*) as total_bols,
+        COALESCE(SUM(freight_charges_usd), 0) as total_freight,
+        COUNT(CASE WHEN freight_variance_usd > 0 THEN 1 END) as overcharge_count,
+        COUNT(CASE WHEN freight_variance_usd < 0 THEN 1 END) as undercharge_count,
+        COALESCE(SUM(CASE WHEN freight_variance_usd > 0 THEN freight_variance_usd ELSE 0 END), 0) as total_overcharges,
+        COALESCE(SUM(CASE WHEN freight_variance_usd < 0 THEN ABS(freight_variance_usd) ELSE 0 END), 0) as total_undercharges,
+        COALESCE(AVG(freight_variance_usd), 0) as avg_variance,
+        COALESCE(AVG(CASE WHEN freight_charges_usd > 0 AND benchmark_rate_per_kg > 0
+          THEN ((freight_charges_usd - benchmark_rate_per_kg) / benchmark_rate_per_kg * 100)
+          ELSE NULL END), 0) as avg_variance_pct,
+        COUNT(CASE WHEN weight_variance_pct IS NOT NULL AND ABS(weight_variance_pct) > 5 THEN 1 END) as weight_discrepancies,
+        COUNT(CASE WHEN is_duplicate THEN 1 END) as duplicates,
+        COUNT(CASE WHEN audit_status = 'approved' THEN 1 END) as approved_count,
+        COUNT(CASE WHEN audit_status = 'discrepancy' THEN 1 END) as discrepancy_count
+      FROM bol_audits
+      ${whereClause}
+      ${whereClause ? 'AND' : 'WHERE'} carrier_name IS NOT NULL AND carrier_name != ''
+      GROUP BY carrier_name
+      ORDER BY total_freight DESC
+    `, params);
+
+    res.json({ data: rows });
+  })
+);
+
+// ==================== AUDIT HISTORY ====================
+
+/**
+ * GET /api/bol-audit/:id/history
+ * Get audit history/timeline for a specific BOL
+ */
+router.get(
+  '/:id/history',
+  authenticateToken,
+  [param('id').isInt({ min: 1 })],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const rows = await queryAll(
+      `SELECT al.*, u.username
+       FROM audit_log al
+       LEFT JOIN users u ON al.user_id = u.id
+       WHERE al.entity_type = 'bol_audit' AND al.entity_id = $1
+       ORDER BY al.created_at ASC`,
+      [req.params.id]
+    );
+    res.json({ data: rows });
+  })
 );
 
 // ==================== PARAMETERIZED ROUTES (must be last) ====================

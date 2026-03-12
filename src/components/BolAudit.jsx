@@ -1,8 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { useNotification } from '../contexts/NotificationContext';
 import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
+import {
+  Chart as ChartJS,
+  CategoryScale, LinearScale, BarElement, ArcElement,
+  Title, Tooltip, Legend,
+} from 'chart.js';
+import { Bar, Doughnut } from 'react-chartjs-2';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
 const STATUS_CONFIG = {
   pending: { label: 'Pending', color: '#f59e0b', bg: '#fef3c7' },
@@ -99,7 +107,7 @@ function BolAudit() {
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
   const [showUploadResult, setShowUploadResult] = useState(false);
-  const fileInputRef = React.useRef(null);
+  const fileInputRef = useRef(null);
 
   // Benchmarks
   const [benchmarks, setBenchmarks] = useState([]);
@@ -109,7 +117,22 @@ function BolAudit() {
   const [activeTab, setActiveTab] = useState('audit');
   const [uploadingRates, setUploadingRates] = useState(false);
   const [rateUploadResult, setRateUploadResult] = useState(null);
-  const rateFileInputRef = React.useRef(null);
+  const rateFileInputRef = useRef(null);
+
+  // [#2] Bulk selection
+  const [selectedBols, setSelectedBols] = useState(new Set());
+
+  // [#6] Audit history
+  const [auditHistory, setAuditHistory] = useState([]);
+
+  // [#7] Carrier stats
+  const [carrierStats, setCarrierStats] = useState([]);
+
+  // [#10] Confidence threshold
+  const [confidenceThreshold, setConfidenceThreshold] = useState(() => {
+    const saved = localStorage.getItem('bolAudit_confidenceThreshold');
+    return saved ? parseInt(saved) : 80;
+  });
 
   // Fetch BOLs — filtered by selected month
   const fetchBols = useCallback(async (page = 1) => {
@@ -158,11 +181,37 @@ function BolAudit() {
     } catch (err) { /* non-critical */ }
   }, [selectedMonth]);
 
+  // [#7] Fetch carrier stats
+  const fetchCarrierStats = useCallback(async () => {
+    try {
+      const res = await authFetch(getApiUrl(`/api/bol-audit/carrier-stats?month=${selectedMonth}`));
+      if (res.ok) {
+        const json = await res.json();
+        setCarrierStats(json.data || []);
+      }
+    } catch (err) { /* non-critical */ }
+  }, [selectedMonth]);
+
   useEffect(() => { fetchBols(1); }, [fetchBols]);
   useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { fetchBenchmarks(); }, [fetchBenchmarks]);
+  useEffect(() => { if (activeTab === 'cost') fetchCarrierStats(); }, [activeTab, fetchCarrierStats]);
   // Update benchmark form dates when month changes
   useEffect(() => { if (!editingBenchmark) setBenchmarkForm(f => ({ ...f, valid_from: monthStart, valid_until: monthEnd })); }, [monthStart, monthEnd]);
+  // Clear selection on page/filter change
+  useEffect(() => { setSelectedBols(new Set()); }, [bols]);
+
+  // [#9] Keyboard shortcuts for audit modal
+  useEffect(() => {
+    if (!showAuditModal) return;
+    const handler = (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'Enter') { e.preventDefault(); handleAuditSubmit(); }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [showAuditModal, auditForm, auditingBol, saving]);
 
   // Create / Update
   const handleSave = async () => {
@@ -251,6 +300,37 @@ function BolAudit() {
       showError('Failed to submit audit');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // [#2] Bulk audit
+  const handleBulkAudit = async (status) => {
+    if (selectedBols.size === 0) return;
+    const confirmed = await confirm({
+      title: `Bulk ${status}`,
+      message: `Set ${selectedBols.size} BOL(s) to "${status}"?`,
+      confirmText: `${status.charAt(0).toUpperCase() + status.slice(1)} All`,
+      type: status === 'approved' ? 'info' : 'danger',
+    });
+    if (!confirmed) return;
+
+    try {
+      const res = await authFetch(getApiUrl('/api/bol-audit/bulk-audit'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bol_ids: [...selectedBols], audit_status: status }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        showSuccess(json.message);
+        setSelectedBols(new Set());
+        fetchBols(pagination.page);
+        fetchStats();
+      } else {
+        showError(json.error || 'Bulk audit failed');
+      }
+    } catch (err) {
+      showError('Bulk audit failed');
     }
   };
 
@@ -472,7 +552,7 @@ function BolAudit() {
       extraction: {
         confidence: confidence || {},
         findings: Array.isArray(discrepancies) ? discrepancies : [],
-        score: null, // stored in audit_notes
+        score: null,
         matched_shipment: null,
       },
     });
@@ -512,8 +592,8 @@ function BolAudit() {
     setShowForm(true);
   };
 
-  // Open audit
-  const openAudit = (bol) => {
+  // [#6] Open audit (with history fetch)
+  const openAudit = async (bol) => {
     setAuditingBol(bol);
     setAuditForm({
       audit_status: bol.audit_status === 'pending' ? 'approved' : bol.audit_status,
@@ -524,11 +604,114 @@ function BolAudit() {
       discrepancies: Array.isArray(bol.discrepancies) ? bol.discrepancies.join('\n') : '',
     });
     setShowAuditModal(true);
+    // Fetch audit history
+    try {
+      const res = await authFetch(getApiUrl(`/api/bol-audit/${bol.id}/history`));
+      if (res.ok) {
+        const json = await res.json();
+        setAuditHistory(json.data || []);
+      }
+    } catch (err) { setAuditHistory([]); }
   };
 
   const formatCurrency = (val) => val != null ? `$${parseFloat(val).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '-';
   const formatDate = (val) => val ? new Date(val).toLocaleDateString() : '-';
   const formatWeight = (val) => val != null ? `${parseFloat(val).toLocaleString()} kg` : '-';
+
+  // [#3] Export to Excel
+  const handleExport = (type) => {
+    const data = type === 'cost'
+      ? bols.filter(b => b.freight_charges_usd).map(b => ({
+          'BOL #': b.bol_number, Supplier: b.supplier_name || '', Carrier: b.carrier_name || '',
+          'Port of Loading': b.port_of_loading || '', 'Port of Discharge': b.port_of_discharge || '',
+          'Container Type': b.container_type || '', 'Weight (kg)': b.gross_weight_kg || '',
+          'Actual Freight (USD)': b.freight_charges_usd || '', 'Benchmark Rate (USD)': b.benchmark_rate_per_kg || '',
+          'Expected (USD)': b.expected_freight_usd || '', 'Variance (USD)': b.freight_variance_usd || '',
+          Status: b.audit_status, Duplicate: b.is_duplicate ? 'Yes' : 'No',
+        }))
+      : bols.map(b => ({
+          'BOL #': b.bol_number, Supplier: b.supplier_name || '', Carrier: b.carrier_name || '',
+          Vessel: b.vessel_name || '', 'Port of Loading': b.port_of_loading || '',
+          'Port of Discharge': b.port_of_discharge || '', 'Issue Date': b.issue_date ? b.issue_date.split('T')[0] : '',
+          'Weight (kg)': b.gross_weight_kg || '', 'Freight (USD)': b.freight_charges_usd || '',
+          Status: b.audit_status, 'Container Type': b.container_type || '',
+          'Audited By': b.audited_by_name || '', 'Audit Notes': b.audit_notes || '',
+        }));
+
+    if (data.length === 0) { showError('No data to export'); return; }
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, type === 'cost' ? 'Cost Protection' : 'BOL Audit');
+    XLSX.writeFile(wb, `BOL_${type === 'cost' ? 'Cost_Protection' : 'Audit'}_${selectedMonth}.xlsx`);
+    showSuccess(`Exported ${data.length} records`);
+  };
+
+  // [#4] High-variance alerts
+  const highVarianceBols = useMemo(() =>
+    bols.filter(b => {
+      const v = parseFloat(b.freight_variance_usd || 0);
+      const f = parseFloat(b.freight_charges_usd || 0);
+      return v > 0 && f > 0 && (v / f) > 0.1; // >10% overcharge
+    }),
+    [bols]
+  );
+
+  // [#5] Expiring benchmarks (within 30 days)
+  const expiringBenchmarks = useMemo(() => {
+    const now = new Date();
+    const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    return benchmarks.filter(bm => {
+      if (!bm.valid_until) return false;
+      const exp = new Date(bm.valid_until);
+      return exp >= now && exp <= thirtyDays;
+    });
+  }, [benchmarks]);
+
+  // [#8] Duplicate groups
+  const duplicateGroups = useMemo(() => {
+    const dups = bols.filter(b => b.is_duplicate);
+    const groups = {};
+    dups.forEach(b => {
+      const key = b.bol_number;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(b);
+    });
+    return Object.entries(groups).filter(([, v]) => v.length > 0);
+  }, [bols]);
+
+  // [#1] Chart data for Cost Protection
+  const varianceChartData = useMemo(() => {
+    const byCarrier = {};
+    bols.filter(b => b.freight_variance_usd != null && b.carrier_name).forEach(b => {
+      const c = b.carrier_name;
+      if (!byCarrier[c]) byCarrier[c] = { over: 0, under: 0 };
+      const v = parseFloat(b.freight_variance_usd);
+      if (v > 0) byCarrier[c].over += v;
+      else byCarrier[c].under += Math.abs(v);
+    });
+    const labels = Object.keys(byCarrier);
+    return {
+      labels,
+      datasets: [
+        { label: 'Overcharges', data: labels.map(l => byCarrier[l].over), backgroundColor: '#ef4444' },
+        { label: 'Undercharges', data: labels.map(l => byCarrier[l].under), backgroundColor: '#22c55e' },
+      ],
+    };
+  }, [bols]);
+
+  const statusChartData = useMemo(() => {
+    if (!stats) return null;
+    const labels = ['Pending', 'Approved', 'Rejected', 'Discrepancy'];
+    const values = [parseInt(stats.pending || 0), parseInt(stats.approved || 0), parseInt(stats.rejected || 0), parseInt(stats.discrepancy || 0)];
+    return {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: ['#f59e0b', '#059669', '#dc2626', '#9333ea'],
+      }],
+    };
+  }, [stats]);
 
   // Shared styles
   const inputStyle = {
@@ -577,6 +760,19 @@ function BolAudit() {
     setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
   };
 
+  // [#2] Toggle select helpers
+  const toggleSelect = (id) => {
+    setSelectedBols(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const toggleSelectAll = () => {
+    if (selectedBols.size === bols.length) setSelectedBols(new Set());
+    else setSelectedBols(new Set(bols.map(b => b.id)));
+  };
+
   return (
     <div style={{ padding: '0' }}>
       {/* Header */}
@@ -607,6 +803,26 @@ function BolAudit() {
           </button>
         </div>
       </div>
+
+      {/* [#4] High Variance Alert */}
+      {highVarianceBols.length > 0 && activeTab === 'audit' && (
+        <div style={{
+          padding: '10px 16px', borderRadius: 8, marginBottom: '1rem',
+          backgroundColor: '#fef2f2', border: '1px solid #fca5a5',
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <span style={{ fontSize: '1.1rem' }}>!</span>
+          <div style={{ fontSize: '0.85rem' }}>
+            <strong style={{ color: '#dc2626' }}>{highVarianceBols.length} BOL(s) with &gt;10% freight overcharge</strong>
+            {' — '}
+            {highVarianceBols.slice(0, 3).map(b => b.bol_number).join(', ')}
+            {highVarianceBols.length > 3 ? ` and ${highVarianceBols.length - 3} more` : ''}
+            . Total overcharge: <strong style={{ color: '#dc2626' }}>
+              {formatCurrency(highVarianceBols.reduce((s, b) => s + parseFloat(b.freight_variance_usd || 0), 0))}
+            </strong>
+          </div>
+        </div>
+      )}
 
       {/* Month Picker */}
       <div style={{
@@ -688,8 +904,53 @@ function BolAudit() {
             <StatCard label="Weight Discrepancies" value={parseInt(stats.weight_discrepancy_count || 0)} color="#9333ea" />
           </div>
 
-          {/* Run benchmark check button */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+          {/* [#1] Charts */}
+          <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
+            {varianceChartData.labels.length > 0 && (
+              <div className="dash-panel" style={{ flex: '2 1 400px', padding: 16 }}>
+                <h3 style={{ margin: '0 0 12px', fontSize: '0.95rem' }}>Freight Variance by Carrier</h3>
+                <div style={{ height: 250 }}>
+                  <Bar data={varianceChartData} options={{
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { beginAtZero: true, ticks: { callback: v => `$${v.toLocaleString()}` } } },
+                  }} />
+                </div>
+              </div>
+            )}
+            {statusChartData && (
+              <div className="dash-panel" style={{ flex: '1 1 250px', padding: 16 }}>
+                <h3 style={{ margin: '0 0 12px', fontSize: '0.95rem' }}>Audit Status Distribution</h3>
+                <div style={{ height: 250, display: 'flex', justifyContent: 'center' }}>
+                  <Doughnut data={statusChartData} options={{
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } },
+                  }} />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* [#10] Confidence Threshold Setting */}
+          <div className="dash-panel" style={{ padding: '10px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-700)' }}>Auto-Approve Threshold:</span>
+            <input type="range" min="50" max="100" step="5" value={confidenceThreshold}
+              onChange={e => { const v = parseInt(e.target.value); setConfidenceThreshold(v); localStorage.setItem('bolAudit_confidenceThreshold', v); }}
+              style={{ width: 120, cursor: 'pointer' }}
+            />
+            <span style={{ fontSize: '0.88rem', fontWeight: 700, color: confidenceThreshold >= 80 ? '#059669' : '#d97706', minWidth: 40 }}>
+              {confidenceThreshold}%
+            </span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-400)' }}>
+              BOLs scoring above this threshold are auto-approved on PDF upload
+            </span>
+          </div>
+
+          {/* Run benchmark check + Export buttons */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 12 }}>
+            <button style={{ ...btnStyle('#6b7280'), fontSize: '0.85rem' }} onClick={() => handleExport('cost')}>
+              Export to Excel
+            </button>
             <button
               style={{ ...btnStyle('#3b82f6'), fontSize: '0.85rem' }}
               onClick={async () => {
@@ -713,6 +974,81 @@ function BolAudit() {
               Run Benchmark Check ({monthLabel})
             </button>
           </div>
+
+          {/* [#7] Carrier Scorecards */}
+          {carrierStats.length > 0 && (
+            <div className="dash-panel" style={{ overflow: 'hidden', marginBottom: 16 }}>
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-color, #e5e7eb)', fontWeight: 600, fontSize: '0.95rem' }}>
+                Carrier Scorecards
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: 'var(--surface-2, #f3f4f6)' }}>
+                      {['Carrier', 'BOLs', 'Total Freight', 'Overcharges', 'Undercharges', 'Avg Var %', 'Weight Issues', 'Duplicates', 'Approved', 'Discrepancies'].map(h => (
+                        <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 600, borderBottom: '2px solid var(--border-color, #e5e7eb)', whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {carrierStats.map((cs, idx) => {
+                      const varPct = parseFloat(cs.avg_variance_pct || 0);
+                      return (
+                        <tr key={cs.carrier_name} style={{ backgroundColor: idx % 2 === 0 ? 'transparent' : 'var(--surface-2, #f9fafb)' }}>
+                          <td style={{ padding: '8px 10px', fontWeight: 600 }}>{cs.carrier_name}</td>
+                          <td style={{ padding: '8px 10px' }}>{parseInt(cs.total_bols)}</td>
+                          <td style={{ padding: '8px 10px' }}>{formatCurrency(cs.total_freight)}</td>
+                          <td style={{ padding: '8px 10px', color: '#dc2626', fontWeight: 600 }}>
+                            {formatCurrency(cs.total_overcharges)} ({parseInt(cs.overcharge_count)})
+                          </td>
+                          <td style={{ padding: '8px 10px', color: '#059669' }}>
+                            {formatCurrency(cs.total_undercharges)} ({parseInt(cs.undercharge_count)})
+                          </td>
+                          <td style={{ padding: '8px 10px', fontWeight: 700, color: varPct > 5 ? '#dc2626' : varPct < -5 ? '#059669' : 'var(--text-500)' }}>
+                            {varPct > 0 ? '+' : ''}{varPct.toFixed(1)}%
+                          </td>
+                          <td style={{ padding: '8px 10px' }}>{parseInt(cs.weight_discrepancies)}</td>
+                          <td style={{ padding: '8px 10px' }}>{parseInt(cs.duplicates)}</td>
+                          <td style={{ padding: '8px 10px', color: '#059669' }}>{parseInt(cs.approved_count)}</td>
+                          <td style={{ padding: '8px 10px', color: '#9333ea' }}>{parseInt(cs.discrepancy_count)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* [#8] Duplicate Groups */}
+          {duplicateGroups.length > 0 && (
+            <div className="dash-panel" style={{ overflow: 'hidden', marginBottom: 16 }}>
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-color, #e5e7eb)', fontWeight: 600, fontSize: '0.95rem', color: '#d97706' }}>
+                Duplicate BOLs — Side-by-Side Comparison
+              </div>
+              {duplicateGroups.map(([bolNum, dups]) => (
+                <div key={bolNum} style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-color, #f0f0f0)' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: 8, color: 'var(--text-700)' }}>BOL# {bolNum} ({dups.length} entries)</div>
+                  <div style={{ display: 'flex', gap: 12, overflowX: 'auto' }}>
+                    {dups.map(d => (
+                      <div key={d.id} style={{
+                        flex: '0 0 220px', padding: '10px', borderRadius: 8, fontSize: '0.8rem',
+                        backgroundColor: 'var(--surface-2, #f9fafb)', border: '1px solid var(--border-color, #e5e7eb)',
+                      }}>
+                        <div><strong>File:</strong> {d.pdf_filename || 'Manual'}</div>
+                        <div><strong>Supplier:</strong> {d.supplier_name || '-'}</div>
+                        <div><strong>Carrier:</strong> {d.carrier_name || '-'}</div>
+                        <div><strong>Freight:</strong> {formatCurrency(d.freight_charges_usd)}</div>
+                        <div><strong>Weight:</strong> {formatWeight(d.gross_weight_kg)}</div>
+                        <div><strong>Date:</strong> {formatDate(d.issue_date)}</div>
+                        <div style={{ marginTop: 6 }}><StatusBadge status={d.audit_status} /></div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Cost protection table — show BOLs with freight variances */}
           <div className="dash-panel" style={{ overflow: 'hidden' }}>
@@ -782,6 +1118,23 @@ function BolAudit() {
       {/* Rate Benchmarks Tab */}
       {activeTab === 'benchmarks' && (
         <div style={{ marginBottom: '1.2rem' }}>
+          {/* [#5] Expiring Benchmarks Warning */}
+          {expiringBenchmarks.length > 0 && (
+            <div style={{
+              padding: '10px 16px', borderRadius: 8, marginBottom: 16,
+              backgroundColor: '#fffbeb', border: '1px solid #fcd34d',
+              fontSize: '0.85rem',
+            }}>
+              <strong style={{ color: '#d97706' }}>Rate Expiry Warning:</strong>{' '}
+              {expiringBenchmarks.length} benchmark rate(s) expire within 30 days —{' '}
+              {expiringBenchmarks.slice(0, 3).map(bm =>
+                `${bm.port_of_loading} → ${bm.port_of_discharge} (${bm.carrier_name}, expires ${new Date(bm.valid_until).toLocaleDateString()})`
+              ).join('; ')}
+              {expiringBenchmarks.length > 3 && ` and ${expiringBenchmarks.length - 3} more`}.
+              {' '}Upload updated rate sheets to avoid benchmark gaps.
+            </div>
+          )}
+
           {/* Upload Rate Sheet */}
           <div className="dash-panel" style={{ padding: 16, marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -963,24 +1316,39 @@ function BolAudit() {
                 <tbody>
                   {benchmarks.length === 0 ? (
                     <tr><td colSpan={11} style={{ padding: 30, textAlign: 'center', color: 'var(--text-500)' }}>No rate benchmarks set. Add contracted rates above to enable freight cost comparison.</td></tr>
-                  ) : benchmarks.map((bm, idx) => (
-                    <tr key={bm.id} style={{ backgroundColor: idx % 2 === 0 ? 'transparent' : 'var(--surface-2, #f9fafb)' }}>
-                      <td style={{ padding: '10px 12px', fontWeight: 600 }}>{bm.port_of_loading}</td>
-                      <td style={{ padding: '10px 12px', fontWeight: 600 }}>{bm.port_of_discharge}</td>
-                      <td style={{ padding: '10px 12px' }}>{bm.rate_per_kg_usd ? `$${parseFloat(bm.rate_per_kg_usd).toFixed(4)}` : '-'}</td>
-                      <td style={{ padding: '10px 12px' }}>{bm.rate_20gp_usd ? `$${parseFloat(bm.rate_20gp_usd).toFixed(0)}` : '-'}</td>
-                      <td style={{ padding: '10px 12px' }}>{bm.rate_40gp_usd ? `$${parseFloat(bm.rate_40gp_usd).toFixed(0)}` : '-'}</td>
-                      <td style={{ padding: '10px 12px' }}>{bm.rate_40hc_usd ? `$${parseFloat(bm.rate_40hc_usd).toFixed(0)}` : '-'}</td>
-                      <td style={{ padding: '10px 12px' }}>{bm.carrier_name || '-'}</td>
-                      <td style={{ padding: '10px 12px', textTransform: 'capitalize' }}>{bm.transport_mode}</td>
-                      <td style={{ padding: '10px 12px' }}>{bm.valid_from ? new Date(bm.valid_from).toLocaleDateString() : '-'}</td>
-                      <td style={{ padding: '10px 12px' }}>{bm.valid_until ? new Date(bm.valid_until).toLocaleDateString() : '-'}</td>
-                      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
-                        <button style={{ ...btnStyle('#6b7280'), marginRight: 4, padding: '4px 10px' }} onClick={() => openEditBenchmark(bm)}>Edit</button>
-                        <button style={{ ...btnStyle('#dc2626'), padding: '4px 10px' }} onClick={() => handleBenchmarkDelete(bm)}>Del</button>
-                      </td>
-                    </tr>
-                  ))}
+                  ) : benchmarks.map((bm, idx) => {
+                    // [#5] Check if expiring soon
+                    const isExpiring = bm.valid_until && (() => {
+                      const now = new Date();
+                      const exp = new Date(bm.valid_until);
+                      return exp >= now && exp <= new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+                    })();
+                    return (
+                      <tr key={bm.id} style={{ backgroundColor: isExpiring ? '#fffbeb' : idx % 2 === 0 ? 'transparent' : 'var(--surface-2, #f9fafb)' }}>
+                        <td style={{ padding: '10px 12px', fontWeight: 600 }}>{bm.port_of_loading}</td>
+                        <td style={{ padding: '10px 12px', fontWeight: 600 }}>{bm.port_of_discharge}</td>
+                        <td style={{ padding: '10px 12px' }}>{bm.rate_per_kg_usd ? `$${parseFloat(bm.rate_per_kg_usd).toFixed(4)}` : '-'}</td>
+                        <td style={{ padding: '10px 12px' }}>{bm.rate_20gp_usd ? `$${parseFloat(bm.rate_20gp_usd).toFixed(0)}` : '-'}</td>
+                        <td style={{ padding: '10px 12px' }}>{bm.rate_40gp_usd ? `$${parseFloat(bm.rate_40gp_usd).toFixed(0)}` : '-'}</td>
+                        <td style={{ padding: '10px 12px' }}>{bm.rate_40hc_usd ? `$${parseFloat(bm.rate_40hc_usd).toFixed(0)}` : '-'}</td>
+                        <td style={{ padding: '10px 12px' }}>{bm.carrier_name || '-'}</td>
+                        <td style={{ padding: '10px 12px', textTransform: 'capitalize' }}>{bm.transport_mode}</td>
+                        <td style={{ padding: '10px 12px' }}>{bm.valid_from ? new Date(bm.valid_from).toLocaleDateString() : '-'}</td>
+                        <td style={{ padding: '10px 12px' }}>
+                          {bm.valid_until ? new Date(bm.valid_until).toLocaleDateString() : '-'}
+                          {isExpiring && (
+                            <span style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 8, fontSize: '0.7rem', fontWeight: 700, backgroundColor: '#fef3c7', color: '#d97706' }}>
+                              EXPIRING
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                          <button style={{ ...btnStyle('#6b7280'), marginRight: 4, padding: '4px 10px' }} onClick={() => openEditBenchmark(bm)}>Edit</button>
+                          <button style={{ ...btnStyle('#dc2626'), padding: '4px 10px' }} onClick={() => handleBenchmarkDelete(bm)}>Del</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -994,7 +1362,7 @@ function BolAudit() {
       <div className="dash-panel" style={{ padding: '12px 16px', marginBottom: '1rem', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <input
           style={{ ...inputStyle, maxWidth: 280 }}
-          placeholder="Search BOL#, supplier, carrier, vessel..."
+          placeholder="Search BOL#, supplier, carrier, container..."
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
@@ -1007,7 +1375,28 @@ function BolAudit() {
         <span style={{ fontSize: '0.82rem', color: 'var(--text-500)' }}>
           {pagination.total} record{pagination.total !== 1 ? 's' : ''}
         </span>
+        {/* [#3] Export */}
+        <button style={{ ...btnStyle('#6b7280'), marginLeft: 'auto', fontSize: '0.8rem' }} onClick={() => handleExport('audit')}>
+          Export
+        </button>
       </div>
+
+      {/* [#2] Bulk action bar */}
+      {selectedBols.size > 0 && (
+        <div style={{
+          padding: '8px 16px', borderRadius: 8, marginBottom: '0.8rem',
+          backgroundColor: '#dbeafe', border: '1px solid #93c5fd',
+          display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+        }}>
+          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1d4ed8' }}>
+            {selectedBols.size} BOL(s) selected
+          </span>
+          <button style={btnStyle('#059669')} onClick={() => handleBulkAudit('approved')}>Approve All</button>
+          <button style={btnStyle('#dc2626')} onClick={() => handleBulkAudit('rejected')}>Reject All</button>
+          <button style={btnStyle('#9333ea')} onClick={() => handleBulkAudit('discrepancy')}>Flag All</button>
+          <button style={{ ...btnStyle('#6b7280'), marginLeft: 'auto' }} onClick={() => setSelectedBols(new Set())}>Clear</button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="dash-panel" style={{ overflow: 'hidden' }}>
@@ -1015,6 +1404,10 @@ function BolAudit() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
               <tr style={{ backgroundColor: 'var(--surface-2, #f3f4f6)' }}>
+                {/* [#2] Checkbox column */}
+                <th style={{ padding: '10px 8px', width: 36, textAlign: 'center', borderBottom: '2px solid var(--border-color, #e5e7eb)' }}>
+                  <input type="checkbox" checked={bols.length > 0 && selectedBols.size === bols.length} onChange={toggleSelectAll} style={{ cursor: 'pointer' }} />
+                </th>
                 {['BOL #', 'Supplier', 'Carrier', 'Vessel', 'POL', 'POD', 'Issue Date', 'Weight', 'Freight (USD)', 'Status', 'Actions'].map(h => (
                   <th key={h} style={{ padding: '10px 12px', textAlign: h === 'Actions' ? 'center' : 'left', fontWeight: 600, borderBottom: '2px solid var(--border-color, #e5e7eb)', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
@@ -1022,11 +1415,14 @@ function BolAudit() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={11} style={{ padding: 40, textAlign: 'center', color: 'var(--text-500)' }}>Loading...</td></tr>
+                <tr><td colSpan={12} style={{ padding: 40, textAlign: 'center', color: 'var(--text-500)' }}>Loading...</td></tr>
               ) : bols.length === 0 ? (
-                <tr><td colSpan={11} style={{ padding: 40, textAlign: 'center', color: 'var(--text-500)' }}>No bills of lading found. Click "+ New BOL" to add one.</td></tr>
+                <tr><td colSpan={12} style={{ padding: 40, textAlign: 'center', color: 'var(--text-500)' }}>No bills of lading found. Click "+ New BOL" to add one.</td></tr>
               ) : bols.map((bol, idx) => (
                 <tr key={bol.id} style={{ backgroundColor: idx % 2 === 0 ? 'transparent' : 'var(--surface-2, #f9fafb)', borderBottom: '1px solid var(--border-color, #f0f0f0)' }}>
+                  <td style={{ padding: '10px 8px', textAlign: 'center' }}>
+                    <input type="checkbox" checked={selectedBols.has(bol.id)} onChange={() => toggleSelect(bol.id)} style={{ cursor: 'pointer' }} />
+                  </td>
                   <td style={{ padding: '10px 12px', fontWeight: 600 }}>{bol.bol_number}</td>
                   <td style={{ padding: '10px 12px' }}>{bol.supplier_name || '-'}</td>
                   <td style={{ padding: '10px 12px' }}>{bol.carrier_name || '-'}</td>
@@ -1125,7 +1521,7 @@ function BolAudit() {
       {/* Audit Modal */}
       {showAuditModal && auditingBol && (
         <div style={modalOverlay} onClick={() => setShowAuditModal(false)}>
-          <div style={{ ...modalBox, maxWidth: 600 }} onClick={e => e.stopPropagation()}>
+          <div style={{ ...modalBox, maxWidth: 650 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h2 style={{ margin: 0, fontSize: '1.2rem' }}>Audit BOL: {auditingBol.bol_number}</h2>
               <button style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: 'var(--text-500)' }} onClick={() => setShowAuditModal(false)}>&times;</button>
@@ -1196,12 +1592,52 @@ function BolAudit() {
               </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
-              <button style={btnStyle('#6b7280')} onClick={() => setShowAuditModal(false)}>Cancel</button>
-              <button style={{ ...btnStyle(STATUS_CONFIG[auditForm.audit_status]?.color || '#059669'), opacity: saving ? 0.6 : 1 }}
-                disabled={saving} onClick={handleAuditSubmit}>
-                {saving ? 'Submitting...' : `Submit: ${STATUS_CONFIG[auditForm.audit_status]?.label || 'Audit'}`}
-              </button>
+            {/* [#6] Audit History Timeline */}
+            {auditHistory.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ ...labelStyle, marginBottom: 8 }}>Audit History</label>
+                <div style={{
+                  borderLeft: '2px solid var(--border-color, #d1d5db)', paddingLeft: 16,
+                  display: 'flex', flexDirection: 'column', gap: 10,
+                }}>
+                  {auditHistory.map((h, i) => (
+                    <div key={i} style={{ position: 'relative', fontSize: '0.82rem' }}>
+                      <div style={{
+                        position: 'absolute', left: -22, top: 4, width: 10, height: 10,
+                        borderRadius: '50%', backgroundColor: h.action === 'audit' ? '#3b82f6' : h.action === 'create' ? '#059669' : h.action === 'import_pdf' ? '#8b5cf6' : '#6b7280',
+                      }} />
+                      <div style={{ fontWeight: 600, color: 'var(--text-700)' }}>
+                        {h.action === 'create' ? 'Created' : h.action === 'audit' ? 'Audited' : h.action === 'update' ? 'Updated' : h.action === 'import_pdf' ? 'PDF Imported' : h.action === 'delete' ? 'Deleted' : h.action}
+                      </div>
+                      <div style={{ color: 'var(--text-500)' }}>
+                        by <strong>{h.username || 'System'}</strong> on {new Date(h.created_at).toLocaleString()}
+                      </div>
+                      {h.changes && (() => {
+                        try {
+                          const c = typeof h.changes === 'string' ? JSON.parse(h.changes) : h.changes;
+                          if (c.audit_status) return <div style={{ color: 'var(--text-500)' }}>Status: <StatusBadge status={c.audit_status} /></div>;
+                          if (c.bulk) return <div style={{ color: 'var(--text-500)' }}>Bulk action: <StatusBadge status={c.audit_status} /></div>;
+                        } catch { /* ignore */ }
+                        return null;
+                      })()}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20 }}>
+              {/* [#9] Keyboard shortcut hint */}
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-400)' }}>
+                Ctrl+Enter to submit
+              </span>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button style={btnStyle('#6b7280')} onClick={() => setShowAuditModal(false)}>Cancel</button>
+                <button style={{ ...btnStyle(STATUS_CONFIG[auditForm.audit_status]?.color || '#059669'), opacity: saving ? 0.6 : 1 }}
+                  disabled={saving} onClick={handleAuditSubmit}>
+                  {saving ? 'Submitting...' : `Submit: ${STATUS_CONFIG[auditForm.audit_status]?.label || 'Audit'}`}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1233,7 +1669,7 @@ function BolAudit() {
                 Auto-Audit: <StatusBadge status={uploadResult.bol.audit_status} />
                 {uploadResult.extraction?.score != null ? (
                   <span style={{ marginLeft: 12, fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-500)' }}>
-                    Score: {uploadResult.extraction.score}/100
+                    Score: {uploadResult.extraction.score}/100 (threshold: {confidenceThreshold}%)
                   </span>
                 ) : uploadResult.bol.audit_notes && /score:\s*(\d+)/i.test(uploadResult.bol.audit_notes) && (
                   <span style={{ marginLeft: 12, fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-500)' }}>
@@ -1317,15 +1753,20 @@ function BolAudit() {
                         <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-700)' }}>Extraction Score</span>
                         <span style={{
                           fontSize: '0.95rem', fontWeight: 700,
-                          color: baseScore >= 80 ? '#059669' : baseScore >= 50 ? '#d97706' : '#dc2626',
+                          color: baseScore >= confidenceThreshold ? '#059669' : baseScore >= 50 ? '#d97706' : '#dc2626',
                         }}>{baseScore}/100</span>
                       </div>
-                      <div style={{ height: 8, backgroundColor: '#e5e7eb', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ height: 8, backgroundColor: '#e5e7eb', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
                         <div style={{
                           height: '100%', borderRadius: 4, transition: 'width 0.5s',
                           width: `${baseScore}%`,
-                          backgroundColor: baseScore >= 80 ? '#059669' : baseScore >= 50 ? '#d97706' : '#dc2626',
+                          backgroundColor: baseScore >= confidenceThreshold ? '#059669' : baseScore >= 50 ? '#d97706' : '#dc2626',
                         }} />
+                        {/* Threshold marker */}
+                        <div style={{
+                          position: 'absolute', top: -2, left: `${confidenceThreshold}%`, width: 2, height: 12,
+                          backgroundColor: '#374151', borderRadius: 1,
+                        }} title={`Auto-approve threshold: ${confidenceThreshold}%`} />
                       </div>
                     </div>
                     {/* Field breakdown table */}
@@ -1360,12 +1801,12 @@ function BolAudit() {
                           <td style={{ padding: '6px', fontWeight: 700 }}>Total</td>
                           <td style={{ padding: '6px', textAlign: 'center', fontWeight: 600, color: 'var(--text-500)' }}>{totalWeight}</td>
                           <td style={{ padding: '6px', textAlign: 'center', fontWeight: 700, color: '#059669' }}>{earned}</td>
-                          <td style={{ padding: '6px', textAlign: 'center', fontWeight: 700, color: baseScore >= 80 ? '#059669' : baseScore >= 50 ? '#d97706' : '#dc2626' }}>{baseScore}%</td>
+                          <td style={{ padding: '6px', textAlign: 'center', fontWeight: 700, color: baseScore >= confidenceThreshold ? '#059669' : baseScore >= 50 ? '#d97706' : '#dc2626' }}>{baseScore}%</td>
                         </tr>
                       </tfoot>
                     </table>
                     <div style={{ marginTop: 8, fontSize: '0.75rem', color: 'var(--text-400)' }}>
-                      Scores above 80% are rated Excellent, 50-79% Good, below 50% Needs Review. Deductions apply for shipment data mismatches.
+                      Scores above {confidenceThreshold}% are auto-approved. Adjust the threshold in Cost Protection settings.
                     </div>
                   </div>
                 </div>
