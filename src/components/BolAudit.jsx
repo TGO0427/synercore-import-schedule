@@ -205,6 +205,17 @@ function BolAudit() {
     } catch (err) { /* non-critical */ }
   }, [selectedMonth]);
 
+  // Fetch clearing benchmarks
+  const fetchClearingBenchmarks = useCallback(async () => {
+    try {
+      const res = await authFetch(getApiUrl('/api/bol-audit/clearing-benchmarks'));
+      if (res.ok) {
+        const json = await res.json();
+        setClearingBenchmarks(json.data || []);
+      }
+    } catch (err) { /* non-critical */ }
+  }, []);
+
   useEffect(() => { fetchBols(1); }, [fetchBols]);
   useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { fetchBenchmarks(); }, [fetchBenchmarks]);
@@ -654,17 +665,6 @@ function BolAudit() {
       if (clearingRateFileRef.current) clearingRateFileRef.current.value = '';
     }
   };
-
-  // Fetch clearing benchmarks
-  const fetchClearingBenchmarks = useCallback(async () => {
-    try {
-      const res = await authFetch(getApiUrl('/api/bol-audit/clearing-benchmarks'));
-      if (res.ok) {
-        const json = await res.json();
-        setClearingBenchmarks(json.data || []);
-      }
-    } catch (err) { /* non-critical */ }
-  }, []);
 
   // Fetch invoices for a specific BOL
   const fetchBolInvoices = async (bolId) => {
