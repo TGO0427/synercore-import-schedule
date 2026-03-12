@@ -13,6 +13,7 @@ import { getPool, queryAll, queryOne, transaction } from '../db/connection.js';
 import { AuditRepository } from '../db/repositories/AuditRepository.ts';
 import { parseBolPdf, autoAuditBol } from '../services/bolPdfParser.ts';
 import { parseExcelRateSheet } from '../services/rateSheetParser.ts';
+import { parseForwardingInvoice } from '../services/forwardingInvoiceParser.ts';
 
 // PDF-only upload (10MB max)
 const pdfUpload = multer({
@@ -1284,6 +1285,124 @@ router.delete(
     logInfo(`BOL deleted: ID ${id}`);
     res.json({ message: 'Bill of Lading deleted successfully' });
   })
+);
+
+/**
+ * POST /api/bol-audit/upload-forwarding-invoice
+ * Upload a forwarding agent invoice PDF (e.g. DHL), parse it, match to an
+ * existing BOL by ocean/house BOL number, and update freight_charges_usd
+ * plus any other empty fields.
+ */
+router.post(
+  '/upload-forwarding-invoice',
+  (req: Request, res: Response, next: NextFunction) => {
+    pdfUpload.single('pdf')(req, res, (err: any) => {
+      if (err) {
+        logError('Forwarding invoice upload error', { error: err.message });
+        return res.status(400).json({ error: `Upload failed: ${err.message}` });
+      }
+      next();
+    });
+  },
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'PDF file is required.' });
+      }
+
+      const userId = (req as any).user?.id;
+
+      logInfo(`Parsing forwarding invoice: ${req.file.originalname} (${(req.file.size / 1024).toFixed(1)}KB)`);
+      const invoice = await parseForwardingInvoice(req.file.buffer);
+
+      // Find matching BOL by ocean or house BOL number
+      const bolNumber = invoice.ocean_bol_number || invoice.house_bol_number;
+      if (!bolNumber) {
+        return res.status(400).json({ error: 'Could not extract a BOL number from the forwarding invoice.' });
+      }
+
+      const existing = await queryOne(
+        `SELECT * FROM bol_audits WHERE bol_number = $1 ORDER BY created_at DESC LIMIT 1`,
+        [bolNumber]
+      );
+
+      if (!existing) {
+        return res.status(404).json({
+          error: `No matching BOL found for "${bolNumber}". Upload the BOL PDF first, then upload the forwarding invoice.`,
+          extracted: { bol_number: bolNumber, freight_usd: invoice.freight_usd, invoice_number: invoice.invoice_number },
+        });
+      }
+
+      const bol = existing as any;
+
+      // Build SET clauses — only update fields that are currently empty/null on the BOL
+      const updates: string[] = [];
+      const values: any[] = [];
+      let paramIdx = 1;
+
+      const setIfEmpty = (column: string, newValue: any) => {
+        if (newValue != null && (bol[column] == null || bol[column] === '' || bol[column] === 0)) {
+          updates.push(`${column} = $${paramIdx++}`);
+          values.push(newValue);
+        }
+      };
+
+      // Freight is the primary value — always update if invoice has it, even if BOL has a value
+      if (invoice.freight_usd != null) {
+        updates.push(`freight_charges_usd = $${paramIdx++}`);
+        values.push(invoice.freight_usd);
+      }
+
+      // Fill other empty fields from the invoice
+      setIfEmpty('vessel_name', invoice.vessel_name);
+      setIfEmpty('voyage_number', invoice.voyage_number);
+      setIfEmpty('port_of_loading', invoice.origin_port);
+      setIfEmpty('port_of_discharge', invoice.destination_port);
+      setIfEmpty('shipper', invoice.shipper);
+      setIfEmpty('consignee', invoice.consignee);
+      setIfEmpty('container_numbers', invoice.container_number ? JSON.stringify([invoice.container_number]) : null);
+      setIfEmpty('container_type', invoice.container_type);
+
+      if (updates.length === 0) {
+        return res.json({ message: 'No fields to update — BOL already has all data.', data: bol });
+      }
+
+      // Add updated_at
+      updates.push(`updated_at = CURRENT_TIMESTAMP`);
+      // Append notes about the forwarding invoice
+      updates.push(`notes = COALESCE(notes, '') || $${paramIdx++}`);
+      values.push(`\nForwarding invoice ${invoice.invoice_number || req.file.originalname} applied: freight $${invoice.freight_usd || 'N/A'}${invoice.exchange_rate ? ` @ rate ${invoice.exchange_rate}` : ''}`);
+
+      values.push(bol.id);
+
+      const result = await queryOne(
+        `UPDATE bol_audits SET ${updates.join(', ')} WHERE id = $${paramIdx} RETURNING *`,
+        values
+      );
+
+      AuditRepository.logAudit(
+        userId, (req as any).user?.username || '', 'forwarding_invoice', 'bol_audit',
+        String(bol.id), bolNumber,
+        { invoice_number: invoice.invoice_number, freight_usd: invoice.freight_usd, filename: req.file.originalname }
+      );
+
+      logInfo(`Forwarding invoice applied to BOL ${bolNumber}: freight=$${invoice.freight_usd}`);
+
+      res.json({
+        data: result,
+        invoice: {
+          invoice_number: invoice.invoice_number,
+          freight_usd: invoice.freight_usd,
+          exchange_rate: invoice.exchange_rate,
+          matched_bol: bolNumber,
+        },
+        message: `Forwarding invoice matched to BOL ${bolNumber}. Freight: $${invoice.freight_usd?.toLocaleString() || 'N/A'}`,
+      });
+    } catch (err: any) {
+      logError('Forwarding invoice upload failed', { error: err.message, stack: err.stack });
+      res.status(500).json({ error: 'Failed to process forwarding invoice', details: err.message });
+    }
+  }
 );
 
 export default router;

@@ -109,6 +109,10 @@ function BolAudit() {
   const [showUploadResult, setShowUploadResult] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Forwarding Invoice Upload
+  const [uploadingInvoice, setUploadingInvoice] = useState(false);
+  const invoiceFileInputRef = useRef(null);
+
   // Benchmarks
   const [benchmarks, setBenchmarks] = useState([]);
   const emptyBenchmarkForm = () => ({ port_of_loading: '', port_of_discharge: '', rate_per_kg_usd: '', rate_20gp_usd: '', rate_40gp_usd: '', rate_40hc_usd: '', carrier_name: '', transport_mode: 'sea', valid_from: monthStart, valid_until: monthEnd, notes: '' });
@@ -545,6 +549,45 @@ function BolAudit() {
     }
   };
 
+  // Forwarding Invoice Upload (DHL etc.)
+  const handleInvoiceUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+      showError('Please select a PDF file');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      showError('File size must be under 10MB');
+      return;
+    }
+
+    setUploadingInvoice(true);
+    try {
+      const formPayload = new FormData();
+      formPayload.append('pdf', file);
+
+      const res = await authFetch(getApiUrl('/api/bol-audit/upload-forwarding-invoice'), {
+        method: 'POST',
+        body: formPayload,
+      });
+
+      const json = await res.json();
+      if (res.ok) {
+        showSuccess(json.message || 'Forwarding invoice applied successfully');
+        fetchBols(pagination.page);
+        fetchStats();
+      } else {
+        showError(json.error || 'Failed to process forwarding invoice');
+      }
+    } catch (err) {
+      showError('Failed to upload forwarding invoice');
+    } finally {
+      setUploadingInvoice(false);
+      if (invoiceFileInputRef.current) invoiceFileInputRef.current.value = '';
+    }
+  };
+
   // View PDF extraction results for an existing BOL
   const viewPdfResults = (bol) => {
     const confidence = typeof bol.extraction_confidence === 'string'
@@ -800,12 +843,27 @@ function BolAudit() {
             style={{ display: 'none' }}
             onChange={handlePdfUpload}
           />
+          <input
+            ref={invoiceFileInputRef}
+            type="file"
+            accept=".pdf"
+            style={{ display: 'none' }}
+            onChange={handleInvoiceUpload}
+          />
           <button
             style={{ ...btnStyle('#3b82f6'), opacity: uploading ? 0.6 : 1 }}
             disabled={uploading}
             onClick={() => fileInputRef.current?.click()}
           >
             {uploading ? 'Processing...' : 'Upload BOL PDF'}
+          </button>
+          <button
+            style={{ ...btnStyle('#8b5cf6'), opacity: uploadingInvoice ? 0.6 : 1 }}
+            disabled={uploadingInvoice}
+            onClick={() => invoiceFileInputRef.current?.click()}
+            title="Upload a forwarding agent invoice (e.g. DHL) to match freight charges to an existing BOL"
+          >
+            {uploadingInvoice ? 'Processing...' : 'Upload Fwd Invoice'}
           </button>
           <button style={btnStyle('#059669')} onClick={() => { setEditingBol(null); setFormData(emptyForm); setShowForm(true); }}>
             + New BOL
