@@ -449,34 +449,44 @@ export async function parseAgxRateSheet(pdfBuffer: Buffer): Promise<ClearingRate
   }
 
   // If line-by-line didn't work well, use known AGX rate sheet patterns
+  // AGX rate sheet uses European number format: "6970,00" (comma = decimal)
+  // PDF text concatenates price+VAT: "ZAR360,0054,00ZAR" = price 360,00 + vat 54,00
+  // Capture pattern: ZAR then digits + comma + exactly 2 digits (European format)
   if (entries.length < 3) {
     const knownRates = [
-      { pat: /LOCAL\s+CARTAGE:\s*CPT\s+TO\s+KLAPMUTS\s+PER\s+CONTAINER\s*<\s*20\s*TON.*?ZAR\s*([\d\s,]+[,.]?\d{2})/i, desc: 'LOCAL CARTAGE: CPT TO KLAPMUTS', per: 'per container < 20 ton', cat: 'transport' },
-      { pat: /LOCAL\s+CARTAGE:\s*CPT\s+TO\s+KLAPMUTS\s+PER\s+CONTAINER\s*21[\-–]28\s*TON.*?ZAR\s*([\d\s,]+[,.]?\d{2})/i, desc: 'LOCAL CARTAGE: CPT TO KLAPMUTS 21-28 TON', per: 'per container 21-28 ton', cat: 'transport' },
-      { pat: /TRANSPORT:\s*DBN\s+PORT\s+TO\s+PRETORIA\s+PER\s+20FT.*?ZAR\s*([\d\s,]+[,.]?\d{2})/i, desc: 'TRANSPORT: DBN PORT TO PRETORIA PER 20FT', per: 'per 20ft container', cat: 'transport' },
-      { pat: /TRANSPORT:\s*DBN\s+PORT\s+TO\s+PRETORIA\s+PER\s+40FT.*?ZAR\s*([\d\s,]+[,.]?\d{2})/i, desc: 'TRANSPORT: DBN PORT TO PRETORIA PER 40FT', per: 'per 40ft container', cat: 'transport' },
-      { pat: /TRANSPORT:\s*DBN\s+PORT\s+TO\s+WHS.*?ZAR\s*([\d\s,]+[,.]?\d{2})/i, desc: 'TRANSPORT: DBN PORT TO WHS', per: 'per container', cat: 'transport' },
-      { pat: /UNPACK\s*\/?\s*RELOAD.*?ZAR\s*([\d\s,]+[,.]?\d{2})/i, desc: 'UNPACK / RELOAD', per: 'per container', cat: 'transport' },
-      { pat: /CARTAGE:\s*DBN\s+WHS\s+TO\s+PRETORIA\s+PER\s+TAUTLINER\s+OPTION\s+A.*?ZAR\s*([\d\s,]+[,.]?\d{2})/i, desc: 'LOCAL CARTAGE: DBN WHS TO PRETORIA TAUTLINER A', per: 'per tautliner', cat: 'transport' },
-      { pat: /CTO\s+FEE.*?ZAR\s*([\d\s,]+[,.]?\d{2})/i, desc: 'CTO FEE', per: 'per container', cat: 'destination' },
-      { pat: /PORT\s+HEALTH\s+INSPECTION.*?ZAR\s*([\d\s,]+[,.]?\d{2})/i, desc: 'PORT HEALTH INSPECTION', per: 'per hour', cat: 'destination' },
-      { pat: /DAFF\s+INSPECTION.*?ZAR\s*([\d\s,]+[,.]?\d{2})/i, desc: 'DAFF INSPECTION', per: 'per hour', cat: 'destination' },
-      { pat: /CUSTOMS\s+DECLARATION.*?ZAR\s*([\d\s,]+[,.]?\d{2})/i, desc: 'CUSTOMS DECLARATION', per: 'per declaration', cat: 'destination' },
-      { pat: /AGENCY\s+FEE.*?ZAR\s*([\d\s,]+[,.]?\d{2})/i, desc: 'AGENCY FEE', per: 'per shipment @ 3.5% min', cat: 'destination' },
-      { pat: /CARGO\s+DUES.*?PER\s+20FT.*?ZAR\s*([\d\s,]+[,.]?\d{2})/i, desc: 'CARGO DUES 20FT', per: 'per 20ft container', cat: 'destination' },
-      { pat: /CARGO\s+DUES.*?PER\s+40FT.*?ZAR\s*([\d\s,]+[,.]?\d{2})/i, desc: 'CARGO DUES 40FT', per: 'per 40ft container', cat: 'destination' },
-      { pat: /CONTAINER\s+UNPACKING\s+CHARGES.*?ZAR\s*([\d\s,]+[,.]?\d{2})/i, desc: 'CONTAINER UNPACKING CHARGES', per: 'per container', cat: 'warehouse' },
-      { pat: /HANDLING\s*\/?\s*RELEASE\s+COSTS.*?ZAR\s*([\d\s,]+[,.]?\d{2})/i, desc: 'HANDLING/RELEASE COSTS', per: 'per pallet', cat: 'warehouse' },
+      { pat: /LOCAL\s+CARTAGE:\s*CPT\s+TO\s+KLAPMUTS\s*PER\s+CONTAINER\s*<\s*20\s*TON.*?ZAR(\d+,\d{2})/i, desc: 'LOCAL CARTAGE: CPT TO KLAPMUTS', per: 'per container < 20 ton', cat: 'transport' },
+      { pat: /LOCAL\s+CARTAGE:\s*CPT\s+TO\s+KLAPMUTS\s*PER\s+CONTAINER\s*21[\-–]28\s*TON.*?ZAR(\d+,\d{2})/i, desc: 'LOCAL CARTAGE: CPT TO KLAPMUTS 21-28 TON', per: 'per container 21-28 ton', cat: 'transport' },
+      { pat: /LOCAL\s+CARTAGE:\s*CPT\s+TO\s+KLAPMUTS\s*PER\s+SUPERLINK.*?ZAR(\d+,\d{2})/i, desc: 'LOCAL CARTAGE: CPT TO KLAPMUTS SUPERLINK', per: 'per superlink', cat: 'transport' },
+      { pat: /LOCAL\s+CARTAGE:\s*CPT\s+PORT\s+TO\s+MONTAGUE.*?ZAR(\d+,\d{2})/i, desc: 'LOCAL CARTAGE: CPT PORT TO MONTAGUE GARDENS', per: 'per container < 20 ton', cat: 'transport' },
+      { pat: /TRANSPORT:\s*DBN\s+PORT\s+TO\s+PRETORIA\s*PER\s+20FT.*?ZAR(\d+,\d{2})/i, desc: 'TRANSPORT: DBN PORT TO PRETORIA PER 20FT', per: 'per 20ft container', cat: 'transport' },
+      { pat: /TRANSPORT:\s*DBN\s+PORT\s+TO\s+PRETORIA\s*PER\s+40FT.*?ZAR(\d+,\d{2})/i, desc: 'TRANSPORT: DBN PORT TO PRETORIA PER 40FT', per: 'per 40ft container', cat: 'transport' },
+      { pat: /TRANSPORT:\s*DBN\s+PORT\s+TO\s+WHS.*?ZAR(\d+,\d{2})/i, desc: 'TRANSPORT: DBN PORT TO WHS', per: 'per container', cat: 'transport' },
+      { pat: /UNPACK\s*\/?\s*RELOAD\s.*?ZAR(\d+,\d{2})/i, desc: 'UNPACK / RELOAD', per: 'per container', cat: 'transport' },
+      { pat: /CARTAGE:\s*DBN\s+WHS\s+TO\s+PRETORIA[\s\S]*?OPTION\s+A[\s\S]*?ZAR(\d+,\d{2})/i, desc: 'LOCAL CARTAGE: DBN WHS TO PRETORIA TAUTLINER A', per: 'per tautliner', cat: 'transport' },
+      { pat: /CARTAGE:\s*DBN\s+WHS\s+TO\s+PRETORIA[\s\S]*?OPTION\s+B[\s\S]*?ZAR(\d+,\d{2})/i, desc: 'LOCAL CARTAGE: DBN WHS TO PRETORIA TAUTLINER B', per: 'per tautliner', cat: 'transport' },
+      { pat: /CARTAGE:\s*DBN\s+WHS\s+TO\s+PRETORIA\s*PER\s+6M.*?ZAR(\d+,\d{2})/i, desc: 'LOCAL CARTAGE: DBN WHS TO PRETORIA 6M DECKSPACE', per: 'per 6m deckspace', cat: 'transport' },
+      { pat: /CARTAGE:\s*DBN\s+WHS\s+TO\s+PRETORIA[\s\S]*?12M.*?ZAR(\d+,\d{2})/i, desc: 'LOCAL CARTAGE: DBN WHS TO PRETORIA 12M DECKSPACE', per: 'per 12m deckspace', cat: 'transport' },
+      { pat: /CTO\s+FEE.*?ZAR(\d+,\d{2})/i, desc: 'CTO FEE', per: 'per container', cat: 'destination' },
+      { pat: /PORT\s+HEALTH\s+INSPECTION.*?ZAR(\d+,\d{2})/i, desc: 'PORT HEALTH INSPECTION', per: 'per hour', cat: 'destination' },
+      { pat: /DAFF\s+INSPECTION.*?ZAR(\d+,\d{2})/i, desc: 'DAFF INSPECTION', per: 'per hour', cat: 'destination' },
+      { pat: /STATE\s+VET\s+CANCELLATION.*?ZAR(\d+,\d{2})/i, desc: 'STATE VET CANCELLATION FEE', per: 'per container', cat: 'destination' },
+      { pat: /CUSTOMS\s+DECLARATION.*?ZAR(\d+,\d{2})/i, desc: 'CUSTOMS DECLARATION', per: 'per declaration', cat: 'destination' },
+      { pat: /AGENCY\s+FEE.*?ZAR(\d+,\d{2})/i, desc: 'AGENCY FEE', per: 'per shipment @ 3.5% min R1187', cat: 'destination' },
+      { pat: /CARGO\s+DUES\s*PER\s+20FT.*?ZAR(\d+,\d{2})/i, desc: 'CARGO DUES 20FT', per: 'per 20ft container', cat: 'destination' },
+      { pat: /CARGO\s+DUES\s*PER\s+40FT.*?ZAR(\d+,\d{2})/i, desc: 'CARGO DUES 40FT', per: 'per 40ft container', cat: 'destination' },
+      { pat: /CONTAINER\s+UNPACKING\s+CHARGES[\s\S]*?ZAR(\d+,\d{2})/i, desc: 'CONTAINER UNPACKING CHARGES', per: 'per container', cat: 'warehouse' },
+      { pat: /STORAGE\s+PER\s+PER\s+PALLET\s*R43[\s\S]*?ZAR(\d+,\d{2})/i, desc: 'STORAGE PER PALLET (WEEK 1)', per: 'per pallet per week', cat: 'warehouse' },
+      { pat: /STORAGE\s+PER\s+PER\s+PALLET\s*R53[\s\S]*?ZAR(\d+,\d{2})/i, desc: 'STORAGE PER PALLET (WEEK 2+)', per: 'per pallet per week', cat: 'warehouse' },
+      { pat: /WMS\s+LOGGING[\s\S]*?ZAR(\d+,\d{2})/i, desc: 'WMS LOGGING', per: 'per pallet', cat: 'warehouse' },
+      { pat: /HANDLING[\s\S]*?RELEASE\s+COSTS[\s\S]*?ZAR(\d+,\d{2})/i, desc: 'HANDLING/RELEASE COSTS', per: 'per pallet', cat: 'warehouse' },
     ];
 
     entries.length = 0; // clear any partial results
     for (const { pat, desc, per, cat } of knownRates) {
       const m = text.match(pat);
       if (m) {
-        let amount = m[1].replace(/\s/g, '');
-        // Handle European comma-decimal: "6970,00" → "6970.00"
-        amount = amount.replace(/,(\d{2})$/, '.$1');
-        amount = amount.replace(/,/g, '');
+        // European format: "6970,00" → replace comma decimal → "6970.00"
+        const amount = m[1].replace(',', '.');
         const price = parseFloat(amount);
         if (!isNaN(price) && price > 0) {
           entries.push({ description: desc, per_type: per, unit_rate_zar: price, vat_amount: null, category: cat, route: null });
