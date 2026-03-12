@@ -708,6 +708,8 @@ export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseRe
   }
 
   // ── Cost protection: benchmark rate comparison ──
+  // Always benchmark against "MSC Standard" as the baseline rate.
+  // If no current benchmarks exist, fall back to the most recent expired one.
   try {
     // Use cleaned port names for benchmark matching
     const bolPOL = cleanedPOL || extracted.port_of_loading;
@@ -718,78 +720,80 @@ export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseRe
       const polCity = bolPOL ? bolPOL.split(/[\s,]+/)[0].substring(0, 30) : null;
       const podCity = bolPOD ? bolPOD.split(/[\s,]+/)[0].substring(0, 30) : null;
 
-      // Build query: match if benchmark port is contained in BOL port OR BOL city matches benchmark
-      const benchmarkConditions: string[] = [];
-      const benchmarkParams: any[] = [];
-      let bIdx = 1;
+      // Helper to build port matching conditions
+      const buildPortConditions = (pCity: string | null, pFull: string | null, field: string, params: any[], startIdx: number): { conditions: string[]; nextIdx: number } => {
+        const conditions: string[] = [];
+        let idx = startIdx;
+        if (pCity) {
+          conditions.push(`(LOWER(${field}) LIKE LOWER($${idx}) OR LOWER($${idx + 1}) LIKE '%' || LOWER(${field}) || '%')`);
+          params.push(`%${pCity}%`, (pFull || pCity).substring(0, 60));
+          idx += 2;
+        }
+        return { conditions, nextIdx: idx };
+      };
 
-      if (polCity) {
-        benchmarkConditions.push(`(LOWER(port_of_loading) LIKE LOWER($${bIdx}) OR LOWER($${bIdx + 1}) LIKE '%' || LOWER(port_of_loading) || '%')`);
-        benchmarkParams.push(`%${polCity}%`, bolPOL!.substring(0, 60));
-        bIdx += 2;
+      // Try MSC Standard first (always the baseline benchmark)
+      const tryBenchmarkQuery = async (portConditions: string[], portParams: any[], requireCurrent: boolean): Promise<any[]> => {
+        const validClause = requireCurrent
+          ? 'AND (valid_until IS NULL OR valid_until >= CURRENT_DATE)'
+          : '';
+        const orderClause = requireCurrent
+          ? 'ORDER BY valid_from DESC NULLS LAST'
+          : 'ORDER BY valid_until DESC NULLS FIRST';
+
+        if (portConditions.length === 0) return [];
+
+        // First: try MSC Standard
+        const mscIdx = portParams.length + 1;
+        const mscResults = await queryAll(
+          `SELECT rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd, carrier_name
+           FROM freight_benchmarks
+           WHERE ${portConditions.join(' AND ')}
+             AND LOWER(carrier_name) = LOWER($${mscIdx})
+             ${validClause}
+           ${orderClause}
+           LIMIT 1`,
+          [...portParams, 'MSC Standard']
+        );
+        if (mscResults.length > 0) return mscResults;
+
+        // Fallback: any carrier for the same route
+        return queryAll(
+          `SELECT rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd, carrier_name
+           FROM freight_benchmarks
+           WHERE ${portConditions.join(' AND ')}
+             ${validClause}
+           ${orderClause}
+           LIMIT 5`,
+          portParams
+        );
+      };
+
+      // Step 1: Match on both POL + POD (current benchmarks)
+      let params1: any[] = [];
+      let idx1 = 1;
+      const pol1 = buildPortConditions(polCity, bolPOL, 'port_of_loading', params1, idx1);
+      idx1 = pol1.nextIdx;
+      const pod1 = buildPortConditions(podCity, bolPOD, 'port_of_discharge', params1, idx1);
+      const conds1 = [...pol1.conditions, ...pod1.conditions];
+
+      let matchedBenchmarks = await tryBenchmarkQuery(conds1, params1, true);
+
+      // Step 2: Try just discharge port (current)
+      if (matchedBenchmarks.length === 0 && podCity) {
+        let params2: any[] = [];
+        const pod2 = buildPortConditions(podCity, bolPOD, 'port_of_discharge', params2, 1);
+        matchedBenchmarks = await tryBenchmarkQuery(pod2.conditions, params2, true);
       }
-      if (podCity) {
-        benchmarkConditions.push(`(LOWER(port_of_discharge) LIKE LOWER($${bIdx}) OR LOWER($${bIdx + 1}) LIKE '%' || LOWER(port_of_discharge) || '%')`);
-        benchmarkParams.push(`%${podCity}%`, bolPOD!.substring(0, 60));
-        bIdx += 2;
+
+      // Step 3: Repeat with expired benchmarks (most recent) as final fallback
+      if (matchedBenchmarks.length === 0) {
+        matchedBenchmarks = await tryBenchmarkQuery(conds1, params1, false);
       }
-
-      // Also try to match carrier if available
-      if (extracted.carrier_name) {
-        benchmarkConditions.push(`LOWER(carrier_name) LIKE LOWER($${bIdx++})`);
-        benchmarkParams.push(`%${extracted.carrier_name.substring(0, 30)}%`);
-      }
-
-      const benchmarks = await queryAll(
-        `SELECT rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd, carrier_name
-         FROM freight_benchmarks
-         WHERE ${benchmarkConditions.join(' AND ')}
-           AND (valid_until IS NULL OR valid_until >= CURRENT_DATE)
-         ORDER BY valid_from DESC NULLS LAST
-         LIMIT 5`,
-        benchmarkParams
-      );
-
-      // If no carrier-specific match, try without carrier
-      let matchedBenchmarks = benchmarks;
-      if (matchedBenchmarks.length === 0 && extracted.carrier_name) {
-        const fallbackConditions: string[] = [];
-        const fallbackParams: any[] = [];
-        let fbIdx = 1;
-        if (polCity) {
-          fallbackConditions.push(`(LOWER(port_of_loading) LIKE LOWER($${fbIdx}) OR LOWER($${fbIdx + 1}) LIKE '%' || LOWER(port_of_loading) || '%')`);
-          fallbackParams.push(`%${polCity}%`, bolPOL!.substring(0, 60));
-          fbIdx += 2;
-        }
-        if (podCity) {
-          fallbackConditions.push(`(LOWER(port_of_discharge) LIKE LOWER($${fbIdx}) OR LOWER($${fbIdx + 1}) LIKE '%' || LOWER(port_of_discharge) || '%')`);
-          fallbackParams.push(`%${podCity}%`, bolPOD!.substring(0, 60));
-          fbIdx += 2;
-        }
-        if (fallbackConditions.length > 0) {
-          matchedBenchmarks = await queryAll(
-            `SELECT rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd, carrier_name
-             FROM freight_benchmarks
-             WHERE ${fallbackConditions.join(' AND ')}
-               AND (valid_until IS NULL OR valid_until >= CURRENT_DATE)
-             ORDER BY valid_from DESC NULLS LAST
-             LIMIT 5`,
-            fallbackParams
-          );
-        }
-
-        // If still no match, try matching on just discharge port (most BOLs ship TO a known port)
-        if (matchedBenchmarks.length === 0 && podCity) {
-          matchedBenchmarks = await queryAll(
-            `SELECT rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd, carrier_name
-             FROM freight_benchmarks
-             WHERE (LOWER(port_of_discharge) LIKE LOWER($1) OR LOWER($2) LIKE '%' || LOWER(port_of_discharge) || '%')
-               AND (valid_until IS NULL OR valid_until >= CURRENT_DATE)
-             ORDER BY valid_from DESC NULLS LAST
-             LIMIT 5`,
-            [`%${podCity}%`, bolPOD!.substring(0, 60)]
-          );
-        }
+      if (matchedBenchmarks.length === 0 && podCity) {
+        let params3: any[] = [];
+        const pod3 = buildPortConditions(podCity, bolPOD, 'port_of_discharge', params3, 1);
+        matchedBenchmarks = await tryBenchmarkQuery(pod3.conditions, params3, false);
       }
 
       if (matchedBenchmarks.length > 0 && extracted.freight_charges_usd) {
