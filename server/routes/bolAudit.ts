@@ -910,6 +910,326 @@ router.get(
   })
 );
 
+// ==================== CLEARING AGENT INVOICES & BENCHMARKS ====================
+
+import { parseClearingInvoice, parseAgxRateSheet } from '../services/clearingInvoiceParser.ts';
+
+/**
+ * GET /api/bol-audit/clearing-benchmarks
+ * List clearing agent rate benchmarks
+ */
+router.get(
+  '/clearing-benchmarks',
+  authenticateToken,
+  asyncHandler(async (req: Request, res: Response) => {
+    const rows = await queryAll(
+      `SELECT * FROM clearing_rate_benchmarks ORDER BY category, description`
+    );
+    res.json({ data: rows });
+  })
+);
+
+/**
+ * POST /api/bol-audit/clearing-benchmarks
+ * Create a clearing rate benchmark
+ */
+router.post(
+  '/clearing-benchmarks',
+  authenticateToken,
+  [
+    body('description').trim().notEmpty(),
+    body('unit_rate_zar').isFloat({ min: 0 }),
+    body('per_type').optional().trim(),
+    body('category').optional().trim(),
+    body('agent_name').optional().trim(),
+    body('route').optional({ nullable: true }).trim(),
+    body('valid_from').optional({ nullable: true }).isISO8601(),
+    body('valid_until').optional({ nullable: true }).isISO8601(),
+  ],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const { description, unit_rate_zar, per_type, category, agent_name, route, valid_from, valid_until, notes } = req.body;
+    const userId = (req as any).user?.id;
+    const result = await queryOne(
+      `INSERT INTO clearing_rate_benchmarks (description, unit_rate_zar, per_type, category, agent_name, route, valid_from, valid_until, notes, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      [description, unit_rate_zar, per_type || 'per container', category || 'destination', agent_name || 'AGX', route || null, valid_from || null, valid_until || null, notes || null, userId]
+    );
+    res.status(201).json({ data: result });
+  })
+);
+
+/**
+ * PUT /api/bol-audit/clearing-benchmarks/:benchmarkId
+ */
+router.put(
+  '/clearing-benchmarks/:benchmarkId',
+  authenticateToken,
+  [param('benchmarkId').isInt({ min: 1 })],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const { description, unit_rate_zar, per_type, category, agent_name, route, valid_from, valid_until, notes } = req.body;
+    const result = await queryOne(
+      `UPDATE clearing_rate_benchmarks SET
+        description = COALESCE($1, description), unit_rate_zar = COALESCE($2, unit_rate_zar),
+        per_type = COALESCE($3, per_type), category = COALESCE($4, category),
+        agent_name = COALESCE($5, agent_name), route = $6,
+        valid_from = $7, valid_until = $8, notes = $9, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $10 RETURNING *`,
+      [description, unit_rate_zar, per_type, category, agent_name, route || null, valid_from || null, valid_until || null, notes || null, req.params.benchmarkId]
+    );
+    if (!result) return res.status(404).json({ error: 'Benchmark not found' });
+    res.json({ data: result });
+  })
+);
+
+/**
+ * DELETE /api/bol-audit/clearing-benchmarks/:benchmarkId
+ */
+router.delete(
+  '/clearing-benchmarks/:benchmarkId',
+  authenticateToken,
+  [param('benchmarkId').isInt({ min: 1 })],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const result = await queryOne('DELETE FROM clearing_rate_benchmarks WHERE id = $1 RETURNING id', [req.params.benchmarkId]);
+    if (!result) return res.status(404).json({ error: 'Benchmark not found' });
+    res.json({ message: 'Clearing benchmark deleted' });
+  })
+);
+
+/**
+ * POST /api/bol-audit/clearing-benchmarks/upload
+ * Upload AGX rate sheet PDF and import clearing rate benchmarks
+ */
+router.post(
+  '/clearing-benchmarks/upload',
+  (req: Request, res: Response, next: NextFunction) => {
+    pdfUpload.single('pdf')(req, res, (err: any) => {
+      if (err) return res.status(400).json({ error: `Upload failed: ${err.message}` });
+      next();
+    });
+  },
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.file) return res.status(400).json({ error: 'PDF file is required.' });
+
+      const userId = (req as any).user?.id;
+      logInfo(`Parsing clearing rate sheet: ${req.file.originalname}`);
+      const entries = await parseAgxRateSheet(req.file.buffer);
+
+      if (entries.length === 0) {
+        return res.status(400).json({ error: 'No rate entries found in the PDF.' });
+      }
+
+      // Insert/update each entry
+      let imported = 0;
+      for (const entry of entries) {
+        await queryOne(
+          `INSERT INTO clearing_rate_benchmarks (description, unit_rate_zar, per_type, category, agent_name, route, created_by)
+           VALUES ($1, $2, $3, $4, 'AGX', $5, $6)
+           ON CONFLICT DO NOTHING`,
+          [entry.description, entry.unit_rate_zar, entry.per_type, entry.category, entry.route, userId]
+        );
+        imported++;
+      }
+
+      logInfo(`Clearing rate sheet imported: ${imported} entries from ${req.file.originalname}`);
+      res.json({ message: `${imported} clearing rate benchmarks imported`, data: entries });
+    } catch (err: any) {
+      logError('Rate sheet upload failed', { error: err.message });
+      res.status(500).json({ error: 'Failed to process rate sheet', details: err.message });
+    }
+  }
+);
+
+/**
+ * POST /api/bol-audit/upload-clearing-invoice
+ * Upload a clearing agent invoice PDF, parse it, match to BOL, audit against benchmarks
+ */
+router.post(
+  '/upload-clearing-invoice',
+  (req: Request, res: Response, next: NextFunction) => {
+    pdfUpload.single('pdf')(req, res, (err: any) => {
+      if (err) return res.status(400).json({ error: `Upload failed: ${err.message}` });
+      next();
+    });
+  },
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.file) return res.status(400).json({ error: 'PDF file is required.' });
+
+      const userId = (req as any).user?.id;
+      logInfo(`Parsing clearing invoice: ${req.file.originalname}`);
+      const invoice = await parseClearingInvoice(req.file.buffer);
+
+      // Match to BOL
+      const bolNumber = invoice.mobl || invoice.hobl;
+      if (!bolNumber) {
+        return res.status(400).json({ error: 'Could not extract a BOL number from the clearing invoice.', extracted: invoice });
+      }
+
+      let bol = await queryOne(
+        `SELECT * FROM bol_audits WHERE bol_number = $1 ORDER BY created_at DESC LIMIT 1`,
+        [bolNumber]
+      );
+      if (!bol) {
+        bol = await queryOne(
+          `SELECT * FROM bol_audits WHERE bol_number ILIKE $1 ORDER BY created_at DESC LIMIT 1`,
+          [`%${bolNumber}%`]
+        );
+      }
+
+      if (!bol) {
+        return res.status(404).json({
+          error: `No matching BOL found for "${bolNumber}". Upload the BOL PDF first.`,
+          extracted: invoice,
+        });
+      }
+
+      const bolId = (bol as any).id;
+
+      // Check for duplicate invoice
+      const existingInv = await queryOne(
+        `SELECT id FROM bol_invoices WHERE invoice_number = $1 AND bol_audit_id = $2`,
+        [invoice.invoice_number, bolId]
+      );
+      if (existingInv) {
+        return res.status(409).json({ error: `Invoice ${invoice.invoice_number} has already been uploaded for this BOL.` });
+      }
+
+      // Insert invoice record
+      const invResult = await queryOne(
+        `INSERT INTO bol_invoices (
+          bol_audit_id, invoice_number, invoice_type, agent_name, account_no, file_ref,
+          invoice_date, due_date, subtotal, vat, total, raw_text, pdf_filename,
+          matched_bol_number, importer, vessel, mobl, hobl, container_numbers, created_by
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING *`,
+        [
+          bolId, invoice.invoice_number, 'clearing', 'AGX', invoice.account_no, invoice.file_ref,
+          invoice.invoice_date, invoice.due_date, invoice.subtotal, invoice.vat, invoice.total,
+          invoice.raw_text, req.file.originalname,
+          bolNumber, invoice.importer, invoice.vessel, invoice.mobl, invoice.hobl,
+          invoice.container_numbers.length > 0 ? JSON.stringify(invoice.container_numbers) : null,
+          userId,
+        ]
+      );
+
+      const invoiceId = (invResult as any).id;
+
+      // Insert line items and audit each against clearing benchmarks
+      let totalVariance = 0;
+      const lineResults: any[] = [];
+
+      for (const charge of invoice.charges) {
+        // Try to match against clearing benchmarks by description fuzzy match
+        // Normalize: strip parenthetical rate info like "- (R5430.00/cnt)"
+        const normalizedDesc = charge.description
+          .replace(/\s*-\s*\(R[\d,.]+\/\w+\)/g, '')
+          .replace(/\s*\(.*?\)/g, '')
+          .trim();
+
+        // Find matching benchmark
+        const benchmark = await queryOne(
+          `SELECT * FROM clearing_rate_benchmarks
+           WHERE (LOWER(description) LIKE $1 OR LOWER($2) LIKE '%' || LOWER(description) || '%')
+           ORDER BY updated_at DESC LIMIT 1`,
+          [`%${normalizedDesc.toLowerCase()}%`, normalizedDesc.toLowerCase()]
+        );
+
+        let benchmarkRate: number | null = null;
+        let varianceAmount: number | null = null;
+        let variancePct: number | null = null;
+        let benchmarkId: number | null = null;
+
+        if (benchmark && charge.local_amount) {
+          benchmarkRate = (benchmark as any).unit_rate_zar;
+          benchmarkId = (benchmark as any).id;
+          varianceAmount = charge.local_amount - benchmarkRate;
+          variancePct = benchmarkRate > 0 ? ((charge.local_amount - benchmarkRate) / benchmarkRate) * 100 : null;
+          totalVariance += varianceAmount;
+        }
+
+        const lineResult = await queryOne(
+          `INSERT INTO bol_invoice_line_items (
+            bol_invoice_id, description, vat_code, roe, foreign_amount, local_amount, vat_amount,
+            benchmark_rate, variance_amount, variance_pct, benchmark_id
+          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+          [
+            invoiceId, charge.description, charge.vat_code, charge.roe,
+            charge.foreign_amount, charge.local_amount, charge.vat_amount,
+            benchmarkRate, varianceAmount, variancePct, benchmarkId,
+          ]
+        );
+        lineResults.push(lineResult);
+      }
+
+      // Update invoice with total variance and audit status
+      const auditStatus = totalVariance > 100 ? 'discrepancy' : 'approved';
+      await queryOne(
+        `UPDATE bol_invoices SET total_variance = $1, audit_status = $2 WHERE id = $3`,
+        [totalVariance, auditStatus, invoiceId]
+      );
+
+      AuditRepository.logAudit(
+        userId, (req as any).user?.username || '', 'clearing_invoice', 'bol_audit',
+        String(bolId), bolNumber,
+        { invoice_number: invoice.invoice_number, total: invoice.total, charges: invoice.charges.length, total_variance: totalVariance }
+      );
+
+      logInfo(`Clearing invoice ${invoice.invoice_number} linked to BOL ${bolNumber}: ${invoice.charges.length} charges, total R${invoice.total}, variance R${totalVariance.toFixed(2)}`);
+
+      res.json({
+        data: { ...invResult, line_items: lineResults },
+        invoice: {
+          invoice_number: invoice.invoice_number,
+          total: invoice.total,
+          charges_count: invoice.charges.length,
+          total_variance: totalVariance,
+          audit_status: auditStatus,
+          matched_bol: bolNumber,
+        },
+        message: `Clearing invoice matched to BOL ${bolNumber}. ${invoice.charges.length} charges audited. Total: R${invoice.total?.toLocaleString() || 'N/A'}. Variance: R${totalVariance.toFixed(2)}`,
+      });
+    } catch (err: any) {
+      logError('Clearing invoice upload failed', { error: err.message, stack: err.stack });
+      res.status(500).json({ error: 'Failed to process clearing invoice', details: err.message });
+    }
+  }
+);
+
+/**
+ * GET /api/bol-audit/invoices/:bolId
+ * Get all invoices linked to a specific BOL
+ */
+router.get(
+  '/invoices/:bolId',
+  authenticateToken,
+  [param('bolId').isInt({ min: 1 })],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const invoices = await queryAll(
+      `SELECT * FROM bol_invoices WHERE bol_audit_id = $1 ORDER BY created_at DESC`,
+      [req.params.bolId]
+    );
+
+    // Fetch line items for each invoice
+    for (const inv of invoices) {
+      const items = await queryAll(
+        `SELECT li.*, cb.description as benchmark_description
+         FROM bol_invoice_line_items li
+         LEFT JOIN clearing_rate_benchmarks cb ON li.benchmark_id = cb.id
+         WHERE li.bol_invoice_id = $1
+         ORDER BY li.id`,
+        [(inv as any).id]
+      );
+      (inv as any).line_items = items;
+    }
+
+    res.json({ data: invoices });
+  })
+);
+
 // ==================== PARAMETERIZED ROUTES (must be last) ====================
 
 /**

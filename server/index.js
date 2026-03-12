@@ -545,6 +545,80 @@ async function start() {
       logWarn('Freight benchmarks table warning', { error: error.message });
     }
 
+    // Clearing rate benchmarks (AGX etc.) + invoice tables
+    try {
+      await getPool().query(`
+        CREATE TABLE IF NOT EXISTS clearing_rate_benchmarks (
+          id SERIAL PRIMARY KEY,
+          description VARCHAR(255) NOT NULL,
+          unit_rate_zar NUMERIC(12,2) NOT NULL,
+          per_type VARCHAR(50) DEFAULT 'per container',
+          vat_applicable BOOLEAN DEFAULT true,
+          agent_name VARCHAR(255) DEFAULT 'AGX',
+          category VARCHAR(50),
+          route VARCHAR(255),
+          valid_from DATE,
+          valid_until DATE,
+          notes TEXT,
+          created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+          created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_clearing_benchmarks_desc ON clearing_rate_benchmarks(description);
+        CREATE INDEX IF NOT EXISTS idx_clearing_benchmarks_agent ON clearing_rate_benchmarks(agent_name);
+
+        CREATE TABLE IF NOT EXISTS bol_invoices (
+          id SERIAL PRIMARY KEY,
+          bol_audit_id INTEGER REFERENCES bol_audits(id) ON DELETE SET NULL,
+          invoice_number VARCHAR(100),
+          invoice_type VARCHAR(20) NOT NULL DEFAULT 'clearing',
+          agent_name VARCHAR(255),
+          account_no VARCHAR(50),
+          file_ref VARCHAR(100),
+          invoice_date DATE,
+          due_date DATE,
+          subtotal NUMERIC(14,2),
+          vat NUMERIC(14,2),
+          total NUMERIC(14,2),
+          currency VARCHAR(10) DEFAULT 'ZAR',
+          raw_text TEXT,
+          pdf_filename VARCHAR(255),
+          matched_bol_number VARCHAR(100),
+          importer VARCHAR(255),
+          vessel VARCHAR(255),
+          mobl VARCHAR(100),
+          hobl VARCHAR(100),
+          container_numbers JSONB,
+          audit_status VARCHAR(20) DEFAULT 'pending',
+          total_variance NUMERIC(14,2),
+          created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+          created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_bol_invoices_bol ON bol_invoices(bol_audit_id);
+        CREATE INDEX IF NOT EXISTS idx_bol_invoices_number ON bol_invoices(invoice_number);
+
+        CREATE TABLE IF NOT EXISTS bol_invoice_line_items (
+          id SERIAL PRIMARY KEY,
+          bol_invoice_id INTEGER NOT NULL REFERENCES bol_invoices(id) ON DELETE CASCADE,
+          description VARCHAR(255),
+          vat_code VARCHAR(5),
+          roe NUMERIC(12,6),
+          foreign_amount NUMERIC(14,2),
+          local_amount NUMERIC(14,2),
+          vat_amount NUMERIC(14,2),
+          benchmark_rate NUMERIC(12,2),
+          variance_amount NUMERIC(14,2),
+          variance_pct NUMERIC(8,2),
+          benchmark_id INTEGER REFERENCES clearing_rate_benchmarks(id) ON DELETE SET NULL,
+          created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_invoice_lines_invoice ON bol_invoice_line_items(bol_invoice_id);
+      `);
+      logger.info('Clearing benchmarks and invoice tables ready');
+    } catch (error) {
+      logWarn('Clearing/invoice tables warning', { error: error.message });
+    }
+
     // Initialize notification scheduler
     try {
       const { default: NotificationScheduler } = await import('./jobs/notificationScheduler.js');

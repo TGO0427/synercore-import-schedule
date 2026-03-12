@@ -113,6 +113,15 @@ function BolAudit() {
   const [uploadingInvoice, setUploadingInvoice] = useState(false);
   const invoiceFileInputRef = useRef(null);
 
+  // Clearing Invoice Upload
+  const [uploadingClearingInvoice, setUploadingClearingInvoice] = useState(false);
+  const clearingInvoiceFileRef = useRef(null);
+  const clearingRateFileRef = useRef(null);
+  const [uploadingClearingRates, setUploadingClearingRates] = useState(false);
+  const [clearingBenchmarks, setClearingBenchmarks] = useState([]);
+  const [bolInvoices, setBolInvoices] = useState([]);
+  const [invoiceDetail, setInvoiceDetail] = useState(null);
+
   // Benchmarks
   const [benchmarks, setBenchmarks] = useState([]);
   const emptyBenchmarkForm = () => ({ port_of_loading: '', port_of_discharge: '', rate_per_kg_usd: '', rate_20gp_usd: '', rate_40gp_usd: '', rate_40hc_usd: '', carrier_name: '', transport_mode: 'sea', valid_from: monthStart, valid_until: monthEnd, notes: '' });
@@ -200,6 +209,7 @@ function BolAudit() {
   useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { fetchBenchmarks(); }, [fetchBenchmarks]);
   useEffect(() => { if (activeTab === 'cost') fetchCarrierStats(); }, [activeTab, fetchCarrierStats]);
+  useEffect(() => { if (activeTab === 'invoices') fetchClearingBenchmarks(); }, [activeTab, fetchClearingBenchmarks]);
   // Update benchmark form dates when month changes
   useEffect(() => { if (!editingBenchmark) setBenchmarkForm(f => ({ ...f, valid_from: monthStart, valid_until: monthEnd })); }, [monthStart, monthEnd]);
   // Clear selection on page/filter change
@@ -590,6 +600,97 @@ function BolAudit() {
     }
   };
 
+  // Clearing Invoice Upload
+  const handleClearingInvoiceUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingClearingInvoice(true);
+    try {
+      const formPayload = new FormData();
+      formPayload.append('pdf', file);
+      const res = await authFetch(getApiUrl('/api/bol-audit/upload-clearing-invoice'), {
+        method: 'POST', body: formPayload,
+      });
+      const json = await res.json();
+      if (res.ok) {
+        showSuccess(json.message || 'Clearing invoice uploaded');
+        fetchBols(pagination.page);
+        fetchClearingBenchmarks();
+        if (json.data) setInvoiceDetail(json.data);
+      } else {
+        showError(json.error || 'Failed to process clearing invoice');
+        if (json.extracted) console.log('Clearing invoice extracted:', json.extracted);
+      }
+    } catch (err) {
+      showError('Failed to upload clearing invoice');
+    } finally {
+      setUploadingClearingInvoice(false);
+      if (clearingInvoiceFileRef.current) clearingInvoiceFileRef.current.value = '';
+    }
+  };
+
+  // Clearing Rate Sheet Upload
+  const handleClearingRateUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingClearingRates(true);
+    try {
+      const formPayload = new FormData();
+      formPayload.append('pdf', file);
+      const res = await authFetch(getApiUrl('/api/bol-audit/clearing-benchmarks/upload'), {
+        method: 'POST', body: formPayload,
+      });
+      const json = await res.json();
+      if (res.ok) {
+        showSuccess(json.message || 'Rate sheet imported');
+        fetchClearingBenchmarks();
+      } else {
+        showError(json.error || 'Failed to import rate sheet');
+      }
+    } catch (err) {
+      showError('Failed to upload rate sheet');
+    } finally {
+      setUploadingClearingRates(false);
+      if (clearingRateFileRef.current) clearingRateFileRef.current.value = '';
+    }
+  };
+
+  // Fetch clearing benchmarks
+  const fetchClearingBenchmarks = useCallback(async () => {
+    try {
+      const res = await authFetch(getApiUrl('/api/bol-audit/clearing-benchmarks'));
+      if (res.ok) {
+        const json = await res.json();
+        setClearingBenchmarks(json.data || []);
+      }
+    } catch (err) { /* non-critical */ }
+  }, []);
+
+  // Fetch invoices for a specific BOL
+  const fetchBolInvoices = async (bolId) => {
+    try {
+      const res = await authFetch(getApiUrl(`/api/bol-audit/invoices/${bolId}`));
+      if (res.ok) {
+        const json = await res.json();
+        setBolInvoices(json.data || []);
+      }
+    } catch (err) { /* non-critical */ }
+  };
+
+  // Delete clearing benchmark
+  const deleteClearingBenchmark = async (id) => {
+    if (!await confirm('Delete this clearing benchmark?')) return;
+    try {
+      const res = await authFetch(getApiUrl(`/api/bol-audit/clearing-benchmarks/${id}`), { method: 'DELETE' });
+      if (res.ok) {
+        showSuccess('Benchmark deleted');
+        fetchClearingBenchmarks();
+      }
+    } catch (err) {
+      showError('Failed to delete benchmark');
+    }
+  };
+
   // View PDF extraction results for an existing BOL
   const viewPdfResults = (bol) => {
     const confidence = typeof bol.extraction_confidence === 'string'
@@ -852,6 +953,20 @@ function BolAudit() {
             style={{ display: 'none' }}
             onChange={handleInvoiceUpload}
           />
+          <input
+            ref={clearingInvoiceFileRef}
+            type="file"
+            accept=".pdf"
+            style={{ display: 'none' }}
+            onChange={handleClearingInvoiceUpload}
+          />
+          <input
+            ref={clearingRateFileRef}
+            type="file"
+            accept=".pdf"
+            style={{ display: 'none' }}
+            onChange={handleClearingRateUpload}
+          />
           <button
             style={{ ...btnStyle('#3b82f6'), opacity: uploading ? 0.6 : 1 }}
             disabled={uploading}
@@ -938,6 +1053,7 @@ function BolAudit() {
         {[
           { key: 'audit', label: 'BOL Audit' },
           { key: 'cost', label: 'Cost Protection' },
+          { key: 'invoices', label: 'Invoices' },
           { key: 'benchmarks', label: 'Rate Benchmarks' },
         ].map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
@@ -1190,6 +1306,194 @@ function BolAudit() {
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invoices Tab */}
+      {activeTab === 'invoices' && (
+        <div style={{ marginBottom: '1.2rem' }}>
+          {/* Upload buttons */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+            <button
+              style={{ ...btnStyle('#8b5cf6'), opacity: uploadingClearingInvoice ? 0.6 : 1 }}
+              disabled={uploadingClearingInvoice}
+              onClick={() => clearingInvoiceFileRef.current?.click()}
+            >
+              {uploadingClearingInvoice ? 'Processing...' : 'Upload Clearing Invoice'}
+            </button>
+            <button
+              style={{ ...btnStyle('#f59e0b'), opacity: uploadingClearingRates ? 0.6 : 1 }}
+              disabled={uploadingClearingRates}
+              onClick={() => clearingRateFileRef.current?.click()}
+            >
+              {uploadingClearingRates ? 'Processing...' : 'Upload Clearing Rate Sheet'}
+            </button>
+          </div>
+
+          {/* Invoice Detail (if just uploaded) */}
+          {invoiceDetail && (
+            <div style={{
+              padding: 16, borderRadius: 10, marginBottom: 16,
+              backgroundColor: 'var(--surface-1)', border: '1px solid var(--border-color)',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <h3 style={{ margin: 0 }}>Invoice {invoiceDetail.invoice_number}</h3>
+                <button onClick={() => setInvoiceDetail(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}>x</button>
+              </div>
+              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: '0.85rem', marginBottom: 12 }}>
+                <span><strong>BOL:</strong> {invoiceDetail.matched_bol_number}</span>
+                <span><strong>Agent:</strong> {invoiceDetail.agent_name}</span>
+                <span><strong>Total:</strong> R{parseFloat(invoiceDetail.total || 0).toLocaleString()}</span>
+                <span><strong>Variance:</strong> <span style={{ color: parseFloat(invoiceDetail.total_variance || 0) > 0 ? '#dc2626' : '#059669', fontWeight: 600 }}>
+                  R{parseFloat(invoiceDetail.total_variance || 0).toLocaleString()}
+                </span></span>
+                <span style={{
+                  padding: '2px 8px', borderRadius: 10, fontSize: '0.75rem', fontWeight: 600,
+                  backgroundColor: invoiceDetail.audit_status === 'approved' ? '#d1fae5' : '#fee2e2',
+                  color: invoiceDetail.audit_status === 'approved' ? '#059669' : '#dc2626',
+                }}>{invoiceDetail.audit_status}</span>
+              </div>
+              {invoiceDetail.line_items && (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: 'var(--surface-2)' }}>
+                      <th style={{ padding: '8px 10px', textAlign: 'left' }}>Charge</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>Amount (ZAR)</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>VAT</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>Benchmark</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>Variance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoiceDetail.line_items.map((li, idx) => {
+                      const variance = parseFloat(li.variance_amount || 0);
+                      return (
+                        <tr key={li.id || idx} style={{
+                          backgroundColor: variance > 10 ? '#fef2f2' : variance < -10 ? '#f0fdf4' : idx % 2 === 0 ? 'transparent' : 'var(--surface-2)',
+                        }}>
+                          <td style={{ padding: '6px 10px' }}>{li.description}</td>
+                          <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: 600 }}>R{parseFloat(li.local_amount || 0).toLocaleString()}</td>
+                          <td style={{ padding: '6px 10px', textAlign: 'right' }}>{li.vat_amount ? `R${parseFloat(li.vat_amount).toLocaleString()}` : '-'}</td>
+                          <td style={{ padding: '6px 10px', textAlign: 'right' }}>{li.benchmark_rate ? `R${parseFloat(li.benchmark_rate).toLocaleString()}` : '-'}</td>
+                          <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: 600, color: variance > 10 ? '#dc2626' : variance < -10 ? '#059669' : 'inherit' }}>
+                            {li.variance_amount != null ? `R${variance.toLocaleString()}` : '-'}
+                            {li.variance_pct != null && <span style={{ fontSize: '0.72rem', marginLeft: 4 }}>({parseFloat(li.variance_pct).toFixed(1)}%)</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+
+          {/* BOL Invoice Lookup */}
+          <div style={{
+            padding: 16, borderRadius: 10, marginBottom: 16,
+            backgroundColor: 'var(--surface-1)', border: '1px solid var(--border-color)',
+          }}>
+            <h3 style={{ margin: '0 0 12px' }}>BOL Invoices</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-500)', marginBottom: 12 }}>
+              Click on any BOL in the Audit tab to view its linked invoices, or upload a clearing/forwarding invoice above.
+            </p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {bols.slice(0, 20).map(bol => (
+                <button key={bol.id} onClick={() => { fetchBolInvoices(bol.id); }} style={{
+                  padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border-color)',
+                  background: 'var(--surface-2)', cursor: 'pointer', fontSize: '0.78rem',
+                }}>
+                  {bol.bol_number}
+                </button>
+              ))}
+            </div>
+
+            {/* Invoice list for selected BOL */}
+            {bolInvoices.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                {bolInvoices.map(inv => (
+                  <div key={inv.id} style={{
+                    padding: 12, borderRadius: 8, marginBottom: 8,
+                    border: '1px solid var(--border-color)', backgroundColor: 'var(--surface-2)',
+                  }}>
+                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: '0.82rem', marginBottom: 8 }}>
+                      <strong>{inv.invoice_number || 'Unknown'}</strong>
+                      <span style={{ padding: '1px 8px', borderRadius: 8, fontSize: '0.72rem', fontWeight: 600, backgroundColor: inv.invoice_type === 'clearing' ? '#dbeafe' : '#fef3c7', color: inv.invoice_type === 'clearing' ? '#3b82f6' : '#f59e0b' }}>
+                        {inv.invoice_type}
+                      </span>
+                      <span>R{parseFloat(inv.total || 0).toLocaleString()}</span>
+                      <span>{inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString() : ''}</span>
+                      {inv.total_variance != null && (
+                        <span style={{ fontWeight: 600, color: parseFloat(inv.total_variance) > 0 ? '#dc2626' : '#059669' }}>
+                          Variance: R{parseFloat(inv.total_variance).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                    {inv.line_items && inv.line_items.length > 0 && (
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                            <th style={{ padding: '4px 8px', textAlign: 'left' }}>Charge</th>
+                            <th style={{ padding: '4px 8px', textAlign: 'right' }}>Amount</th>
+                            <th style={{ padding: '4px 8px', textAlign: 'right' }}>Benchmark</th>
+                            <th style={{ padding: '4px 8px', textAlign: 'right' }}>Variance</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {inv.line_items.map((li, idx) => (
+                            <tr key={idx} style={{ backgroundColor: parseFloat(li.variance_amount || 0) > 10 ? '#fef2f2' : 'transparent' }}>
+                              <td style={{ padding: '3px 8px' }}>{li.description}</td>
+                              <td style={{ padding: '3px 8px', textAlign: 'right' }}>R{parseFloat(li.local_amount || 0).toLocaleString()}</td>
+                              <td style={{ padding: '3px 8px', textAlign: 'right' }}>{li.benchmark_rate ? `R${parseFloat(li.benchmark_rate).toLocaleString()}` : '-'}</td>
+                              <td style={{ padding: '3px 8px', textAlign: 'right', color: parseFloat(li.variance_amount || 0) > 10 ? '#dc2626' : 'inherit' }}>
+                                {li.variance_amount != null ? `R${parseFloat(li.variance_amount).toFixed(2)}` : '-'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Clearing Rate Benchmarks */}
+          <div style={{
+            padding: 16, borderRadius: 10,
+            backgroundColor: 'var(--surface-1)', border: '1px solid var(--border-color)',
+          }}>
+            <h3 style={{ margin: '0 0 12px' }}>Clearing Agent Rate Benchmarks (AGX)</h3>
+            {clearingBenchmarks.length === 0 ? (
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-500)' }}>No clearing benchmarks yet. Upload an AGX rate sheet to import rates.</p>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                <thead>
+                  <tr style={{ backgroundColor: 'var(--surface-2)' }}>
+                    <th style={{ padding: '8px 10px', textAlign: 'left' }}>Description</th>
+                    <th style={{ padding: '8px 10px', textAlign: 'left' }}>Category</th>
+                    <th style={{ padding: '8px 10px', textAlign: 'left' }}>Per Type</th>
+                    <th style={{ padding: '8px 10px', textAlign: 'right' }}>Rate (ZAR)</th>
+                    <th style={{ padding: '8px 10px', textAlign: 'center' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clearingBenchmarks.map((b, idx) => (
+                    <tr key={b.id} style={{ backgroundColor: idx % 2 === 0 ? 'transparent' : 'var(--surface-2)' }}>
+                      <td style={{ padding: '6px 10px' }}>{b.description}</td>
+                      <td style={{ padding: '6px 10px' }}><span style={{ padding: '2px 8px', borderRadius: 6, fontSize: '0.72rem', backgroundColor: b.category === 'transport' ? '#dbeafe' : b.category === 'warehouse' ? '#fef3c7' : '#f3e8ff', color: b.category === 'transport' ? '#3b82f6' : b.category === 'warehouse' ? '#f59e0b' : '#9333ea' }}>{b.category}</span></td>
+                      <td style={{ padding: '6px 10px' }}>{b.per_type}</td>
+                      <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: 600 }}>R{parseFloat(b.unit_rate_zar).toLocaleString()}</td>
+                      <td style={{ padding: '6px 10px', textAlign: 'center' }}>
+                        <button onClick={() => deleteClearingBenchmark(b.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '0.78rem' }}>Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       )}
