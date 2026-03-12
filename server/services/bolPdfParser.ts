@@ -205,6 +205,10 @@ const CONTAINER_PATTERNS = [
 ];
 
 const WEIGHT_PATTERNS = [
+  // OOCL/carrier TOTAL line: "TOTAL:  960    24592.000KGS  40.000CBM"
+  /TOTAL\s*:?\s*\d*\s+([\d,]+\.?\d*)\s*KGS/i,
+  // Summary weight in rightmost column (large values, 4+ digits before KGS)
+  /([\d,]{4,}\.?\d*)\s*KGS\b/i,
   // Total/Gross weight in summary line (prefer over individual tare/net weights)
   /Total\s*[:\s|]*\s*([\d,\.]+)\s*(?:KGS?|Kgs?|kgs?)/i,
   /(?:Gross\s*(?:Cargo\s*)?Weight|G\.?W\.?)\s*[:\s]*([\d,\.]+)\s*(?:KGS?|Kgs?|kg)/i,
@@ -223,8 +227,10 @@ const VOLUME_PATTERNS = [
 ];
 
 const PACKAGES_PATTERNS = [
+  // OOCL TOTAL line: "TOTAL:  960"
+  /TOTAL\s*:?\s*(\d{2,})\s+[\d,]+\.?\d*\s*KGS/i,
   /(?:No\.?\s*of\s*(?:Packages|Pkgs|Pieces)|Packages|Quantity)\s*[:\s]*([\d,]+)/i,
-  /([\d,]+)\s*(?:Packages|Pkgs|Pieces|Cartons?|Ctns?|Pallets|Plts)/i,
+  /([\d,]+)\s*(?:Packages|Pkgs|Pieces|Cartons?|Ctns?|Bags?|Pallets|Plts)/i,
   /Total\s+Items[:\s]*([\d,]+)/i,
 ];
 
@@ -809,11 +815,11 @@ export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseRe
 
         // Try to identify container type from BOL content
         // OOCL format: "/PCL/FCL /40HC/" or "/FCL/FCL /40GP/"
-        if (/\/(?:PCL|FCL|LCL)\s*\/\s*(?:PCL|FCL|LCL)\s*\/\s*(40HC|40GP|20GP)\b/i.test(allText)) {
-          const ctMatch = allText.match(/\/(?:PCL|FCL|LCL)\s*\/\s*(?:PCL|FCL|LCL)\s*\/\s*(40HC|40GP|20GP)/i);
+        if (/\/(?:PCL|FCL|LCL)\s*\/\s*(?:PCL|FCL|LCL)\s*\/\s*(40H[CQ]|40GP|20GP)\b/i.test(allText)) {
+          const ctMatch = allText.match(/\/(?:PCL|FCL|LCL)\s*\/\s*(?:PCL|FCL|LCL)\s*\/\s*(40H[CQ]|40GP|20GP)/i);
           if (ctMatch) {
             const ct = ctMatch[1].toUpperCase();
-            if (ct === '40HC') { benchmarkRate = parseFloat(rate.rate_40hc_usd) || null; containerType = '40HC'; }
+            if (ct === '40HC' || ct === '40HQ') { benchmarkRate = parseFloat(rate.rate_40hc_usd) || null; containerType = '40HC'; }
             else if (ct === '40GP') { benchmarkRate = parseFloat(rate.rate_40gp_usd) || null; containerType = '40GP'; }
             else if (ct === '20GP') { benchmarkRate = parseFloat(rate.rate_20gp_usd) || null; containerType = '20GP'; }
           }
