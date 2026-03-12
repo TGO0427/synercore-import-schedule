@@ -526,8 +526,27 @@ export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
     return v.trim();
   };
 
-  const cleanedPOL = cleanOcrField(portOfLoading);
-  const cleanedPOD = cleanOcrField(portOfDischarge);
+  // Clean port names: strip common noise phrases from OOCL/carrier formats
+  const cleanPort = (val: string | null): string | null => {
+    if (!val) return null;
+    let v = cleanOcrField(val) || '';
+    // Remove noise phrases that leak into port names
+    v = v.replace(/\b(?:LOADING\s+PIER|PLACE\s+OF\s+DELIVERY|PLACE\s+OF\s+RECEIPT|CY\s*\/?\s*CY|CFS\s*\/?\s*CFS)\b/gi, '');
+    // Remove trailing country after comma if it's a duplicate city (e.g., "DURBAN ... DURBAN, SOUTH A" → "DURBAN")
+    v = v.replace(/,\s*SOUTH\s+AF?\w*$/i, '');
+    // Remove duplicate city names (e.g., "DURBAN DURBAN" → "DURBAN")
+    const words = v.trim().split(/\s+/);
+    if (words.length >= 2 && words[0].toLowerCase() === words[1].toLowerCase()) {
+      words.splice(1, 1);
+    }
+    v = words.join(' ').trim();
+    // Remove trailing commas/spaces
+    v = v.replace(/[,\s]+$/, '').trim();
+    return v.length >= 2 ? v : null;
+  };
+
+  const cleanedPOL = cleanPort(portOfLoading);
+  const cleanedPOD = cleanPort(portOfDischarge);
   const cleanedConsignee = cleanOcrField(consignee);
   const cleanedShipper = cleanOcrField(shipper);
   const cleanedNotify = cleanOcrField(notifyParty);
@@ -690,18 +709,29 @@ export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseRe
 
   // ── Cost protection: benchmark rate comparison ──
   try {
-    if (extracted.port_of_loading || extracted.port_of_discharge) {
+    // Use cleaned port names for benchmark matching
+    const bolPOL = cleanedPOL || extracted.port_of_loading;
+    const bolPOD = cleanedPOD || extracted.port_of_discharge;
+
+    if (bolPOL || bolPOD) {
+      // Extract just the city name (first word) for flexible matching
+      const polCity = bolPOL ? bolPOL.split(/[\s,]+/)[0].substring(0, 30) : null;
+      const podCity = bolPOD ? bolPOD.split(/[\s,]+/)[0].substring(0, 30) : null;
+
+      // Build query: match if benchmark port is contained in BOL port OR BOL city matches benchmark
       const benchmarkConditions: string[] = [];
       const benchmarkParams: any[] = [];
       let bIdx = 1;
 
-      if (extracted.port_of_loading) {
-        benchmarkConditions.push(`LOWER(port_of_loading) LIKE LOWER($${bIdx++})`);
-        benchmarkParams.push(`%${extracted.port_of_loading.substring(0, 30)}%`);
+      if (polCity) {
+        benchmarkConditions.push(`(LOWER(port_of_loading) LIKE LOWER($${bIdx}) OR LOWER($${bIdx + 1}) LIKE '%' || LOWER(port_of_loading) || '%')`);
+        benchmarkParams.push(`%${polCity}%`, bolPOL!.substring(0, 60));
+        bIdx += 2;
       }
-      if (extracted.port_of_discharge) {
-        benchmarkConditions.push(`LOWER(port_of_discharge) LIKE LOWER($${bIdx++})`);
-        benchmarkParams.push(`%${extracted.port_of_discharge.substring(0, 30)}%`);
+      if (podCity) {
+        benchmarkConditions.push(`(LOWER(port_of_discharge) LIKE LOWER($${bIdx}) OR LOWER($${bIdx + 1}) LIKE '%' || LOWER(port_of_discharge) || '%')`);
+        benchmarkParams.push(`%${podCity}%`, bolPOD!.substring(0, 60));
+        bIdx += 2;
       }
 
       // Also try to match carrier if available
@@ -726,13 +756,15 @@ export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseRe
         const fallbackConditions: string[] = [];
         const fallbackParams: any[] = [];
         let fbIdx = 1;
-        if (extracted.port_of_loading) {
-          fallbackConditions.push(`LOWER(port_of_loading) LIKE LOWER($${fbIdx++})`);
-          fallbackParams.push(`%${extracted.port_of_loading.substring(0, 30)}%`);
+        if (polCity) {
+          fallbackConditions.push(`(LOWER(port_of_loading) LIKE LOWER($${fbIdx}) OR LOWER($${fbIdx + 1}) LIKE '%' || LOWER(port_of_loading) || '%')`);
+          fallbackParams.push(`%${polCity}%`, bolPOL!.substring(0, 60));
+          fbIdx += 2;
         }
-        if (extracted.port_of_discharge) {
-          fallbackConditions.push(`LOWER(port_of_discharge) LIKE LOWER($${fbIdx++})`);
-          fallbackParams.push(`%${extracted.port_of_discharge.substring(0, 30)}%`);
+        if (podCity) {
+          fallbackConditions.push(`(LOWER(port_of_discharge) LIKE LOWER($${fbIdx}) OR LOWER($${fbIdx + 1}) LIKE '%' || LOWER(port_of_discharge) || '%')`);
+          fallbackParams.push(`%${podCity}%`, bolPOD!.substring(0, 60));
+          fbIdx += 2;
         }
         if (fallbackConditions.length > 0) {
           matchedBenchmarks = await queryAll(
@@ -743,6 +775,19 @@ export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseRe
              ORDER BY valid_from DESC NULLS LAST
              LIMIT 5`,
             fallbackParams
+          );
+        }
+
+        // If still no match, try matching on just discharge port (most BOLs ship TO a known port)
+        if (matchedBenchmarks.length === 0 && podCity) {
+          matchedBenchmarks = await queryAll(
+            `SELECT rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd, carrier_name
+             FROM freight_benchmarks
+             WHERE (LOWER(port_of_discharge) LIKE LOWER($1) OR LOWER($2) LIKE '%' || LOWER(port_of_discharge) || '%')
+               AND (valid_until IS NULL OR valid_until >= CURRENT_DATE)
+             ORDER BY valid_from DESC NULLS LAST
+             LIMIT 5`,
+            [`%${podCity}%`, bolPOD!.substring(0, 60)]
           );
         }
       }
