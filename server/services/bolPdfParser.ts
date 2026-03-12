@@ -124,9 +124,9 @@ const BOL_NUMBER_PATTERNS = [
 
 // Vessel: require explicit label, capture name with 3+ chars, must look like a proper name
 const VESSEL_PATTERNS = [
+  // ONE page 2: "VESSEL VOYAGE: CHIBA C 091W" (may run into "B/L NO")
+  /VESSEL\s+VOYAGE\s*:\s*([A-Z][A-Z\s]+\w*\s+\d+\w?)(?:B\/L|$|\n)/i,
   // OOCL: vessel name appears near "ORIGINALS TO BE RELEASED AT" section
-  // Text: "ORIGINALS TO BE RELEASED AT\nSHANGHAI \nCHIBA C 91W \n"
-  // Vessel is a line with letters+digits+spaces that contains a voyage-like code (digits+letter)
   /ORIGINALS\s+TO\s+BE\s+RELEASED\s+AT\s*\n[^\n]*\n\s*([A-Z][A-Za-z\s]+\w*\s+\d+\w*)\s*\n/i,
   // OOCL fallback: look for "VESSEL/VOYAGE/FLAG" then scan ahead for vessel-like name
   /VESSEL\s*\/\s*VOYAGE[^\n]*\n[\s\S]*?^([A-Z][A-Z\s]{2,20}\s+\d+\w{0,3})\s*$/im,
@@ -139,11 +139,13 @@ const VESSEL_PATTERNS = [
 ];
 
 // Words that should never be extracted as vessel names
-const VESSEL_BLACKLIST = /^(?:BILL\s+OF\s+LADING|BILL\s+OF\s+ENTRY|CUSTOMS\s+WORKSHEET|SHIPPING\s+ORDER|DRAFT|ORIGINAL|COPY|SHANGHAI|DURBAN|CAPE\s+TOWN|PORT\s+KELANG|LOADING)$/i;
+const VESSEL_BLACKLIST = /^(?:BILL\s+OF\s+LADING|BILL\s+OF\s+ENTRY|CUSTOMS\s+WORKSHEET|SHIPPING\s+ORDER|DRAFT|ORIGINAL|COPY|SHANGHAI|DURBAN|CAPE\s+TOWN|PORT\s+KELANG|LOADING|ARRIVAL|VOYAGE\s+NO|RECEIVED)$/i;
 
 // Voyage: require explicit "Voyage" or "Voy" label (NOT just "V." which is too ambiguous)
 // Voyage numbers typically have digits: e.g., 2401E, 025W, V.123, GA601W
 const VOYAGE_PATTERNS = [
+  // ONE: "VESSEL VOYAGE: CHIBA C 091W" — voyage is trailing code (may run into B/L)
+  /VESSEL\s+VOYAGE\s*:\s*[A-Z][A-Z\s]+?\s+(\d+\w?)(?:B\/L|$|\n)/i,
   // OOCL: vessel+voyage on one line "CHIBA C 91W" — voyage is trailing code with digits
   /ORIGINALS\s+TO\s+BE\s+RELEASED\s+AT\s*\n[^\n]*\n\s*[A-Z][A-Za-z\s]+?\s+(\d+\w{0,3})\s*\n/i,
   // MSC: standalone "MSC KALAMATA VII - ZF602A" — extract voyage after dash
@@ -156,6 +158,8 @@ const VOYAGE_PATTERNS = [
 // Ports: require the full label, capture only proper location names (not clause text)
 // Port names: typically capitalized words, city/country names, 4+ chars
 const PORT_LOADING_PATTERNS = [
+  // Standalone: "Port Klang, Malaysia" or "QINGDAO" near loading context
+  /(?:PLACE\s+OF\s+RECEIPT|PRE-CARRIAGE)[^\n]*\n[^\n]*?\b(PORT\s+KLANG|QINGDAO|SHANGHAI|DALIAN|TIANJIN|NINGBO|JAKARTA)\b/im,
   // OOCL/MSC: "PORT OF LOADING" on one line, port name on next line (single line only)
   /PORT\s+OF\s+LOADING\s*\n\s*([A-Z][A-Za-z ,\-\.]{3,40})/im,
   // MSC BOL OCR: vessel line has POL inline "MSC TARANTO - GA601W DALIAN.CHLNG XXXX"
@@ -168,6 +172,8 @@ const PORT_LOADING_PATTERNS = [
 ];
 
 const PORT_DISCHARGE_PATTERNS = [
+  // Standalone SA port with country: "DURBAN, SOUTH AFRICA" or "Cape Town, South Africa"
+  /\b(DURBAN|Cape\s+Town|Port\s+Elizabeth),?\s+South\s+Africa\b/i,
   // OOCL/MSC: "PORT OF DISCHARGE" on one line, port name on next line (single line only)
   /PORT\s+OF\s+DISCHARGE\s*\n\s*([A-Z][A-Za-z ,\-\.]{3,40})/im,
   // MSC BOL OCR: booking ref line "177DPPPED60245 Cape Town, South Africa OOOO XXXX"
@@ -483,7 +489,13 @@ export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
   let consignee = extract('consignee', CONSIGNEE_PATTERNS);
   let shipper = extract('shipper', SHIPPER_PATTERNS);
   const notifyParty = extract('notify_party', NOTIFY_PATTERNS);
-  const descriptionOfGoods = extract('description_of_goods', DESCRIPTION_PATTERNS);
+  let descriptionOfGoods = extract('description_of_goods', DESCRIPTION_PATTERNS);
+  // Reject descriptions that are document titles or legal text
+  const DESC_BLACKLIST = /^(?:ORIGINAL|NON\s+NEGOTIABLE|RECEIVED|PARTICULARS|SIGNED|PAGE|COPY|DRAFT|CARRIER)/i;
+  if (descriptionOfGoods && DESC_BLACKLIST.test(descriptionOfGoods)) {
+    descriptionOfGoods = null;
+    confidence['description_of_goods'] = 0;
+  }
   const containers = findAllContainers(text);
   confidence['container_numbers'] = containers.length > 0 ? 0.9 : 0;
 
@@ -535,7 +547,7 @@ export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
     carrierName = 'OOCL';
   } else if (/COSCO/i.test(text)) {
     carrierName = 'COSCO';
-  } else if (/ONE[\s\-]*(?:LINE|NETWORK)/i.test(text)) {
+  } else if (/Ocean\s+Network\s+Express|ONE[\s\-]*(?:LINE|NETWORK)/i.test(text)) {
     carrierName = 'ONE';
   } else {
     // Fallback: explicit label
@@ -563,7 +575,7 @@ export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
   }
 
   // Reject consignee values that are form labels/noise
-  const CONSIGNEE_BLACKLIST = /^(?:TRANSPORT\s+CODE|TRANSPORT\s+DOCUMENT|CUSTOMS|DECLARATION|FORWARDING|FMC\s*NO)/i;
+  const CONSIGNEE_BLACKLIST = /^(?:TRANSPORT\s+CODE|TRANSPORT\s+DOCUMENT|CUSTOMS|DECLARATION|FORWARDING|FMC\s*NO|RECEIVED|PARTICULARS|SIGNED|PAGE)/i;
   if (consignee && CONSIGNEE_BLACKLIST.test(consignee)) {
     consignee = null;
     confidence['consignee'] = 0;
