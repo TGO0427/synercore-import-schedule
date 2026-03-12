@@ -105,6 +105,8 @@ function cleanExtraction(value: string | null): string | null {
 // ─── Pattern definitions ───
 
 const BOL_NUMBER_PATTERNS = [
+  // Customs Worksheet: "TRANSPORT DOCUMENT NUMBER : OOLU8881386790"
+  /TRANSPORT\s+DOCUMENT\s+(?:NUMBER|NO\.?)\s*[:\s]*([A-Z0-9][\w\-\/]{4,30})/i,
   /B\/?L\s*(?:No\.?|Number|#|:)\s*[:\s]*([A-Z0-9][\w\-\/]{4,30})/i,
   /(?:Bill\s+of\s+Lading|BOL)\s*(?:No\.?|Number|#|:)\s*[~:\s]*([A-Z0-9][\w\-\/]{4,30})/i,
   // MSC BOL format: MEDU... number after "BILL OF LADING No."
@@ -122,6 +124,9 @@ const VESSEL_PATTERNS = [
   /(?:Vessel\s*(?:Name)?|Motor\s*Vessel|M\/V|Ocean\s*Vessel)\s*[:\s]+([A-Z][A-Za-z0-9\s\-\.]{2,40}?)(?:\s*(?:Voyage|Voy|V\/|$|\n))/i,
   /(?:Vessel\s*(?:Name)?|Motor\s*Vessel|M\/V)\s*[:\s]+([A-Z][A-Za-z0-9][A-Za-z0-9\s\-\.]{1,38})/i,
 ];
+
+// Words that should never be extracted as vessel names
+const VESSEL_BLACKLIST = /^(?:BILL\s+OF\s+LADING|BILL\s+OF\s+ENTRY|CUSTOMS\s+WORKSHEET|SHIPPING\s+ORDER|DRAFT|ORIGINAL|COPY)$/i;
 
 // Voyage: require explicit "Voyage" or "Voy" label (NOT just "V." which is too ambiguous)
 // Voyage numbers typically have digits: e.g., 2401E, 025W, V.123, GA601W
@@ -154,6 +159,8 @@ const PORT_DISCHARGE_PATTERNS = [
 ];
 
 const CONSIGNEE_PATTERNS = [
+  // Customs Worksheet: "IMPORTER : AFRICAN FOOD INDUSTRIES (PTY) LTD"
+  /IMPORTER\s*[:\s]+([A-Z][^\n]{4,100})/i,
   // MSC BOL: "CONSIGNEE:" followed by boilerplate, then company name on next line
   // Stop at LTD/PTY boundary (OCR may misread PTY as "flap)" etc.)
   /CONSIGNEE[:\s][^\n]*\n([A-Z][^\n]*?\b(?:PTY|LTD|INC|CORP|LLC)\b[^\n]{0,10}?\bLTD\b)/i,
@@ -205,13 +212,18 @@ const PACKAGES_PATTERNS = [
 ];
 
 const FREIGHT_PATTERNS = [
+  // Customs Worksheet: "FREIGHT / INSURANCE (deducted) 3360.00 USD"
+  /FREIGHT\s*\/\s*INSURANCE\s*\(?[^)]*\)?\s*([\d,\.]+)\s*USD/i,
   /(?:Freight|Freight\s+Charges?|Ocean\s+Freight)\s*[:\s]*(?:USD|US\$|\$)\s*([\d,\.]+)/i,
   /(?:USD|US\$|\$)\s*([\d,\.]+)\s*(?:Freight|as\s+agreed)/i,
   /(?:Freight|Freight\s+Charges?)\s*[:\s]*([\d,\.]+)/i,
 ];
 
 const VALUE_PATTERNS = [
+  // Customs Worksheet: "SUPPLIER'S INVOICE #QD260105(CIF) 65520.00 USD"
+  /SUPPLIER'?S?\s+INVOICE\s*#?\w*\s*\(?[^)]*\)?\s*([\d,\.]+)\s*USD/i,
   /(?:Declared\s+Value|Invoice\s+Value|Cargo\s+Value)\s*[:\s]*(?:USD|US\$|\$)\s*([\d,\.]+)/i,
+  /(?:Foreign\s+Amount)\s*[:\s]*(?:USD|US\$|\$)?\s*([\d,\.]+)\s*USD/i,
 ];
 
 const DATE_PATTERNS = [
@@ -220,6 +232,8 @@ const DATE_PATTERNS = [
 ];
 
 const ONBOARD_DATE_PATTERNS = [
+  // Customs Worksheet: "SHIPPED ON BOARD : 16/01/2026"
+  /SHIPPED\s+ON\s+BOARD\s*[:\s]+(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i,
   /(?:Shipped\s+on\s+Board|On\s+Board\s+Date|Laden\s+on\s+Board)\s*[:\s]*(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i,
   /(?:Shipped\s+on\s+Board|On\s+Board\s+Date)\s*[:\s]*(\d{1,2}\s+\w{3,9}\s+\d{4})/i,
   // MSC BOL: "SHIPPED ON BOARD DATE" then date on next/same line (dd-Mon-yyyy)
@@ -281,6 +295,17 @@ function parseDate(text: string | null): string | null {
       const mon = monthMap[monMatch[2].substring(0, 3).toLowerCase()];
       if (mon) {
         return `${monMatch[3]}-${mon}-${monMatch[1].padStart(2, '0')}`;
+      }
+    }
+    // Handle dd/mm/yyyy or dd-mm-yyyy (common in customs docs, South African format)
+    const ddmmMatch = text.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
+    if (ddmmMatch) {
+      const day = parseInt(ddmmMatch[1]);
+      const month = parseInt(ddmmMatch[2]);
+      // If day > 12, it must be dd/mm format; if month > 12, it's mm/dd
+      // Default to dd/mm (South African convention)
+      if (day <= 31 && month <= 12) {
+        return `${ddmmMatch[3]}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       }
     }
     const d = new Date(text + 'T00:00:00');
@@ -373,12 +398,17 @@ export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
   };
 
   const bolNumber = extract('bol_number', BOL_NUMBER_PATTERNS);
-  const vesselName = extract('vessel_name', VESSEL_PATTERNS);
+  let vesselName = extract('vessel_name', VESSEL_PATTERNS);
+  // Reject false positive vessel names (document titles etc.)
+  if (vesselName && VESSEL_BLACKLIST.test(vesselName)) {
+    vesselName = null;
+    confidence['vessel_name'] = 0;
+  }
   const voyageNumber = extract('voyage_number', VOYAGE_PATTERNS);
   const portOfLoading = extract('port_of_loading', PORT_LOADING_PATTERNS);
   const portOfDischarge = extract('port_of_discharge', PORT_DISCHARGE_PATTERNS);
   const consignee = extract('consignee', CONSIGNEE_PATTERNS);
-  const shipper = extract('shipper', SHIPPER_PATTERNS);
+  let shipper = extract('shipper', SHIPPER_PATTERNS);
   const notifyParty = extract('notify_party', NOTIFY_PATTERNS);
   const descriptionOfGoods = extract('description_of_goods', DESCRIPTION_PATTERNS);
   const containers = findAllContainers(text);
@@ -450,8 +480,15 @@ export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
   }
   confidence['carrier_name'] = carrierName ? 0.7 : 0;
 
-  // Supplier — try shipper as fallback
-  const supplierName = shipper;
+  // Reject shipper values that are legal disclaimers/clause fragments
+  const SHIPPER_BLACKLIST = /^(?:BUT\s+NOT|NOT\s+RESPONSIBLE|AS\s+AGENT|ACCORDING|RECEIVED|SAID|APPARENT)/i;
+  if (shipper && SHIPPER_BLACKLIST.test(shipper)) {
+    shipper = null;
+    confidence['shipper'] = 0;
+  }
+
+  // Supplier — try shipper as fallback, or consignee for customs worksheets (importer)
+  const supplierName = shipper || null;
 
   // ── Post-processing: clean common OCR artifacts ──
   const cleanOcrField = (val: string | null): string | null => {
