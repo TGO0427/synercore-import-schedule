@@ -140,13 +140,22 @@ router.get(
       conditions.push(`b.carrier_name ILIKE $${paramIndex++}`);
       params.push(`%${req.query.carrier}%`);
     }
-    if (req.query.date_from) {
-      conditions.push(`COALESCE(b.issue_date, b.ship_on_board_date) >= $${paramIndex++}`);
+    if (req.query.date_from && req.query.date_to) {
+      // Include BOLs whose date falls in range, OR BOLs with no date that were created in range
+      conditions.push(`(
+        (COALESCE(b.issue_date, b.ship_on_board_date) >= $${paramIndex} AND COALESCE(b.issue_date, b.ship_on_board_date) <= $${paramIndex + 1})
+        OR (b.issue_date IS NULL AND b.ship_on_board_date IS NULL AND b.created_at >= $${paramIndex}::date AND b.created_at <= ($${paramIndex + 1}::date + INTERVAL '1 day'))
+      )`);
+      params.push(req.query.date_from, req.query.date_to);
+      paramIndex += 2;
+    } else if (req.query.date_from) {
+      conditions.push(`(COALESCE(b.issue_date, b.ship_on_board_date) >= $${paramIndex} OR (b.issue_date IS NULL AND b.ship_on_board_date IS NULL AND b.created_at >= $${paramIndex}::date))`);
       params.push(req.query.date_from);
-    }
-    if (req.query.date_to) {
-      conditions.push(`COALESCE(b.issue_date, b.ship_on_board_date) <= $${paramIndex++}`);
+      paramIndex++;
+    } else if (req.query.date_to) {
+      conditions.push(`(COALESCE(b.issue_date, b.ship_on_board_date) <= $${paramIndex} OR (b.issue_date IS NULL AND b.ship_on_board_date IS NULL AND b.created_at <= ($${paramIndex}::date + INTERVAL '1 day')))`);
       params.push(req.query.date_to);
+      paramIndex++;
     }
     if (req.query.search) {
       conditions.push(`(
@@ -201,8 +210,8 @@ function parseMonth(monthStr: string | undefined): { monthStart: string; monthEn
   return { monthStart, monthEnd };
 }
 
-// Helper: BOL date column for month filtering
-const BOL_DATE_COL = `COALESCE(issue_date, ship_on_board_date)`;
+// Helper: BOL date column for month filtering — falls back to created_at for undated BOLs
+const BOL_DATE_COL = `COALESCE(issue_date, ship_on_board_date, created_at::date)`;
 
 /**
  * GET /api/bol-audit/stats
