@@ -121,11 +121,12 @@ const BOL_NUMBER_PATTERNS = [
 
 // Vessel: require explicit label, capture name with 3+ chars, must look like a proper name
 const VESSEL_PATTERNS = [
-  // OOCL: "VESSEL/VOYAGE/FLAG" then "CHIBA C 91W" + "LIBERIA" on next line
-  // Capture vessel name up to flag country or digits that look like voyage
-  /VESSEL\s*\/\s*VOYAGE\s*\/?\s*FLAG[^\n]*\n\s*([A-Z][A-Za-z\s]{2,25}?\s+[A-Z]?\s*\d+\w*)/i,
-  // OOCL: "VESSEL/VOYAGE" header then vessel name on next line — stop before port labels
-  /VESSEL\s*\/\s*VOYAGE[^\n]*\n\s*([A-Z][A-Za-z0-9\s]{2,25}?)(?:\s{2,}|\s+(?:LIBERIA|PANAMA|HONG\s*KONG|SINGAPORE|MARSHALL|BAHAMAS|BERMUDA)|\n)/i,
+  // OOCL: vessel name appears near "ORIGINALS TO BE RELEASED AT" section
+  // Text: "ORIGINALS TO BE RELEASED AT\nSHANGHAI \nCHIBA C 91W \n"
+  // Vessel is a line with letters+digits+spaces that contains a voyage-like code (digits+letter)
+  /ORIGINALS\s+TO\s+BE\s+RELEASED\s+AT\s*\n[^\n]*\n\s*([A-Z][A-Za-z\s]+\w*\s+\d+\w*)\s*\n/i,
+  // OOCL fallback: look for "VESSEL/VOYAGE/FLAG" then scan ahead for vessel-like name
+  /VESSEL\s*\/\s*VOYAGE[^\n]*\n[\s\S]*?^([A-Z][A-Z\s]{2,20}\s+\d+\w{0,3})\s*$/im,
   // MSC BOL: "VESSEL AND VOYAGE NO" on one line, then "MSC TARANTO - GA601W" on next
   /VESSEL\s+AND\s+VOYAGE\s+NO[^\n]*\n([A-Z][A-Za-z0-9\s]{2,30}?)\s*[\-–]\s*[A-Z0-9]/i,
   /(?:Vessel\s*(?:Name)?|Motor\s*Vessel|M\/V|Ocean\s*Vessel)\s*[:\s]+([A-Z][A-Za-z0-9\s\-\.]{2,40}?)(?:\s*(?:Voyage|Voy|V\/|$|\n))/i,
@@ -138,8 +139,8 @@ const VESSEL_BLACKLIST = /^(?:BILL\s+OF\s+LADING|BILL\s+OF\s+ENTRY|CUSTOMS\s+WOR
 // Voyage: require explicit "Voyage" or "Voy" label (NOT just "V." which is too ambiguous)
 // Voyage numbers typically have digits: e.g., 2401E, 025W, V.123, GA601W
 const VOYAGE_PATTERNS = [
-  // OOCL: vessel line "CHIBA C 91W" — voyage is the trailing alphanumeric code with digits
-  /VESSEL\s*\/\s*VOYAGE[^\n]*\n\s*[A-Z][A-Za-z\s]+?\s+([A-Z]?\s*\d+\w{0,3})\b/i,
+  // OOCL: vessel+voyage on one line "CHIBA C 91W" — voyage is trailing code with digits
+  /ORIGINALS\s+TO\s+BE\s+RELEASED\s+AT\s*\n[^\n]*\n\s*[A-Z][A-Za-z\s]+?\s+(\d+\w{0,3})\s*\n/i,
   // MSC BOL: vessel and voyage on same line "MSC TARANTO - GA601W"
   /VESSEL\s+AND\s+VOYAGE\s+NO[^\n]*\n[A-Za-z0-9\s]+[\-–]\s*([A-Z0-9]{3,15})/i,
   /(?:Voyage|Voy\.?)\s*(?:No\.?|#)?\s*[:\s]*([A-Z0-9][\w\-]{2,20})/i,
@@ -172,10 +173,12 @@ const PORT_DISCHARGE_PATTERNS = [
 ];
 
 const CONSIGNEE_PATTERNS = [
-  // OOCL: "CONSIGNEE (COMPLETE NAME AND ADDRESS)" then company on next line
+  // OOCL: "CONSIGNEE (COMPLETE NAME AND ADDRESS)" — company may span two lines: "(PTY)\nLTD"
+  /CONSIGNEE\s*\(?(?:COMPLETE\s+)?NAME\s+AND\s+ADDRESS\)?[^\n]*\n\s*([A-Z][^\n]*?\(PTY\)\s*\n\s*LTD)/i,
   /CONSIGNEE\s*\(?(?:COMPLETE\s+)?NAME\s+AND\s+ADDRESS\)?[^\n]*\n\s*([A-Z][^\n]*?(?:PTY|LTD|INC|CORP|LLC)[^\n]{0,20}?\bLTD\b)/i,
   /CONSIGNEE\s*\(?(?:COMPLETE\s+)?NAME\s+AND\s+ADDRESS\)?[^\n]*\n\s*([A-Z][^\n]{4,100})/i,
-  // Generic: "CONSIGNEE'S COMPLETE NAME AND ADDRESS" then company on next line
+  // Generic: "CONSIGNEE'S COMPLETE NAME AND ADDRESS" — may span two lines
+  /CONSIGNEE'?S?\s+(?:COMPLETE\s+)?NAME\s+AND\s+ADDRESS[^\n]*\n\s*([A-Z][^\n]*?\(PTY\)\s*\n\s*LTD)/i,
   /CONSIGNEE'?S?\s+(?:COMPLETE\s+)?NAME\s+AND\s+ADDRESS[^\n]*\n\s*([A-Z][^\n]*?(?:PTY|LTD|INC|CORP|LLC)[^\n]{0,20}?\bLTD\b)/i,
   /CONSIGNEE'?S?\s+(?:COMPLETE\s+)?NAME\s+AND\s+ADDRESS[^\n]*\n\s*([A-Z][^\n]{4,100})/i,
   // Customs Worksheet: "IMPORTER : AFRICAN FOOD INDUSTRIES (PTY) LTD"
@@ -289,6 +292,10 @@ const DESCRIPTION_PATTERNS = [
   // Specific goods patterns first (more reliable than generic label matching)
   // Container line followed by goods description (e.g., "MSNU2831240 1759 Carton(s) of ...")
   /[A-Z]{4}\d{7}\s+(\d+\s+(?:Cartons?|Pkgs?|Pallets?|Pieces?|Bags?|Drums?)\(?s?\)?\s+of\s+[^\n]{5,200})/i,
+  // OOCL: "960 SODIUM CARBOXYMETHYL CELLULOSE" (quantity + product name, no "of")
+  /\d+\s+(?:BAGS?|CARTONS?|PKGS?)\s+[\s\S]*?\d+\s+((?:SODIUM|[A-Z]{4,})\s+[A-Z\s]{5,100})/i,
+  // Quantity + product name pattern (e.g., "960 BAGS ... SODIUM CARBOXYMETHYL CELLULOSE")
+  /(\d+\s+(?:Cartons?|Pkgs?|Bags?|Drums?|Pieces?)\s+[A-Z][A-Z\s\-()]{5,200})/i,
   // HS CODE line has goods description before it
   /(\d+\s+(?:Cartons?|Pkgs?)\(?s?\)?\s+of\s+[A-Z][^\n]{5,200}?)\s*(?:HS\s*CODE|$)/i,
   // Generic label-based patterns
