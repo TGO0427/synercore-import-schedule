@@ -5,12 +5,12 @@ import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
 import {
   Chart as ChartJS,
-  CategoryScale, LinearScale, BarElement, ArcElement,
-  Title, Tooltip, Legend,
+  CategoryScale, LinearScale, PointElement, LineElement, ArcElement,
+  Title, Tooltip, Legend, Filler,
 } from 'chart.js';
-import { Bar, Doughnut } from 'react-chartjs-2';
+import { Line, Doughnut } from 'react-chartjs-2';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Title, Tooltip, Legend, Filler);
 
 const STATUS_CONFIG = {
   pending: { label: 'Pending', color: '#f59e0b', bg: '#fef3c7' },
@@ -694,8 +694,22 @@ function BolAudit() {
     return {
       labels,
       datasets: [
-        { label: 'Overcharges', data: labels.map(l => byCarrier[l].over), backgroundColor: '#ef4444' },
-        { label: 'Undercharges', data: labels.map(l => byCarrier[l].under), backgroundColor: '#22c55e' },
+        {
+          label: 'Overcharges',
+          data: labels.map(l => byCarrier[l].over),
+          borderColor: '#dc2626',
+          backgroundColor: 'rgba(220,38,38,0.08)',
+          borderWidth: 2, pointRadius: 3, pointHoverRadius: 5,
+          tension: 0.3, fill: true,
+        },
+        {
+          label: 'Undercharges',
+          data: labels.map(l => byCarrier[l].under),
+          borderColor: '#059669',
+          backgroundColor: 'rgba(5,150,105,0.08)',
+          borderWidth: 2, pointRadius: 3, pointHoverRadius: 5,
+          tension: 0.3, fill: true,
+        },
       ],
     };
   }, [bols]);
@@ -910,10 +924,13 @@ function BolAudit() {
               <div className="dash-panel" style={{ flex: '2 1 400px', padding: 16 }}>
                 <h3 style={{ margin: '0 0 12px', fontSize: '0.95rem' }}>Freight Variance by Carrier</h3>
                 <div style={{ height: 250 }}>
-                  <Bar data={varianceChartData} options={{
+                  <Line data={varianceChartData} options={{
                     responsive: true, maintainAspectRatio: false,
                     plugins: { legend: { position: 'top' } },
-                    scales: { y: { beginAtZero: true, ticks: { callback: v => `$${v.toLocaleString()}` } } },
+                    scales: {
+                      x: { grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false }, ticks: { font: { size: 12 } } },
+                      y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false }, ticks: { callback: v => `$${v.toLocaleString()}`, font: { size: 11 } } },
+                    },
                   }} />
                 </div>
               </div>
