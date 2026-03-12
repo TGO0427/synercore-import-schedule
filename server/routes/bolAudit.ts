@@ -1150,9 +1150,17 @@ router.post(
         const dupFinding = auditResult.findings.find((f: any) => f.field === 'bol_number' && f.existing_filenames);
         const existingFiles: string[] = dupFinding?.existing_filenames || [];
         if (existingFiles.includes(req.file.originalname)) {
+          // Fetch the existing BOL's date so the user knows where to find it
+          const existingBol = dupFinding?.shipment_value
+            ? await queryOne(`SELECT id, COALESCE(issue_date, ship_on_board_date) as bol_date FROM bol_audits WHERE id = $1`, [dupFinding.shipment_value])
+            : null;
+          const dateHint = existingBol?.bol_date
+            ? `. It is in ${new Date(existingBol.bol_date).toLocaleString('default', { month: 'long', year: 'numeric' })} — switch month filter to view it`
+            : '. It may have no date set — try clearing the month filter or check all months';
           return res.status(409).json({
-            error: `Exact duplicate: BOL "${extracted.bol_number}" from file "${req.file.originalname}" has already been uploaded`,
+            error: `Exact duplicate: BOL "${extracted.bol_number}" from file "${req.file.originalname}" has already been uploaded${dateHint}`,
             existing_id: dupFinding?.shipment_value,
+            existing_date: existingBol?.bol_date || null,
           });
         }
         // BOL number exists but from a different file — allow but escalate to discrepancy

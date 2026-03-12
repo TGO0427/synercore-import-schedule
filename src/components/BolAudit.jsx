@@ -528,6 +528,12 @@ function BolAudit() {
         fetchStats();
       } else if (res.status === 409) {
         showError(json.error || 'This BOL has already been uploaded');
+        // Auto-navigate to the month where the duplicate lives
+        if (json.existing_date) {
+          const d = new Date(json.existing_date);
+          const dupMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          if (dupMonth !== selectedMonth) setSelectedMonth(dupMonth);
+        }
       } else {
         showError(json.error || 'Failed to process PDF');
       }
