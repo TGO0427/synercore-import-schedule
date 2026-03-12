@@ -105,6 +105,8 @@ function cleanExtraction(value: string | null): string | null {
 // ─── Pattern definitions ───
 
 const BOL_NUMBER_PATTERNS = [
+  // OOCL Sea Waybill: "SEA WAYBILL NO. (WAYBILL) OOLU8881386790"
+  /(?:SEA\s+)?WAYBILL\s+NO\.?\s*\(?[^)]*\)?\s*([A-Z0-9][\w\-\/]{4,30})/i,
   // Customs Worksheet: "TRANSPORT DOCUMENT NUMBER : OOLU8881386790"
   /TRANSPORT\s+DOCUMENT\s+(?:NUMBER|NO\.?)\s*[:\s]*([A-Z0-9][\w\-\/]{4,30})/i,
   /B\/?L\s*(?:No\.?|Number|#|:)\s*[:\s]*([A-Z0-9][\w\-\/]{4,30})/i,
@@ -119,6 +121,8 @@ const BOL_NUMBER_PATTERNS = [
 
 // Vessel: require explicit label, capture name with 3+ chars, must look like a proper name
 const VESSEL_PATTERNS = [
+  // OOCL: "VESSEL/VOYAGE" header then vessel name on next line (e.g., "CHINA OIW")
+  /VESSEL\s*\/\s*VOYAGE[^\n]*\n([A-Z][A-Za-z0-9\s]{2,30})/i,
   // MSC BOL: "VESSEL AND VOYAGE NO" on one line, then "MSC TARANTO - GA601W" on next
   /VESSEL\s+AND\s+VOYAGE\s+NO[^\n]*\n([A-Z][A-Za-z0-9\s]{2,30}?)\s*[\-–]\s*[A-Z0-9]/i,
   /(?:Vessel\s*(?:Name)?|Motor\s*Vessel|M\/V|Ocean\s*Vessel)\s*[:\s]+([A-Z][A-Za-z0-9\s\-\.]{2,40}?)(?:\s*(?:Voyage|Voy|V\/|$|\n))/i,
@@ -131,6 +135,8 @@ const VESSEL_BLACKLIST = /^(?:BILL\s+OF\s+LADING|BILL\s+OF\s+ENTRY|CUSTOMS\s+WOR
 // Voyage: require explicit "Voyage" or "Voy" label (NOT just "V." which is too ambiguous)
 // Voyage numbers typically have digits: e.g., 2401E, 025W, V.123, GA601W
 const VOYAGE_PATTERNS = [
+  // OOCL: "LIBERTY" label near vessel, voyage on the same line
+  /VESSEL\s*\/\s*VOYAGE[^\n]*\n[A-Za-z0-9\s]+?\n\s*([A-Z0-9][\w\-]{2,15})/i,
   // MSC BOL: vessel and voyage on same line "MSC TARANTO - GA601W"
   /VESSEL\s+AND\s+VOYAGE\s+NO[^\n]*\n[A-Za-z0-9\s]+[\-–]\s*([A-Z0-9]{3,15})/i,
   /(?:Voyage|Voy\.?)\s*(?:No\.?|#)?\s*[:\s]*([A-Z0-9][\w\-]{2,20})/i,
@@ -139,6 +145,8 @@ const VOYAGE_PATTERNS = [
 // Ports: require the full label, capture only proper location names (not clause text)
 // Port names: typically capitalized words, city/country names, 4+ chars
 const PORT_LOADING_PATTERNS = [
+  // OOCL: "PORT OF LOADING" on one line, port name on next line
+  /PORT\s+OF\s+LOADING\s*\n\s*([A-Z][A-Za-z\s,\-\.]{3,40})/im,
   // MSC BOL OCR: vessel line has POL inline "MSC TARANTO - GA601W DALIAN.CHLNG XXXX"
   // Match text between voyage number and XXXX placeholder
   /[A-Z0-9]{3,10}W?\s+([A-Z][A-Za-z\.,\s]{3,30}?)\s+X{4,}/i,
@@ -150,6 +158,8 @@ const PORT_LOADING_PATTERNS = [
 ];
 
 const PORT_DISCHARGE_PATTERNS = [
+  // OOCL: "PORT OF DISCHARGE" on one line, port name on next line
+  /PORT\s+OF\s+DISCHARGE\s*\n\s*([A-Z][A-Za-z\s,\-\.]{3,40})/im,
   // MSC BOL OCR: booking ref line "177DPPPED60245 Cape Town, South Africa OOOO XXXX"
   /[A-Z0-9]{8,}\s+(.+?)\s+[OX]{4}/i,
   /(?:Port\s+of\s+Discharge)\s*[:\s]+([A-Z][A-Za-z\s,]{3,45}?)(?:\s*(?:Port\s+of|Vessel|Notify|Consignee|Place|$|\n))/i,
@@ -159,10 +169,12 @@ const PORT_DISCHARGE_PATTERNS = [
 ];
 
 const CONSIGNEE_PATTERNS = [
+  // OOCL/generic: "CONSIGNEE'S COMPLETE NAME AND ADDRESS" then company on next line
+  /CONSIGNEE'?S?\s+(?:COMPLETE\s+)?NAME\s+AND\s+ADDRESS[^\n]*\n\s*([A-Z][^\n]*?(?:PTY|LTD|INC|CORP|LLC)[^\n]{0,20}?\bLTD\b)/i,
+  /CONSIGNEE'?S?\s+(?:COMPLETE\s+)?NAME\s+AND\s+ADDRESS[^\n]*\n\s*([A-Z][^\n]{4,100})/i,
   // Customs Worksheet: "IMPORTER : AFRICAN FOOD INDUSTRIES (PTY) LTD"
   /IMPORTER\s*[:\s]+([A-Z][^\n]{4,100})/i,
   // MSC BOL: "CONSIGNEE:" followed by boilerplate, then company name on next line
-  // Stop at LTD/PTY boundary (OCR may misread PTY as "flap)" etc.)
   /CONSIGNEE[:\s][^\n]*\n([A-Z][^\n]*?\b(?:PTY|LTD|INC|CORP|LLC)\b[^\n]{0,10}?\bLTD\b)/i,
   /CONSIGNEE[:\s][^\n]*\n([A-Z][^\n]*?\bLTD\b)/i,
   // Company name line after CONSIGNEE with address on next line
@@ -171,6 +183,9 @@ const CONSIGNEE_PATTERNS = [
 ];
 
 const SHIPPER_PATTERNS = [
+  // OOCL/generic: "SHIPPER'S COMPLETE NAME AND ADDRESS" then company on next line
+  /SHIPPER'?S?\s+(?:COMPLETE\s+)?NAME\s+AND\s+ADDRESS[^\n]*\n\s*([A-Z][^\n]*?(?:CO\.?,?\s*LTD|PTY\)?\s*LTD|INC\.?|CORP\.?|LLC|GMBH|S\.?A\.?))/i,
+  /SHIPPER'?S?\s+(?:COMPLETE\s+)?NAME\s+AND\s+ADDRESS[^\n]*\n\s*([A-Z][^\n]{4,100})/i,
   // MSC BOL: "SHIPPER" followed by other column header on same line, company on next line
   /SHIPPER\s+(?:CARRIER|AGENT)[^\n]*\n([A-Z][^\n]*?(?:CO\.?,?\s*LTD|PTY\)?\s*LTD|INC\.?|CORP\.?|LLC|GMBH|S\.?A\.?))/i,
   /^SHIPPER\s*\n([A-Z][^\n]{4,100})/im,
@@ -178,6 +193,8 @@ const SHIPPER_PATTERNS = [
 ];
 
 const NOTIFY_PATTERNS = [
+  // OOCL: "NOTIFY PARTY (COMPLETE NAME AND ADDRESS)" then company on next line
+  /NOTIFY\s+PARTY\s*\(?[^)]*\)?\s*[:\s]*\n\s*([A-Z][^\n]*?(?:PTY|LTD|INC|CORP|LLC|INDUSTRIES)[^\n]{0,80})/im,
   // MSC BOL: "NOTIFY PARTIES" with clause note, then company on next line
   /NOTIFY\s+PART(?:Y|IES)\s*[:\s]*(?:\([^\)]*\)\s*\n)?([A-Z][A-Z\s]{3,}(?:PTY|LTD|INC|CO|FOOD|INDUSTRIES)[^\n]{0,80})/im,
   /(?:Notify\s+Party)\s*[:\s]+([A-Z][^\n]{4,100})/i,
@@ -232,10 +249,12 @@ const DATE_PATTERNS = [
 ];
 
 const ONBOARD_DATE_PATTERNS = [
+  // OOCL: "DATE LADEN ON BOARD" then date (16 JAN 2026)
+  /DATE\s+LADEN\s+ON\s+BOARD\s*[:\s=]*(\d{1,2}\s+\w{3,9}\s+\d{4})/i,
   // Customs Worksheet: "SHIPPED ON BOARD : 16/01/2026"
   /SHIPPED\s+ON\s+BOARD\s*[:\s]+(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i,
   /(?:Shipped\s+on\s+Board|On\s+Board\s+Date|Laden\s+on\s+Board)\s*[:\s]*(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i,
-  /(?:Shipped\s+on\s+Board|On\s+Board\s+Date)\s*[:\s]*(\d{1,2}\s+\w{3,9}\s+\d{4})/i,
+  /(?:Shipped\s+on\s+Board|On\s+Board\s+Date|Laden\s+on\s+Board)\s*[:\s]*(\d{1,2}\s+\w{3,9}\s+\d{4})/i,
   // MSC BOL: "SHIPPED ON BOARD DATE" then date on next/same line (dd-Mon-yyyy)
   /SHIPPED\s+ON\s+BOARD\s+DATE\s*\n?\s*(\d{1,2}[\-\/]\w{3,9}[\-\/]\d{2,4})/i,
   // Standalone date format dd-Mon-yyyy near "Board" or "Shipped"
@@ -458,6 +477,8 @@ export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
     carrierName = 'Hapag-Lloyd';
   } else if (/EVERGREEN/i.test(text)) {
     carrierName = 'Evergreen';
+  } else if (/ORIENT\s+OVERSEAS|OOCL/i.test(text)) {
+    carrierName = 'OOCL';
   } else if (/COSCO/i.test(text)) {
     carrierName = 'COSCO';
   } else if (/ONE[\s\-]*(?:LINE|NETWORK)/i.test(text)) {
@@ -738,7 +759,16 @@ export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseRe
         let containerType = '';
 
         // Try to identify container type from BOL content
-        if (/40\s*h[cq]|40.*high\s*cube/i.test(allText)) {
+        // OOCL format: "/PCL/FCL /40HC/" or "/FCL/FCL /40GP/"
+        if (/\/(?:PCL|FCL|LCL)\s*\/\s*(?:PCL|FCL|LCL)\s*\/\s*(40HC|40GP|20GP)\b/i.test(allText)) {
+          const ctMatch = allText.match(/\/(?:PCL|FCL|LCL)\s*\/\s*(?:PCL|FCL|LCL)\s*\/\s*(40HC|40GP|20GP)/i);
+          if (ctMatch) {
+            const ct = ctMatch[1].toUpperCase();
+            if (ct === '40HC') { benchmarkRate = parseFloat(rate.rate_40hc_usd) || null; containerType = '40HC'; }
+            else if (ct === '40GP') { benchmarkRate = parseFloat(rate.rate_40gp_usd) || null; containerType = '40GP'; }
+            else if (ct === '20GP') { benchmarkRate = parseFloat(rate.rate_20gp_usd) || null; containerType = '20GP'; }
+          }
+        } else if (/40\s*h[cq]|40.*high\s*cube/i.test(allText)) {
           benchmarkRate = parseFloat(rate.rate_40hc_usd) || null;
           containerType = '40HC';
         } else if (/40\s*(?:gp|ft|dc|')|40.*(?:dry|general|standard)/i.test(allText)) {
