@@ -156,21 +156,20 @@ const VOYAGE_PATTERNS = [
 // Ports: require the full label, capture only proper location names (not clause text)
 // Port names: typically capitalized words, city/country names, 4+ chars
 const PORT_LOADING_PATTERNS = [
-  // OOCL: "PORT OF LOADING" on one line, port name on next line
-  /PORT\s+OF\s+LOADING\s*\n\s*([A-Z][A-Za-z\s,\-\.]{3,40})/im,
+  // OOCL/MSC: "PORT OF LOADING" on one line, port name on next line (single line only)
+  /PORT\s+OF\s+LOADING\s*\n\s*([A-Z][A-Za-z ,\-\.]{3,40})/im,
   // MSC BOL OCR: vessel line has POL inline "MSC TARANTO - GA601W DALIAN.CHLNG XXXX"
-  // Match text between voyage number and XXXX placeholder
-  /[A-Z0-9]{3,10}W?\s+([A-Z][A-Za-z\.,\s]{3,30}?)\s+X{4,}/i,
+  /[A-Z0-9]{3,10}W?\s+([A-Z][A-Za-z\., ]{3,30}?)\s+X{4,}/i,
   // MSC BOL: "PORT OF LOADING" header line, then actual port on next line
-  /PORT\s+OF\s+LOADING[^\n]*\n[^\n]*?[A-Z0-9]+W?\s+([A-Z][A-Za-z\.,\s]{3,30}?)\s+X{4,}/im,
-  /(?:Port\s+of\s+Loading)\s*[:\s]+([A-Z][A-Za-z\s,]{3,45}?)(?:\s*(?:Port\s+of|Vessel|Voyage|Carrier|Place|$|\n))/i,
-  /(?:Port\s+of\s+Loading)\s*[:\s]+([A-Z][A-Za-z][A-Za-z\s,\-]{2,40})/i,
-  /(?:Loading\s+Port)\s*[:\s]+([A-Z][A-Za-z][A-Za-z\s,\-]{2,40})/i,
+  /PORT\s+OF\s+LOADING[^\n]*\n[^\n]*?[A-Z0-9]+W?\s+([A-Z][A-Za-z\., ]{3,30}?)\s+X{4,}/im,
+  /(?:Port\s+of\s+Loading)\s*[:\s]+([A-Z][A-Za-z ,]{3,45}?)(?:\s*(?:Port\s+of|Vessel|Voyage|Carrier|Place|$|\n))/i,
+  /(?:Port\s+of\s+Loading)\s*[:\s]+([A-Z][A-Za-z][A-Za-z ,\-]{2,40})/i,
+  /(?:Loading\s+Port)\s*[:\s]+([A-Z][A-Za-z][A-Za-z ,\-]{2,40})/i,
 ];
 
 const PORT_DISCHARGE_PATTERNS = [
-  // OOCL: "PORT OF DISCHARGE" on one line, port name on next line
-  /PORT\s+OF\s+DISCHARGE\s*\n\s*([A-Z][A-Za-z\s,\-\.]{3,40})/im,
+  // OOCL/MSC: "PORT OF DISCHARGE" on one line, port name on next line (single line only)
+  /PORT\s+OF\s+DISCHARGE\s*\n\s*([A-Z][A-Za-z ,\-\.]{3,40})/im,
   // MSC BOL OCR: booking ref line "177DPPPED60245 Cape Town, South Africa OOOO XXXX"
   /[A-Z0-9]{8,}\s+(.+?)\s+[OX]{4}/i,
   /(?:Port\s+of\s+Discharge)\s*[:\s]+([A-Z][A-Za-z\s,]{3,45}?)(?:\s*(?:Port\s+of|Vessel|Notify|Consignee|Place|$|\n))/i,
@@ -458,26 +457,28 @@ export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
   let portOfDischarge = extract('port_of_discharge', PORT_DISCHARGE_PATTERNS);
 
   // Post-processing: detect port swap from garbled multi-column PDF extraction
-  // If discharge port is a known Asian loading port and loading port looks South African, swap them
+  // Asian ports are loading origins, SA ports are discharge destinations
   const ASIAN_PORTS = /^(?:QINGDAO|SHANGHAI|DALIAN|TIANJIN|NINGBO|SHENZHEN|XIAMEN|GUANGZHOU|JAKARTA|PORT\s+KELANG|BUSAN|HONG\s*KONG|YOKOHAMA|TOKYO|KAOHSIUNG)/i;
   const SA_PORTS = /^(?:DURBAN|CAPE\s+TOWN|PORT\s+ELIZABETH|COEGA|NGQURA)/i;
-  if (portOfDischarge && portOfLoading && ASIAN_PORTS.test(portOfDischarge) && SA_PORTS.test(portOfLoading)) {
-    [portOfLoading, portOfDischarge] = [portOfDischarge, portOfLoading];
-    confidence['port_of_loading'] = 0.7;
-    confidence['port_of_discharge'] = 0.7;
-  }
-  // Also swap if discharge is Asian and loading is null/empty (MSC column order issue)
-  if (portOfDischarge && !portOfLoading && ASIAN_PORTS.test(portOfDischarge)) {
-    portOfLoading = portOfDischarge;
-    portOfDischarge = null;
-    confidence['port_of_loading'] = 0.6;
-    confidence['port_of_discharge'] = 0;
-    // Try to find SA port as discharge from text
+
+  // If discharge is an Asian port, it's almost certainly the loading port (swap)
+  if (portOfDischarge && ASIAN_PORTS.test(portOfDischarge)) {
+    const correctPOL = portOfDischarge;
+    // Try to find the real discharge port from text
     const saMatch = text.match(/\b(Durban|Cape\s+Town|Port\s+Elizabeth)[,\s]+South\s+Africa\b/i);
-    if (saMatch) {
-      portOfDischarge = saMatch[1];
-      confidence['port_of_discharge'] = 0.7;
-    }
+    portOfLoading = correctPOL;
+    portOfDischarge = saMatch ? saMatch[1] : portOfLoading === portOfDischarge ? null : portOfLoading;
+    if (portOfDischarge === portOfLoading) portOfDischarge = null;
+    confidence['port_of_loading'] = 0.7;
+    confidence['port_of_discharge'] = saMatch ? 0.7 : 0;
+  }
+  // If loading is a SA port and discharge is null/non-Asian, they might also be swapped
+  if (portOfLoading && SA_PORTS.test(portOfLoading) && portOfDischarge && ASIAN_PORTS.test(portOfDischarge) === false) {
+    const temp = portOfLoading;
+    portOfLoading = portOfDischarge;
+    portOfDischarge = temp;
+    confidence['port_of_loading'] = 0.6;
+    confidence['port_of_discharge'] = 0.6;
   }
   let consignee = extract('consignee', CONSIGNEE_PATTERNS);
   let shipper = extract('shipper', SHIPPER_PATTERNS);
