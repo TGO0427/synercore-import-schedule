@@ -59,12 +59,38 @@ export async function parseForwardingInvoice(pdfBuffer: Buffer): Promise<Forward
   const invoiceMatch = text.match(/TAX\s+INVOICE\s+(\S+)/i);
   const invoiceNumber = invoiceMatch ? invoiceMatch[1] : null;
 
-  // BOL numbers
-  const oceanBolMatch = text.match(/OCEAN\s+BILL\s+OF\s+LADING\s*[:\s]+(\S+)/i);
-  const oceanBolNumber = oceanBolMatch ? oceanBolMatch[1].trim() : null;
+  // BOL numbers — try multiple label formats
+  const oceanBolPatterns = [
+    /OCEAN\s+B(?:ILL\s+OF\s+LADING|\/L|L)\s*(?:NO\.?)?\s*[:\s]+(\S+)/i,
+    /O\.?B\.?\/?L\.?\s*(?:NO\.?)?\s*[:\s]+(\S+)/i,
+    /MBL\s*(?:NO\.?)?\s*[:\s]+(\S+)/i,
+    /MASTER\s+B(?:ILL|\/L|L)\s*(?:NO\.?)?\s*[:\s]+(\S+)/i,
+    /B\/L\s*(?:NO\.?)?\s*[:\s]*([A-Z]{4}\w{8,})/i,
+    /BL\s*(?:NO\.?|NUMBER)\s*[:\s]+(\S+)/i,
+    /BILL\s+OF\s+LADING\s*(?:NO\.?)?\s*[:\s]+(\S+)/i,
+  ];
+  let oceanBolNumber: string | null = null;
+  for (const pat of oceanBolPatterns) {
+    const m = text.match(pat);
+    if (m) { oceanBolNumber = m[1].trim(); break; }
+  }
 
-  const houseBolMatch = text.match(/HOUSE\s+BILL\s+OF\s+LADING\s*[:\s]+(\S+)/i);
-  const houseBolNumber = houseBolMatch ? houseBolMatch[1].trim() : null;
+  const houseBolPatterns = [
+    /HOUSE\s+B(?:ILL\s+OF\s+LADING|\/L|L)\s*(?:NO\.?)?\s*[:\s]+(\S+)/i,
+    /H\.?B\.?\/?L\.?\s*(?:NO\.?)?\s*[:\s]+(\S+)/i,
+    /HBL\s*(?:NO\.?)?\s*[:\s]+(\S+)/i,
+  ];
+  let houseBolNumber: string | null = null;
+  for (const pat of houseBolPatterns) {
+    const m = text.match(pat);
+    if (m) { houseBolNumber = m[1].trim(); break; }
+  }
+
+  // Fallback: look for common BOL number formats anywhere (MEDU, OOLU, ONEYP, COSU, etc.)
+  if (!oceanBolNumber && !houseBolNumber) {
+    const bolFallback = text.match(/\b((?:MEDU|OOLU|ONEYP|COSU|HDMU|MAEU|MSCU|ZIMU|HLCU)[A-Z0-9]{6,})\b/i);
+    if (bolFallback) oceanBolNumber = bolFallback[1].toUpperCase();
+  }
 
   // Shipper & Consignee
   const shipperMatch = text.match(/SHIPPER\s*:\s*(.+)/i);

@@ -1318,18 +1318,28 @@ router.post(
       // Find matching BOL by ocean or house BOL number
       const bolNumber = invoice.ocean_bol_number || invoice.house_bol_number;
       if (!bolNumber) {
-        return res.status(400).json({ error: 'Could not extract a BOL number from the forwarding invoice.' });
+        return res.status(400).json({
+          error: 'Could not extract a BOL number from the forwarding invoice.',
+          extracted: invoice,
+        });
       }
 
-      const existing = await queryOne(
+      // Try exact match first, then partial match (BOL number contained in DB or vice-versa)
+      let existing = await queryOne(
         `SELECT * FROM bol_audits WHERE bol_number = $1 ORDER BY created_at DESC LIMIT 1`,
         [bolNumber]
       );
+      if (!existing) {
+        existing = await queryOne(
+          `SELECT * FROM bol_audits WHERE bol_number ILIKE $1 OR $2 ILIKE '%' || bol_number || '%' ORDER BY created_at DESC LIMIT 1`,
+          [`%${bolNumber}%`, bolNumber]
+        );
+      }
 
       if (!existing) {
         return res.status(404).json({
           error: `No matching BOL found for "${bolNumber}". Upload the BOL PDF first, then upload the forwarding invoice.`,
-          extracted: { bol_number: bolNumber, freight_usd: invoice.freight_usd, invoice_number: invoice.invoice_number },
+          extracted: invoice,
         });
       }
 

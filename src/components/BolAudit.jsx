@@ -579,6 +579,8 @@ function BolAudit() {
         fetchStats();
       } else {
         showError(json.error || 'Failed to process forwarding invoice');
+        // Log extracted data for debugging
+        if (json.extracted) console.log('Forwarding invoice extracted:', json.extracted);
       }
     } catch (err) {
       showError('Failed to upload forwarding invoice');
