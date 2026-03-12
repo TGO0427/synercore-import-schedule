@@ -738,11 +738,14 @@ export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseRe
 
   // ── Cost protection: benchmark rate comparison ──
   // Always benchmark against "MSC Standard" as the baseline rate.
-  // If no current benchmarks exist, fall back to the most recent expired one.
+  // Match benchmarks to the BOL's ship-on-board date (or issue date as fallback).
+  // If no date-matched benchmarks exist, fall back to the most recent one.
   try {
     // Use cleaned port names for benchmark matching
     const bolPOL = cleanedPOL || extracted.port_of_loading;
     const bolPOD = cleanedPOD || extracted.port_of_discharge;
+    // BOL date for benchmark period matching: prefer ship_on_board_date
+    const bolDate = extracted.ship_on_board_date || extracted.issue_date || null;
 
     if (bolPOL || bolPOD) {
       // Extract just the city name (first word) for flexible matching
@@ -762,20 +765,28 @@ export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseRe
       };
 
       // Try MSC Standard first (always the baseline benchmark)
-      const tryBenchmarkQuery = async (portConditions: string[], portParams: any[], requireCurrent: boolean): Promise<any[]> => {
-        const validClause = requireCurrent
-          ? 'AND (valid_until IS NULL OR valid_until >= CURRENT_DATE)'
-          : '';
-        const orderClause = requireCurrent
-          ? 'ORDER BY valid_from DESC NULLS LAST'
-          : 'ORDER BY valid_until DESC NULLS FIRST';
+      // dateMatch: 'exact' uses the BOL date to find the right benchmark period,
+      //            'any' ignores dates (most recent), 'none' for null-date benchmarks only
+      const tryBenchmarkQuery = async (portConditions: string[], portParams: any[], dateMatch: 'exact' | 'any' | 'none'): Promise<any[]> => {
+        let validClause = '';
+        let orderClause = 'ORDER BY valid_from DESC NULLS LAST';
+
+        if (dateMatch === 'exact' && bolDate) {
+          // Find benchmark whose period covers the BOL date
+          validClause = `AND (valid_from IS NOT NULL AND valid_until IS NOT NULL AND valid_from <= '${bolDate}'::date AND valid_until >= '${bolDate}'::date)`;
+          orderClause = 'ORDER BY valid_from DESC';
+        } else if (dateMatch === 'none') {
+          // Only null-date (always-active) benchmarks
+          validClause = 'AND valid_from IS NULL AND valid_until IS NULL';
+        }
+        // dateMatch === 'any' has no date filter — picks most recent
 
         if (portConditions.length === 0) return [];
 
         // First: try MSC Standard
         const mscIdx = portParams.length + 1;
         const mscResults = await queryAll(
-          `SELECT rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd, carrier_name
+          `SELECT rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd, carrier_name, valid_from, valid_until
            FROM freight_benchmarks
            WHERE ${portConditions.join(' AND ')}
              AND LOWER(carrier_name) = LOWER($${mscIdx})
@@ -788,7 +799,7 @@ export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseRe
 
         // Fallback: any carrier for the same route
         return queryAll(
-          `SELECT rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd, carrier_name
+          `SELECT rate_per_kg_usd, rate_20gp_usd, rate_40gp_usd, rate_40hc_usd, carrier_name, valid_from, valid_until
            FROM freight_benchmarks
            WHERE ${portConditions.join(' AND ')}
              ${validClause}
@@ -798,7 +809,7 @@ export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseRe
         );
       };
 
-      // Step 1: Match on both POL + POD (current benchmarks)
+      // Build port conditions for full route
       let params1: any[] = [];
       let idx1 = 1;
       const pol1 = buildPortConditions(polCity, bolPOL, 'port_of_loading', params1, idx1);
@@ -806,23 +817,36 @@ export async function autoAuditBol(extracted: ParsedBolData): Promise<BolParseRe
       const pod1 = buildPortConditions(podCity, bolPOD, 'port_of_discharge', params1, idx1);
       const conds1 = [...pol1.conditions, ...pod1.conditions];
 
-      let matchedBenchmarks = await tryBenchmarkQuery(conds1, params1, true);
+      // Step 1: Match on BOL date + full route (exact period match)
+      let matchedBenchmarks = bolDate ? await tryBenchmarkQuery(conds1, params1, 'exact') : [];
 
-      // Step 2: Try just discharge port (current)
-      if (matchedBenchmarks.length === 0 && podCity) {
+      // Step 2: BOL date + discharge port only
+      if (matchedBenchmarks.length === 0 && bolDate && podCity) {
         let params2: any[] = [];
         const pod2 = buildPortConditions(podCity, bolPOD, 'port_of_discharge', params2, 1);
-        matchedBenchmarks = await tryBenchmarkQuery(pod2.conditions, params2, true);
+        matchedBenchmarks = await tryBenchmarkQuery(pod2.conditions, params2, 'exact');
       }
 
-      // Step 3: Repeat with expired benchmarks (most recent) as final fallback
+      // Step 3: Null-date (always-active) benchmarks for full route
       if (matchedBenchmarks.length === 0) {
-        matchedBenchmarks = await tryBenchmarkQuery(conds1, params1, false);
+        matchedBenchmarks = await tryBenchmarkQuery(conds1, params1, 'none');
       }
+
+      // Step 4: Null-date benchmarks for discharge port only
       if (matchedBenchmarks.length === 0 && podCity) {
         let params3: any[] = [];
         const pod3 = buildPortConditions(podCity, bolPOD, 'port_of_discharge', params3, 1);
-        matchedBenchmarks = await tryBenchmarkQuery(pod3.conditions, params3, false);
+        matchedBenchmarks = await tryBenchmarkQuery(pod3.conditions, params3, 'none');
+      }
+
+      // Step 5: Final fallback — any benchmark for the route (most recent)
+      if (matchedBenchmarks.length === 0) {
+        matchedBenchmarks = await tryBenchmarkQuery(conds1, params1, 'any');
+      }
+      if (matchedBenchmarks.length === 0 && podCity) {
+        let params4: any[] = [];
+        const pod4 = buildPortConditions(podCity, bolPOD, 'port_of_discharge', params4, 1);
+        matchedBenchmarks = await tryBenchmarkQuery(pod4.conditions, params4, 'any');
       }
 
       if (matchedBenchmarks.length > 0 && extracted.freight_charges_usd) {

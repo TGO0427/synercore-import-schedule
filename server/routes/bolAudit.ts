@@ -143,17 +143,17 @@ router.get(
     if (req.query.date_from && req.query.date_to) {
       // Include BOLs whose date falls in range, OR BOLs with no date that were created in range
       conditions.push(`(
-        (COALESCE(b.issue_date, b.ship_on_board_date) >= $${paramIndex} AND COALESCE(b.issue_date, b.ship_on_board_date) <= $${paramIndex + 1})
+        (COALESCE(b.ship_on_board_date, b.issue_date) >= $${paramIndex} AND COALESCE(b.ship_on_board_date, b.issue_date) <= $${paramIndex + 1})
         OR (b.issue_date IS NULL AND b.ship_on_board_date IS NULL AND b.created_at >= $${paramIndex}::date AND b.created_at <= ($${paramIndex + 1}::date + INTERVAL '1 day'))
       )`);
       params.push(req.query.date_from, req.query.date_to);
       paramIndex += 2;
     } else if (req.query.date_from) {
-      conditions.push(`(COALESCE(b.issue_date, b.ship_on_board_date) >= $${paramIndex} OR (b.issue_date IS NULL AND b.ship_on_board_date IS NULL AND b.created_at >= $${paramIndex}::date))`);
+      conditions.push(`(COALESCE(b.ship_on_board_date, b.issue_date) >= $${paramIndex} OR (b.issue_date IS NULL AND b.ship_on_board_date IS NULL AND b.created_at >= $${paramIndex}::date))`);
       params.push(req.query.date_from);
       paramIndex++;
     } else if (req.query.date_to) {
-      conditions.push(`(COALESCE(b.issue_date, b.ship_on_board_date) <= $${paramIndex} OR (b.issue_date IS NULL AND b.ship_on_board_date IS NULL AND b.created_at <= ($${paramIndex}::date + INTERVAL '1 day')))`);
+      conditions.push(`(COALESCE(b.ship_on_board_date, b.issue_date) <= $${paramIndex} OR (b.issue_date IS NULL AND b.ship_on_board_date IS NULL AND b.created_at <= ($${paramIndex}::date + INTERVAL '1 day')))`);
       params.push(req.query.date_to);
       paramIndex++;
     }
@@ -211,7 +211,7 @@ function parseMonth(monthStr: string | undefined): { monthStart: string; monthEn
 }
 
 // Helper: BOL date column for month filtering — falls back to created_at for undated BOLs
-const BOL_DATE_COL = `COALESCE(issue_date, ship_on_board_date, created_at::date)`;
+const BOL_DATE_COL = `COALESCE(ship_on_board_date, issue_date, created_at::date)`;
 
 /**
  * GET /api/bol-audit/stats
@@ -1161,7 +1161,7 @@ router.post(
         if (existingFiles.includes(req.file.originalname)) {
           // Fetch the existing BOL's date so the user knows where to find it
           const existingBol = dupFinding?.shipment_value
-            ? await queryOne(`SELECT id, COALESCE(issue_date, ship_on_board_date) as bol_date FROM bol_audits WHERE id = $1`, [dupFinding.shipment_value])
+            ? await queryOne(`SELECT id, COALESCE(ship_on_board_date, issue_date) as bol_date FROM bol_audits WHERE id = $1`, [dupFinding.shipment_value])
             : null;
           const dateHint = existingBol?.bol_date
             ? `. It is in ${new Date(existingBol.bol_date).toLocaleString('default', { month: 'long', year: 'numeric' })} — switch month filter to view it`
