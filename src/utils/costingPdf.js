@@ -561,10 +561,11 @@ export function generateEstimatePDFBase64(estimate) {
  * @param {Object|null} options.chartRef - React ref to the chart component
  * @param {Array} options.filteredEstimates - filtered estimate list
  */
-export async function generateReportPDF({ chartData, selectedProduct, selectedSupplier, chartRef, filteredEstimates }) {
+export async function generateReportPDF({ chartData, selectedProduct, selectedSupplier, transportModeFilter, chartRef, filteredEstimates }) {
   const doc = new jsPDF();
   const productLabel = selectedProduct === 'all' ? 'All Products' : selectedProduct;
   const supplierLabel = selectedSupplier === 'all' ? 'All Suppliers' : selectedSupplier;
+  const modeLabel = transportModeFilter === 'sea' ? 'Sea Freight' : transportModeFilter === 'air' ? 'Air Freight' : 'All Modes';
 
   // Header
   doc.setFillColor(91, 33, 182);
@@ -573,7 +574,7 @@ export async function generateReportPDF({ chartData, selectedProduct, selectedSu
   doc.setFontSize(20);
   doc.text('Cost Analysis Report', 14, 15);
   doc.setFontSize(10);
-  doc.text(`Supplier: ${supplierLabel}`, 14, 25);
+  doc.text(`Supplier: ${supplierLabel}  |  Mode: ${modeLabel}`, 14, 25);
   doc.text(`Product: ${productLabel}`, 14, 33);
   doc.text(`Generated: ${formatDate(new Date().toISOString())}`, 140, 33);
 

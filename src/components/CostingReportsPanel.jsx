@@ -260,16 +260,21 @@ function CostingReportsPanel({ estimates, onClose }) {
     };
   }, [chartData, supplierAnalysis]);
 
-  // Filtered estimates for PDF generation (exclude archived)
+  // Filtered estimates for PDF generation (exclude archived + respect transport mode filter)
   const filteredEstimates = useMemo(() => {
-    return estimates.filter(est => est.status !== 'archived');
-  }, [estimates]);
+    return estimates.filter(est => {
+      if (est.status === 'archived') return false;
+      if (transportModeFilter !== 'all' && (est.transport_mode || 'sea') !== transportModeFilter) return false;
+      return true;
+    });
+  }, [estimates, transportModeFilter]);
 
   const generateReportPDF = async () => {
     await generateReportPDFUtil({
       chartData: getSupplierChartData,
       selectedProduct,
       selectedSupplier,
+      transportModeFilter,
       chartRef,
       filteredEstimates,
     });
