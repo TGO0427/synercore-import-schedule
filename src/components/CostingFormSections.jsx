@@ -588,28 +588,40 @@ function CostingFormSections({
           </div>
         </div>
 
+        {/* Airfreight Rate - USD + EUR */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-          {currencyInput('Airfreight Rate', 'airfreight_rate_per_kg', 'USD/kg')}
+          {currencyInput('Airfreight Rate', 'airfreight_rate_per_kg_usd', 'USD/kg')}
           <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#5b21b6' }}>
-              Total Airfreight (USD)
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#166534' }}>
+              USD to ZAR - Auto
             </label>
-            <div style={{ padding: '8px 12px', backgroundColor: '#ede9fe', borderRadius: '6px', fontWeight: '600', color: '#5b21b6' }}>
-              ${formatNumber(calculatedTotals.airfreight_total_usd || 0)}
+            <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', borderRadius: '6px', fontWeight: '600', color: '#166534' }}>
+              {formatCurrency(calculatedTotals._airfreight_usd_zar || 0)}
             </div>
           </div>
+          {currencyInput('Airfreight Rate', 'airfreight_rate_per_kg_eur', 'EUR/kg')}
           <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#5b21b6' }}>
-              Total Airfreight (ZAR)
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#1d4ed8' }}>
+              EUR to ZAR - Auto
             </label>
-            <div style={{ padding: '8px 12px', backgroundColor: '#ede9fe', borderRadius: '6px', fontWeight: '600', color: '#5b21b6' }}>
-              {formatCurrency(calculatedTotals.airfreight_total_zar || 0)}
+            <div style={{ padding: '8px 12px', backgroundColor: '#dbeafe', borderRadius: '6px', fontWeight: '600', color: '#1d4ed8' }}>
+              {formatCurrency(calculatedTotals._airfreight_eur_zar || 0)}
             </div>
           </div>
         </div>
+        <div style={{ marginTop: '0.5rem', padding: '12px', backgroundColor: '#ede9fe', borderRadius: '6px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontWeight: '500', color: '#5b21b6' }}>Total Airfreight (ZAR)</span>
+            <span style={{ fontSize: '1.25rem', fontWeight: '700', color: '#5b21b6' }}>
+              {formatCurrency(calculatedTotals.airfreight_total_zar || 0)}
+            </span>
+          </div>
+        </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginTop: '0.5rem' }}>
-          {currencyInput('Fuel Surcharge', 'fuel_surcharge_per_kg', 'USD/kg')}
+        {/* Surcharges - USD + EUR */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginTop: '1rem' }}>
+          {currencyInput('Fuel Surcharge', 'fuel_surcharge_per_kg_usd', 'USD/kg')}
+          {currencyInput('Fuel Surcharge', 'fuel_surcharge_per_kg_eur', 'EUR/kg')}
           <div style={{ marginBottom: '12px' }}>
             <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#5b21b6' }}>
               Fuel Surcharge Total (ZAR)
@@ -618,7 +630,10 @@ function CostingFormSections({
               {formatCurrency(calculatedTotals.fuel_surcharge_total_zar || 0)}
             </div>
           </div>
-          {currencyInput('Security Surcharge', 'security_surcharge_per_kg', 'USD/kg')}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+          {currencyInput('Security Surcharge', 'security_surcharge_per_kg_usd', 'USD/kg')}
+          {currencyInput('Security Surcharge', 'security_surcharge_per_kg_eur', 'EUR/kg')}
           <div style={{ marginBottom: '12px' }}>
             <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#5b21b6' }}>
               Security Surcharge Total (ZAR)
@@ -633,9 +648,10 @@ function CostingFormSections({
       {/* Section: Air Freight Origin & Local Charges */}
       <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f0fdf4', borderRadius: '8px' }}>
         <h4 style={{ margin: '0 0 1rem', color: '#166534', fontSize: '1rem' }}>Origin & Local Charges <InfoTip text="Origin handling, airport fees, and local transport from airport to warehouse." /></h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
           {currencyInput('Origin Charges', 'airfreight_origin_charges_usd', 'USD')}
-          <div style={{ marginBottom: '12px' }}>
+          {currencyInput('Origin Charges', 'airfreight_origin_charges_eur', 'EUR')}
+          <div style={{ marginBottom: '12px', gridColumn: 'span 2' }}>
             <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#166534' }}>
               Origin Charges (ZAR) - Auto
             </label>
@@ -643,6 +659,8 @@ function CostingFormSections({
               {formatCurrency(calculatedTotals.airfreight_origin_charges_zar || 0)}
             </div>
           </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginTop: '0.5rem' }}>
           {currencyInput('Screening Fee', 'screening_fee_zar', 'ZAR')}
           {currencyInput('AWB Fee', 'awb_fee_zar', 'ZAR', 'Air Waybill documentation fee.')}
           {currencyInput('Airline Handling Fee', 'airline_handling_fee_zar', 'ZAR')}

@@ -254,19 +254,28 @@ export const calculateAllTotals = (data) => {
   // === Airfreight-specific calculations ===
   const volumetricWeightKg = calculateVolumetricWeight(data);
   const chargeableWeightKg = calculateChargeableWeight(data);
-  const airfreightRatePerKg = parseFloat(data.airfreight_rate_per_kg) || 0;
-  const airfreightTotalUsd = airfreightRatePerKg * chargeableWeightKg;
-  const airfreightTotalZar = airfreightTotalUsd * roeOrigin;
 
-  // Airfreight surcharges (per-kg × chargeable weight, converted to ZAR)
-  const fuelSurchargePerKg = parseFloat(data.fuel_surcharge_per_kg) || 0;
-  const fuelSurchargeTotalZar = fuelSurchargePerKg * chargeableWeightKg * roeOrigin;
-  const securitySurchargePerKg = parseFloat(data.security_surcharge_per_kg) || 0;
-  const securitySurchargeTotalZar = securitySurchargePerKg * chargeableWeightKg * roeOrigin;
+  // Airfreight rate (USD + EUR)
+  const airfreightRatePerKgUsd = parseFloat(data.airfreight_rate_per_kg_usd) || 0;
+  const airfreightRatePerKgEur = parseFloat(data.airfreight_rate_per_kg_eur) || 0;
+  const airfreightTotalUsd = airfreightRatePerKgUsd * chargeableWeightKg;
+  const airfreightTotalEur = airfreightRatePerKgEur * chargeableWeightKg;
+  const airfreightTotalZar = (airfreightTotalUsd * roeOrigin) + (airfreightTotalEur * roeEur);
 
-  // Airfreight origin charges
+  // Airfreight surcharges (USD + EUR per-kg × chargeable weight)
+  const fuelSurchargePerKgUsd = parseFloat(data.fuel_surcharge_per_kg_usd) || 0;
+  const fuelSurchargePerKgEur = parseFloat(data.fuel_surcharge_per_kg_eur) || 0;
+  const fuelSurchargeTotalZar = (fuelSurchargePerKgUsd * chargeableWeightKg * roeOrigin)
+    + (fuelSurchargePerKgEur * chargeableWeightKg * roeEur);
+  const securitySurchargePerKgUsd = parseFloat(data.security_surcharge_per_kg_usd) || 0;
+  const securitySurchargePerKgEur = parseFloat(data.security_surcharge_per_kg_eur) || 0;
+  const securitySurchargeTotalZar = (securitySurchargePerKgUsd * chargeableWeightKg * roeOrigin)
+    + (securitySurchargePerKgEur * chargeableWeightKg * roeEur);
+
+  // Airfreight origin charges (USD + EUR)
   const airfreightOriginUsd = parseFloat(data.airfreight_origin_charges_usd) || 0;
-  const airfreightOriginZar = airfreightOriginUsd * roeOrigin;
+  const airfreightOriginEur = parseFloat(data.airfreight_origin_charges_eur) || 0;
+  const airfreightOriginZar = (airfreightOriginUsd * roeOrigin) + (airfreightOriginEur * roeEur);
 
   // Airfreight local charges (all ZAR)
   const airLocalChargesSubtotalZar = calculateAirfreightChargesSubtotal(data);
@@ -342,6 +351,9 @@ export const calculateAllTotals = (data) => {
     volumetric_weight_kg: r(volumetricWeightKg),
     chargeable_weight_kg: r(chargeableWeightKg),
     airfreight_total_usd: r(airfreightTotalUsd),
+    _airfreight_total_eur: r(airfreightTotalEur),
+    _airfreight_usd_zar: r(airfreightTotalUsd * roeOrigin),
+    _airfreight_eur_zar: r(airfreightTotalEur * roeEur),
     airfreight_total_zar: r(airfreightTotalZar),
     fuel_surcharge_total_zar: r(fuelSurchargeTotalZar),
     security_surcharge_total_zar: r(securitySurchargeTotalZar),
