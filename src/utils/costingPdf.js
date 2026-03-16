@@ -97,33 +97,89 @@ const getProductCostPerKg = (product, estimate, totals, productTotals) => {
   return { costPerKg: bd.costPerKg, totalLanded: bd.totalLanded, allocatedShipping: bd.allocatedShipping };
 };
 
+// Draw a section divider with accent bar and label
+const drawSectionDivider = (doc, y, label, color) => {
+  // Accent bar (3px wide, 12px tall)
+  doc.setFillColor(color[0], color[1], color[2]);
+  doc.rect(14, y - 3, 1.2, 5, 'F');
+  // Section title
+  doc.setFontSize(11);
+  doc.setFont(undefined, 'bold');
+  doc.setTextColor(color[0], color[1], color[2]);
+  doc.text(label, 17, y + 1);
+  doc.setFont(undefined, 'normal');
+  return y + 5;
+};
+
+// Check page break — if content would exceed page, add new page and return new Y
+const checkPageBreak = (doc, y, neededHeight) => {
+  const pageHeight = doc.internal.pageSize.height;
+  if (y + neededHeight > pageHeight - 20) {
+    doc.addPage();
+    return 15;
+  }
+  return y;
+};
+
 // Shared helper: render header, ROE info, shipment details, and products table
 const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
   const products = estimate.products || [];
-
   const isAir = (estimate.transport_mode || 'sea') === 'air';
+  const pageWidth = doc.internal.pageSize.width;
 
-  // Header
-  doc.setFontSize(18);
-  doc.setTextColor(isAir ? 124 : 11, isAir ? 58 : 31, isAir ? 237 : 58);
-  doc.text(isAir ? 'Air Freight Import Cost Estimate' : 'FCL Import Cost Estimate', 14, 20);
+  // === FULL-WIDTH COLOR BAR ===
+  const barColor = isAir ? [91, 33, 182] : [11, 31, 58];
+  doc.setFillColor(barColor[0], barColor[1], barColor[2]);
+  doc.rect(0, 0, pageWidth, 16, 'F');
 
-  doc.setFontSize(10);
-  doc.setTextColor(100);
-  doc.text(`Reference: ${estimate.reference_number || 'N/A'}`, 14, 28);
-  doc.text(`Date: ${formatDate(estimate.costing_date)}`, 14, 34);
-  doc.text(`Supplier: ${estimate.supplier_name || 'N/A'}`, 14, 40);
-
-  // ROE Information
-  doc.setFontSize(9);
-  doc.setTextColor(0, 102, 204);
+  // "SYNERCORE" left side
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
   doc.setFont(undefined, 'bold');
-  doc.text(`ROE Date: ${formatDate(estimate.costing_date)}`, 130, 28);
-  doc.text(`USD/ZAR: ${formatNumber(estimate.roe_origin || 0, 4)}`, 130, 34);
-  doc.text(`EUR/ZAR: ${formatNumber(estimate.roe_eur || 0, 4)}`, 130, 40);
-  doc.setFont(undefined, 'normal');
+  doc.text('SYNERCORE', 10, 11);
 
-  // Shipment Details
+  // Estimate type right side
+  doc.setFontSize(11);
+  doc.setFont(undefined, 'normal');
+  const titleText = isAir ? 'Air Freight Cost Estimate' : 'Import Cost Estimate';
+  const titleWidth = doc.getTextWidth(titleText);
+  doc.text(titleText, pageWidth - titleWidth - 10, 11);
+
+  // === LIGHT GRAY INFO STRIP ===
+  doc.setFillColor(241, 245, 249);
+  doc.rect(0, 16, pageWidth, 9, 'F');
+  doc.setFontSize(8);
+  doc.setTextColor(71, 85, 105);
+  doc.setFont(undefined, 'normal');
+  const infoText = `Reference: ${estimate.reference_number || 'N/A'}     Date: ${formatDate(estimate.costing_date)}     Supplier: ${estimate.supplier_name || 'N/A'}`;
+  doc.text(infoText, 10, 22);
+
+  // === ROE INFO BOX (right-aligned, below info strip) ===
+  const roeBoxW = 62;
+  const roeBoxH = 16;
+  const roeBoxX = pageWidth - roeBoxW - 10;
+  const roeBoxY = 27;
+
+  // Light blue background
+  doc.setFillColor(239, 246, 255);
+  doc.setDrawColor(191, 219, 254);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(roeBoxX, roeBoxY, roeBoxW, roeBoxH, 1.5, 1.5, 'FD');
+
+  // ROE text
+  doc.setFontSize(7);
+  doc.setTextColor(30, 64, 175);
+  doc.setFont(undefined, 'bold');
+  doc.text('ROE', roeBoxX + 2, roeBoxY + 4.5);
+  doc.setFont(undefined, 'normal');
+  doc.text(`Date: ${formatDate(estimate.costing_date)}`, roeBoxX + 2, roeBoxY + 8.5);
+  doc.text(`USD/ZAR: ${formatNumber(estimate.roe_origin || 0, 4)}`, roeBoxX + 2, roeBoxY + 12.5);
+  doc.text(`EUR/ZAR: ${formatNumber(estimate.roe_eur || 0, 4)}`, roeBoxX + 32, roeBoxY + 12.5);
+
+  // === SHIPMENT DETAILS TABLE ===
+  let startY = 46;
+  startY = drawSectionDivider(doc, startY, 'Shipment Details', barColor);
+
   const shipmentRows = isAir
     ? filterZeroRows([
         ['Country of Origin', estimate.country_of_origin || '-'],
@@ -150,14 +206,19 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
       ]);
 
   autoTable(doc, {
-    startY: 48,
+    startY: startY + 2,
     head: [['Shipment Details', '']],
     body: shipmentRows,
-    theme: 'grid',
-    headStyles: { fillColor: [11, 31, 58] },
+    theme: 'striped',
+    headStyles: { fillColor: barColor, textColor: [255, 255, 255] },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    styles: { fontSize: 8.5 },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 55 },
+    },
   });
 
-  // Products in Container
+  // === PRODUCTS TABLE ===
   if (products.length > 0) {
     const roeCustoms = parseFloat(estimate.roe_customs) || parseFloat(estimate.roe_origin) || 0;
     const roeEur = parseFloat(estimate.roe_eur) || roeCustoms;
@@ -193,12 +254,16 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
       'TOTAL', '', `${formatNumber(productTotals.totalWeight)} kg`, '', '', '', formatCurrency(productTotals.totalCustomsValue), formatCurrency(overallCostPerKg),
     ]);
 
+    let prodY = doc.lastAutoTable.finalY + 8;
+    prodY = drawSectionDivider(doc, prodY, 'Products', [245, 158, 11]);
+
     autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 10,
+      startY: prodY + 2,
       head: [['Product', 'HS Code', 'Weight', 'Rate/kg', 'Curr', 'Invoice Val', 'Customs Val (ZAR)', 'Cost/kg']],
       body: productRows,
-      theme: 'grid',
-      headStyles: { fillColor: [245, 158, 11] },
+      theme: 'striped',
+      headStyles: { fillColor: [245, 158, 11], textColor: [255, 255, 255] },
+      alternateRowStyles: { fillColor: [255, 251, 235] },
       styles: { fontSize: 8 },
       columnStyles: {
         2: { halign: 'right' },
@@ -207,15 +272,20 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
         6: { halign: 'right' },
         7: { halign: 'right', fontStyle: 'bold' },
       },
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.row.index === productRows.length - 1) {
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fillColor = [243, 244, 246];
+        }
+      },
     });
 
-    // Product Cost Allocation breakdown
+    // === PRODUCT COST ALLOCATION TABLE ===
     if (totals) {
       const incoTerms = (estimate.inco_terms || '').toUpperCase();
       const freightIncluded = ['CIF', 'CIP', 'CFR'].includes(incoTerms);
       const shippingLabel = freightIncluded ? 'Alloc. Local Charges' : 'Alloc. Shipping';
 
-      // Build per-product rows with full cost breakdown
       let sumWeight = 0, sumCustomsValue = 0, sumImportDuty = 0, sumSchedule1Duty = 0;
       let sumAllocatedShipping = 0, sumTotalLanded = 0;
 
@@ -242,7 +312,6 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
         ];
       });
 
-      // Summary totals row
       const sumCostPerKg = sumWeight > 0 ? sumTotalLanded / sumWeight : 0;
       allocationRows.push([
         'TOTAL',
@@ -257,12 +326,16 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
         formatCurrency(sumCostPerKg),
       ]);
 
+      let allocY = doc.lastAutoTable.finalY + 8;
+      allocY = drawSectionDivider(doc, allocY, 'Product Cost Allocation', [22, 101, 52]);
+
       autoTable(doc, {
-        startY: doc.lastAutoTable.finalY + 10,
+        startY: allocY + 2,
         head: [['Product', 'Weight (kg)', 'Wt %', 'Invoice Value', 'Customs Val (ZAR)', 'Import Duty', 'Sch1 Duty', shippingLabel, 'Total Landed', 'Cost/kg']],
         body: allocationRows,
-        theme: 'grid',
-        headStyles: { fillColor: [22, 101, 52], fontSize: 7 },
+        theme: 'striped',
+        headStyles: { fillColor: [22, 101, 52], fontSize: 7, textColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: [240, 253, 244] },
         styles: { fontSize: 7 },
         columnStyles: {
           0: { cellWidth: 26 },
@@ -276,11 +349,10 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
           8: { halign: 'right', fontStyle: 'bold' },
           9: { halign: 'right', fontStyle: 'bold' },
         },
-        // Bold the totals row
         didParseCell: (data) => {
-          if (data.row.index === allocationRows.length - 1) {
+          if (data.section === 'body' && data.row.index === allocationRows.length - 1) {
             data.cell.styles.fontStyle = 'bold';
-            data.cell.styles.fillColor = [240, 240, 240];
+            data.cell.styles.fillColor = [229, 231, 235];
           }
         },
       });
@@ -299,6 +371,19 @@ export function generateEstimatePDF(estimate) {
   buildEstimateHeader(doc, estimate, productTotals, totals);
 
   const isAir = (estimate.transport_mode || 'sea') === 'air';
+  const themeColor = isAir ? [91, 33, 182] : [11, 31, 58];
+  const pageWidth = doc.internal.pageSize.width;
+
+  // Helper to style sub-total rows in charge tables
+  const chargeTableSubTotalHook = (rows) => (data) => {
+    if (data.section === 'body' && data.row.index === rows.length - 1) {
+      const lastLabel = rows[rows.length - 1]?.[0] || '';
+      if (lastLabel.startsWith('Sub-Total') || lastLabel.startsWith('Total')) {
+        data.cell.styles.fontStyle = 'bold';
+        data.cell.styles.fillColor = [243, 244, 246];
+      }
+    }
+  };
 
   if (isAir) {
     // === AIR FREIGHT PDF SECTIONS ===
@@ -312,12 +397,16 @@ export function generateEstimatePDF(estimate) {
       airRows.push(['Total Airfreight', '', formatCurrency(totals.airfreight_total_zar)]);
     }
     if (airRows.length > 0) {
+      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 8, 30);
+      secY = drawSectionDivider(doc, secY, 'Airfreight Charges', [124, 58, 237]);
       autoTable(doc, {
-        startY: doc.lastAutoTable.finalY + 10,
+        startY: secY + 2,
         head: [['Airfreight', 'Amount', 'ZAR']],
         body: airRows,
-        theme: 'grid',
-        headStyles: { fillColor: [124, 58, 237] },
+        theme: 'striped',
+        headStyles: { fillColor: [124, 58, 237], textColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: [250, 250, 250] },
+        didParseCell: chargeTableSubTotalHook(airRows),
       });
     }
 
@@ -332,12 +421,16 @@ export function generateEstimatePDF(estimate) {
       surchargeRows.push(['Total Surcharges', '', formatCurrency((totals.fuel_surcharge_total_zar || 0) + (totals.security_surcharge_total_zar || 0))]);
     }
     if (surchargeRows.length > 0) {
+      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 8, 30);
+      secY = drawSectionDivider(doc, secY, 'Surcharges', [109, 40, 217]);
       autoTable(doc, {
-        startY: doc.lastAutoTable.finalY + 10,
+        startY: secY + 2,
         head: [['Surcharges', 'Amount', 'ZAR']],
         body: surchargeRows,
-        theme: 'grid',
-        headStyles: { fillColor: [109, 40, 217] },
+        theme: 'striped',
+        headStyles: { fillColor: [109, 40, 217], textColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: [250, 250, 250] },
+        didParseCell: chargeTableSubTotalHook(surchargeRows),
       });
     }
 
@@ -356,12 +449,16 @@ export function generateEstimatePDF(estimate) {
       airLocalRows.push(['Sub-Total', formatCurrency((totals.airfreight_origin_charges_zar || 0) + (totals.air_local_charges_subtotal_zar || 0) + (totals.airfreight_insurance_zar || 0))]);
     }
     if (airLocalRows.length > 0) {
+      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 8, 30);
+      secY = drawSectionDivider(doc, secY, 'Origin & Local Charges', [22, 101, 52]);
       autoTable(doc, {
-        startY: doc.lastAutoTable.finalY + 10,
+        startY: secY + 2,
         head: [['Origin & Local Charges', 'Amount']],
         body: airLocalRows,
-        theme: 'grid',
-        headStyles: { fillColor: [22, 101, 52] },
+        theme: 'striped',
+        headStyles: { fillColor: [22, 101, 52], textColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: [250, 250, 250] },
+        didParseCell: chargeTableSubTotalHook(airLocalRows),
       });
     }
 
@@ -377,12 +474,16 @@ export function generateEstimatePDF(estimate) {
       oceanFreightRows.push(['Total Ocean Freight', '', formatCurrency(totals.total_ocean_freight_zar)]);
     }
     if (oceanFreightRows.length > 0) {
+      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 8, 30);
+      secY = drawSectionDivider(doc, secY, 'Ocean Freight', [59, 130, 246]);
       autoTable(doc, {
-        startY: doc.lastAutoTable.finalY + 10,
+        startY: secY + 2,
         head: [['Ocean Freight', 'Amount', 'ZAR']],
         body: oceanFreightRows,
-        theme: 'grid',
-        headStyles: { fillColor: [59, 130, 246] },
+        theme: 'striped',
+        headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: [250, 250, 250] },
+        didParseCell: chargeTableSubTotalHook(oceanFreightRows),
       });
     }
 
@@ -395,12 +496,16 @@ export function generateEstimatePDF(estimate) {
       originRows.push(['Total Origin Charges', '', formatCurrency(totals.total_origin_charges_zar)]);
     }
     if (originRows.length > 0) {
+      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 8, 30);
+      secY = drawSectionDivider(doc, secY, 'Origin Charges', [46, 139, 87]);
       autoTable(doc, {
-        startY: doc.lastAutoTable.finalY + 10,
+        startY: secY + 2,
         head: [['Origin Charges', 'Amount', 'ZAR']],
         body: originRows,
-        theme: 'grid',
-        headStyles: { fillColor: [46, 139, 87] },
+        theme: 'striped',
+        headStyles: { fillColor: [46, 139, 87], textColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: [250, 250, 250] },
+        didParseCell: chargeTableSubTotalHook(originRows),
       });
     }
 
@@ -424,12 +529,16 @@ export function generateEstimatePDF(estimate) {
       localChargeRows.push(['Sub-Total', formatCurrency(totals.local_charges_subtotal_zar)]);
     }
     if (localChargeRows.length > 0) {
+      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 8, 30);
+      secY = drawSectionDivider(doc, secY, 'Local Charges', [22, 101, 52]);
       autoTable(doc, {
-        startY: doc.lastAutoTable.finalY + 10,
+        startY: secY + 2,
         head: [['Local Charges (Transport/Cartage)', 'ZAR']],
         body: localChargeRows,
-        theme: 'grid',
-        headStyles: { fillColor: [22, 101, 52] },
+        theme: 'striped',
+        headStyles: { fillColor: [22, 101, 52], textColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: [250, 250, 250] },
+        didParseCell: chargeTableSubTotalHook(localChargeRows),
       });
     }
 
@@ -448,12 +557,16 @@ export function generateEstimatePDF(estimate) {
       destChargeRows.push(['Sub-Total', formatCurrency(totals.destination_charges_subtotal_zar)]);
     }
     if (destChargeRows.length > 0) {
+      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 8, 30);
+      secY = drawSectionDivider(doc, secY, 'Destination Charges', [0, 123, 167]);
       autoTable(doc, {
-        startY: doc.lastAutoTable.finalY + 10,
+        startY: secY + 2,
         head: [['Destination Charges', 'ZAR']],
         body: destChargeRows,
-        theme: 'grid',
-        headStyles: { fillColor: [0, 123, 167] },
+        theme: 'striped',
+        headStyles: { fillColor: [0, 123, 167], textColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: [250, 250, 250] },
+        didParseCell: chargeTableSubTotalHook(destChargeRows),
       });
     }
   }
@@ -469,36 +582,84 @@ export function generateEstimatePDF(estimate) {
     customsRows.push(['Sub-Total (excl. Import VAT)', formatCurrency(totals.customs_subtotal_zar)]);
   }
   if (customsRows.length > 0) {
+    let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 8, 30);
+    secY = drawSectionDivider(doc, secY, 'Customs & Duties', [146, 64, 14]);
     autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 10,
+      startY: secY + 2,
       head: [['Customs & Duties', 'ZAR']],
       body: customsRows,
-      theme: 'grid',
-      headStyles: { fillColor: [146, 64, 14] },
+      theme: 'striped',
+      headStyles: { fillColor: [146, 64, 14], textColor: [255, 255, 255] },
+      alternateRowStyles: { fillColor: [250, 250, 250] },
+      didParseCell: chargeTableSubTotalHook(customsRows),
     });
   }
 
-  // Summary Totals
-  const summaryRows = filterZeroRows([
+  // === SUMMARY SECTION (prominent dark box) ===
+  const summaryData = [
     ['Total Shipping Cost', formatCurrency(totals.total_shipping_cost_zar)],
     ['Total Landed Cost', formatCurrency(totals.total_landed_cost_zar)],
     ['Landed Cost/KG', formatCurrency(totals.all_in_warehouse_cost_per_kg_zar)],
-  ]);
-  if (summaryRows.length > 0) {
+  ].filter(r => {
+    const v = parseFloat((r[1] || '').replace(/[^0-9.-]/g, ''));
+    return !isNaN(v) && v !== 0;
+  });
+
+  if (summaryData.length > 0) {
+    let sumY = checkPageBreak(doc, doc.lastAutoTable.finalY + 8, 50);
+    sumY = drawSectionDivider(doc, sumY, 'Summary', themeColor);
+
     autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 10,
+      startY: sumY + 2,
       head: [['Summary', 'Amount']],
-      body: summaryRows,
-      theme: 'grid',
-      headStyles: { fillColor: [11, 31, 58] },
-      bodyStyles: { fontStyle: 'bold' },
+      body: summaryData,
+      theme: 'plain',
+      headStyles: { fillColor: themeColor, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 10 },
+      styles: { fontSize: 10 },
+      didParseCell: (data) => {
+        if (data.section === 'body') {
+          data.cell.styles.fillColor = themeColor;
+          data.cell.styles.textColor = [255, 255, 255];
+          data.cell.styles.fontStyle = 'bold';
+          // Make "Total Landed Cost" row larger
+          if (data.row.index === 1) {
+            data.cell.styles.fontSize = 13;
+          }
+          // Right-align amount column
+          if (data.column.index === 1) {
+            data.cell.styles.halign = 'right';
+          }
+        }
+      },
     });
   }
 
-  // Footer
-  doc.setFontSize(8);
-  doc.setTextColor(150);
-  doc.text('Generated by Synercore Import Schedule', 14, doc.internal.pageSize.height - 10);
+  // === FOOTER (all pages) ===
+  const pageCount = doc.internal.getNumberOfPages();
+  const pageHeight = doc.internal.pageSize.height;
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    // Thin gray separator line
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    doc.line(10, pageHeight - 14, pageWidth - 10, pageHeight - 14);
+
+    doc.setFontSize(7.5);
+    doc.setTextColor(140, 140, 140);
+    doc.setFont(undefined, 'normal');
+    // Left: branding
+    doc.text('Generated by Synercore Import Schedule', 10, pageHeight - 9);
+    // Right: date
+    const dateStr = formatDate(new Date().toISOString());
+    const dateWidth = doc.getTextWidth(dateStr);
+    doc.text(dateStr, pageWidth - dateWidth - 10, pageHeight - 9);
+    // Center: page number (if multi-page)
+    if (pageCount > 1) {
+      const pageText = `Page ${i} of ${pageCount}`;
+      const ptWidth = doc.getTextWidth(pageText);
+      doc.text(pageText, (pageWidth - ptWidth) / 2, pageHeight - 9);
+    }
+  }
 
   doc.save(`cost-estimate-${estimate.reference_number || estimate.id}.pdf`);
 }
