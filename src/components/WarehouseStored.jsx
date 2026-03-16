@@ -415,8 +415,28 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
       'Final POD': s.finalPod || '',
       'Stored Date': formatDate(s.receivingDate || s.updatedAt || s.estimatedArrival),
       'Days in Storage': (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE' ? getDaysInStorage(s) : '-',
+      'Storage Cost (ZAR)': (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE' ? getStorageCost(s) : '-',
       'Archived': s.isArchived || s.latestStatus === 'archived' ? 'Yes' : 'No'
     }));
+    // Add total storage cost row
+    const totalStorageCost = filteredAndSortedShipments
+      .filter(s => (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE')
+      .reduce((sum, s) => sum + getStorageCost(s), 0);
+    dataRows.push({
+      'Order Ref': '',
+      'Supplier': '',
+      'Product': '',
+      'Quantity': '',
+      'Pallet Qty': '',
+      'CBM': '',
+      'Week': '',
+      'Warehouse': '',
+      'Final POD': '',
+      'Stored Date': '',
+      'Days in Storage': 'TOTAL',
+      'Storage Cost (ZAR)': totalStorageCost,
+      'Archived': ''
+    });
     const dataWS = XLSX.utils.json_to_sheet(dataRows);
     XLSX.utils.book_append_sheet(wb, dataWS, 'Stored Stock');
 
@@ -475,17 +495,33 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     // Stock table
     doc.autoTable({
       startY: yPos,
-      head: [['Order Ref', 'Supplier', 'Product', 'Qty', 'Pallets', 'Warehouse', 'Stored Date', 'Days']],
-      body: filteredAndSortedShipments.map(s => [
-        s.orderRef || '',
-        s.supplier || '',
-        s.productName || '',
-        s.quantity || 0,
-        Math.round(s.palletQty || 0) || 1,
-        s.receivingWarehouse || 'Unassigned',
-        formatDate(s.receivingDate || s.updatedAt || s.estimatedArrival),
-        (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE' ? getDaysInStorage(s) : '-'
-      ]),
+      head: [['Order Ref', 'Supplier', 'Product', 'Qty', 'Pallets', 'Warehouse', 'Stored Date', 'Days', 'Cost (ZAR)']],
+      body: [
+        ...filteredAndSortedShipments.map(s => {
+          const isOffsite = (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE';
+          return [
+            s.orderRef || '',
+            s.supplier || '',
+            s.productName || '',
+            s.quantity || 0,
+            Math.round(s.palletQty || 0) || 1,
+            s.receivingWarehouse || 'Unassigned',
+            formatDate(s.receivingDate || s.updatedAt || s.estimatedArrival),
+            isOffsite ? getDaysInStorage(s) : '-',
+            isOffsite ? `R ${getStorageCost(s).toLocaleString()}` : '-'
+          ];
+        }),
+        [
+          { content: 'TOTAL', colSpan: 8, styles: { halign: 'right', fontStyle: 'bold' } },
+          {
+            content: `R ${filteredAndSortedShipments
+              .filter(s => (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE')
+              .reduce((sum, s) => sum + getStorageCost(s), 0)
+              .toLocaleString()}`,
+            styles: { fontStyle: 'bold' }
+          }
+        ]
+      ],
       styles: { fontSize: 8 },
       headStyles: { fillColor: [5, 150, 105] }
     });
@@ -771,6 +807,10 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                     {warehouseShipments.length} item{warehouseShipments.length !== 1 ? 's' : ''}
                     {whPallets > 0 && <> &middot; {whPallets} pallets</>}
                     {archivedCount > 0 && <> &middot; {archivedCount} archived</>}
+                    {name.toUpperCase() === 'OFFSITE' && (() => {
+                      const totalCost = warehouseShipments.reduce((sum, s) => sum + getStorageCost(s), 0);
+                      return totalCost > 0 ? <> &middot; <span style={{ fontWeight: 600, color: 'var(--navy-900)' }}>R{totalCost.toLocaleString('en-ZA', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span></> : null;
+                    })()}
                   </span>
                 </button>
 
@@ -1026,6 +1066,28 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                           </tr>
                         ))}
                       </tbody>
+                      {isOffsite && (
+                        <tfoot>
+                          <tr style={{ borderTop: '2px solid var(--border)', background: 'var(--surface-2)' }}>
+                            <td style={{ padding: '8px 4px' }} />
+                            <td colSpan={2} style={{ padding: '8px 12px', fontWeight: 700, fontSize: 13, color: 'var(--navy-900)' }}>
+                              Totals
+                            </td>
+                            <td style={{ padding: '8px 12px', fontWeight: 700, fontSize: 13, color: 'var(--navy-900)' }}>
+                              {warehouseShipments.reduce((sum, s) => sum + (Number(s.quantity) || 0), 0).toLocaleString('en-ZA')}
+                            </td>
+                            <td style={{ padding: '8px 12px', fontWeight: 700, fontSize: 13, color: 'var(--navy-900)' }}>
+                              {Math.round(warehouseShipments.reduce((sum, s) => sum + (Number(s.palletQty) || 0), 0))}
+                            </td>
+                            <td style={{ padding: '8px 12px' }} />
+                            <td style={{ padding: '8px 12px' }} />
+                            <td style={{ padding: '8px 12px', fontWeight: 700, fontSize: 13, color: 'var(--navy-900)' }}>
+                              R{warehouseShipments.reduce((sum, s) => sum + getStorageCost(s), 0).toLocaleString('en-ZA', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </td>
+                            <td style={{ padding: '8px 12px' }} />
+                          </tr>
+                        </tfoot>
+                      )}
                     </table>
                   </div>
                   );

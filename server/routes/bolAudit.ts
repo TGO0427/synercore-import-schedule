@@ -1122,35 +1122,166 @@ router.post(
       const lineResults: any[] = [];
 
       // Synonym map: invoice description keywords → benchmark description keywords
+      // Each key is a term that might appear on an invoice; values are benchmark descriptions to search for.
       const DESCRIPTION_SYNONYMS: Record<string, string[]> = {
-        'UNPACK / REPACK': ['UNPACK / RELOAD'],
-        'UNPACK / RELOAD': ['UNPACK / REPACK'],
+        // --- Unpack / reload / repack ---
+        'UNPACK / REPACK': ['UNPACK / RELOAD', 'CONTAINER UNPACKING CHARGES'],
+        'UNPACK / RELOAD': ['UNPACK / REPACK', 'CONTAINER UNPACKING CHARGES'],
+        'UNPACK/REPACK': ['UNPACK / RELOAD', 'CONTAINER UNPACKING CHARGES'],
+        'UNPACK/RELOAD': ['UNPACK / REPACK', 'CONTAINER UNPACKING CHARGES'],
+        'DEVANNING': ['UNPACK / RELOAD', 'CONTAINER UNPACKING CHARGES'],
+        'DESTUFFING': ['UNPACK / RELOAD', 'CONTAINER UNPACKING CHARGES'],
+
+        // --- Transport / cartage ---
         'CARTAGE': ['TRANSPORT', 'LOCAL CARTAGE'],
         'TRANSPORT': ['CARTAGE', 'LOCAL CARTAGE'],
+        'TRPT': ['TRANSPORT', 'LOCAL CARTAGE'],
+        'CTGE': ['CARTAGE', 'LOCAL CARTAGE', 'TRANSPORT'],
+        'HAULAGE': ['TRANSPORT', 'LOCAL CARTAGE', 'CARTAGE'],
+        'DELIVERY': ['TRANSPORT', 'LOCAL CARTAGE', 'CARTAGE'],
+        'TRUCKING': ['TRANSPORT', 'LOCAL CARTAGE', 'CARTAGE'],
+
+        // --- Customs / clearance ---
         'IMPORT CLEARANCE FEE': ['CUSTOMS DECLARATION'],
         'CUSTOMS DECLARATION': ['IMPORT CLEARANCE FEE'],
         'CLEARANCE FEE': ['CUSTOMS DECLARATION'],
+        'CUSTOMS CLEARANCE': ['CUSTOMS DECLARATION'],
+        'CUSTOMS ENTRY': ['CUSTOMS DECLARATION'],
+        'IMPORT ENTRY': ['CUSTOMS DECLARATION'],
+        'IMPORT DECLARATION': ['CUSTOMS DECLARATION'],
+        'DECLARATION FEE': ['CUSTOMS DECLARATION'],
+        'SARS DECLARATION': ['CUSTOMS DECLARATION'],
+        'SARS ENTRY': ['CUSTOMS DECLARATION'],
+
+        // --- Cargo dues ---
         'CARGO DUES': ['CARGO DUES 20FT', 'CARGO DUES 40FT'], // size resolved below
+        'PORT CHARGES': ['CARGO DUES 20FT', 'CARGO DUES 40FT'],
+        'WHARFAGE': ['CARGO DUES 20FT', 'CARGO DUES 40FT'],
+
+        // --- Handling / release ---
         'HANDLING': ['HANDLING/RELEASE COSTS'],
         'RELEASE': ['HANDLING/RELEASE COSTS'],
+        'HANDLING/RELEASE': ['HANDLING/RELEASE COSTS'],
+        'RELEASE COSTS': ['HANDLING/RELEASE COSTS'],
+        'RELEASE CHARGES': ['HANDLING/RELEASE COSTS'],
+        'HANDLING FEE': ['HANDLING/RELEASE COSTS'],
+        'HANDLING CHARGES': ['HANDLING/RELEASE COSTS'],
+
+        // --- WMS ---
         'WMS': ['WMS LOGGING'],
+        'WMS LOG': ['WMS LOGGING'],
+        'WAREHOUSE MANAGEMENT': ['WMS LOGGING'],
+
+        // --- Storage ---
         'STORAGE': ['STORAGE PER PALLET'],
+        'STORAGE CHARGES': ['STORAGE PER PALLET'],
+        'WAREHOUSING': ['STORAGE PER PALLET'],
+        'WAREHOUSE STORAGE': ['STORAGE PER PALLET'],
+        'PALLET STORAGE': ['STORAGE PER PALLET'],
+
+        // --- Unpacking ---
         'UNPACKING': ['CONTAINER UNPACKING CHARGES'],
+        'UNPACKING CHARGES': ['CONTAINER UNPACKING CHARGES'],
+        'CONTAINER UNPACK': ['CONTAINER UNPACKING CHARGES'],
+
+        // --- Agency fee ---
+        'AGENCY FEE': ['AGENCY FEE'],
+        'AGENT FEE': ['AGENCY FEE'],
+        'AGENCY COMMISSION': ['AGENCY FEE'],
+        'CLEARING FEE': ['CUSTOMS DECLARATION', 'AGENCY FEE'],
+        'BROKER FEE': ['AGENCY FEE'],
+        'BROKERAGE': ['AGENCY FEE'],
+        'BROKERAGE FEE': ['AGENCY FEE'],
+
+        // --- CTO ---
+        'CTO FEE': ['CTO FEE'],
+        'CTO CHARGES': ['CTO FEE'],
+        'CTO': ['CTO FEE'],
+        'CONTAINER TERMINAL': ['CTO FEE'],
+        'TERMINAL HANDLING': ['CTO FEE'],
+        'THC': ['CTO FEE'],
+
+        // --- Inspections ---
+        'PORT HEALTH INSPECTION': ['PORT HEALTH INSPECTION'],
+        'PORT HEALTH': ['PORT HEALTH INSPECTION'],
+        'HEALTH INSPECTION': ['PORT HEALTH INSPECTION'],
+        'PHYTO': ['PORT HEALTH INSPECTION'],
+        'PHYTOSANITARY': ['PORT HEALTH INSPECTION'],
+        'DAFF INSPECTION': ['DAFF INSPECTION'],
+        'DAFF': ['DAFF INSPECTION'],
+        'DALRRD': ['DAFF INSPECTION'],
+        'DALRRD INSPECTION': ['DAFF INSPECTION'],
+        'STATE VET': ['STATE VET CANCELLATION FEE'],
+        'STATE VET CANCELLATION': ['STATE VET CANCELLATION FEE'],
+        'VETERINARY': ['STATE VET CANCELLATION FEE'],
+        'VET INSPECTION': ['STATE VET CANCELLATION FEE'],
+
+        // --- Documentation ---
+        'DOCUMENTATION FEE': ['AGENCY FEE', 'CUSTOMS DECLARATION'],
+        'DOCUMENTATION': ['AGENCY FEE', 'CUSTOMS DECLARATION'],
+        'DOC FEE': ['AGENCY FEE', 'CUSTOMS DECLARATION'],
+        'ADMIN FEE': ['AGENCY FEE'],
+        'ADMINISTRATION FEE': ['AGENCY FEE'],
       };
 
       // Pass-through charges that don't have benchmarks (billed at cost)
-      const PASSTHROUGH_CHARGES = ['LANDSIDE CHARGES', 'SEAL', 'DO FEE', 'DETENTION', 'CUSTOMS VAT', 'CUSTOMS DUTY'];
+      const PASSTHROUGH_CHARGES = [
+        'LANDSIDE CHARGES', 'LANDSIDE', 'SEAL', 'SEAL FEE', 'CONTAINER SEAL',
+        'DO FEE', 'DELIVERY ORDER', 'DELIVERY ORDER FEE', 'D/O FEE',
+        'DETENTION', 'DETENTION CHARGES', 'CONTAINER DETENTION',
+        'DEMURRAGE', 'DEMURRAGE CHARGES',
+        'CUSTOMS VAT', 'IMPORT VAT',
+        'CUSTOMS DUTY', 'DUTY', 'IMPORT DUTY',
+        'OCEAN FREIGHT', 'SEA FREIGHT', 'FREIGHT', 'FRT',
+        'BAF', 'BUNKER ADJUSTMENT', 'BUNKER SURCHARGE', 'BUNKER ADJUSTMENT FACTOR',
+        'CAF', 'CURRENCY ADJUSTMENT', 'CURRENCY ADJUSTMENT FACTOR',
+        'ISPS', 'ISPS FEE', 'SECURITY SURCHARGE',
+        'BL FEE', 'B/L FEE', 'BILL OF LADING FEE',
+        'AMENDMENT FEE', 'AMENDMENT',
+        'GUARANTEE FEE', 'BANK GUARANTEE',
+        'INSURANCE', 'MARINE INSURANCE', 'CARGO INSURANCE',
+        'SCANNING', 'SCANNING FEE', 'X-RAY', 'XRAY',
+        'SOLAS', 'VGM', 'VERIFIED GROSS MASS',
+        'DEPOT', 'DEPOT CHARGES', 'EMPTY DEPOT',
+        'REEFER', 'REEFER MONITORING', 'GENSET',
+        'LATE DOCUMENTATION', 'LATE DOC FEE',
+        'DISBURSEMENT', 'DISBURSEMENTS',
+        'COMMUNICATION FEE', 'COMMS FEE',
+        'COURIER', 'COURIER FEE',
+      ];
 
       // City/port abbreviation expansions for route matching
       const ROUTE_ABBREVIATIONS: Record<string, string[]> = {
-        'PTA': ['PRETORIA'],
-        'PRETORIA': ['PTA'],
-        'DBN': ['DURBAN'],
-        'DURBAN': ['DBN'],
-        'CPT': ['CAPE TOWN'],
-        'CAPE TOWN': ['CPT'],
-        'WHS': ['WAREHOUSE'],
-        'WAREHOUSE': ['WHS'],
+        'PTA': ['PRETORIA', 'TSHWANE'],
+        'PRETORIA': ['PTA', 'TSHWANE'],
+        'TSHWANE': ['PTA', 'PRETORIA'],
+        'DBN': ['DURBAN', 'DUR', 'ETHEKWINI'],
+        'DURBAN': ['DBN', 'DUR', 'ETHEKWINI'],
+        'DUR': ['DBN', 'DURBAN'],
+        'CPT': ['CAPE TOWN', 'CT', 'CAPETOWN'],
+        'CAPE TOWN': ['CPT', 'CT', 'CAPETOWN'],
+        'CAPETOWN': ['CPT', 'CT', 'CAPE TOWN'],
+        'CT': ['CPT', 'CAPE TOWN', 'CAPETOWN'],
+        'JNB': ['JOHANNESBURG', 'JHB', 'JOBURG'],
+        'JHB': ['JOHANNESBURG', 'JNB', 'JOBURG'],
+        'JOHANNESBURG': ['JNB', 'JHB', 'JOBURG'],
+        'JOBURG': ['JNB', 'JHB', 'JOHANNESBURG'],
+        'PLZ': ['PORT ELIZABETH', 'PE', 'GQEBERHA'],
+        'PE': ['PORT ELIZABETH', 'PLZ', 'GQEBERHA'],
+        'PORT ELIZABETH': ['PLZ', 'PE', 'GQEBERHA'],
+        'GQEBERHA': ['PLZ', 'PE', 'PORT ELIZABETH'],
+        'EL': ['EAST LONDON'],
+        'EAST LONDON': ['EL'],
+        'WHS': ['WAREHOUSE', 'W/H', 'WHS'],
+        'WAREHOUSE': ['WHS', 'W/H', 'WHS'],
+        'KLAPMUTS': ['KLAP'],
+        'KLAP': ['KLAPMUTS'],
+        'MONTAGUE': ['MONTAGUE GARDENS', 'MTG'],
+        'MONTAGUE GARDENS': ['MONTAGUE', 'MTG'],
+        'MTG': ['MONTAGUE', 'MONTAGUE GARDENS'],
+        'PORT': ['HARBOUR', 'TERMINAL'],
+        'HARBOUR': ['PORT', 'TERMINAL'],
+        'OFFSITE': ['OFF-SITE', 'OFF SITE'],
       };
 
       // Load all benchmarks once for this invoice
@@ -1158,13 +1289,25 @@ router.post(
         `SELECT * FROM clearing_rate_benchmarks ORDER BY updated_at DESC`
       );
 
+      // Container size normalizations: unify 20'/40' variants to 20FT/40FT
+      const normalizeContainerSizes = (s: string): string =>
+        s.replace(/\b20['′]\s*(?:GP|STD|STANDARD)?\b/gi, '20FT')
+          .replace(/\b40['′]\s*(?:GP|STD|STANDARD)?\b/gi, '40FT')
+          .replace(/\b20\s*GP\b/gi, '20FT')
+          .replace(/\b40\s*GP\b/gi, '40FT')
+          .replace(/\b40\s*H[CQ]\b/gi, '40FT')
+          .replace(/\b20\s*FOOT\b/gi, '20FT')
+          .replace(/\b40\s*FOOT\b/gi, '40FT');
+
       for (const charge of invoice.charges) {
         // Normalize: strip parenthetical rate info like "- (R5430.00/cnt)"
-        const normalizedDesc = charge.description
-          .replace(/\s*-\s*\(R[\d,.]+\/\w+\)/g, '')
-          .replace(/\s*\(.*?\)/g, '')
-          .trim()
-          .toUpperCase();
+        const normalizedDesc = normalizeContainerSizes(
+          charge.description
+            .replace(/\s*-\s*\(R[\d,.]+\/\w+\)/g, '')
+            .replace(/\s*\(.*?\)/g, '')
+            .trim()
+            .toUpperCase()
+        );
 
         // Check if this is a pass-through charge (no benchmark expected)
         const isPassthrough = PASSTHROUGH_CHARGES.some(p => normalizedDesc.includes(p));
@@ -1173,15 +1316,16 @@ router.post(
         let benchmark: any = null;
 
         if (!isPassthrough) {
-          // Strategy 1: Direct ILIKE match
+          // Strategy 1: Direct ILIKE match (with container size normalization on both sides)
           benchmark = allBenchmarks.find((b: any) => {
-            const bd = (b.description as string).toUpperCase();
+            const bd = normalizeContainerSizes((b.description as string).toUpperCase());
             return bd.includes(normalizedDesc) || normalizedDesc.includes(bd);
           });
 
           // Strategy 2: Route-aware match with abbreviation expansion
           // e.g., "CARTAGE: DBN to PTA" → "TRANSPORT: DBN PORT TO PRETORIA PER 20FT"
           if (!benchmark && normalizedDesc.includes(':')) {
+            const chargePart = normalizedDesc.split(':')[0].trim();
             const routePart = normalizedDesc.split(':').slice(1).join(':').trim();
             if (routePart.length > 3) {
               // Extract route keywords and expand abbreviations
@@ -1193,15 +1337,28 @@ router.post(
                 if (expansions) expansions.forEach(e => expandedWords.add(e.toUpperCase()));
               }
 
+              // Also expand charge-type synonyms (e.g., CARTAGE → TRANSPORT, LOCAL CARTAGE)
+              const chargeSynonyms = new Set<string>();
+              chargeSynonyms.add(chargePart);
+              const chargeExpansions = DESCRIPTION_SYNONYMS[chargePart];
+              if (chargeExpansions) chargeExpansions.forEach(s => chargeSynonyms.add(s));
+
               // Match benchmarks that contain at least 2 route keywords (original or expanded)
+              // AND whose charge type matches (original or synonym)
               let bestMatch: any = null;
               let bestScore = 0;
               for (const b of allBenchmarks) {
                 const bd = (b.description as string).toUpperCase();
+                // Check charge type match
+                const chargeTypeMatch = [...chargeSynonyms].some(syn =>
+                  bd.includes(syn) || syn.split(/\s+/).every(w => bd.includes(w))
+                );
                 let score = 0;
                 for (const w of expandedWords) {
                   if (bd.includes(w)) score++;
                 }
+                // Boost score if charge type also matches
+                if (chargeTypeMatch) score += 1;
                 if (score >= 2 && score > bestScore) {
                   bestScore = score;
                   bestMatch = b;

@@ -49,6 +49,8 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
   const [annForm, setAnnForm] = useState({ title: '', description: '', link: '', expires_at: '' });
   const [editingAnnId, setEditingAnnId] = useState(null);
 
+  const [storageRates, setStorageRates] = useState({ week1: 43, week2Plus: 53 });
+
   const isAdmin = authUtils.getUser()?.role === 'admin';
 
   const fetchAnnouncements = useCallback(async () => {
@@ -126,6 +128,29 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       } catch (err) { /* silently ignore */ }
     };
     fetchCapacity();
+  }, []);
+
+  // Fetch storage benchmark rates for offsite cost calculation
+  useEffect(() => {
+    const fetchStorageRates = async () => {
+      try {
+        const res = await authFetch(getApiUrl('/api/bol-audit/clearing-benchmarks'));
+        if (!res.ok) return;
+        const json = await res.json();
+        const benchmarks = json.data || json;
+        const w1 = benchmarks.find(b => /STORAGE.*PALLET.*WEEK\s*1\b/i.test(b.description));
+        const w2 = benchmarks.find(b => /STORAGE.*PALLET.*WEEK\s*2/i.test(b.description));
+        if (w1 || w2) {
+          setStorageRates({
+            week1: w1 ? parseFloat(w1.unit_rate_zar) : 43,
+            week2Plus: w2 ? parseFloat(w2.unit_rate_zar) : 53,
+          });
+        }
+      } catch {
+        // keep defaults
+      }
+    };
+    fetchStorageRates();
   }, []);
 
   // Consolidated single-pass computation: stats, percentage deltas, and offsite average
@@ -429,6 +454,35 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       .sort((a, b) => b.days - a.days);
   }, [shipments]);
 
+  // Total offsite storage cost
+  const totalStorageCost = useMemo(() => {
+    const offsiteStatuses = [
+      ShipmentStatus.ARRIVED_OFFSITE,
+      ShipmentStatus.UNLOADING, ShipmentStatus.INSPECTION_PENDING, ShipmentStatus.INSPECTING,
+      ShipmentStatus.INSPECTION_PASSED, ShipmentStatus.INSPECTION_FAILED,
+      ShipmentStatus.RECEIVING, ShipmentStatus.RECEIVED,
+      ShipmentStatus.STORED, ShipmentStatus.ARCHIVED,
+    ];
+    const offsite = (shipments || []).filter(s =>
+      offsiteStatuses.includes(s.latestStatus) &&
+      (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE'
+    );
+    return offsite.reduce((sum, s) => {
+      const storedDate = s.receivingDate || s.updatedAt || s.estimatedArrival;
+      if (!storedDate) return sum;
+      const days = Math.max(0, Math.floor((new Date() - new Date(storedDate)) / (1000 * 60 * 60 * 24)));
+      if (days === 0) return sum;
+      const pallets = Math.round(s.palletQty) || 1;
+      const totalWeeks = Math.ceil(days / 7);
+      const cost = totalWeeks <= 1
+        ? pallets * storageRates.week1
+        : pallets * (storageRates.week1 + (totalWeeks - 1) * storageRates.week2Plus);
+      return sum + cost;
+    }, 0);
+  }, [shipments, storageRates]);
+
+  const formattedStorageCost = `R${Math.round(totalStorageCost).toLocaleString('en-ZA')}`;
+
   const getUpcomingOrders = () => {
     const currentWeek = getCurrentWeek();
     const activeStatuses = [
@@ -457,6 +511,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
     { key: 'delayed', value: stats.delayed, label: 'Delayed', icon: '⚠️', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)', filter: 'delayed', delta: stats.deltas.delayed, pctDelta: pctDeltas.delayed, info: stats.delayed > 0 ? { label: 'Needs Attention', pill: 'pill-bad' } : null },
     { key: 'planned', value: stats.planned, label: 'Planned', icon: '📅', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)', filter: 'planned', delta: stats.deltas.planned, pctDelta: pctDeltas.planned },
     { key: 'offsite', value: `${avgDaysOffsite}d`, label: 'Avg Days in OFFSITE', icon: '🏭', ring: 'ring-accent', tint: 'rgba(139,92,246,0.1)', filter: 'stored', view: 'stored', delta: null, pctDelta: null },
+    { key: 'storageCost', value: formattedStorageCost, label: 'Storage Cost', icon: '💰', ring: 'ring-warning', tint: 'rgba(245,158,11,0.08)', filter: 'stored', view: 'stored', delta: null, pctDelta: null },
   ];
 
   const renderDelta = (delta, pctDelta) => {

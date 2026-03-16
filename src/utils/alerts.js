@@ -195,6 +195,21 @@ export function computeShipmentAlerts(shipments) {
       }
     }
 
+    // Offsite stock > 30 days
+    if (s.receivingWarehouse === 'OFFSITE' && s.latestStatus === 'stored') {
+      const storedSince = new Date(s.receivingDate || s.updatedAt || s.estimatedArrival);
+      const daysStored = Math.floor((new Date() - storedSince) / (1000 * 60 * 60 * 24));
+      if (daysStored > 30) {
+        alerts.push({
+          ...base,
+          id: `ship-${s.id}-offsite-long`,
+          severity: 'warning',
+          title: 'Offsite Stock > 30 Days',
+          description: `${s.orderRef || s.productName || s.supplier} has been stored offsite for ${daysStored} days. Consider moving to main warehouse.`
+        });
+      }
+    }
+
     // High value shipments (based on pallet quantity)
     const palletQty = s.palletQty || s.cbm;
     if (palletQty && parseFloat(palletQty) > 50) {
@@ -234,6 +249,50 @@ function getCurrentWeekNumber() {
 
   // Ensure we don't exceed reasonable week range (1-52)
   return Math.min(Math.max(weekNumber, 1), 52);
+}
+
+// Compute alerts for cost estimates with approaching or expired validity dates
+export function computeCostingAlerts(estimates) {
+  const alerts = [];
+  const now = Date.now();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  for (const est of estimates) {
+    if (!est.validity_date) continue;
+
+    const validityDate = new Date(est.validity_date);
+    validityDate.setHours(0, 0, 0, 0);
+    const daysUntilExpiry = Math.floor((validityDate - today) / (1000 * 60 * 60 * 24));
+    const label = est.name || est.orderRef || est.description || `Estimate #${est.id}`;
+
+    if (daysUntilExpiry < 0) {
+      alerts.push({
+        id: `costing-${est.id}-expired`,
+        ts: now,
+        read: false,
+        severity: 'warning',
+        title: 'Costing Expired',
+        description: `${label} expired ${Math.abs(daysUntilExpiry)} day${Math.abs(daysUntilExpiry) !== 1 ? 's' : ''} ago. Please renew or remove.`,
+        meta: { estimateId: est.id, validityDate: est.validity_date }
+      });
+    } else if (daysUntilExpiry <= 7) {
+      alerts.push({
+        id: `costing-${est.id}-expiring`,
+        ts: now,
+        read: false,
+        severity: 'info',
+        title: 'Costing Expiring Soon',
+        description: `${label} expires in ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''}${daysUntilExpiry === 0 ? ' (today)' : ''}.`,
+        meta: { estimateId: est.id, validityDate: est.validity_date }
+      });
+    }
+  }
+
+  return alerts.sort((a, b) => {
+    const severityOrder = { critical: 3, warning: 2, info: 1 };
+    return severityOrder[b.severity] - severityOrder[a.severity] || b.ts - a.ts;
+  });
 }
 
 // Helper function to create custom alerts
