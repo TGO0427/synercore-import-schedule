@@ -10,7 +10,7 @@ import { applyPlugin } from 'jspdf-autotable';
 applyPlugin(jsPDF);
 import * as XLSX from 'xlsx';
 
-function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArchiveShipment, loading }) {
+function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArchiveShipment, onCreateShipment, loading }) {
   const { showSuccess, showError, confirm: confirmAction } = useNotification();
   const [searchParamsObj, setSearchParamsObj] = useSearchParams();
   const globalSearchTerm = searchParamsObj.get('search') || '';
@@ -22,8 +22,8 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
   const [showWeekDropdown, setShowWeekDropdown] = useState(false);
   const [archivingAll, setArchivingAll] = useState(false);
   const [collapsedWarehouses, setCollapsedWarehouses] = useState({});
-  const [editingWarehouse, setEditingWarehouse] = useState(null); // shipment id being edited
   const [editingDate, setEditingDate] = useState(null); // shipment id being date-edited
+  const [moveModal, setMoveModal] = useState(null); // { shipment, destination, moveQty, movePallets }
   const [editingDateValue, setEditingDateValue] = useState(''); // temp date value while editing
   const [selectedShipment, setSelectedShipment] = useState(null); // shipment detail card
   const [editShipment, setEditShipment] = useState(null); // shipment being edited
@@ -267,14 +267,61 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     setCollapsedWarehouses(prev => ({ ...prev, [name]: !prev[name] }));
   };
 
-  const handleWarehouseChange = async (shipmentId, newWarehouse) => {
-    setEditingWarehouse(null);
+  const openMoveModal = (shipment) => {
+    setMoveModal({
+      shipment,
+      destination: '',
+      moveQty: shipment.quantity || 0,
+      movePallets: Math.round(shipment.palletQty) || 1,
+    });
+  };
+
+  const handleMoveSubmit = async () => {
+    if (!moveModal || !moveModal.destination) return;
+    const { shipment, destination, moveQty, movePallets } = moveModal;
+    const totalQty = shipment.quantity || 0;
+    const totalPallets = Math.round(shipment.palletQty) || 1;
+    const isFullMove = moveQty >= totalQty && movePallets >= totalPallets;
+
     try {
-      await onUpdateShipment(shipmentId, { receivingWarehouse: newWarehouse });
-      if (showSuccess) showSuccess(`Moved to ${newWarehouse}`);
+      if (isFullMove) {
+        // Full move — just update warehouse
+        await onUpdateShipment(shipment.id, { receivingWarehouse: destination });
+        showSuccess(`Moved all stock to ${destination}`);
+      } else {
+        // Partial move — reduce original, create new split
+        const remainQty = totalQty - moveQty;
+        const remainPallets = totalPallets - movePallets;
+
+        // Update original with reduced qty/pallets
+        await onUpdateShipment(shipment.id, {
+          quantity: remainQty,
+          palletQty: remainPallets > 0 ? remainPallets : 1,
+        });
+
+        // Create new shipment at destination with moved qty/pallets
+        await onCreateShipment({
+          orderRef: shipment.orderRef,
+          supplier: shipment.supplier,
+          productName: shipment.productName,
+          quantity: moveQty,
+          palletQty: movePallets,
+          receivingWarehouse: destination,
+          latestStatus: 'stored',
+          finalPod: shipment.finalPod || '',
+          weekNumber: shipment.weekNumber || '',
+          cbm: shipment.cbm || '',
+          freightType: shipment.freightType || '',
+          forwardingAgent: shipment.forwardingAgent || '',
+          notes: `Partial move from ${shipment.receivingWarehouse || 'OFFSITE'}`,
+        });
+
+        showSuccess(`Moved ${moveQty} qty / ${movePallets} pallets to ${destination}`);
+      }
     } catch (err) {
-      if (showError) showError('Failed to update warehouse');
+      showError('Failed to move stock');
     }
+    setMoveModal(null);
   };
 
   const openEditModal = (shipment) => {
@@ -784,7 +831,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                             </button>
                             <button
                               className="btn btn-ghost"
-                              onClick={() => setEditingWarehouse(shipment.id)}
+                              onClick={() => openMoveModal(shipment)}
                               style={{ fontSize: 12, padding: '6px 12px' }}
                             >
                               Move
@@ -956,29 +1003,14 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                               >
                                 Edit
                               </button>
-                              {editingWarehouse === shipment.id ? (
-                                <select
-                                  autoFocus
-                                  defaultValue={shipment.receivingWarehouse || ''}
-                                  onChange={(e) => handleWarehouseChange(shipment.id, e.target.value)}
-                                  onBlur={() => setEditingWarehouse(null)}
-                                  style={{ fontSize: 12, padding: '4px 6px', borderRadius: 4, border: '1px solid var(--border)' }}
-                                >
-                                  <option value="">Unassigned</option>
-                                  <option value="PRETORIA">PRETORIA</option>
-                                  <option value="KLAPMUTS">KLAPMUTS</option>
-                                  <option value="OFFSITE">OFFSITE</option>
-                                </select>
-                              ) : (
-                                <button
-                                  className="btn btn-ghost"
-                                  onClick={() => setEditingWarehouse(shipment.id)}
-                                  style={{ fontSize: 12, padding: '4px 10px' }}
-                                  title="Move to another warehouse"
-                                >
-                                  Move
-                                </button>
-                              )}
+                              <button
+                                className="btn btn-ghost"
+                                onClick={() => openMoveModal(shipment)}
+                                style={{ fontSize: 12, padding: '4px 10px' }}
+                                title="Move stock to another warehouse"
+                              >
+                                Move
+                              </button>
                               {!isArch && (
                                 <button
                                   className="btn btn-ghost"
@@ -1076,6 +1108,103 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                 </div>
               );
             })()}
+          </div>
+        </div>
+      )}
+      {/* Move Stock Modal */}
+      {moveModal && (
+        <div
+          onClick={() => setMoveModal(null)}
+          style={{
+            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'white', borderRadius: 12, padding: 24, width: '100%', maxWidth: 420,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+            }}
+          >
+            <h3 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 700, color: 'var(--navy-900)' }}>Move Stock</h3>
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--text-500)' }}>
+              {moveModal.shipment.orderRef} &mdash; {moveModal.shipment.productName || 'N/A'}
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-500)', marginBottom: 2 }}>Available Qty</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--navy-900)' }}>{moveModal.shipment.quantity || 0}</div>
+              </div>
+              <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-500)', marginBottom: 2 }}>Available Pallets</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--navy-900)' }}>{Math.round(moveModal.shipment.palletQty) || 1}</div>
+              </div>
+            </div>
+
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4, color: 'var(--text-700)' }}>
+              Destination Warehouse
+            </label>
+            <select
+              value={moveModal.destination}
+              onChange={(e) => setMoveModal(prev => ({ ...prev, destination: e.target.value }))}
+              style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13, marginBottom: 12 }}
+            >
+              <option value="">Select warehouse...</option>
+              {['PRETORIA', 'KLAPMUTS', 'OFFSITE'].filter(w => w !== (moveModal.shipment.receivingWarehouse || '').toUpperCase()).map(w => (
+                <option key={w} value={w}>{w}</option>
+              ))}
+            </select>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4, color: 'var(--text-700)' }}>Qty to Move</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={moveModal.shipment.quantity || 1}
+                  value={moveModal.moveQty}
+                  onChange={(e) => setMoveModal(prev => ({ ...prev, moveQty: Math.min(parseInt(e.target.value) || 0, prev.shipment.quantity || 0) }))}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13 }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4, color: 'var(--text-700)' }}>Pallets to Move</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={Math.round(moveModal.shipment.palletQty) || 1}
+                  value={moveModal.movePallets}
+                  onChange={(e) => setMoveModal(prev => ({ ...prev, movePallets: Math.min(parseInt(e.target.value) || 0, Math.round(prev.shipment.palletQty) || 1) }))}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13 }}
+                />
+              </div>
+            </div>
+
+            {moveModal.moveQty < (moveModal.shipment.quantity || 0) || moveModal.movePallets < (Math.round(moveModal.shipment.palletQty) || 1) ? (
+              <div style={{
+                background: '#FEF3C7', border: '1px solid #F59E0B', borderRadius: 8,
+                padding: '8px 12px', marginBottom: 16, fontSize: 12, color: '#92400E'
+              }}>
+                <strong>Partial move:</strong> {moveModal.moveQty} qty / {moveModal.movePallets} pallets will move to {moveModal.destination || '...'}.
+                Remaining {(moveModal.shipment.quantity || 0) - moveModal.moveQty} qty / {(Math.round(moveModal.shipment.palletQty) || 1) - moveModal.movePallets} pallets stays in {moveModal.shipment.receivingWarehouse || 'current'}.
+              </div>
+            ) : null}
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" onClick={() => setMoveModal(null)} style={{ fontSize: 13, padding: '8px 16px' }}>
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                disabled={!moveModal.destination || moveModal.moveQty <= 0 || moveModal.movePallets <= 0}
+                onClick={handleMoveSubmit}
+                style={{ fontSize: 13, padding: '8px 16px' }}
+              >
+                Move Stock
+              </button>
+            </div>
           </div>
         </div>
       )}

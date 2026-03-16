@@ -247,6 +247,7 @@ function App() {
       <WarehouseStored
         shipments={storedShipments}
         onUpdateShipment={handleUpdateShipment}
+        onCreateShipment={handleCreateShipment}
         onDeleteShipment={handleDeleteShipment}
         onArchiveShipment={handleArchiveShipment}
         loading={loading}
