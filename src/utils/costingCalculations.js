@@ -149,6 +149,41 @@ export const calculateCustomsValue = (data) => {
 };
 
 /**
+ * Calculate airfreight charges subtotal
+ */
+export const calculateAirfreightChargesSubtotal = (data) => {
+  return (
+    (parseFloat(data.screening_fee_zar) || 0) +
+    (parseFloat(data.awb_fee_zar) || 0) +
+    (parseFloat(data.airline_handling_fee_zar) || 0) +
+    (parseFloat(data.airport_transfer_fee_zar) || 0) +
+    (parseFloat(data.cartage_airport_to_whs_zar) || 0)
+  );
+};
+
+/**
+ * Calculate volumetric weight from dimensions
+ */
+export const calculateVolumetricWeight = (data) => {
+  const l = parseFloat(data.dimensions_length_cm) || 0;
+  const w = parseFloat(data.dimensions_width_cm) || 0;
+  const h = parseFloat(data.dimensions_height_cm) || 0;
+  const pieces = parseInt(data.number_of_pieces) || 1;
+  const divisor = parseInt(data.volumetric_divisor) || 6000;
+  if (l <= 0 || w <= 0 || h <= 0) return 0;
+  return (l * w * h * pieces) / divisor;
+};
+
+/**
+ * Calculate chargeable weight (higher of actual vs volumetric)
+ */
+export const calculateChargeableWeight = (data) => {
+  const actual = parseFloat(data.actual_weight_kg) || 0;
+  const volumetric = calculateVolumetricWeight(data);
+  return Math.max(actual, volumetric);
+};
+
+/**
  * Calculate all totals from form data
  */
 export const calculateAllTotals = (data) => {
@@ -214,16 +249,58 @@ export const calculateAllTotals = (data) => {
        (parseFloat(data.customs_declaration_zar) || 0) + agencyFeeZar)
     : calculateCustomsSubtotal(data, agencyFeeZar);
 
-  // Total shipping cost (ocean freight + origin + local + destination charges)
-  const totalShippingCostZar = totalOceanFreightZar + totalOriginChargesZar + localChargesSubtotalZar + destinationChargesSubtotalZar;
+  const isAirfreight = (data.transport_mode || 'sea') === 'air';
+
+  // === Airfreight-specific calculations ===
+  const volumetricWeightKg = calculateVolumetricWeight(data);
+  const chargeableWeightKg = calculateChargeableWeight(data);
+  const airfreightRatePerKg = parseFloat(data.airfreight_rate_per_kg) || 0;
+  const airfreightTotalUsd = airfreightRatePerKg * chargeableWeightKg;
+  const airfreightTotalZar = airfreightTotalUsd * roeOrigin;
+
+  // Airfreight surcharges (per-kg × chargeable weight, converted to ZAR)
+  const fuelSurchargePerKg = parseFloat(data.fuel_surcharge_per_kg) || 0;
+  const fuelSurchargeTotalZar = fuelSurchargePerKg * chargeableWeightKg * roeOrigin;
+  const securitySurchargePerKg = parseFloat(data.security_surcharge_per_kg) || 0;
+  const securitySurchargeTotalZar = securitySurchargePerKg * chargeableWeightKg * roeOrigin;
+
+  // Airfreight origin charges
+  const airfreightOriginUsd = parseFloat(data.airfreight_origin_charges_usd) || 0;
+  const airfreightOriginZar = airfreightOriginUsd * roeOrigin;
+
+  // Airfreight local charges (all ZAR)
+  const airLocalChargesSubtotalZar = calculateAirfreightChargesSubtotal(data);
+
+  // Insurance (% of customs value)
+  const insurancePercent = parseFloat(data.airfreight_insurance_percent) || 0;
+  const airfreightInsuranceZar = customsValueZar * (insurancePercent / 100);
+
+  // Total airfreight cost
+  const totalAirfreightCostZar = airfreightTotalZar + fuelSurchargeTotalZar + securitySurchargeTotalZar
+    + airfreightOriginZar + airLocalChargesSubtotalZar + airfreightInsuranceZar;
+
+  // === Unified shipping cost (sea or air) ===
+  // Sea freight total
+  const totalShippingCostSeaZar = totalOceanFreightZar + totalOriginChargesZar + localChargesSubtotalZar + destinationChargesSubtotalZar;
+
+  // Use the right total based on transport mode
+  const totalShippingCostZar = isAirfreight ? totalAirfreightCostZar : totalShippingCostSeaZar;
 
   // For CIF/CIP/CFR, ocean freight and origin charges are in the product price —
   // only local + destination charges are additional shipping costs
   const incoTerms = (data.inco_terms || '').toUpperCase();
   const freightIncluded = ['CIF', 'CIP', 'CFR'].includes(incoTerms);
-  const shippingToAllocateZar = freightIncluded
-    ? localChargesSubtotalZar + destinationChargesSubtotalZar
-    : totalShippingCostZar;
+  let shippingToAllocateZar;
+  if (isAirfreight) {
+    // For airfreight: if freight included in price, only allocate local charges + insurance
+    shippingToAllocateZar = freightIncluded
+      ? airLocalChargesSubtotalZar + airfreightInsuranceZar
+      : totalAirfreightCostZar;
+  } else {
+    shippingToAllocateZar = freightIncluded
+      ? localChargesSubtotalZar + destinationChargesSubtotalZar
+      : totalShippingCostSeaZar;
+  }
 
   // Total in warehouse cost (shipping + customs overhead) - VAT excluded
   const totalInWarehouseCostZar = shippingToAllocateZar + customsSubtotalZar;
@@ -241,29 +318,42 @@ export const calculateAllTotals = (data) => {
     ? totalInWarehouseCostZar / totalGrossWeightKg
     : 0;
 
+  const r = (v) => Math.round(v * 100) / 100;
+
   return {
     // Database columns (will be saved)
-    customs_value_zar: Math.round(customsValueZar * 100) / 100,
-    ocean_freight_zar: Math.round(totalOceanFreightZar * 100) / 100,
-    total_ocean_freight_zar: Math.round(totalOceanFreightZar * 100) / 100,
-    origin_charge_zar: Math.round((originChargeUsdZar + originChargeEurZar) * 100) / 100,
-    total_origin_charges_zar: Math.round(totalOriginChargesZar * 100) / 100,
-    local_charges_subtotal_zar: Math.round(localChargesSubtotalZar * 100) / 100,
-    destination_charges_subtotal_zar: Math.round(destinationChargesSubtotalZar * 100) / 100,
-    import_vat_zar: Math.round(importVatZar * 100) / 100,
-    total_duties_zar: Math.round((customsItemsTotals.totalDuties + customsItemsTotals.totalSchedule1Duty) * 100) / 100,
-    agency_fee_zar: Math.round(agencyFeeZar * 100) / 100,
-    customs_subtotal_zar: Math.round(customsSubtotalZar * 100) / 100,
-    total_shipping_cost_zar: Math.round(totalShippingCostZar * 100) / 100,
-    total_in_warehouse_cost_zar: Math.round(totalInWarehouseCostZar * 100) / 100,
-    total_landed_cost_zar: Math.round(totalLandedCostZar * 100) / 100,
-    all_in_warehouse_cost_per_kg_zar: Math.round(allInWarehouseCostPerKgZar * 100) / 100,
-    overhead_cost_per_kg_zar: Math.round(overheadCostPerKgZar * 100) / 100,
+    customs_value_zar: r(customsValueZar),
+    ocean_freight_zar: r(totalOceanFreightZar),
+    total_ocean_freight_zar: r(totalOceanFreightZar),
+    origin_charge_zar: r(originChargeUsdZar + originChargeEurZar),
+    total_origin_charges_zar: r(totalOriginChargesZar),
+    local_charges_subtotal_zar: r(localChargesSubtotalZar),
+    destination_charges_subtotal_zar: r(destinationChargesSubtotalZar),
+    import_vat_zar: r(importVatZar),
+    total_duties_zar: r(customsItemsTotals.totalDuties + customsItemsTotals.totalSchedule1Duty),
+    agency_fee_zar: r(agencyFeeZar),
+    customs_subtotal_zar: r(customsSubtotalZar),
+    total_shipping_cost_zar: r(totalShippingCostZar),
+    total_in_warehouse_cost_zar: r(totalInWarehouseCostZar),
+    total_landed_cost_zar: r(totalLandedCostZar),
+    all_in_warehouse_cost_per_kg_zar: r(allInWarehouseCostPerKgZar),
+    overhead_cost_per_kg_zar: r(overheadCostPerKgZar),
+    // Airfreight calculated fields
+    volumetric_weight_kg: r(volumetricWeightKg),
+    chargeable_weight_kg: r(chargeableWeightKg),
+    airfreight_total_usd: r(airfreightTotalUsd),
+    airfreight_total_zar: r(airfreightTotalZar),
+    fuel_surcharge_total_zar: r(fuelSurchargeTotalZar),
+    security_surcharge_total_zar: r(securitySurchargeTotalZar),
+    airfreight_origin_charges_zar: r(airfreightOriginZar),
+    air_local_charges_subtotal_zar: r(airLocalChargesSubtotalZar),
+    airfreight_insurance_zar: r(airfreightInsuranceZar),
+    total_airfreight_cost_zar: r(totalAirfreightCostZar),
     // Display-only fields (not saved to database, used for form display)
-    _ocean_freight_usd_zar: Math.round(oceanFreightUsdZar * 100) / 100,
-    _ocean_freight_eur_zar: Math.round(oceanFreightEurZar * 100) / 100,
-    _origin_charge_usd_zar: Math.round(originChargeUsdZar * 100) / 100,
-    _origin_charge_eur_zar: Math.round(originChargeEurZar * 100) / 100,
+    _ocean_freight_usd_zar: r(oceanFreightUsdZar),
+    _ocean_freight_eur_zar: r(oceanFreightEurZar),
+    _origin_charge_usd_zar: r(originChargeUsdZar),
+    _origin_charge_eur_zar: r(originChargeEurZar),
   };
 };
 
@@ -503,12 +593,66 @@ export const LOAD_TYPES = [
   { value: 'LCL', label: 'LCL - Less than Container Load' },
 ];
 
+/**
+ * Airport options (common origins for air freight into SA)
+ */
+export const AIRPORTS_OF_DEPARTURE = [
+  { value: 'HKG', label: 'Hong Kong (HKG)' },
+  { value: 'PVG', label: 'Shanghai Pudong (PVG)' },
+  { value: 'CAN', label: 'Guangzhou (CAN)' },
+  { value: 'SZX', label: 'Shenzhen (SZX)' },
+  { value: 'PEK', label: 'Beijing (PEK)' },
+  { value: 'NRT', label: 'Tokyo Narita (NRT)' },
+  { value: 'ICN', label: 'Seoul Incheon (ICN)' },
+  { value: 'SIN', label: 'Singapore (SIN)' },
+  { value: 'BKK', label: 'Bangkok (BKK)' },
+  { value: 'KUL', label: 'Kuala Lumpur (KUL)' },
+  { value: 'CGK', label: 'Jakarta (CGK)' },
+  { value: 'DEL', label: 'Delhi (DEL)' },
+  { value: 'BOM', label: 'Mumbai (BOM)' },
+  { value: 'DXB', label: 'Dubai (DXB)' },
+  { value: 'IST', label: 'Istanbul (IST)' },
+  { value: 'FRA', label: 'Frankfurt (FRA)' },
+  { value: 'AMS', label: 'Amsterdam (AMS)' },
+  { value: 'LHR', label: 'London Heathrow (LHR)' },
+  { value: 'CDG', label: 'Paris CDG (CDG)' },
+  { value: 'ADD', label: 'Addis Ababa (ADD)' },
+  { value: 'NBO', label: 'Nairobi (NBO)' },
+  { value: 'LOS', label: 'Lagos (LOS)' },
+];
+
+export const AIRPORTS_OF_ARRIVAL = [
+  { value: 'JNB', label: 'OR Tambo, Johannesburg (JNB)' },
+  { value: 'CPT', label: 'Cape Town International (CPT)' },
+  { value: 'DUR', label: 'King Shaka, Durban (DUR)' },
+  { value: 'PLZ', label: 'Port Elizabeth (PLZ)' },
+  { value: 'BFN', label: 'Bloemfontein (BFN)' },
+];
+
+export const AIRLINES = [
+  { value: 'Ethiopian Airlines', label: 'Ethiopian Airlines' },
+  { value: 'Emirates SkyCargo', label: 'Emirates SkyCargo' },
+  { value: 'Turkish Cargo', label: 'Turkish Cargo' },
+  { value: 'Qatar Airways Cargo', label: 'Qatar Airways Cargo' },
+  { value: 'SAA Cargo', label: 'SAA Cargo' },
+  { value: 'Lufthansa Cargo', label: 'Lufthansa Cargo' },
+  { value: 'KLM Cargo', label: 'KLM Cargo' },
+  { value: 'Singapore Airlines Cargo', label: 'Singapore Airlines Cargo' },
+  { value: 'Cathay Cargo', label: 'Cathay Cargo' },
+  { value: 'British Airways Cargo', label: 'British Airways Cargo' },
+  { value: 'Kenya Airways Cargo', label: 'Kenya Airways Cargo' },
+  { value: 'Other', label: 'Other' },
+];
+
 export default {
   COSTING_DEFAULTS,
   calculateDAVIF,
   calculateOriginChargeZAR,
   calculateLocalChargesSubtotal,
   calculateDestinationSubtotal,
+  calculateAirfreightChargesSubtotal,
+  calculateVolumetricWeight,
+  calculateChargeableWeight,
   calculateAgencyFee,
   calculateCustomsSubtotal,
   calculateAllTotals,
@@ -523,4 +667,7 @@ export default {
   SHIPPING_LINES,
   OCEAN_FREIGHT_RATES,
   lookupOceanFreightRate,
+  AIRPORTS_OF_DEPARTURE,
+  AIRPORTS_OF_ARRIVAL,
+  AIRLINES,
 };

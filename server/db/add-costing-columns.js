@@ -8,23 +8,19 @@ import { query } from './connection.js';
 
 const addColumn = async (columnDef) => {
   const colName = columnDef.split(' ')[0];
-  try {
-    // Check if column exists
-    const checkResult = await query(
-      `SELECT column_name FROM information_schema.columns
-       WHERE table_name='import_cost_estimates' AND column_name=$1`,
-      [colName]
-    );
+  // Check if column exists
+  const checkResult = await query(
+    `SELECT column_name FROM information_schema.columns
+     WHERE table_name='import_cost_estimates' AND column_name=$1`,
+    [colName]
+  );
 
-    if (checkResult.rows.length === 0) {
-      await query(`ALTER TABLE import_cost_estimates ADD COLUMN ${columnDef}`);
-      console.log(`  ✓ Added column: ${colName}`);
-      return true;
-    }
-    return false;
-  } catch (error) {
-    throw error;
+  if (checkResult.rows.length === 0) {
+    await query(`ALTER TABLE import_cost_estimates ADD COLUMN ${columnDef}`);
+    console.log(`  ✓ Added column: ${colName}`);  // eslint-disable-line no-console
+    return true;
   }
+  return false;
 };
 
 export default async function addCostingColumns() {
@@ -198,6 +194,45 @@ export default async function addCostingColumns() {
   // Products array (JSON) - for multi-product costing
   const productsColumn = "products JSONB DEFAULT '[]'::jsonb";
   if (await addColumn(productsColumn)) added++;
+
+  // Airfreight columns
+  const airfreightColumns = [
+    "transport_mode VARCHAR(10) DEFAULT 'sea'",
+    'airfreight_rate_per_kg NUMERIC(12,2) DEFAULT 0',
+    'actual_weight_kg NUMERIC(12,2) DEFAULT 0',
+    'volumetric_weight_kg NUMERIC(12,2) DEFAULT 0',
+    'chargeable_weight_kg NUMERIC(12,2) DEFAULT 0',
+    'volumetric_divisor INTEGER DEFAULT 6000',
+    'airfreight_total_usd NUMERIC(14,2) DEFAULT 0',
+    'airfreight_total_zar NUMERIC(14,2) DEFAULT 0',
+    'fuel_surcharge_per_kg NUMERIC(12,2) DEFAULT 0',
+    'fuel_surcharge_total_zar NUMERIC(14,2) DEFAULT 0',
+    'security_surcharge_per_kg NUMERIC(12,2) DEFAULT 0',
+    'security_surcharge_total_zar NUMERIC(14,2) DEFAULT 0',
+    'screening_fee_zar NUMERIC(12,2) DEFAULT 0',
+    'awb_fee_zar NUMERIC(12,2) DEFAULT 0',
+    'airline_handling_fee_zar NUMERIC(12,2) DEFAULT 0',
+    'airport_transfer_fee_zar NUMERIC(12,2) DEFAULT 0',
+    'cartage_airport_to_whs_zar NUMERIC(12,2) DEFAULT 0',
+    'airfreight_insurance_percent NUMERIC(5,2) DEFAULT 0',
+    'airfreight_insurance_zar NUMERIC(14,2) DEFAULT 0',
+    'airfreight_origin_charges_usd NUMERIC(12,2) DEFAULT 0',
+    'airfreight_origin_charges_zar NUMERIC(14,2) DEFAULT 0',
+    'air_local_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0',
+    'total_airfreight_cost_zar NUMERIC(14,2) DEFAULT 0',
+    'airline_name VARCHAR(100)',
+    'flight_number VARCHAR(50)',
+    'airport_of_departure VARCHAR(100)',
+    'airport_of_arrival VARCHAR(100)',
+    'dimensions_length_cm NUMERIC(10,2) DEFAULT 0',
+    'dimensions_width_cm NUMERIC(10,2) DEFAULT 0',
+    'dimensions_height_cm NUMERIC(10,2) DEFAULT 0',
+    'number_of_pieces INTEGER DEFAULT 1',
+  ];
+
+  for (const col of airfreightColumns) {
+    if (await addColumn(col)) added++;
+  }
 
   if (added > 0) {
     console.log(`✓ Added ${added} new costing columns`);

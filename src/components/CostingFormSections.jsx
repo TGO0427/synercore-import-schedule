@@ -8,6 +8,9 @@ import {
   LOAD_TYPES,
   PORTS_OF_LOADING,
   SHIPPING_LINES,
+  AIRPORTS_OF_DEPARTURE,
+  AIRPORTS_OF_ARRIVAL,
+  AIRLINES,
 } from '../utils/costingCalculations';
 
 // Payment terms options
@@ -127,7 +130,10 @@ function CostingFormSections({
     <form onSubmit={onSubmit} style={{ padding: '1.5rem' }}>
       {/* Section: Header Details */}
       <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
-        <h4 style={{ margin: '0 0 1rem', color: '#0f172a', fontSize: '1rem' }}>Shipment Details <InfoTip text="Core shipment info: supplier, origin, ports, and shipping terms." /></h4>
+        <h4 style={{ margin: '0 0 1rem', color: '#0f172a', fontSize: '1rem' }}>
+          {formData.transport_mode === 'air' ? 'Shipment Details (Air Freight)' : 'Shipment Details'}
+          {' '}<InfoTip text="Core shipment info: supplier, origin, ports, and shipping terms." />
+        </h4>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
           {input('Reference Number', 'reference_number')}
           <div style={{ marginBottom: '12px' }}>
@@ -188,15 +194,26 @@ function CostingFormSections({
             )}
           </div>
           {input('Country of Origin', 'country_of_origin')}
-          {select('Port of Loading', 'port_of_loading', PORTS_OF_LOADING)}
-          {select('Port of Discharge', 'port_of_discharge', AFRICAN_PORTS)}
-          {select('Load Type', 'load_type', LOAD_TYPES, 'FCL = Full Container Load (exclusive use). LCL = Less than Container Load (shared).')}
-          {select('Container Type', 'container_type', CONTAINER_TYPES)}
+          {formData.transport_mode === 'air' ? (
+            <>
+              {select('Airport of Departure', 'airport_of_departure', AIRPORTS_OF_DEPARTURE)}
+              {select('Airport of Arrival', 'airport_of_arrival', AIRPORTS_OF_ARRIVAL)}
+              {select('Airline', 'airline_name', AIRLINES)}
+              {input('Flight Number', 'flight_number')}
+            </>
+          ) : (
+            <>
+              {select('Port of Loading', 'port_of_loading', PORTS_OF_LOADING)}
+              {select('Port of Discharge', 'port_of_discharge', AFRICAN_PORTS)}
+              {select('Load Type', 'load_type', LOAD_TYPES, 'FCL = Full Container Load (exclusive use). LCL = Less than Container Load (shared).')}
+              {select('Container Type', 'container_type', CONTAINER_TYPES)}
+            </>
+          )}
           {select('INCO Terms', 'inco_terms', INCO_TERMS, 'International Commercial Terms — defines who pays freight, insurance, and risk transfer point (e.g. FOB, CIF, EXW).')}
           {input('INCO Term Place', 'inco_term_place', 'text', {}, "The named location for the Incoterm, e.g. 'Shanghai' for FOB Shanghai.")}
-          {input('Transit Time (days)', 'transit_time_days', 'number', {}, 'Estimated number of days from port of loading to port of discharge.')}
-          {select('Shipping Line', 'shipping_line', SHIPPING_LINES)}
-          {input('No. of Containers', 'quantity', 'number')}
+          {input('Transit Time (days)', 'transit_time_days', 'number', {}, formData.transport_mode === 'air' ? 'Estimated days from departure to arrival.' : 'Estimated number of days from port of loading to port of discharge.')}
+          {formData.transport_mode !== 'air' && select('Shipping Line', 'shipping_line', SHIPPING_LINES)}
+          {formData.transport_mode !== 'air' && input('No. of Containers', 'quantity', 'number')}
           {input('Costing Date', 'costing_date', 'date')}
           {input('Validity Date', 'validity_date', 'date')}
           {select('Payment Terms', 'payment_terms', PAYMENT_TERMS)}
@@ -413,6 +430,9 @@ function CostingFormSections({
         </div>
       </div>
 
+      {/* === SEA FREIGHT SECTIONS === */}
+      {formData.transport_mode !== 'air' && (
+      <>
       {/* Section: Ocean Freight */}
       <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#eff6ff', borderRadius: '8px', border: '2px solid #3b82f6' }}>
         <h4 style={{ margin: '0 0 1rem', color: '#1d4ed8', fontSize: '1rem' }}>Ocean Freight <InfoTip text="Sea freight charges from the shipping line. Enter in original currency — ZAR conversion is automatic." /></h4>
@@ -533,6 +553,123 @@ function CostingFormSections({
           </div>
         </div>
       </div>
+
+      </>
+      )}
+
+      {/* === AIR FREIGHT SECTIONS === */}
+      {formData.transport_mode === 'air' && (
+      <>
+      {/* Section: Airfreight & Weight */}
+      <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f5f3ff', borderRadius: '8px', border: '2px solid #7c3aed' }}>
+        <h4 style={{ margin: '0 0 1rem', color: '#5b21b6', fontSize: '1rem' }}>Air Freight Rate & Weight <InfoTip text="Chargeable weight is the higher of actual weight or volumetric weight. Volumetric = (L×W×H×pieces) / 6000." /></h4>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+          {currencyInput('Actual Gross Weight', 'actual_weight_kg', 'kg')}
+          {input('No. of Pieces', 'number_of_pieces', 'number')}
+          {currencyInput('Length', 'dimensions_length_cm', 'cm')}
+          {currencyInput('Width', 'dimensions_width_cm', 'cm')}
+          {currencyInput('Height', 'dimensions_height_cm', 'cm')}
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#5b21b6' }}>
+              Volumetric Weight (auto)
+            </label>
+            <div style={{ padding: '8px 12px', backgroundColor: '#ede9fe', borderRadius: '6px', fontWeight: '600', color: '#5b21b6' }}>
+              {formatNumber(calculatedTotals.volumetric_weight_kg || 0)} kg
+            </div>
+          </div>
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#7c3aed' }}>
+              Chargeable Weight (auto) <InfoTip text="Higher of actual vs volumetric weight — this is what airlines bill on." />
+            </label>
+            <div style={{ padding: '8px 12px', backgroundColor: '#7c3aed', borderRadius: '6px', fontWeight: '700', color: 'white', fontSize: '1.1rem' }}>
+              {formatNumber(calculatedTotals.chargeable_weight_kg || 0)} kg
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+          {currencyInput('Airfreight Rate', 'airfreight_rate_per_kg', 'USD/kg')}
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#5b21b6' }}>
+              Total Airfreight (USD)
+            </label>
+            <div style={{ padding: '8px 12px', backgroundColor: '#ede9fe', borderRadius: '6px', fontWeight: '600', color: '#5b21b6' }}>
+              ${formatNumber(calculatedTotals.airfreight_total_usd || 0)}
+            </div>
+          </div>
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#5b21b6' }}>
+              Total Airfreight (ZAR)
+            </label>
+            <div style={{ padding: '8px 12px', backgroundColor: '#ede9fe', borderRadius: '6px', fontWeight: '600', color: '#5b21b6' }}>
+              {formatCurrency(calculatedTotals.airfreight_total_zar || 0)}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginTop: '0.5rem' }}>
+          {currencyInput('Fuel Surcharge', 'fuel_surcharge_per_kg', 'USD/kg')}
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#5b21b6' }}>
+              Fuel Surcharge Total (ZAR)
+            </label>
+            <div style={{ padding: '8px 12px', backgroundColor: '#ede9fe', borderRadius: '6px', fontWeight: '600', color: '#5b21b6' }}>
+              {formatCurrency(calculatedTotals.fuel_surcharge_total_zar || 0)}
+            </div>
+          </div>
+          {currencyInput('Security Surcharge', 'security_surcharge_per_kg', 'USD/kg')}
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#5b21b6' }}>
+              Security Surcharge Total (ZAR)
+            </label>
+            <div style={{ padding: '8px 12px', backgroundColor: '#ede9fe', borderRadius: '6px', fontWeight: '600', color: '#5b21b6' }}>
+              {formatCurrency(calculatedTotals.security_surcharge_total_zar || 0)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Section: Air Freight Origin & Local Charges */}
+      <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f0fdf4', borderRadius: '8px' }}>
+        <h4 style={{ margin: '0 0 1rem', color: '#166534', fontSize: '1rem' }}>Origin & Local Charges <InfoTip text="Origin handling, airport fees, and local transport from airport to warehouse." /></h4>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+          {currencyInput('Origin Charges', 'airfreight_origin_charges_usd', 'USD')}
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#166534' }}>
+              Origin Charges (ZAR) - Auto
+            </label>
+            <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', borderRadius: '6px', fontWeight: '600', color: '#166534' }}>
+              {formatCurrency(calculatedTotals.airfreight_origin_charges_zar || 0)}
+            </div>
+          </div>
+          {currencyInput('Screening Fee', 'screening_fee_zar', 'ZAR')}
+          {currencyInput('AWB Fee', 'awb_fee_zar', 'ZAR', 'Air Waybill documentation fee.')}
+          {currencyInput('Airline Handling Fee', 'airline_handling_fee_zar', 'ZAR')}
+          {currencyInput('Airport Transfer Fee', 'airport_transfer_fee_zar', 'ZAR')}
+          {currencyInput('Cartage: Airport to Warehouse', 'cartage_airport_to_whs_zar', 'ZAR')}
+          {currencyInput('Insurance %', 'airfreight_insurance_percent', '%')}
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#166534' }}>
+              Insurance Amount (ZAR)
+            </label>
+            <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', borderRadius: '6px', fontWeight: '600', color: '#166534' }}>
+              {formatCurrency(calculatedTotals.airfreight_insurance_zar || 0)}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: '1rem', padding: '12px', backgroundColor: '#7c3aed', borderRadius: '6px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontWeight: '500', color: 'white' }}>Total Air Freight Cost (ZAR)</span>
+            <span style={{ fontSize: '1.25rem', fontWeight: '700', color: 'white' }}>
+              {formatCurrency(calculatedTotals.total_airfreight_cost_zar || 0)}
+            </span>
+          </div>
+        </div>
+      </div>
+      </>
+      )}
 
       {/* Section: Customs VAT & Duty Summary */}
       <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fef3c7', borderRadius: '8px' }}>

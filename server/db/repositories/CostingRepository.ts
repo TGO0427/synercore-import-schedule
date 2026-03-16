@@ -102,6 +102,38 @@ export interface ImportCostEstimate {
   total_shipping_cost_zar: number;
   total_in_warehouse_cost_zar: number;
   all_in_warehouse_cost_per_kg_zar: number;
+  // Airfreight
+  transport_mode?: string;
+  airfreight_rate_per_kg?: number;
+  actual_weight_kg?: number;
+  volumetric_weight_kg?: number;
+  chargeable_weight_kg?: number;
+  volumetric_divisor?: number;
+  airfreight_total_usd?: number;
+  airfreight_total_zar?: number;
+  fuel_surcharge_per_kg?: number;
+  fuel_surcharge_total_zar?: number;
+  security_surcharge_per_kg?: number;
+  security_surcharge_total_zar?: number;
+  screening_fee_zar?: number;
+  awb_fee_zar?: number;
+  airline_handling_fee_zar?: number;
+  airport_transfer_fee_zar?: number;
+  cartage_airport_to_whs_zar?: number;
+  airfreight_insurance_percent?: number;
+  airfreight_insurance_zar?: number;
+  airfreight_origin_charges_usd?: number;
+  airfreight_origin_charges_zar?: number;
+  air_local_charges_subtotal_zar?: number;
+  total_airfreight_cost_zar?: number;
+  airline_name?: string;
+  flight_number?: string;
+  airport_of_departure?: string;
+  airport_of_arrival?: string;
+  dimensions_length_cm?: number;
+  dimensions_width_cm?: number;
+  dimensions_height_cm?: number;
+  number_of_pieces?: number;
   // Metadata
   status: string;
   notes?: string;
@@ -143,7 +175,19 @@ const COST_ESTIMATE_COLUMNS = [
   'agency_fee_percentage', 'agency_fee_min', 'customs_duty_not_applicable', 'customs_subtotal_zar',
   // Totals
   'total_shipping_cost_zar', 'total_in_warehouse_cost_zar',
-  'all_in_warehouse_cost_per_kg_zar', 'status', 'notes', 'created_by', 'created_at', 'updated_at'
+  'all_in_warehouse_cost_per_kg_zar',
+  // Airfreight
+  'transport_mode', 'airfreight_rate_per_kg', 'actual_weight_kg', 'volumetric_weight_kg',
+  'chargeable_weight_kg', 'volumetric_divisor', 'airfreight_total_usd', 'airfreight_total_zar',
+  'fuel_surcharge_per_kg', 'fuel_surcharge_total_zar', 'security_surcharge_per_kg', 'security_surcharge_total_zar',
+  'screening_fee_zar', 'awb_fee_zar', 'airline_handling_fee_zar', 'airport_transfer_fee_zar',
+  'cartage_airport_to_whs_zar', 'airfreight_insurance_percent', 'airfreight_insurance_zar',
+  'airfreight_origin_charges_usd', 'airfreight_origin_charges_zar',
+  'air_local_charges_subtotal_zar', 'total_airfreight_cost_zar',
+  'airline_name', 'flight_number', 'airport_of_departure', 'airport_of_arrival',
+  'dimensions_length_cm', 'dimensions_width_cm', 'dimensions_height_cm', 'number_of_pieces',
+  // Metadata
+  'status', 'notes', 'created_by', 'created_at', 'updated_at'
 ];
 
 export class CostingRepository {

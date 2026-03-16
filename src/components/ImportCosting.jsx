@@ -16,6 +16,7 @@ import CostingFormSections from './CostingFormSections';
 import { EmailEstimateModal, RequestCostingModal } from './CostingModals';
 
 const INITIAL_FORM_STATE = {
+  transport_mode: 'sea', // 'sea' or 'air'
   reference_number: '',
   // Origin details
   country_of_origin: '',
@@ -77,6 +78,27 @@ const INITIAL_FORM_STATE = {
   customs_declaration_zar: 590,
   agency_fee_percentage: 3.5,
   agency_fee_min: 1187,
+  // Airfreight fields
+  airline_name: '',
+  flight_number: '',
+  airport_of_departure: '',
+  airport_of_arrival: '',
+  actual_weight_kg: 0,
+  dimensions_length_cm: 0,
+  dimensions_width_cm: 0,
+  dimensions_height_cm: 0,
+  number_of_pieces: 1,
+  volumetric_divisor: 6000,
+  airfreight_rate_per_kg: 0,
+  airfreight_origin_charges_usd: 0,
+  fuel_surcharge_per_kg: 0,
+  security_surcharge_per_kg: 0,
+  screening_fee_zar: 0,
+  awb_fee_zar: 0,
+  airline_handling_fee_zar: 0,
+  airport_transfer_fee_zar: 0,
+  cartage_airport_to_whs_zar: 0,
+  airfreight_insurance_percent: 0,
   // Metadata
   notes: '',
   status: 'draft',
@@ -536,7 +558,7 @@ function ImportCosting() {
         <div className="page-header">
           <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a' }}>Import Costing</h2>
           <p style={{ margin: '0.25rem 0 0', color: 'var(--text-500)', fontSize: '0.8rem' }}>
-            FCL Import Cost Comparison
+            Sea & Air Freight Import Cost Comparison
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -625,9 +647,35 @@ function ImportCosting() {
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               position: 'sticky', top: 0, backgroundColor: 'white', zIndex: 10
             }}>
-              <h3 style={{ margin: 0, color: '#0f172a' }}>
-                {editingId ? 'Edit Cost Estimate' : 'New Cost Estimate'}
-              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <h3 style={{ margin: 0, color: '#0f172a' }}>
+                  {editingId ? 'Edit Cost Estimate' : 'New Cost Estimate'}
+                </h3>
+                <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '2px solid #e5e7eb' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleInputChange('transport_mode', 'sea')}
+                    style={{
+                      padding: '6px 16px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '0.85rem',
+                      backgroundColor: formData.transport_mode === 'sea' ? '#1d4ed8' : '#f3f4f6',
+                      color: formData.transport_mode === 'sea' ? 'white' : '#6b7280',
+                    }}
+                  >
+                    Sea Freight
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleInputChange('transport_mode', 'air')}
+                    style={{
+                      padding: '6px 16px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '0.85rem',
+                      backgroundColor: formData.transport_mode === 'air' ? '#7c3aed' : '#f3f4f6',
+                      color: formData.transport_mode === 'air' ? 'white' : '#6b7280',
+                    }}
+                  >
+                    Air Freight
+                  </button>
+                </div>
+              </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button
                   onClick={() => setFormExpanded(!formExpanded)}

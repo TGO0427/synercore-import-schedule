@@ -99,10 +99,25 @@ function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplica
                 const products = est.products || [];
                 return (
                   <tr key={est.id} style={{ borderBottom: '1px solid #e5e7eb', verticalAlign: 'top' }}>
-                    <td style={{ padding: '12px 16px', color: '#111827' }}>{est.reference_number || est.id.slice(0, 8)}</td>
+                    <td style={{ padding: '12px 16px', color: '#111827' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {est.reference_number || est.id.slice(0, 8)}
+                        {est.transport_mode === 'air' && (
+                          <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '600', backgroundColor: '#ede9fe', color: '#7c3aed' }}>AIR</span>
+                        )}
+                      </div>
+                    </td>
                     <td style={{ padding: '12px 16px', color: '#374151' }}>{est.supplier_name || '-'}</td>
-                    <td style={{ padding: '12px 16px', color: '#374151' }}>{est.port_of_discharge || '-'}</td>
-                    <td style={{ padding: '12px 16px', color: '#374151' }}>{est.container_type || '-'}</td>
+                    <td style={{ padding: '12px 16px', color: '#374151' }}>
+                      {est.transport_mode === 'air'
+                        ? (est.airport_of_arrival || '-')
+                        : (est.port_of_discharge || '-')}
+                    </td>
+                    <td style={{ padding: '12px 16px', color: '#374151' }}>
+                      {est.transport_mode === 'air'
+                        ? (est.airline_name || '-')
+                        : (est.container_type || '-')}
+                    </td>
                     <td style={{ padding: '12px 16px', color: '#374151' }}>
                       {products.length === 0 ? (
                         <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>No products</span>
