@@ -31,6 +31,7 @@ const GlobalSearch = lazy(() => import('./components/GlobalSearch'));
 const LiveBoard = lazy(() => import('./components/LiveBoard'));
 const AuditLog = lazy(() => import('./components/AuditLog'));
 const BolAudit = lazy(() => import('./components/BolAudit'));
+const SupplierPerformance = lazy(() => import('./components/SupplierPerformance'));
 import SupplierLogin from './pages/SupplierLogin';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -236,6 +237,7 @@ function App() {
     if (path === '/costing-requests') return 'costing-requests';
     if (path === '/reports') return 'reports';
     if (path === '/advanced-reports') return 'advanced-reports';
+    if (path === '/supplier-performance') return 'supplier-performance';
     if (path === '/users') return 'users';
     if (path === '/audit') return 'audit';
     return 'shipping';
@@ -331,6 +333,7 @@ function App() {
             costingRequests: { label: 'Cost Requests', icon: '\u{1F4CB}', view: 'costing-requests', adminOnly: true, badge: costingRequestCount },
             reports: { label: 'Reports', icon: '\u{1F4CA}', view: 'reports' },
             advancedReports: { label: 'Advanced Reports', icon: '\u{1F4C8}', view: 'advanced-reports' },
+            supplierPerformance: { label: 'Supplier Performance', icon: '\u{1F3AF}', view: 'supplier-performance' },
             bolAudit: { label: 'BOL Audit', icon: '\u{1F4DC}', view: 'bol-audit' },
             audit: { label: 'Activity Log', icon: '\u{1F4DD}', view: 'audit', adminOnly: true },
           };
@@ -416,7 +419,7 @@ function App() {
               {renderSection('Master Data', 'masterData', ['suppliers'])}
               {renderSection('Operations', 'operations', ['shipping', 'workflow', 'capacity', 'stored', 'archives', 'bolAudit'])}
               {renderSection('Finance', 'finance', ['rates', 'costing', 'costingRequests'])}
-              {renderSection('Reports', 'reports', ['reports', 'advancedReports', 'audit'])}
+              {renderSection('Reports', 'reports', ['reports', 'advancedReports', 'supplierPerformance', 'audit'])}
 
               {!sidebarCollapsed && (!q || resourcesVisible.length > 0) && (
                 <div className="sidebar-resources">
@@ -621,6 +624,9 @@ function App() {
             } />
             <Route path="/users" element={
               <Suspense fallback={<PageLoader />}><ErrorBoundary>{isAdmin ? <UserManagement /> : <AccessDenied />}</ErrorBoundary></Suspense>
+            } />
+            <Route path="/supplier-performance" element={
+              <Suspense fallback={<PageLoader />}><ErrorBoundary><SupplierPerformance shipments={shipments} /></ErrorBoundary></Suspense>
             } />
             <Route path="/bol-audit" element={
               <Suspense fallback={<PageLoader />}><ErrorBoundary><BolAudit /></ErrorBoundary></Suspense>

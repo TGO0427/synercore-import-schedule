@@ -1,6 +1,7 @@
 import React from 'react';
 import ResizableModal from './ResizableModal';
 import { ShipmentStatus } from '../types/shipment';
+import ShipmentTimeline from './ShipmentTimeline';
 
 const AIRFREIGHT_STATUSES = [
   ShipmentStatus.PLANNED_AIRFREIGHT,
@@ -33,6 +34,7 @@ const OrderDetailsModal = ({ isOpen, shipment, onClose }) => {
       minWidth={400}
       minHeight={350}
     >
+      <ShipmentTimeline shipment={shipment} />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
         <div>
           <label style={labelStyle}>Supplier</label>

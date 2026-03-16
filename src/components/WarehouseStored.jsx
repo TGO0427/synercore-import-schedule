@@ -5,6 +5,7 @@ import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
 import { useNotification } from '../contexts/NotificationContext';
 import FilterPresetBar from './FilterPresetBar';
+import ShipmentTimeline from './ShipmentTimeline';
 import { jsPDF } from 'jspdf';
 import { applyPlugin } from 'jspdf-autotable';
 applyPlugin(jsPDF);
@@ -1070,7 +1071,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                         <tfoot>
                           <tr style={{ borderTop: '2px solid var(--border)', background: 'var(--surface-2)' }}>
                             <td style={{ padding: '8px 4px' }} />
-                            <td colSpan={2} style={{ padding: '8px 12px', fontWeight: 700, fontSize: 13, color: 'var(--navy-900)' }}>
+                            <td colSpan={3} style={{ padding: '8px 12px', fontWeight: 700, fontSize: 13, color: 'var(--navy-900)' }}>
                               Totals
                             </td>
                             <td style={{ padding: '8px 12px', fontWeight: 700, fontSize: 13, color: 'var(--navy-900)' }}>
@@ -1128,6 +1129,8 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                 x
               </button>
             </div>
+
+            <ShipmentTimeline shipment={selectedShipment} />
 
             {(() => {
               const s = selectedShipment;

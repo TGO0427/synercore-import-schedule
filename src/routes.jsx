@@ -15,6 +15,7 @@ export const VIEW_ROUTES = {
   users:             '/users',
   audit:             '/audit',
   'bol-audit':       '/bol-audit',
+  'supplier-performance': '/supplier-performance',
 };
 
 // Reverse map: path -> view name

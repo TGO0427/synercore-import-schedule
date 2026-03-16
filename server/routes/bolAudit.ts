@@ -1473,6 +1473,46 @@ router.post(
         lineResults.push(lineResult);
       }
 
+      // ---- Historical comparison: flag significant charge jumps vs previous invoices ----
+      const agentName = (invResult as any).agent_name || 'AGX';
+      const previousLineItems = await queryAll(
+        `SELECT li.description, li.local_amount, i.invoice_date, i.id as invoice_id
+         FROM bol_invoice_line_items li
+         JOIN bol_invoices i ON li.bol_invoice_id = i.id
+         WHERE i.agent_name = $1 AND i.id != $2
+         ORDER BY i.invoice_date DESC, i.id DESC`,
+        [agentName, invoiceId]
+      );
+
+      // Build a map of description → most recent previous amount
+      const previousByDesc = new Map<string, { amount: number; date: string }>();
+      for (const prev of previousLineItems) {
+        const key = ((prev as any).description || '').toUpperCase().trim();
+        if (!previousByDesc.has(key)) {
+          previousByDesc.set(key, {
+            amount: parseFloat((prev as any).local_amount) || 0,
+            date: (prev as any).invoice_date,
+          });
+        }
+      }
+
+      // Enrich each line result with historical comparison
+      for (const item of lineResults) {
+        const desc = ((item as any).description || '').toUpperCase().trim();
+        const prevData = previousByDesc.get(desc);
+        if (prevData && prevData.amount > 0 && (item as any).local_amount != null) {
+          const currentAmt = parseFloat((item as any).local_amount) || 0;
+          const changePct = ((currentAmt - prevData.amount) / prevData.amount) * 100;
+          (item as any).previous_amount = prevData.amount;
+          (item as any).change_percent = Math.round(changePct * 100) / 100;
+          (item as any).historical_flag = changePct > 15 ? 'increase' : null;
+        } else {
+          (item as any).previous_amount = null;
+          (item as any).change_percent = null;
+          (item as any).historical_flag = null;
+        }
+      }
+
       // Update invoice with total variance and audit status
       const auditStatus = totalVariance > 100 ? 'discrepancy' : 'approved';
       await queryOne(
@@ -1536,6 +1576,58 @@ router.get(
     }
 
     res.json({ data: invoices });
+  })
+);
+
+/**
+ * GET /api/bol-audit/invoice-history/:agentName
+ * Returns historical charge trends for a specific clearing agent.
+ * Groups line items by description and shows amount over time with latest change %.
+ */
+router.get(
+  '/invoice-history/:agentName',
+  authenticateToken,
+  [param('agentName').trim().notEmpty().withMessage('Agent name is required')],
+  validate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const { agentName } = req.params;
+
+    const rows = await queryAll(
+      `SELECT li.description, li.local_amount, i.invoice_date
+       FROM bol_invoice_line_items li
+       JOIN bol_invoices i ON li.bol_invoice_id = i.id
+       WHERE i.agent_name = $1 AND li.local_amount IS NOT NULL
+       ORDER BY li.description, i.invoice_date ASC`,
+      [agentName]
+    );
+
+    // Group by description
+    const grouped = new Map<string, { date: string; amount: number }[]>();
+    for (const row of rows) {
+      const desc = ((row as any).description || '').trim();
+      if (!desc) continue;
+      if (!grouped.has(desc)) grouped.set(desc, []);
+      grouped.get(desc)!.push({
+        date: (row as any).invoice_date,
+        amount: parseFloat((row as any).local_amount) || 0,
+      });
+    }
+
+    // Build result with latest change percentage
+    const result: { description: string; amounts: { date: string; amount: number }[]; latest_change_pct: number | null }[] = [];
+    for (const [description, amounts] of grouped) {
+      let latestChangePct: number | null = null;
+      if (amounts.length >= 2) {
+        const prev = amounts[amounts.length - 2].amount;
+        const curr = amounts[amounts.length - 1].amount;
+        if (prev > 0) {
+          latestChangePct = Math.round(((curr - prev) / prev) * 100 * 100) / 100;
+        }
+      }
+      result.push({ description, amounts, latest_change_pct: latestChangePct });
+    }
+
+    res.json({ data: result });
   })
 );
 
