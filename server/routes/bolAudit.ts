@@ -1121,21 +1121,95 @@ router.post(
       let totalVariance = 0;
       const lineResults: any[] = [];
 
+      // Synonym map: invoice description keywords → benchmark description keywords
+      const DESCRIPTION_SYNONYMS: Record<string, string[]> = {
+        'UNPACK / REPACK': ['UNPACK / RELOAD'],
+        'UNPACK / RELOAD': ['UNPACK / REPACK'],
+        'CARTAGE': ['TRANSPORT', 'LOCAL CARTAGE'],
+        'TRANSPORT': ['CARTAGE', 'LOCAL CARTAGE'],
+        'IMPORT CLEARANCE FEE': ['CUSTOMS DECLARATION'],
+        'CUSTOMS DECLARATION': ['IMPORT CLEARANCE FEE'],
+        'CLEARANCE FEE': ['CUSTOMS DECLARATION'],
+        'CARGO DUES': ['CARGO DUES 20FT', 'CARGO DUES 40FT'],
+        'HANDLING': ['HANDLING/RELEASE COSTS'],
+        'RELEASE': ['HANDLING/RELEASE COSTS'],
+        'WMS': ['WMS LOGGING'],
+        'STORAGE': ['STORAGE PER PALLET'],
+        'UNPACKING': ['CONTAINER UNPACKING CHARGES'],
+      };
+
+      // Pass-through charges that don't have benchmarks (billed at cost)
+      const PASSTHROUGH_CHARGES = ['LANDSIDE CHARGES', 'SEAL', 'DO FEE', 'DETENTION'];
+
+      // Load all benchmarks once for this invoice
+      const allBenchmarks = await queryAll(
+        `SELECT * FROM clearing_rate_benchmarks ORDER BY updated_at DESC`
+      );
+
       for (const charge of invoice.charges) {
-        // Try to match against clearing benchmarks by description fuzzy match
         // Normalize: strip parenthetical rate info like "- (R5430.00/cnt)"
         const normalizedDesc = charge.description
           .replace(/\s*-\s*\(R[\d,.]+\/\w+\)/g, '')
           .replace(/\s*\(.*?\)/g, '')
-          .trim();
+          .trim()
+          .toUpperCase();
 
-        // Find matching benchmark
-        const benchmark = await queryOne(
-          `SELECT * FROM clearing_rate_benchmarks
-           WHERE (LOWER(description) LIKE $1 OR LOWER($2) LIKE '%' || LOWER(description) || '%')
-           ORDER BY updated_at DESC LIMIT 1`,
-          [`%${normalizedDesc.toLowerCase()}%`, normalizedDesc.toLowerCase()]
-        );
+        // Check if this is a pass-through charge (no benchmark expected)
+        const isPassthrough = PASSTHROUGH_CHARGES.some(p => normalizedDesc.includes(p));
+
+        // Find matching benchmark using multi-strategy approach
+        let benchmark: any = null;
+
+        if (!isPassthrough) {
+          // Strategy 1: Direct ILIKE match
+          benchmark = allBenchmarks.find((b: any) => {
+            const bd = (b.description as string).toUpperCase();
+            return bd.includes(normalizedDesc) || normalizedDesc.includes(bd);
+          });
+
+          // Strategy 2: Route-aware match (e.g., "CARTAGE: DBN Port to WHS" → "TRANSPORT: DBN PORT TO WHS")
+          if (!benchmark && normalizedDesc.includes(':')) {
+            const routePart = normalizedDesc.split(':').slice(1).join(':').trim();
+            if (routePart.length > 5) {
+              benchmark = allBenchmarks.find((b: any) => {
+                const bd = (b.description as string).toUpperCase();
+                return bd.includes(routePart);
+              });
+            }
+          }
+
+          // Strategy 3: Synonym mapping
+          if (!benchmark) {
+            for (const [key, synonyms] of Object.entries(DESCRIPTION_SYNONYMS)) {
+              if (normalizedDesc.includes(key)) {
+                for (const syn of synonyms) {
+                  benchmark = allBenchmarks.find((b: any) =>
+                    (b.description as string).toUpperCase().includes(syn)
+                  );
+                  if (benchmark) break;
+                }
+                if (benchmark) break;
+              }
+            }
+          }
+
+          // Strategy 4: Keyword overlap — match if 2+ significant words overlap
+          if (!benchmark) {
+            const stopWords = new Set(['PER', 'TO', 'THE', 'A', 'AN', 'OF', 'AND', 'OR', 'FOR', 'AT', 'IN', 'ON']);
+            const descWords = normalizedDesc.split(/[\s\/\-:]+/).filter(w => w.length > 2 && !stopWords.has(w));
+            let bestMatch: any = null;
+            let bestOverlap = 0;
+            for (const b of allBenchmarks) {
+              const bWords = ((b as any).description as string).toUpperCase().split(/[\s\/\-:]+/).filter(w => w.length > 2 && !stopWords.has(w));
+              const overlap = descWords.filter(w => bWords.some(bw => bw.includes(w) || w.includes(bw))).length;
+              if (overlap >= 2 && overlap > bestOverlap) {
+                bestOverlap = overlap;
+                bestMatch = b;
+              }
+            }
+            benchmark = bestMatch;
+          }
+        }
 
         let benchmarkRate: number | null = null;
         let varianceAmount: number | null = null;
@@ -1143,10 +1217,28 @@ router.post(
         let benchmarkId: number | null = null;
 
         if (benchmark && charge.local_amount) {
-          benchmarkRate = (benchmark as any).unit_rate_zar;
+          benchmarkRate = parseFloat((benchmark as any).unit_rate_zar);
           benchmarkId = (benchmark as any).id;
-          varianceAmount = charge.local_amount - benchmarkRate;
-          variancePct = benchmarkRate > 0 ? ((charge.local_amount - benchmarkRate) / benchmarkRate) * 100 : null;
+
+          // Special handling for agency fee (percentage-based: 3.5% of cargo value, min R1,187)
+          const isAgencyFee = (benchmark as any).description.toUpperCase().includes('AGENCY FEE');
+          if (isAgencyFee) {
+            // Agency fee benchmark is the minimum; if invoice amount > minimum, it's likely
+            // the percentage-based fee which is correct. Only flag if below minimum.
+            // We can't calculate 3.5% without cargo value, so accept amounts >= minimum as OK.
+            if (charge.local_amount >= benchmarkRate) {
+              // Fee is at or above minimum — acceptable (likely percentage-based)
+              varianceAmount = 0;
+              variancePct = 0;
+            } else {
+              // Below minimum — flag it
+              varianceAmount = charge.local_amount - benchmarkRate;
+              variancePct = ((charge.local_amount - benchmarkRate) / benchmarkRate) * 100;
+            }
+          } else {
+            varianceAmount = charge.local_amount - benchmarkRate;
+            variancePct = benchmarkRate > 0 ? ((charge.local_amount - benchmarkRate) / benchmarkRate) * 100 : null;
+          }
           totalVariance += varianceAmount;
         }
 
