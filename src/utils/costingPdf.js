@@ -428,7 +428,106 @@ export function generateEstimatePDFBase64(estimate) {
 
   buildEstimateHeader(doc, estimate, productTotals, totals);
 
-  // Summary (simplified for email)
+  const isAir = (estimate.transport_mode || 'sea') === 'air';
+
+  if (isAir) {
+    // Airfreight Charges
+    const airRows = filterZeroRows([
+      ['Airfreight (USD)', formatCurrency(estimate.airfreight_usd, 'USD'), formatCurrency(totals._airfreight_usd_zar)],
+      ['Airfreight (EUR)', formatCurrency(estimate.airfreight_eur, 'EUR'), formatCurrency(totals._airfreight_eur_zar)],
+    ]);
+    if (totals.airfreight_total_zar > 0) {
+      airRows.push(['Total Airfreight', '', formatCurrency(totals.airfreight_total_zar)]);
+    }
+    if (airRows.length > 0) {
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Airfreight', 'Amount', 'ZAR']],
+        body: airRows,
+        theme: 'grid',
+        headStyles: { fillColor: [124, 58, 237] },
+      });
+    }
+
+    // Surcharges
+    const surchargeRows = filterZeroRows([
+      ['Fuel Surcharge (USD)', formatCurrency(estimate.fuel_surcharge_usd, 'USD'), formatCurrency((parseFloat(estimate.fuel_surcharge_usd) || 0) * (parseFloat(estimate.roe_origin) || 0))],
+      ['Fuel Surcharge (EUR)', formatCurrency(estimate.fuel_surcharge_eur, 'EUR'), formatCurrency((parseFloat(estimate.fuel_surcharge_eur) || 0) * (parseFloat(estimate.roe_eur) || 0))],
+      ['Security Surcharge (USD)', formatCurrency(estimate.security_surcharge_usd, 'USD'), formatCurrency((parseFloat(estimate.security_surcharge_usd) || 0) * (parseFloat(estimate.roe_origin) || 0))],
+      ['Security Surcharge (EUR)', formatCurrency(estimate.security_surcharge_eur, 'EUR'), formatCurrency((parseFloat(estimate.security_surcharge_eur) || 0) * (parseFloat(estimate.roe_eur) || 0))],
+    ]);
+    if (totals.fuel_surcharge_total_zar > 0 || totals.security_surcharge_total_zar > 0) {
+      surchargeRows.push(['Total Surcharges', '', formatCurrency((totals.fuel_surcharge_total_zar || 0) + (totals.security_surcharge_total_zar || 0))]);
+    }
+    if (surchargeRows.length > 0) {
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Surcharges', 'Amount', 'ZAR']],
+        body: surchargeRows,
+        theme: 'grid',
+        headStyles: { fillColor: [109, 40, 217] },
+      });
+    }
+
+    // Origin & Local Charges
+    const airLocalRows = filterZeroRows([
+      ['Origin Charges (USD)', formatCurrency(estimate.airfreight_origin_charges_usd, 'USD')],
+      ['Origin Charges (EUR)', formatCurrency(estimate.airfreight_origin_charges_eur, 'EUR')],
+      ['Screening Fee', formatCurrency(estimate.screening_fee_zar)],
+      ['AWB Fee', formatCurrency(estimate.awb_fee_zar)],
+      ['Airline Handling Fee', formatCurrency(estimate.airline_handling_fee_zar)],
+      ['Airport Transfer Fee', formatCurrency(estimate.airport_transfer_fee_zar)],
+      ['Cartage: Airport to Warehouse', formatCurrency(estimate.cartage_airport_to_whs_zar)],
+      ['Insurance', formatCurrency(totals.airfreight_insurance_zar)],
+    ]);
+    if (totals.airfreight_origin_charges_zar > 0 || totals.air_local_charges_subtotal_zar > 0) {
+      airLocalRows.push(['Sub-Total', formatCurrency((totals.airfreight_origin_charges_zar || 0) + (totals.air_local_charges_subtotal_zar || 0) + (totals.airfreight_insurance_zar || 0))]);
+    }
+    if (airLocalRows.length > 0) {
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Origin & Local Charges', 'Amount']],
+        body: airLocalRows,
+        theme: 'grid',
+        headStyles: { fillColor: [22, 101, 52] },
+      });
+    }
+  } else {
+    // Sea freight summary for email
+    const seaSummaryRows = filterZeroRows([
+      ['Ocean Freight', formatCurrency(totals.total_ocean_freight_zar)],
+      ['Origin Charges', formatCurrency(totals.total_origin_charges_zar)],
+      ['Local Charges', formatCurrency(totals.local_charges_subtotal_zar)],
+      ['Destination Charges', formatCurrency(totals.destination_charges_subtotal_zar)],
+    ]);
+    if (seaSummaryRows.length > 0) {
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Shipping Charges', 'ZAR']],
+        body: seaSummaryRows,
+        theme: 'grid',
+        headStyles: { fillColor: [59, 130, 246] },
+      });
+    }
+  }
+
+  // Customs & Duties
+  const customsRows = filterZeroRows([
+    ['Customs Value', formatCurrency(totals.customs_value_zar)],
+    ['Duties', formatCurrency(productTotals.totalDuties || estimate.duties_zar)],
+    ['Agency Fee', formatCurrency(totals.agency_fee_zar)],
+  ]);
+  if (customsRows.length > 0) {
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 10,
+      head: [['Customs & Duties', 'ZAR']],
+      body: customsRows,
+      theme: 'grid',
+      headStyles: { fillColor: [146, 64, 14] },
+    });
+  }
+
+  // Summary
   const summaryRows = filterZeroRows([
     ['Total Shipping Cost', formatCurrency(totals.total_shipping_cost_zar)],
     ['Total Landed Cost', formatCurrency(totals.total_landed_cost_zar)],
