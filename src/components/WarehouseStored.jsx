@@ -31,6 +31,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
   const [bulkSelectedIds, setBulkSelectedIds] = useState(new Set());
   const [bulkSelectAll, setBulkSelectAll] = useState(false);
   const [bulkArchiving, setBulkArchiving] = useState(false);
+  const [storageRates, setStorageRates] = useState({ week1: 43, week2Plus: 53 });
 
   // Mobile responsiveness
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -94,6 +95,29 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     fetchArchivedShipments();
     const interval = setInterval(fetchArchivedShipments, 10000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Fetch storage benchmark rates
+  useEffect(() => {
+    const fetchStorageRates = async () => {
+      try {
+        const res = await authFetch(getApiUrl('/api/bol-audit/clearing-benchmarks'));
+        if (!res.ok) return;
+        const json = await res.json();
+        const benchmarks = json.data || json;
+        const w1 = benchmarks.find(b => /STORAGE.*PALLET.*WEEK\s*1\b/i.test(b.description));
+        const w2 = benchmarks.find(b => /STORAGE.*PALLET.*WEEK\s*2/i.test(b.description));
+        if (w1 || w2) {
+          setStorageRates({
+            week1: w1 ? parseFloat(w1.unit_rate_zar) : 43,
+            week2Plus: w2 ? parseFloat(w2.unit_rate_zar) : 53,
+          });
+        }
+      } catch {
+        // keep defaults
+      }
+    };
+    fetchStorageRates();
   }, []);
 
   const filteredAndSortedShipments = useMemo(() => {
@@ -489,13 +513,14 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
   };
 
   const columns = [
-    { key: 'orderRef', label: 'Order Ref', width: '15%' },
-    { key: 'supplier', label: 'Supplier', width: '18%' },
-    { key: 'productName', label: 'Product', width: '22%' },
-    { key: 'quantity', label: 'Qty', width: '8%' },
-    { key: 'palletQty', label: 'Pallets', width: '8%' },
-    { key: 'storedDate', label: 'Stored Date', width: '12%' },
-    { key: 'daysInStorage', label: 'Days', width: '6%' },
+    { key: 'orderRef', label: 'Order Ref', width: '14%' },
+    { key: 'supplier', label: 'Supplier', width: '16%' },
+    { key: 'productName', label: 'Product', width: '19%' },
+    { key: 'quantity', label: 'Qty', width: '7%' },
+    { key: 'palletQty', label: 'Pallets', width: '7%' },
+    { key: 'storedDate', label: 'Stored Date', width: '11%' },
+    { key: 'daysInStorage', label: 'Days', width: '5%' },
+    { key: 'storageCost', label: 'Storage Cost', width: '10%' },
     { key: null, label: '', width: '11%' },
   ];
 
@@ -504,6 +529,15 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     if (!storedDate) return '-';
     const diff = Math.floor((new Date() - new Date(storedDate)) / (1000 * 60 * 60 * 24));
     return diff >= 0 ? diff : 0;
+  };
+
+  const getStorageCost = (shipment) => {
+    const days = getDaysInStorage(shipment);
+    if (typeof days !== 'number' || days === 0) return 0;
+    const pallets = Math.round(shipment.palletQty) || 1;
+    const totalWeeks = Math.ceil(days / 7);
+    if (totalWeeks <= 1) return pallets * 1 * storageRates.week1;
+    return pallets * (storageRates.week1 + (totalWeeks - 1) * storageRates.week2Plus);
   };
 
   return (
@@ -722,14 +756,23 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                             <dt>Quantity</dt><dd>{shipment.quantity || 'N/A'}</dd>
                             <dt>Pallets</dt><dd>{shipment.palletQty ? Math.round(shipment.palletQty) : '-'}</dd>
                             <dt>Stored</dt><dd>{formatDate(shipment.receivingDate || shipment.updatedAt || shipment.estimatedArrival)}</dd>
-                            {isOffsite && (
+                            {isOffsite && (() => {
+                              const days = getDaysInStorage(shipment);
+                              const isLong = typeof days === 'number' && days > 30;
+                              const cost = getStorageCost(shipment);
+                              return (
                               <>
                                 <dt>Days Stored</dt>
-                                <dd style={{ fontWeight: 600, color: typeof getDaysInStorage(shipment) === 'number' && getDaysInStorage(shipment) > 30 ? 'var(--danger)' : 'var(--text-700)' }}>
-                                  {getDaysInStorage(shipment)}{typeof getDaysInStorage(shipment) === 'number' ? 'd' : ''}
+                                <dd style={{ fontWeight: 600, color: isLong ? 'var(--danger)' : 'var(--text-700)' }}>
+                                  {days}{typeof days === 'number' ? 'd' : ''}
+                                </dd>
+                                <dt>Storage Cost</dt>
+                                <dd style={{ fontWeight: 600, color: isLong ? 'var(--danger)' : 'var(--text-700)' }}>
+                                  {cost > 0 ? `R${cost.toLocaleString('en-ZA', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '-'}
                                 </dd>
                               </>
-                            )}
+                              );
+                            })()}
                           </dl>
                           <div className="card-actions">
                             <button
@@ -889,13 +932,19 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                               )}
                             </td>
                             {(() => {
-                              if (!isOffsite) return <td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-500)' }}>-</td>;
+                              if (!isOffsite) return <><td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-500)' }}>-</td><td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-500)' }}>-</td></>;
                               const days = getDaysInStorage(shipment);
                               const isLong = typeof days === 'number' && days > 30;
+                              const cost = getStorageCost(shipment);
                               return (
+                                <>
                                 <td style={{ padding: '8px 12px', fontSize: 13, fontWeight: 600, color: isLong ? 'var(--danger)' : 'var(--text-700)' }}>
                                   {days}{typeof days === 'number' ? 'd' : ''}
                                 </td>
+                                <td style={{ padding: '8px 12px', fontSize: 13, fontWeight: 600, color: isLong ? 'var(--danger)' : 'var(--text-700)' }}>
+                                  {cost > 0 ? `R${cost.toLocaleString('en-ZA', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '-'}
+                                </td>
+                                </>
                               );
                             })()}
                             <td style={{ padding: '8px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
