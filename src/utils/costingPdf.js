@@ -93,10 +93,12 @@ const getProductCostPerKg = (product, estimate, totals, productTotals) => {
 const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
   const products = estimate.products || [];
 
+  const isAir = (estimate.transport_mode || 'sea') === 'air';
+
   // Header
   doc.setFontSize(18);
-  doc.setTextColor(11, 31, 58);
-  doc.text('FCL Import Cost Estimate', 14, 20);
+  doc.setTextColor(isAir ? 124 : 11, isAir ? 58 : 31, isAir ? 237 : 58);
+  doc.text(isAir ? 'Air Freight Import Cost Estimate' : 'FCL Import Cost Estimate', 14, 20);
 
   doc.setFontSize(10);
   doc.setTextColor(100);
@@ -114,17 +116,30 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
   doc.setFont(undefined, 'normal');
 
   // Shipment Details
-  const shipmentRows = filterZeroRows([
-    ['Country of Origin', estimate.country_of_origin || '-'],
-    ['Port of Loading', estimate.port_of_loading || '-'],
-    ['Port of Discharge', estimate.port_of_discharge || '-'],
-    ['Load Type', estimate.load_type || '-'],
-    ['Container Type', estimate.container_type || '-'],
-    ['Shipping Line', estimate.shipping_line || '-'],
-    ['INCO Terms', estimate.inco_terms || '-'],
-    ['Transit Time', estimate.transit_time_days ? `${estimate.transit_time_days} days` : '-'],
-    ['Total Weight', `${formatNumber(productTotals.totalWeight || estimate.total_gross_weight_kg)} kg`],
-  ]);
+  const shipmentRows = isAir
+    ? filterZeroRows([
+        ['Country of Origin', estimate.country_of_origin || '-'],
+        ['Airport of Departure', estimate.airport_of_departure || '-'],
+        ['Airport of Arrival', estimate.airport_of_arrival || '-'],
+        ['Airline', estimate.airline_name || '-'],
+        ['Flight Number', estimate.flight_number || '-'],
+        ['INCO Terms', estimate.inco_terms || '-'],
+        ['Transit Time', estimate.transit_time_days ? `${estimate.transit_time_days} days` : '-'],
+        ['Actual Weight', `${formatNumber(estimate.actual_weight_kg || 0)} kg`],
+        ['Chargeable Weight', `${formatNumber(totals.chargeable_weight_kg || 0)} kg`],
+        ['Total Product Weight', `${formatNumber(productTotals.totalWeight || 0)} kg`],
+      ])
+    : filterZeroRows([
+        ['Country of Origin', estimate.country_of_origin || '-'],
+        ['Port of Loading', estimate.port_of_loading || '-'],
+        ['Port of Discharge', estimate.port_of_discharge || '-'],
+        ['Load Type', estimate.load_type || '-'],
+        ['Container Type', estimate.container_type || '-'],
+        ['Shipping Line', estimate.shipping_line || '-'],
+        ['INCO Terms', estimate.inco_terms || '-'],
+        ['Transit Time', estimate.transit_time_days ? `${estimate.transit_time_days} days` : '-'],
+        ['Total Weight', `${formatNumber(productTotals.totalWeight || estimate.total_gross_weight_kg)} kg`],
+      ]);
 
   autoTable(doc, {
     startY: 48,
@@ -198,93 +213,164 @@ export function generateEstimatePDF(estimate) {
 
   buildEstimateHeader(doc, estimate, productTotals, totals);
 
-  // Ocean Freight
-  const oceanFreightRows = filterZeroRows([
-    ['Ocean Freight (USD)', formatCurrency(estimate.ocean_freight_usd, 'USD'), formatCurrency(totals._ocean_freight_usd_zar)],
-    ['Ocean Freight (EUR)', formatCurrency(estimate.ocean_freight_eur, 'EUR'), formatCurrency(totals._ocean_freight_eur_zar)],
-  ]);
-  if (totals.total_ocean_freight_zar > 0) {
-    oceanFreightRows.push(['Total Ocean Freight', '', formatCurrency(totals.total_ocean_freight_zar)]);
-  }
-  if (oceanFreightRows.length > 0) {
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 10,
-      head: [['Ocean Freight', 'Amount', 'ZAR']],
-      body: oceanFreightRows,
-      theme: 'grid',
-      headStyles: { fillColor: [59, 130, 246] },
-    });
-  }
+  const isAir = (estimate.transport_mode || 'sea') === 'air';
 
-  // Origin Charges
-  const originRows = filterZeroRows([
-    ['Origin Charge (USD)', formatCurrency(estimate.origin_charge_usd, 'USD'), formatCurrency(totals._origin_charge_usd_zar)],
-    ['Origin Charge (EUR)', formatCurrency(estimate.origin_charge_eur, 'EUR'), formatCurrency(totals._origin_charge_eur_zar)],
-  ]);
-  if (totals.total_origin_charges_zar > 0) {
-    originRows.push(['Total Origin Charges', '', formatCurrency(totals.total_origin_charges_zar)]);
-  }
-  if (originRows.length > 0) {
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 10,
-      head: [['Origin Charges', 'Amount', 'ZAR']],
-      body: originRows,
-      theme: 'grid',
-      headStyles: { fillColor: [46, 139, 87] },
-    });
-  }
+  if (isAir) {
+    // === AIR FREIGHT PDF SECTIONS ===
 
-  // Local Charges
-  const localChargeRows = filterZeroRows([
-    ['Local Cartage: CPT to Klapmuts (<20 Ton)', formatCurrency(estimate.local_cartage_cpt_klapmuts_20ton_zar)],
-    ['Local Cartage: CPT to Klapmuts (21-28 Ton)', formatCurrency(estimate.local_cartage_cpt_klapmuts_28ton_zar)],
-    ['Transport: DBN Port to Pretoria (20FT)', formatCurrency(estimate.transport_dbn_to_pretoria_20ft_zar)],
-    ['Transport: DBN Port to Pretoria (40FT)', formatCurrency(estimate.transport_dbn_to_pretoria_40ft_zar)],
-    ['Transport: DBN Port to WHS', formatCurrency(estimate.transport_dbn_to_whs_zar)],
-    ['Unpack / Reload', formatCurrency(estimate.unpack_reload_zar)],
-    ['Storage', formatCurrency(estimate.storage_zar)],
-    ['Outlying Container Depot Surcharge', formatCurrency(estimate.outlying_depot_surcharge_zar)],
-    ['Local Cartage: DBN WHS to PTA (Tautliner A)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_opt_a_zar)],
-    ['Local Cartage: DBN WHS to PTA (Tautliner B)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_opt_b_zar)],
-    ['Local Cartage: DBN WHS to PTA (6M Deck)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_6m_zar)],
-    ['Local Cartage: DBN WHS to PTA (12M Deck)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_12m_zar)],
-    ['Transport: PE/Coega Port to Pretoria', formatCurrency(estimate.transport_pe_coega_to_pretoria_zar)],
-  ]);
-  if (totals.local_charges_subtotal_zar > 0) {
-    localChargeRows.push(['Sub-Total', formatCurrency(totals.local_charges_subtotal_zar)]);
-  }
-  if (localChargeRows.length > 0) {
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 10,
-      head: [['Local Charges (Transport/Cartage)', 'ZAR']],
-      body: localChargeRows,
-      theme: 'grid',
-      headStyles: { fillColor: [22, 101, 52] },
-    });
-  }
+    // Airfreight Charges
+    const airRows = filterZeroRows([
+      ['Airfreight (USD)', formatCurrency(estimate.airfreight_usd, 'USD'), formatCurrency(totals._airfreight_usd_zar)],
+      ['Airfreight (EUR)', formatCurrency(estimate.airfreight_eur, 'EUR'), formatCurrency(totals._airfreight_eur_zar)],
+    ]);
+    if (totals.airfreight_total_zar > 0) {
+      airRows.push(['Total Airfreight', '', formatCurrency(totals.airfreight_total_zar)]);
+    }
+    if (airRows.length > 0) {
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Airfreight', 'Amount', 'ZAR']],
+        body: airRows,
+        theme: 'grid',
+        headStyles: { fillColor: [124, 58, 237] },
+      });
+    }
 
-  // Destination Charges
-  const destChargeRows = filterZeroRows([
-    ['Shipping Line Charges (At Cost)', formatCurrency(estimate.shipping_line_charges_zar)],
-    ['Cargo Dues (20FT)', formatCurrency(estimate.cargo_dues_20ft_zar)],
-    ['Cargo Dues (40FT)', formatCurrency(estimate.cargo_dues_40ft_zar)],
-    ['CTO Fee', formatCurrency(estimate.cto_fee_zar)],
-    ['Port Health Inspection', formatCurrency(estimate.port_health_inspection_zar)],
-    ['DAFF Inspection', formatCurrency(estimate.daff_inspection_zar)],
-    ['State Vet Cancellation Fee', formatCurrency(estimate.state_vet_cancellation_fee_zar)],
-    ['JNB Turn In (At Cost)', formatCurrency(estimate.jnb_turn_in_zar)],
-  ]);
-  if (totals.destination_charges_subtotal_zar > 0) {
-    destChargeRows.push(['Sub-Total', formatCurrency(totals.destination_charges_subtotal_zar)]);
-  }
-  if (destChargeRows.length > 0) {
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 10,
-      head: [['Destination Charges', 'ZAR']],
-      body: destChargeRows,
-      theme: 'grid',
-      headStyles: { fillColor: [0, 123, 167] },
-    });
+    // Surcharges
+    const surchargeRows = filterZeroRows([
+      ['Fuel Surcharge (USD)', formatCurrency(estimate.fuel_surcharge_usd, 'USD'), formatCurrency((parseFloat(estimate.fuel_surcharge_usd) || 0) * (parseFloat(estimate.roe_origin) || 0))],
+      ['Fuel Surcharge (EUR)', formatCurrency(estimate.fuel_surcharge_eur, 'EUR'), formatCurrency((parseFloat(estimate.fuel_surcharge_eur) || 0) * (parseFloat(estimate.roe_eur) || 0))],
+      ['Security Surcharge (USD)', formatCurrency(estimate.security_surcharge_usd, 'USD'), formatCurrency((parseFloat(estimate.security_surcharge_usd) || 0) * (parseFloat(estimate.roe_origin) || 0))],
+      ['Security Surcharge (EUR)', formatCurrency(estimate.security_surcharge_eur, 'EUR'), formatCurrency((parseFloat(estimate.security_surcharge_eur) || 0) * (parseFloat(estimate.roe_eur) || 0))],
+    ]);
+    if (totals.fuel_surcharge_total_zar > 0 || totals.security_surcharge_total_zar > 0) {
+      surchargeRows.push(['Total Surcharges', '', formatCurrency((totals.fuel_surcharge_total_zar || 0) + (totals.security_surcharge_total_zar || 0))]);
+    }
+    if (surchargeRows.length > 0) {
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Surcharges', 'Amount', 'ZAR']],
+        body: surchargeRows,
+        theme: 'grid',
+        headStyles: { fillColor: [109, 40, 217] },
+      });
+    }
+
+    // Origin & Local Charges
+    const airLocalRows = filterZeroRows([
+      ['Origin Charges (USD)', formatCurrency(estimate.airfreight_origin_charges_usd, 'USD')],
+      ['Origin Charges (EUR)', formatCurrency(estimate.airfreight_origin_charges_eur, 'EUR')],
+      ['Screening Fee', formatCurrency(estimate.screening_fee_zar)],
+      ['AWB Fee', formatCurrency(estimate.awb_fee_zar)],
+      ['Airline Handling Fee', formatCurrency(estimate.airline_handling_fee_zar)],
+      ['Airport Transfer Fee', formatCurrency(estimate.airport_transfer_fee_zar)],
+      ['Cartage: Airport to Warehouse', formatCurrency(estimate.cartage_airport_to_whs_zar)],
+      ['Insurance', formatCurrency(totals.airfreight_insurance_zar)],
+    ]);
+    if (totals.airfreight_origin_charges_zar > 0 || totals.air_local_charges_subtotal_zar > 0) {
+      airLocalRows.push(['Sub-Total', formatCurrency((totals.airfreight_origin_charges_zar || 0) + (totals.air_local_charges_subtotal_zar || 0) + (totals.airfreight_insurance_zar || 0))]);
+    }
+    if (airLocalRows.length > 0) {
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Origin & Local Charges', 'Amount']],
+        body: airLocalRows,
+        theme: 'grid',
+        headStyles: { fillColor: [22, 101, 52] },
+      });
+    }
+
+  } else {
+    // === SEA FREIGHT PDF SECTIONS ===
+
+    // Ocean Freight
+    const oceanFreightRows = filterZeroRows([
+      ['Ocean Freight (USD)', formatCurrency(estimate.ocean_freight_usd, 'USD'), formatCurrency(totals._ocean_freight_usd_zar)],
+      ['Ocean Freight (EUR)', formatCurrency(estimate.ocean_freight_eur, 'EUR'), formatCurrency(totals._ocean_freight_eur_zar)],
+    ]);
+    if (totals.total_ocean_freight_zar > 0) {
+      oceanFreightRows.push(['Total Ocean Freight', '', formatCurrency(totals.total_ocean_freight_zar)]);
+    }
+    if (oceanFreightRows.length > 0) {
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Ocean Freight', 'Amount', 'ZAR']],
+        body: oceanFreightRows,
+        theme: 'grid',
+        headStyles: { fillColor: [59, 130, 246] },
+      });
+    }
+
+    // Origin Charges
+    const originRows = filterZeroRows([
+      ['Origin Charge (USD)', formatCurrency(estimate.origin_charge_usd, 'USD'), formatCurrency(totals._origin_charge_usd_zar)],
+      ['Origin Charge (EUR)', formatCurrency(estimate.origin_charge_eur, 'EUR'), formatCurrency(totals._origin_charge_eur_zar)],
+    ]);
+    if (totals.total_origin_charges_zar > 0) {
+      originRows.push(['Total Origin Charges', '', formatCurrency(totals.total_origin_charges_zar)]);
+    }
+    if (originRows.length > 0) {
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Origin Charges', 'Amount', 'ZAR']],
+        body: originRows,
+        theme: 'grid',
+        headStyles: { fillColor: [46, 139, 87] },
+      });
+    }
+
+    // Local Charges
+    const localChargeRows = filterZeroRows([
+      ['Local Cartage: CPT to Klapmuts (<20 Ton)', formatCurrency(estimate.local_cartage_cpt_klapmuts_20ton_zar)],
+      ['Local Cartage: CPT to Klapmuts (21-28 Ton)', formatCurrency(estimate.local_cartage_cpt_klapmuts_28ton_zar)],
+      ['Transport: DBN Port to Pretoria (20FT)', formatCurrency(estimate.transport_dbn_to_pretoria_20ft_zar)],
+      ['Transport: DBN Port to Pretoria (40FT)', formatCurrency(estimate.transport_dbn_to_pretoria_40ft_zar)],
+      ['Transport: DBN Port to WHS', formatCurrency(estimate.transport_dbn_to_whs_zar)],
+      ['Unpack / Reload', formatCurrency(estimate.unpack_reload_zar)],
+      ['Storage', formatCurrency(estimate.storage_zar)],
+      ['Outlying Container Depot Surcharge', formatCurrency(estimate.outlying_depot_surcharge_zar)],
+      ['Local Cartage: DBN WHS to PTA (Tautliner A)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_opt_a_zar)],
+      ['Local Cartage: DBN WHS to PTA (Tautliner B)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_opt_b_zar)],
+      ['Local Cartage: DBN WHS to PTA (6M Deck)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_6m_zar)],
+      ['Local Cartage: DBN WHS to PTA (12M Deck)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_12m_zar)],
+      ['Transport: PE/Coega Port to Pretoria', formatCurrency(estimate.transport_pe_coega_to_pretoria_zar)],
+    ]);
+    if (totals.local_charges_subtotal_zar > 0) {
+      localChargeRows.push(['Sub-Total', formatCurrency(totals.local_charges_subtotal_zar)]);
+    }
+    if (localChargeRows.length > 0) {
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Local Charges (Transport/Cartage)', 'ZAR']],
+        body: localChargeRows,
+        theme: 'grid',
+        headStyles: { fillColor: [22, 101, 52] },
+      });
+    }
+
+    // Destination Charges
+    const destChargeRows = filterZeroRows([
+      ['Shipping Line Charges (At Cost)', formatCurrency(estimate.shipping_line_charges_zar)],
+      ['Cargo Dues (20FT)', formatCurrency(estimate.cargo_dues_20ft_zar)],
+      ['Cargo Dues (40FT)', formatCurrency(estimate.cargo_dues_40ft_zar)],
+      ['CTO Fee', formatCurrency(estimate.cto_fee_zar)],
+      ['Port Health Inspection', formatCurrency(estimate.port_health_inspection_zar)],
+      ['DAFF Inspection', formatCurrency(estimate.daff_inspection_zar)],
+      ['State Vet Cancellation Fee', formatCurrency(estimate.state_vet_cancellation_fee_zar)],
+      ['JNB Turn In (At Cost)', formatCurrency(estimate.jnb_turn_in_zar)],
+    ]);
+    if (totals.destination_charges_subtotal_zar > 0) {
+      destChargeRows.push(['Sub-Total', formatCurrency(totals.destination_charges_subtotal_zar)]);
+    }
+    if (destChargeRows.length > 0) {
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Destination Charges', 'ZAR']],
+        body: destChargeRows,
+        theme: 'grid',
+        headStyles: { fillColor: [0, 123, 167] },
+      });
+    }
   }
 
   // Customs & Duties
