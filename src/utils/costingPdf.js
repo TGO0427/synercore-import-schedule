@@ -230,7 +230,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
 
         return [
           p.name || '-',
-          `${formatNumber(bd.weight, 0)} kg`,
+          formatNumber(bd.weight, 0),
           `${(bd.weightRatio * 100).toFixed(1)}%`,
           `${formatNumber(bd.invoiceValue, 2)} ${bd.currency}`,
           formatCurrency(bd.customsValue),
@@ -246,7 +246,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
       const sumCostPerKg = sumWeight > 0 ? sumTotalLanded / sumWeight : 0;
       allocationRows.push([
         'TOTAL',
-        `${formatNumber(sumWeight, 0)} kg`,
+        formatNumber(sumWeight, 0),
         '100.0%',
         '',
         formatCurrency(sumCustomsValue),
@@ -259,7 +259,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
 
       autoTable(doc, {
         startY: doc.lastAutoTable.finalY + 10,
-        head: [['Product', 'Weight', 'Wt %', 'Invoice Value', 'Customs Val (ZAR)', 'Import Duty', 'Sch1 Duty', shippingLabel, 'Total Landed', 'Cost/kg']],
+        head: [['Product', 'Weight (kg)', 'Wt %', 'Invoice Value', 'Customs Val (ZAR)', 'Import Duty', 'Sch1 Duty', shippingLabel, 'Total Landed', 'Cost/kg']],
         body: allocationRows,
         theme: 'grid',
         headStyles: { fillColor: [22, 101, 52], fontSize: 7 },
