@@ -230,7 +230,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
 
         return [
           p.name || '-',
-          `${formatNumber(bd.weight)} kg`,
+          `${formatNumber(bd.weight, 0)} kg`,
           `${(bd.weightRatio * 100).toFixed(1)}%`,
           `${formatNumber(bd.invoiceValue, 2)} ${bd.currency}`,
           formatCurrency(bd.customsValue),
@@ -246,7 +246,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
       const sumCostPerKg = sumWeight > 0 ? sumTotalLanded / sumWeight : 0;
       allocationRows.push([
         'TOTAL',
-        `${formatNumber(sumWeight)} kg`,
+        `${formatNumber(sumWeight, 0)} kg`,
         '100.0%',
         '',
         formatCurrency(sumCustomsValue),
