@@ -1130,7 +1130,7 @@ router.post(
         'IMPORT CLEARANCE FEE': ['CUSTOMS DECLARATION'],
         'CUSTOMS DECLARATION': ['IMPORT CLEARANCE FEE'],
         'CLEARANCE FEE': ['CUSTOMS DECLARATION'],
-        'CARGO DUES': ['CARGO DUES 20FT', 'CARGO DUES 40FT'],
+        'CARGO DUES': ['CARGO DUES 20FT', 'CARGO DUES 40FT'], // size resolved below
         'HANDLING': ['HANDLING/RELEASE COSTS'],
         'RELEASE': ['HANDLING/RELEASE COSTS'],
         'WMS': ['WMS LOGGING'],
@@ -1139,7 +1139,19 @@ router.post(
       };
 
       // Pass-through charges that don't have benchmarks (billed at cost)
-      const PASSTHROUGH_CHARGES = ['LANDSIDE CHARGES', 'SEAL', 'DO FEE', 'DETENTION'];
+      const PASSTHROUGH_CHARGES = ['LANDSIDE CHARGES', 'SEAL', 'DO FEE', 'DETENTION', 'CUSTOMS VAT', 'CUSTOMS DUTY'];
+
+      // City/port abbreviation expansions for route matching
+      const ROUTE_ABBREVIATIONS: Record<string, string[]> = {
+        'PTA': ['PRETORIA'],
+        'PRETORIA': ['PTA'],
+        'DBN': ['DURBAN'],
+        'DURBAN': ['DBN'],
+        'CPT': ['CAPE TOWN'],
+        'CAPE TOWN': ['CPT'],
+        'WHS': ['WAREHOUSE'],
+        'WAREHOUSE': ['WHS'],
+      };
 
       // Load all benchmarks once for this invoice
       const allBenchmarks = await queryAll(
@@ -1167,14 +1179,35 @@ router.post(
             return bd.includes(normalizedDesc) || normalizedDesc.includes(bd);
           });
 
-          // Strategy 2: Route-aware match (e.g., "CARTAGE: DBN Port to WHS" → "TRANSPORT: DBN PORT TO WHS")
+          // Strategy 2: Route-aware match with abbreviation expansion
+          // e.g., "CARTAGE: DBN to PTA" → "TRANSPORT: DBN PORT TO PRETORIA PER 20FT"
           if (!benchmark && normalizedDesc.includes(':')) {
             const routePart = normalizedDesc.split(':').slice(1).join(':').trim();
-            if (routePart.length > 5) {
-              benchmark = allBenchmarks.find((b: any) => {
+            if (routePart.length > 3) {
+              // Extract route keywords and expand abbreviations
+              const routeWords = routePart.split(/[\s]+/).filter(w => w.length >= 2);
+              const expandedWords = new Set<string>();
+              for (const w of routeWords) {
+                expandedWords.add(w.toUpperCase());
+                const expansions = ROUTE_ABBREVIATIONS[w.toUpperCase()];
+                if (expansions) expansions.forEach(e => expandedWords.add(e.toUpperCase()));
+              }
+
+              // Match benchmarks that contain at least 2 route keywords (original or expanded)
+              let bestMatch: any = null;
+              let bestScore = 0;
+              for (const b of allBenchmarks) {
                 const bd = (b.description as string).toUpperCase();
-                return bd.includes(routePart);
-              });
+                let score = 0;
+                for (const w of expandedWords) {
+                  if (bd.includes(w)) score++;
+                }
+                if (score >= 2 && score > bestScore) {
+                  bestScore = score;
+                  bestMatch = b;
+                }
+              }
+              benchmark = bestMatch;
             }
           }
 
@@ -1210,6 +1243,33 @@ router.post(
             benchmark = bestMatch;
           }
         }
+
+          // Strategy 5: For size-variant benchmarks (CARGO DUES, CARTAGE with tonnage),
+          // if multiple benchmarks match, pick the one closest to the invoice amount
+          if (benchmark && charge.local_amount) {
+            const benchDesc = ((benchmark as any).description as string).toUpperCase();
+            // Check if there are multiple size variants for this category
+            if (benchDesc.includes('CARGO DUES') || benchDesc.includes('CARTAGE') || benchDesc.includes('TRANSPORT')) {
+              const baseDesc = benchDesc.replace(/\s*(20FT|40FT|PER\s+20FT|PER\s+40FT|<\s*20\s*TON|21-28\s*TON|SUPERLINK|TAUTLINER\s*[AB]|6M\s*DECKSPACE|12M\s*DECKSPACE).*$/i, '').trim();
+              const variants = allBenchmarks.filter((b: any) =>
+                (b.description as string).toUpperCase().startsWith(baseDesc) ||
+                (b.description as string).toUpperCase().includes(baseDesc)
+              );
+              if (variants.length > 1) {
+                // Pick the variant whose rate is closest to the invoice amount
+                let closestVariant = benchmark;
+                let closestDiff = Math.abs(charge.local_amount - parseFloat((benchmark as any).unit_rate_zar));
+                for (const v of variants) {
+                  const diff = Math.abs(charge.local_amount - parseFloat((v as any).unit_rate_zar));
+                  if (diff < closestDiff) {
+                    closestDiff = diff;
+                    closestVariant = v;
+                  }
+                }
+                benchmark = closestVariant;
+              }
+            }
+          }
 
         let benchmarkRate: number | null = null;
         let varianceAmount: number | null = null;
