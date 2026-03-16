@@ -588,9 +588,9 @@ function CostingFormSections({
           </div>
         </div>
 
-        {/* Airfreight Rate - USD + EUR */}
+        {/* Airfreight Cost - USD + EUR */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-          {currencyInput('Airfreight Rate', 'airfreight_rate_per_kg_usd', 'USD/kg')}
+          {currencyInput('Airfreight', 'airfreight_usd', 'USD')}
           <div style={{ marginBottom: '12px' }}>
             <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#166534' }}>
               USD to ZAR - Auto
@@ -599,7 +599,7 @@ function CostingFormSections({
               {formatCurrency(calculatedTotals._airfreight_usd_zar || 0)}
             </div>
           </div>
-          {currencyInput('Airfreight Rate', 'airfreight_rate_per_kg_eur', 'EUR/kg')}
+          {currencyInput('Airfreight', 'airfreight_eur', 'EUR')}
           <div style={{ marginBottom: '12px' }}>
             <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#1d4ed8' }}>
               EUR to ZAR - Auto
@@ -618,11 +618,11 @@ function CostingFormSections({
           </div>
         </div>
 
-        {/* Surcharges - USD + EUR */}
+        {/* Surcharges - USD + EUR totals */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginTop: '1rem' }}>
-          {currencyInput('Fuel Surcharge', 'fuel_surcharge_per_kg_usd', 'USD/kg')}
-          {currencyInput('Fuel Surcharge', 'fuel_surcharge_per_kg_eur', 'EUR/kg')}
-          <div style={{ marginBottom: '12px' }}>
+          {currencyInput('Fuel Surcharge', 'fuel_surcharge_usd', 'USD')}
+          {currencyInput('Fuel Surcharge', 'fuel_surcharge_eur', 'EUR')}
+          <div style={{ marginBottom: '12px', gridColumn: 'span 2' }}>
             <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#5b21b6' }}>
               Fuel Surcharge Total (ZAR)
             </label>
@@ -632,9 +632,9 @@ function CostingFormSections({
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-          {currencyInput('Security Surcharge', 'security_surcharge_per_kg_usd', 'USD/kg')}
-          {currencyInput('Security Surcharge', 'security_surcharge_per_kg_eur', 'EUR/kg')}
-          <div style={{ marginBottom: '12px' }}>
+          {currencyInput('Security Surcharge', 'security_surcharge_usd', 'USD')}
+          {currencyInput('Security Surcharge', 'security_surcharge_eur', 'EUR')}
+          <div style={{ marginBottom: '12px', gridColumn: 'span 2' }}>
             <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#5b21b6' }}>
               Security Surcharge Total (ZAR)
             </label>

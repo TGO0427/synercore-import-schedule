@@ -255,22 +255,20 @@ export const calculateAllTotals = (data) => {
   const volumetricWeightKg = calculateVolumetricWeight(data);
   const chargeableWeightKg = calculateChargeableWeight(data);
 
-  // Airfreight rate (USD + EUR)
-  const airfreightRatePerKgUsd = parseFloat(data.airfreight_rate_per_kg_usd) || 0;
-  const airfreightRatePerKgEur = parseFloat(data.airfreight_rate_per_kg_eur) || 0;
-  const airfreightTotalUsd = airfreightRatePerKgUsd * chargeableWeightKg;
-  const airfreightTotalEur = airfreightRatePerKgEur * chargeableWeightKg;
-  const airfreightTotalZar = (airfreightTotalUsd * roeOrigin) + (airfreightTotalEur * roeEur);
+  // Airfreight total (direct USD + EUR amounts)
+  const airfreightUsd = parseFloat(data.airfreight_usd) || 0;
+  const airfreightEur = parseFloat(data.airfreight_eur) || 0;
+  const airfreightTotalUsd = airfreightUsd;
+  const airfreightTotalEur = airfreightEur;
+  const airfreightTotalZar = (airfreightUsd * roeOrigin) + (airfreightEur * roeEur);
 
-  // Airfreight surcharges (USD + EUR per-kg × chargeable weight)
-  const fuelSurchargePerKgUsd = parseFloat(data.fuel_surcharge_per_kg_usd) || 0;
-  const fuelSurchargePerKgEur = parseFloat(data.fuel_surcharge_per_kg_eur) || 0;
-  const fuelSurchargeTotalZar = (fuelSurchargePerKgUsd * chargeableWeightKg * roeOrigin)
-    + (fuelSurchargePerKgEur * chargeableWeightKg * roeEur);
-  const securitySurchargePerKgUsd = parseFloat(data.security_surcharge_per_kg_usd) || 0;
-  const securitySurchargePerKgEur = parseFloat(data.security_surcharge_per_kg_eur) || 0;
-  const securitySurchargeTotalZar = (securitySurchargePerKgUsd * chargeableWeightKg * roeOrigin)
-    + (securitySurchargePerKgEur * chargeableWeightKg * roeEur);
+  // Airfreight surcharges (direct USD + EUR amounts)
+  const fuelSurchargeUsd = parseFloat(data.fuel_surcharge_usd) || 0;
+  const fuelSurchargeEur = parseFloat(data.fuel_surcharge_eur) || 0;
+  const fuelSurchargeTotalZar = (fuelSurchargeUsd * roeOrigin) + (fuelSurchargeEur * roeEur);
+  const securitySurchargeUsd = parseFloat(data.security_surcharge_usd) || 0;
+  const securitySurchargeEur = parseFloat(data.security_surcharge_eur) || 0;
+  const securitySurchargeTotalZar = (securitySurchargeUsd * roeOrigin) + (securitySurchargeEur * roeEur);
 
   // Airfreight origin charges (USD + EUR)
   const airfreightOriginUsd = parseFloat(data.airfreight_origin_charges_usd) || 0;

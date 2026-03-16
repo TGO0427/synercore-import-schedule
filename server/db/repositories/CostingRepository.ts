@@ -104,19 +104,19 @@ export interface ImportCostEstimate {
   all_in_warehouse_cost_per_kg_zar: number;
   // Airfreight
   transport_mode?: string;
-  airfreight_rate_per_kg_usd?: number;
-  airfreight_rate_per_kg_eur?: number;
+  airfreight_usd?: number;
+  airfreight_eur?: number;
   actual_weight_kg?: number;
   volumetric_weight_kg?: number;
   chargeable_weight_kg?: number;
   volumetric_divisor?: number;
   airfreight_total_usd?: number;
   airfreight_total_zar?: number;
-  fuel_surcharge_per_kg_usd?: number;
-  fuel_surcharge_per_kg_eur?: number;
+  fuel_surcharge_usd?: number;
+  fuel_surcharge_eur?: number;
   fuel_surcharge_total_zar?: number;
-  security_surcharge_per_kg_usd?: number;
-  security_surcharge_per_kg_eur?: number;
+  security_surcharge_usd?: number;
+  security_surcharge_eur?: number;
   security_surcharge_total_zar?: number;
   screening_fee_zar?: number;
   awb_fee_zar?: number;
@@ -181,10 +181,10 @@ const COST_ESTIMATE_COLUMNS = [
   'total_shipping_cost_zar', 'total_in_warehouse_cost_zar',
   'all_in_warehouse_cost_per_kg_zar',
   // Airfreight
-  'transport_mode', 'airfreight_rate_per_kg_usd', 'airfreight_rate_per_kg_eur', 'actual_weight_kg', 'volumetric_weight_kg',
+  'transport_mode', 'airfreight_usd', 'airfreight_eur', 'actual_weight_kg', 'volumetric_weight_kg',
   'chargeable_weight_kg', 'volumetric_divisor', 'airfreight_total_usd', 'airfreight_total_zar',
-  'fuel_surcharge_per_kg_usd', 'fuel_surcharge_per_kg_eur', 'fuel_surcharge_total_zar',
-  'security_surcharge_per_kg_usd', 'security_surcharge_per_kg_eur', 'security_surcharge_total_zar',
+  'fuel_surcharge_usd', 'fuel_surcharge_eur', 'fuel_surcharge_total_zar',
+  'security_surcharge_usd', 'security_surcharge_eur', 'security_surcharge_total_zar',
   'screening_fee_zar', 'awb_fee_zar', 'airline_handling_fee_zar', 'airport_transfer_fee_zar',
   'cartage_airport_to_whs_zar', 'airfreight_insurance_percent', 'airfreight_insurance_zar',
   'airfreight_origin_charges_usd', 'airfreight_origin_charges_eur', 'airfreight_origin_charges_zar',
