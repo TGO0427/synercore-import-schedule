@@ -8,6 +8,7 @@ import {
 function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplicate, onGeneratePDF, onEmailEstimate }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortDirection, setSortDirection] = useState('desc'); // 'asc' or 'desc'
+  const [transportModeFilter, setTransportModeFilter] = useState('all'); // 'all', 'sea', 'air'
 
   // Filter and sort estimates (exclude archived - those show under Suppliers)
   const filteredEstimates = useMemo(() => {
@@ -15,6 +16,8 @@ function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplica
       .filter(est => {
         // Exclude archived estimates from main view
         if (est.status === 'archived') return false;
+        // Filter by transport mode
+        if (transportModeFilter !== 'all' && (est.transport_mode || 'sea') !== transportModeFilter) return false;
         if (!searchTerm) return true;
         const ref = (est.reference_number || '').toLowerCase();
         const supplier = (est.supplier_name || '').toLowerCase();
@@ -29,12 +32,39 @@ function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplica
         }
         return refB.localeCompare(refA);
       });
-  }, [estimates, searchTerm, sortDirection]);
+  }, [estimates, searchTerm, sortDirection, transportModeFilter]);
 
   return (
     <div className="dash-panel" style={{ overflow: 'hidden' }}>
       {/* Search and Sort Controls */}
       <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '2px solid #e5e7eb' }}>
+          {['all', 'sea', 'air'].map(mode => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setTransportModeFilter(mode)}
+              style={{
+                padding: '6px 14px',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '0.8rem',
+                letterSpacing: '0.02em',
+                backgroundColor:
+                  transportModeFilter === mode
+                    ? mode === 'sea' ? '#1d4ed8'
+                      : mode === 'air' ? '#7c3aed'
+                      : '#374151'
+                    : '#f3f4f6',
+                color: transportModeFilter === mode ? 'white' : '#6b7280',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {mode === 'all' ? 'All' : mode === 'sea' ? 'Sea' : 'Air'}
+            </button>
+          ))}
+        </div>
         <div style={{ flex: '1', minWidth: '200px', maxWidth: '300px' }}>
           <input
             type="text"
@@ -68,7 +98,7 @@ function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplica
           Reference {sortDirection === 'asc' ? '↑ A-Z' : '↓ Z-A'}
         </button>
         <span style={{ color: '#6b7280', fontSize: '0.85rem' }}>
-          {filteredEstimates.length} of {estimates.length} estimates
+          {filteredEstimates.length} of {estimates.filter(e => e.status !== 'archived').length} estimates
         </span>
       </div>
       <div style={{ overflowX: 'auto' }}>
