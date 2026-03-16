@@ -14,6 +14,7 @@ import CostingReportsPanel from './CostingReportsPanel';
 import CostingEstimatesTable from './CostingEstimatesTable';
 import CostingFormSections from './CostingFormSections';
 import { EmailEstimateModal, RequestCostingModal } from './CostingModals';
+import CostingRequests from './CostingRequests';
 
 const INITIAL_FORM_STATE = {
   transport_mode: 'sea', // 'sea' or 'air'
@@ -136,6 +137,10 @@ function ImportCosting() {
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [myRequests, setMyRequests] = useState([]);
 
+  // Admin request queue state
+  const [pendingRequestCount, setPendingRequestCount] = useState(0);
+  const [showRequests, setShowRequests] = useState(false);
+
   // Warn before leaving with unsaved form data
   useEffect(() => {
     if (!showForm) return;
@@ -150,6 +155,7 @@ function ImportCosting() {
     fetchExchangeRate();
     fetchSuppliers();
     if (!isAdmin) fetchMyRequests();
+    if (isAdmin) fetchPendingRequestCount();
   }, []);
 
   // Recalculate totals when form data changes
@@ -183,6 +189,18 @@ function ImportCosting() {
       }
     } catch (err) {
       console.error('Failed to fetch costing requests:', err);
+    }
+  };
+
+  const fetchPendingRequestCount = async () => {
+    try {
+      const response = await authFetch(getApiUrl('/api/costing-requests?status=pending'));
+      if (response.ok) {
+        const result = await response.json();
+        setPendingRequestCount((result.data || []).length);
+      }
+    } catch (err) {
+      console.error('Failed to fetch pending request count:', err);
     }
   };
 
@@ -583,15 +601,40 @@ function ImportCosting() {
             {showReports ? '✕ Close Reports' : '📊 Reports'}
           </button>
           {isAdmin ? (
-            <button
-              onClick={() => { resetForm(); setShowForm(true); }}
-              style={{
-                padding: '10px 20px', backgroundColor: '#059669', color: 'white',
-                border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500'
-              }}
-            >
-              + New Estimate
-            </button>
+            <>
+              <button
+                onClick={() => setShowRequests(true)}
+                style={{
+                  position: 'relative',
+                  padding: '10px 20px', backgroundColor: '#1e40af', color: 'white',
+                  border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500'
+                }}
+              >
+                Requests
+                {pendingRequestCount > 0 && (
+                  <span style={{
+                    position: 'absolute', top: '-8px', right: '-8px',
+                    backgroundColor: '#dc2626', color: 'white',
+                    borderRadius: '50%', minWidth: '20px', height: '20px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.7rem', fontWeight: '700',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                    padding: '0 4px',
+                  }}>
+                    {pendingRequestCount}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => { resetForm(); setShowForm(true); }}
+                style={{
+                  padding: '10px 20px', backgroundColor: '#059669', color: 'white',
+                  border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500'
+                }}
+              >
+                + New Estimate
+              </button>
+            </>
           ) : (
             <button
               onClick={() => setShowRequestModal(true)}
@@ -748,6 +791,11 @@ function ImportCosting() {
         onClose={() => setShowRequestModal(false)}
         onSubmit={handleSubmitRequest}
       />
+
+      {/* Admin Costing Requests Queue */}
+      {showRequests && (
+        <CostingRequests onClose={() => { setShowRequests(false); fetchPendingRequestCount(); }} />
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { ShipmentStatus, DELAYED_STATUSES, isDelayedStatus, PRE_ARRIVAL_STATUSES
 import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
 import { authUtils } from '../utils/auth';
+import { calculateAllTotals, formatCurrency } from '../utils/costingCalculations';
 import PerformanceMetrics from './PerformanceMetrics';
 import {
   Chart as ChartJS,
@@ -50,6 +51,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
   const [editingAnnId, setEditingAnnId] = useState(null);
 
   const [storageRates, setStorageRates] = useState({ week1: 43, week2Plus: 53 });
+  const [costingEstimates, setCostingEstimates] = useState([]);
 
   const isAdmin = authUtils.getUser()?.role === 'admin';
 
@@ -152,6 +154,65 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
     };
     fetchStorageRates();
   }, []);
+
+  // Fetch import costing estimates
+  useEffect(() => {
+    const fetchCosting = async () => {
+      try {
+        const res = await authFetch(getApiUrl('/api/costing'));
+        if (res.ok) {
+          const json = await res.json();
+          setCostingEstimates(Array.isArray(json) ? json : (json.data || []));
+        }
+      } catch (err) { /* silently ignore */ }
+    };
+    fetchCosting();
+  }, []);
+
+  // Import costing KPI computations
+  const costingKpis = useMemo(() => {
+    const active = costingEstimates.filter(e => !e.archived);
+    if (active.length === 0) return { avgLandedPerKg: 0, seaCount: 0, airCount: 0, totalCostedValue: 0, seaTotalCost: 0, airTotalCost: 0 };
+
+    let totalLandedPerKg = 0;
+    let landedPerKgCount = 0;
+    let seaCount = 0;
+    let airCount = 0;
+    let totalCostedValue = 0;
+    let seaTotalCost = 0;
+    let airTotalCost = 0;
+
+    active.forEach(est => {
+      const totals = calculateAllTotals(est);
+      const landedCost = totals.total_landed_cost_zar || 0;
+      const costPerKg = totals.all_in_warehouse_cost_per_kg_zar || 0;
+      const isAir = (est.transport_mode || 'sea') === 'air';
+
+      if (costPerKg > 0) {
+        totalLandedPerKg += costPerKg;
+        landedPerKgCount++;
+      }
+
+      totalCostedValue += landedCost;
+
+      if (isAir) {
+        airCount++;
+        airTotalCost += landedCost;
+      } else {
+        seaCount++;
+        seaTotalCost += landedCost;
+      }
+    });
+
+    return {
+      avgLandedPerKg: landedPerKgCount > 0 ? totalLandedPerKg / landedPerKgCount : 0,
+      seaCount,
+      airCount,
+      totalCostedValue,
+      seaTotalCost,
+      airTotalCost,
+    };
+  }, [costingEstimates]);
 
   // Consolidated single-pass computation: stats, percentage deltas, and offsite average
   const { stats, pctDeltas, avgDaysOffsite } = useMemo(() => {
@@ -922,6 +983,156 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Import Costing Overview */}
+      {costingEstimates.length > 0 && (
+        <>
+          <div style={{ marginTop: '2rem', marginBottom: '0.75rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--navy-900)', letterSpacing: '0.3px' }}>
+              Import Costing Overview
+            </h3>
+            <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-500)' }}>
+              {costingEstimates.filter(e => !e.archived).length} active estimates
+            </p>
+          </div>
+
+          {/* Costing KPI Tiles */}
+          <div className="stats-grid">
+            <div className="stat-card ring-accent" style={{ cursor: 'pointer' }} onClick={() => navigate('/costing')}>
+              <div style={{
+                width: 24, height: 24, borderRadius: '50%', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', fontSize: 12,
+                backgroundColor: 'rgba(5,150,105,0.1)', marginBottom: 6,
+              }}>R</div>
+              <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 1px', color: 'var(--navy-900)' }}>
+                {formatCurrency(costingKpis.avgLandedPerKg)}
+              </h3>
+              <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>
+                Avg Landed Cost/KG
+              </p>
+            </div>
+            <div className="stat-card ring-info" style={{ cursor: 'pointer' }} onClick={() => navigate('/costing')}>
+              <div style={{
+                width: 24, height: 24, borderRadius: '50%', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', fontSize: 12,
+                backgroundColor: 'rgba(59,130,246,0.1)', marginBottom: 6,
+              }}>S</div>
+              <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 1px', color: 'var(--navy-900)' }}>
+                {costingKpis.seaCount}
+              </h3>
+              <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>
+                Sea Estimates
+              </p>
+            </div>
+            <div className="stat-card ring-warning" style={{ cursor: 'pointer' }} onClick={() => navigate('/costing')}>
+              <div style={{
+                width: 24, height: 24, borderRadius: '50%', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', fontSize: 12,
+                backgroundColor: 'rgba(245,158,11,0.1)', marginBottom: 6,
+              }}>A</div>
+              <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 1px', color: 'var(--navy-900)' }}>
+                {costingKpis.airCount}
+              </h3>
+              <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>
+                Air Estimates
+              </p>
+            </div>
+            <div className="stat-card ring-success" style={{ cursor: 'pointer' }} onClick={() => navigate('/costing')}>
+              <div style={{
+                width: 24, height: 24, borderRadius: '50%', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', fontSize: 12,
+                backgroundColor: 'rgba(16,185,129,0.1)', marginBottom: 6,
+              }}>T</div>
+              <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 1px', color: 'var(--navy-900)' }}>
+                {formatCurrency(costingKpis.totalCostedValue)}
+              </h3>
+              <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>
+                Total Costed Value
+              </p>
+            </div>
+          </div>
+
+          {/* Sea vs Air Cost Split Chart */}
+          {(costingKpis.seaTotalCost > 0 || costingKpis.airTotalCost > 0) && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem', marginTop: '1.25rem' }}>
+              <ChartCard title="Sea vs Air Cost Split" subtitle="Total landed cost by mode">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                  <div style={{ width: 160, height: 160 }}>
+                    <Doughnut
+                      data={{
+                        labels: ['Sea Freight', 'Air Freight'],
+                        datasets: [{
+                          data: [costingKpis.seaTotalCost, costingKpis.airTotalCost],
+                          backgroundColor: ['#3b82f6', '#f59e0b'],
+                          borderWidth: 2,
+                          borderColor: '#fff',
+                          hoverBorderWidth: 0,
+                          hoverOffset: 4,
+                        }],
+                      }}
+                      options={{
+                        responsive: true, maintainAspectRatio: false, cutout: '72%',
+                        plugins: {
+                          legend: { display: false },
+                          tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${formatCurrency(ctx.raw)}` } },
+                        },
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {[
+                      { label: 'Sea Freight', value: costingKpis.seaTotalCost, color: '#3b82f6', count: costingKpis.seaCount },
+                      { label: 'Air Freight', value: costingKpis.airTotalCost, color: '#f59e0b', count: costingKpis.airCount },
+                    ].map(item => {
+                      const total = costingKpis.seaTotalCost + costingKpis.airTotalCost;
+                      const pct = total > 0 ? Math.round((item.value / total) * 100) : 0;
+                      return (
+                        <div key={item.label}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: item.color, flexShrink: 0 }} />
+                            <span style={{ fontSize: 13, color: 'var(--text-700)' }}>{item.label}</span>
+                            <span style={{ fontSize: 11, color: 'var(--text-500)' }}>({pct}%)</span>
+                          </div>
+                          <div style={{ marginLeft: 18, fontSize: 12, color: 'var(--text-500)', marginTop: 2 }}>
+                            {formatCurrency(item.value)} ({item.count} estimate{item.count !== 1 ? 's' : ''})
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </ChartCard>
+
+              <ChartCard title="Cost Comparison" subtitle="Sea vs Air total landed cost">
+                <div style={{ height: 160 }}>
+                  <BarChart
+                    data={{
+                      labels: ['Sea Freight', 'Air Freight'],
+                      datasets: [{
+                        data: [costingKpis.seaTotalCost, costingKpis.airTotalCost],
+                        backgroundColor: ['#3b82f6', '#f59e0b'],
+                        borderRadius: 6,
+                        barThickness: 40,
+                      }],
+                    }}
+                    options={{
+                      responsive: true, maintainAspectRatio: false,
+                      plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: (ctx) => formatCurrency(ctx.raw) } },
+                      },
+                      scales: {
+                        x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 12, weight: 600 } } },
+                        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false }, ticks: { font: { size: 11 }, callback: (v) => `R${(v / 1000).toFixed(0)}k` } },
+                      },
+                    }}
+                  />
+                </div>
+              </ChartCard>
+            </div>
+          )}
+        </>
       )}
 
       {/* Quick Actions */}

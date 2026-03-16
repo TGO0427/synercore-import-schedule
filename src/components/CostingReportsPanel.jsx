@@ -248,6 +248,67 @@ function CostingReportsPanel({ estimates, onClose }) {
     return rows;
   }, [supplierAnalysis, transportModeFilter, hasBothModes]);
 
+  // Sea vs Air comparison data — grouped by supplier + product
+  const seaVsAirComparisons = useMemo(() => {
+    if (transportModeFilter !== 'all') return [];
+
+    // Key: "supplier|||product" → { sea: { totalCost, totalWeight }, air: { ... } }
+    const map = {};
+
+    estimates.forEach(est => {
+      const supplier = est.supplier_name || 'Unknown';
+      const mode = est.transport_mode || 'sea';
+      const products = est.products || [];
+      const totals = calculateAllTotals(est);
+      const totalWeight = products.reduce((s, p) => s + (parseFloat(p.weight_kg) || 0), 0);
+
+      products.forEach(p => {
+        const productName = p.name || 'Unknown';
+        const key = `${supplier}|||${productName}`;
+        if (!map[key]) {
+          map[key] = {
+            supplier,
+            product: productName,
+            sea: { totalCost: 0, totalWeight: 0, count: 0 },
+            air: { totalCost: 0, totalWeight: 0, count: 0 },
+          };
+        }
+
+        const pWeight = parseFloat(p.weight_kg) || 0;
+        const weightRatio = totalWeight > 0 ? pWeight / totalWeight : 0;
+        const cost = (totals.total_landed_cost_zar || totals.total_in_warehouse_cost_zar || 0) * weightRatio;
+
+        const bucket = map[key][mode];
+        bucket.totalCost += cost;
+        bucket.totalWeight += pWeight;
+        bucket.count += 1;
+      });
+    });
+
+    // Only keep combos that have BOTH sea and air
+    return Object.values(map)
+      .filter(item => item.sea.count > 0 && item.air.count > 0)
+      .map(item => {
+        const seaCostPerKg = item.sea.totalWeight > 0 ? item.sea.totalCost / item.sea.totalWeight : 0;
+        const airCostPerKg = item.air.totalWeight > 0 ? item.air.totalCost / item.air.totalWeight : 0;
+        const diffZar = item.air.totalCost - item.sea.totalCost;
+        const diffPct = item.sea.totalCost > 0 ? ((item.air.totalCost - item.sea.totalCost) / item.sea.totalCost) * 100 : 0;
+        const seaCheaper = item.sea.totalCost <= item.air.totalCost;
+        return {
+          supplier: item.supplier,
+          product: item.product,
+          seaTotalCost: item.sea.totalCost,
+          seaCostPerKg,
+          airTotalCost: item.air.totalCost,
+          airCostPerKg,
+          diffZar,
+          diffPct,
+          seaCheaper,
+        };
+      })
+      .sort((a, b) => Math.abs(b.diffZar) - Math.abs(a.diffZar));
+  }, [estimates, transportModeFilter]);
+
   // Legacy-compatible supplierDetails for PDF generation
   const getSupplierChartData = useMemo(() => {
     return {
@@ -487,6 +548,82 @@ function CostingReportsPanel({ estimates, onClose }) {
                 </tbody>
               </table>
             </div>
+
+            {/* Sea vs Air Comparison */}
+            {seaVsAirComparisons.length > 0 && (
+              <div style={{ marginTop: '1.5rem' }}>
+                <div style={{
+                  padding: '10px 12px',
+                  backgroundColor: '#f5f3ff',
+                  borderRadius: '8px 8px 0 0',
+                  borderBottom: '2px solid #e5e7eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}>
+                  <h4 style={{ margin: 0, color: '#5b21b6', fontSize: '0.95rem' }}>Sea vs Air Cost Comparison</h4>
+                  <span style={{
+                    fontSize: '0.75rem',
+                    color: '#6b7280',
+                    fontWeight: '400',
+                  }}>
+                    ({seaVsAirComparisons.length} product{seaVsAirComparisons.length !== 1 ? 's' : ''} with both modes)
+                  </span>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f3f4f6' }}>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', borderBottom: '2px solid #e5e7eb' }}>Supplier</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', borderBottom: '2px solid #e5e7eb' }}>Product</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #e5e7eb', color: '#1d4ed8' }}>Sea Total</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #e5e7eb', color: '#1d4ed8' }}>Sea /KG</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #e5e7eb', color: '#7c3aed' }}>Air Total</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #e5e7eb', color: '#7c3aed' }}>Air /KG</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #e5e7eb' }}>Difference</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #e5e7eb' }}>Recommendation</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {seaVsAirComparisons.map((row, idx) => {
+                        const diffColor = row.seaCheaper ? '#059669' : '#7c3aed';
+                        return (
+                          <tr key={`${row.supplier}-${row.product}-${idx}`} style={{ backgroundColor: idx % 2 === 0 ? 'white' : 'var(--surface-2)' }}>
+                            <td style={{ padding: '10px 12px', fontWeight: '500' }}>{row.supplier}</td>
+                            <td style={{ padding: '10px 12px' }}>{row.product}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right', color: '#1d4ed8', fontWeight: '500' }}>{formatCurrency(row.seaTotalCost)}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right', color: '#1d4ed8' }}>{formatCurrency(row.seaCostPerKg)}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right', color: '#7c3aed', fontWeight: '500' }}>{formatCurrency(row.airTotalCost)}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right', color: '#7c3aed' }}>{formatCurrency(row.airCostPerKg)}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '600', color: diffColor }}>
+                              {row.diffZar >= 0 ? '+' : ''}{formatCurrency(row.diffZar)}
+                              <span style={{ fontSize: '0.75rem', marginLeft: '4px', opacity: 0.8 }}>
+                                ({row.diffPct >= 0 ? '+' : ''}{formatNumber(row.diffPct, 1)}%)
+                              </span>
+                            </td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                              <span style={{
+                                display: 'inline-block',
+                                padding: '3px 10px',
+                                borderRadius: '9999px',
+                                fontSize: '0.7rem',
+                                fontWeight: '700',
+                                letterSpacing: '0.03em',
+                                backgroundColor: row.seaCheaper ? '#d1fae5' : '#ede9fe',
+                                color: row.seaCheaper ? '#065f46' : '#5b21b6',
+                                border: `1px solid ${row.seaCheaper ? '#6ee7b7' : '#c4b5fd'}`,
+                              }}>
+                                {row.seaCheaper ? 'Sea Cheaper' : 'Air Cheaper'}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

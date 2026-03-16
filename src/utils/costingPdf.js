@@ -55,8 +55,8 @@ const getProductTotals = (estimate) => {
   return { totalWeight, totalCustomsValue, totalDuties };
 };
 
-// Calculate per-product cost/kg (matches ImportCosting calculateProductAllocation)
-const getProductCostPerKg = (product, estimate, totals, productTotals) => {
+// Calculate per-product full cost breakdown (matches ImportCosting calculateProductAllocation)
+const getProductCostBreakdown = (product, estimate, totals, productTotals) => {
   const roeCustoms = parseFloat(estimate.roe_customs) || parseFloat(estimate.roe_origin) || 0;
   const roeEur = parseFloat(estimate.roe_eur) || roeCustoms;
   const weight = parseFloat(product.weight_kg) || 0;
@@ -70,7 +70,9 @@ const getProductCostPerKg = (product, estimate, totals, productTotals) => {
   if (currency === 'ZAR') roe = 1;
 
   const customsValue = invoiceValue * roe;
-  const duties = customsValue * ((dutyPercent + dutySchedule1Percent) / 100);
+  const importDuty = customsValue * (dutyPercent / 100);
+  const schedule1Duty = customsValue * (dutySchedule1Percent / 100);
+  const totalDuties = importDuty + schedule1Duty;
   const weightRatio = productTotals.totalWeight > 0 ? weight / productTotals.totalWeight : 0;
 
   // For CIF/CIP/CFR, only allocate local + destination charges
@@ -83,10 +85,16 @@ const getProductCostPerKg = (product, estimate, totals, productTotals) => {
     shippingToAllocate = totals.total_shipping_cost_zar || 0;
   }
   const allocatedShipping = shippingToAllocate * weightRatio;
-  const totalLanded = customsValue + duties + allocatedShipping;
+  const totalLanded = customsValue + totalDuties + allocatedShipping;
   const costPerKg = weight > 0 ? totalLanded / weight : 0;
 
-  return { costPerKg, totalLanded, allocatedShipping };
+  return { weight, weightRatio, invoiceValue, currency, customsValue, importDuty, schedule1Duty, totalDuties, allocatedShipping, totalLanded, costPerKg };
+};
+
+// Backward-compatible wrapper
+const getProductCostPerKg = (product, estimate, totals, productTotals) => {
+  const bd = getProductCostBreakdown(product, estimate, totals, productTotals);
+  return { costPerKg: bd.costPerKg, totalLanded: bd.totalLanded, allocatedShipping: bd.allocatedShipping };
 };
 
 // Shared helper: render header, ROE info, shipment details, and products table
@@ -200,6 +208,83 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
         7: { halign: 'right', fontStyle: 'bold' },
       },
     });
+
+    // Product Cost Allocation breakdown
+    if (totals) {
+      const incoTerms = (estimate.inco_terms || '').toUpperCase();
+      const freightIncluded = ['CIF', 'CIP', 'CFR'].includes(incoTerms);
+      const shippingLabel = freightIncluded ? 'Alloc. Local Charges' : 'Alloc. Shipping';
+
+      // Build per-product rows with full cost breakdown
+      let sumWeight = 0, sumCustomsValue = 0, sumImportDuty = 0, sumSchedule1Duty = 0;
+      let sumAllocatedShipping = 0, sumTotalLanded = 0;
+
+      const allocationRows = products.map(p => {
+        const bd = getProductCostBreakdown(p, estimate, totals, productTotals);
+        sumWeight += bd.weight;
+        sumCustomsValue += bd.customsValue;
+        sumImportDuty += bd.importDuty;
+        sumSchedule1Duty += bd.schedule1Duty;
+        sumAllocatedShipping += bd.allocatedShipping;
+        sumTotalLanded += bd.totalLanded;
+
+        return [
+          p.name || '-',
+          `${formatNumber(bd.weight)} kg`,
+          `${(bd.weightRatio * 100).toFixed(1)}%`,
+          `${formatNumber(bd.invoiceValue, 2)} ${bd.currency}`,
+          formatCurrency(bd.customsValue),
+          formatCurrency(bd.importDuty),
+          formatCurrency(bd.schedule1Duty),
+          formatCurrency(bd.allocatedShipping),
+          formatCurrency(bd.totalLanded),
+          formatCurrency(bd.costPerKg),
+        ];
+      });
+
+      // Summary totals row
+      const sumCostPerKg = sumWeight > 0 ? sumTotalLanded / sumWeight : 0;
+      allocationRows.push([
+        'TOTAL',
+        `${formatNumber(sumWeight)} kg`,
+        '100.0%',
+        '',
+        formatCurrency(sumCustomsValue),
+        formatCurrency(sumImportDuty),
+        formatCurrency(sumSchedule1Duty),
+        formatCurrency(sumAllocatedShipping),
+        formatCurrency(sumTotalLanded),
+        formatCurrency(sumCostPerKg),
+      ]);
+
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Product', 'Weight', 'Wt %', 'Invoice Value', 'Customs Val (ZAR)', 'Import Duty', 'Sch1 Duty', shippingLabel, 'Total Landed', 'Cost/kg']],
+        body: allocationRows,
+        theme: 'grid',
+        headStyles: { fillColor: [22, 101, 52], fontSize: 7 },
+        styles: { fontSize: 7 },
+        columnStyles: {
+          0: { cellWidth: 26 },
+          1: { halign: 'right' },
+          2: { halign: 'right' },
+          3: { halign: 'right', cellWidth: 24 },
+          4: { halign: 'right' },
+          5: { halign: 'right' },
+          6: { halign: 'right' },
+          7: { halign: 'right' },
+          8: { halign: 'right', fontStyle: 'bold' },
+          9: { halign: 'right', fontStyle: 'bold' },
+        },
+        // Bold the totals row
+        didParseCell: (data) => {
+          if (data.row.index === allocationRows.length - 1) {
+            data.cell.styles.fontStyle = 'bold';
+            data.cell.styles.fillColor = [240, 240, 240];
+          }
+        },
+      });
+    }
   }
 };
 

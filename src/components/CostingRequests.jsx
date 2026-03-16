@@ -17,7 +17,7 @@ const STATUS_STYLES = {
   dismissed: { backgroundColor: '#f3f4f6', color: '#6b7280' },
 };
 
-function CostingRequests() {
+function CostingRequests({ onClose }) {
   const { confirm: confirmAction } = useNotification();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +95,7 @@ function CostingRequests() {
           <p style={{ margin: '0.25rem 0 0', color: 'var(--text-500)', fontSize: '0.8rem' }}>Manage costing requests from team members</p>
         </div>
         <button
-          onClick={() => window.history.back()}
+          onClick={() => onClose ? onClose() : window.history.back()}
           style={{
             background: 'rgba(0,0,0,0.05)', border: '1px solid #d1d5db',
             color: '#374151', padding: '8px 20px', borderRadius: '8px', cursor: 'pointer',
