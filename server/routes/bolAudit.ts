@@ -1332,7 +1332,7 @@ router.post(
       logInfo(`Clearing invoice ${invoice.invoice_number} linked to BOL ${bolNumber}: ${invoice.charges.length} charges, total R${invoice.total}, variance R${totalVariance.toFixed(2)}`);
 
       res.json({
-        data: { ...invResult, line_items: lineResults },
+        data: { ...invResult, total_variance: totalVariance, audit_status: auditStatus, line_items: lineResults },
         invoice: {
           invoice_number: invoice.invoice_number,
           total: invoice.total,
