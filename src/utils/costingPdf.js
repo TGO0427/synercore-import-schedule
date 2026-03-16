@@ -6,14 +6,16 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { calculateAllTotals, formatCurrency, formatNumber } from './costingCalculations';
 
-// Shared helper: filter rows where the last column is zero
+// Shared helper: filter rows where the last column is zero or empty/dash
 const filterZeroRows = (rows) => rows.filter(row => {
   const value = row[row.length - 1];
+  if (value === '-' || value === '' || value === null || value === undefined) return false;
   if (typeof value === 'string') {
+    if (value.trim() === '-') return false;
     const numericValue = parseFloat(value.replace(/[^0-9.-]/g, ''));
     return !isNaN(numericValue) && numericValue !== 0;
   }
-  return value !== 0 && value !== '-';
+  return value !== 0;
 });
 
 // Format date nicely (e.g. "03 Mar 2026")
@@ -206,11 +208,10 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
       ]);
 
   autoTable(doc, {
-    startY: startY + 2,
-    head: [['Shipment Details', '']],
+    startY: startY + 1,
     body: shipmentRows,
+    showHead: false,
     theme: 'striped',
-    headStyles: { fillColor: barColor, textColor: [255, 255, 255] },
     alternateRowStyles: { fillColor: [248, 250, 252] },
     styles: { fontSize: 8.5 },
     columnStyles: {
@@ -254,11 +255,11 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
       'TOTAL', '', `${formatNumber(productTotals.totalWeight)} kg`, '', '', '', formatCurrency(productTotals.totalCustomsValue), formatCurrency(overallCostPerKg),
     ]);
 
-    let prodY = doc.lastAutoTable.finalY + 8;
+    let prodY = doc.lastAutoTable.finalY + 4;
     prodY = drawSectionDivider(doc, prodY, 'Products', [245, 158, 11]);
 
     autoTable(doc, {
-      startY: prodY + 2,
+      startY: prodY + 1,
       head: [['Product', 'HS Code', 'Weight', 'Rate/kg', 'Curr', 'Invoice Val', 'Customs Val (ZAR)', 'Cost/kg']],
       body: productRows,
       theme: 'striped',
@@ -326,11 +327,11 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
         formatCurrency(sumCostPerKg),
       ]);
 
-      let allocY = doc.lastAutoTable.finalY + 8;
+      let allocY = doc.lastAutoTable.finalY + 4;
       allocY = drawSectionDivider(doc, allocY, 'Product Cost Allocation', [22, 101, 52]);
 
       autoTable(doc, {
-        startY: allocY + 2,
+        startY: allocY + 1,
         head: [['Product', 'Weight (kg)', 'Wt %', 'Invoice Value', 'Customs Val (ZAR)', 'Import Duty', 'Sch1 Duty', shippingLabel, 'Total Landed', 'Cost/kg']],
         body: allocationRows,
         theme: 'striped',
@@ -397,10 +398,10 @@ export function generateEstimatePDF(estimate) {
       airRows.push(['Total Airfreight', '', formatCurrency(totals.airfreight_total_zar)]);
     }
     if (airRows.length > 0) {
-      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 8, 30);
+      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
       secY = drawSectionDivider(doc, secY, 'Airfreight Charges', [124, 58, 237]);
       autoTable(doc, {
-        startY: secY + 2,
+        startY: secY + 1,
         head: [['Airfreight', 'Amount', 'ZAR']],
         body: airRows,
         theme: 'striped',
@@ -421,10 +422,10 @@ export function generateEstimatePDF(estimate) {
       surchargeRows.push(['Total Surcharges', '', formatCurrency((totals.fuel_surcharge_total_zar || 0) + (totals.security_surcharge_total_zar || 0))]);
     }
     if (surchargeRows.length > 0) {
-      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 8, 30);
+      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
       secY = drawSectionDivider(doc, secY, 'Surcharges', [109, 40, 217]);
       autoTable(doc, {
-        startY: secY + 2,
+        startY: secY + 1,
         head: [['Surcharges', 'Amount', 'ZAR']],
         body: surchargeRows,
         theme: 'striped',
@@ -449,10 +450,10 @@ export function generateEstimatePDF(estimate) {
       airLocalRows.push(['Sub-Total', formatCurrency((totals.airfreight_origin_charges_zar || 0) + (totals.air_local_charges_subtotal_zar || 0) + (totals.airfreight_insurance_zar || 0))]);
     }
     if (airLocalRows.length > 0) {
-      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 8, 30);
+      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
       secY = drawSectionDivider(doc, secY, 'Origin & Local Charges', [22, 101, 52]);
       autoTable(doc, {
-        startY: secY + 2,
+        startY: secY + 1,
         head: [['Origin & Local Charges', 'Amount']],
         body: airLocalRows,
         theme: 'striped',
@@ -474,10 +475,10 @@ export function generateEstimatePDF(estimate) {
       oceanFreightRows.push(['Total Ocean Freight', '', formatCurrency(totals.total_ocean_freight_zar)]);
     }
     if (oceanFreightRows.length > 0) {
-      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 8, 30);
+      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
       secY = drawSectionDivider(doc, secY, 'Ocean Freight', [59, 130, 246]);
       autoTable(doc, {
-        startY: secY + 2,
+        startY: secY + 1,
         head: [['Ocean Freight', 'Amount', 'ZAR']],
         body: oceanFreightRows,
         theme: 'striped',
@@ -496,10 +497,10 @@ export function generateEstimatePDF(estimate) {
       originRows.push(['Total Origin Charges', '', formatCurrency(totals.total_origin_charges_zar)]);
     }
     if (originRows.length > 0) {
-      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 8, 30);
+      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
       secY = drawSectionDivider(doc, secY, 'Origin Charges', [46, 139, 87]);
       autoTable(doc, {
-        startY: secY + 2,
+        startY: secY + 1,
         head: [['Origin Charges', 'Amount', 'ZAR']],
         body: originRows,
         theme: 'striped',
@@ -529,10 +530,10 @@ export function generateEstimatePDF(estimate) {
       localChargeRows.push(['Sub-Total', formatCurrency(totals.local_charges_subtotal_zar)]);
     }
     if (localChargeRows.length > 0) {
-      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 8, 30);
+      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
       secY = drawSectionDivider(doc, secY, 'Local Charges', [22, 101, 52]);
       autoTable(doc, {
-        startY: secY + 2,
+        startY: secY + 1,
         head: [['Local Charges (Transport/Cartage)', 'ZAR']],
         body: localChargeRows,
         theme: 'striped',
@@ -557,10 +558,10 @@ export function generateEstimatePDF(estimate) {
       destChargeRows.push(['Sub-Total', formatCurrency(totals.destination_charges_subtotal_zar)]);
     }
     if (destChargeRows.length > 0) {
-      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 8, 30);
+      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
       secY = drawSectionDivider(doc, secY, 'Destination Charges', [0, 123, 167]);
       autoTable(doc, {
-        startY: secY + 2,
+        startY: secY + 1,
         head: [['Destination Charges', 'ZAR']],
         body: destChargeRows,
         theme: 'striped',
@@ -582,10 +583,10 @@ export function generateEstimatePDF(estimate) {
     customsRows.push(['Sub-Total (excl. Import VAT)', formatCurrency(totals.customs_subtotal_zar)]);
   }
   if (customsRows.length > 0) {
-    let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 8, 30);
+    let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
     secY = drawSectionDivider(doc, secY, 'Customs & Duties', [146, 64, 14]);
     autoTable(doc, {
-      startY: secY + 2,
+      startY: secY + 1,
       head: [['Customs & Duties', 'ZAR']],
       body: customsRows,
       theme: 'striped',
@@ -606,11 +607,11 @@ export function generateEstimatePDF(estimate) {
   });
 
   if (summaryData.length > 0) {
-    let sumY = checkPageBreak(doc, doc.lastAutoTable.finalY + 8, 50);
+    let sumY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 50);
     sumY = drawSectionDivider(doc, sumY, 'Summary', themeColor);
 
     autoTable(doc, {
-      startY: sumY + 2,
+      startY: sumY + 1,
       head: [['Summary', 'Amount']],
       body: summaryData,
       theme: 'plain',
