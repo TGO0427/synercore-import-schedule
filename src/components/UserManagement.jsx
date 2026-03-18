@@ -1,6 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { authUtils } from '../utils/auth';
 
+// Simple user-agent parser for the Device column
+function parseUserAgent(ua) {
+  if (!ua) return 'Unknown';
+  let browser = 'Unknown';
+  let os = 'Unknown';
+  // Browser detection
+  if (ua.includes('Edg/')) browser = 'Edge';
+  else if (ua.includes('OPR/') || ua.includes('Opera')) browser = 'Opera';
+  else if (ua.includes('Chrome/')) browser = 'Chrome';
+  else if (ua.includes('Safari/') && !ua.includes('Chrome')) browser = 'Safari';
+  else if (ua.includes('Firefox/')) browser = 'Firefox';
+  else if (ua.includes('MSIE') || ua.includes('Trident/')) browser = 'IE';
+  // OS detection
+  if (ua.includes('Windows')) os = 'Windows';
+  else if (ua.includes('Mac OS X') || ua.includes('Macintosh')) os = 'macOS';
+  else if (ua.includes('Linux') && !ua.includes('Android')) os = 'Linux';
+  else if (ua.includes('Android')) os = 'Android';
+  else if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS';
+  return `${browser} / ${os}`;
+}
+
 function UserManagement() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -24,6 +45,12 @@ function UserManagement() {
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
+
+  // Login activity state
+  const [showLoginActivity, setShowLoginActivity] = useState(false);
+  const [loginActivity, setLoginActivity] = useState([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityUserId, setActivityUserId] = useState(null);
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
 
@@ -237,6 +264,65 @@ function UserManagement() {
     }
   };
 
+  const fetchLoginActivity = async (userId = null) => {
+    try {
+      setActivityLoading(true);
+      const url = userId
+        ? `${apiUrl}/api/auth/admin/login-activity/${userId}`
+        : `${apiUrl}/api/auth/admin/login-activity`;
+      const response = await fetch(url, {
+        headers: authUtils.getAuthHeader()
+      });
+      if (!response.ok) throw new Error('Failed to load login activity');
+      const data = await response.json();
+      setLoginActivity(Array.isArray(data) ? data.slice(0, 100) : []);
+    } catch (error) {
+      console.error('Error loading login activity:', error);
+      setLoginActivity([]);
+    } finally {
+      setActivityLoading(false);
+    }
+  };
+
+  const handleToggleLoginActivity = () => {
+    if (!showLoginActivity) {
+      setActivityUserId(null);
+      fetchLoginActivity(null);
+    }
+    setShowLoginActivity(!showLoginActivity);
+  };
+
+  const handleActivityFilterChange = (userId) => {
+    const val = userId === '' ? null : userId;
+    setActivityUserId(val);
+    fetchLoginActivity(val);
+  };
+
+  const handlePerUserActivity = (userId) => {
+    setActivityUserId(userId);
+    setShowLoginActivity(true);
+    fetchLoginActivity(userId);
+  };
+
+  // Detect concurrent sessions: same user logged in from 2+ IPs in last 30 min
+  const getConcurrentSessionUsers = () => {
+    const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const recentSuccessful = loginActivity.filter(
+      (a) => a.success && new Date(a.timestamp || a.createdAt) >= thirtyMinAgo
+    );
+    const userIpMap = {};
+    recentSuccessful.forEach((a) => {
+      const uid = a.userId || a.user_id || a.username;
+      if (!userIpMap[uid]) userIpMap[uid] = new Set();
+      if (a.ipAddress || a.ip_address) userIpMap[uid].add(a.ipAddress || a.ip_address);
+    });
+    const flagged = new Set();
+    Object.entries(userIpMap).forEach(([uid, ips]) => {
+      if (ips.size >= 2) flagged.add(uid);
+    });
+    return flagged;
+  };
+
   return (
     <div style={{
       padding: '2rem',
@@ -254,24 +340,44 @@ function UserManagement() {
         <div className="page-header">
           <h2>User Management</h2>
         </div>
-        <button
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          style={{
-            padding: '10px 20px',
-            backgroundColor: 'var(--accent)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            fontSize: '14px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'background-color 0.2s'
-          }}
-          onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--accent-600)'}
-          onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--accent)'}
-        >
-          {showCreateForm ? '✕ Cancel' : '+ Create New User'}
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={handleToggleLoginActivity}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: showLoginActivity ? 'var(--text-500)' : '#6b7280',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#4b5563'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = showLoginActivity ? 'var(--text-500)' : '#6b7280'}
+          >
+            {showLoginActivity ? '✕ Close Activity' : 'Login Activity'}
+          </button>
+          <button
+            onClick={() => setShowCreateForm(!showCreateForm)}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: 'var(--accent)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--accent-600)'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--accent)'}
+          >
+            {showCreateForm ? '✕ Cancel' : '+ Create New User'}
+          </button>
+        </div>
       </div>
 
       {/* Message */}
@@ -499,6 +605,197 @@ function UserManagement() {
         </div>
       )}
 
+      {/* Login Activity Panel */}
+      {showLoginActivity && (
+        <div className="dash-panel" style={{
+          padding: '24px',
+          marginBottom: '2rem',
+          border: '1px solid var(--border)'
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '16px'
+          }}>
+            <h2 style={{
+              margin: 0,
+              fontSize: '20px',
+              color: 'var(--text-900)'
+            }}>
+              Login Activity
+            </h2>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <select
+                value={activityUserId || ''}
+                onChange={(e) => handleActivityFilterChange(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  border: '2px solid var(--border)',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  backgroundColor: 'white',
+                  minWidth: '180px'
+                }}
+              >
+                <option value="">All Users</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>{u.username}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => setShowLoginActivity(false)}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+
+          {activityLoading ? (
+            <div style={{
+              padding: '40px',
+              textAlign: 'center',
+              color: 'var(--text-500)'
+            }}>
+              Loading activity...
+            </div>
+          ) : loginActivity.length === 0 ? (
+            <div style={{
+              padding: '40px',
+              textAlign: 'center',
+              color: 'var(--text-500)'
+            }}>
+              No login activity found
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{
+                width: '100%',
+                borderCollapse: 'collapse'
+              }}>
+                <thead>
+                  <tr style={{
+                    backgroundColor: 'var(--surface-2)',
+                    borderBottom: '2px solid var(--border)'
+                  }}>
+                    {['Date/Time', 'Username', 'IP Address', 'Device', 'Status'].map((col) => (
+                      <th key={col} style={{
+                        padding: '12px 16px',
+                        textAlign: 'left',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: 'var(--text-900)'
+                      }}>
+                        {col}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    const concurrentUsers = getConcurrentSessionUsers();
+                    return loginActivity.map((entry, idx) => {
+                      const success = entry.success !== false;
+                      const timestamp = entry.timestamp || entry.createdAt || entry.created_at;
+                      const username = entry.username || entry.user?.username || '-';
+                      const ip = entry.ipAddress || entry.ip_address || '-';
+                      const ua = entry.userAgent || entry.user_agent || '';
+                      const userId = entry.userId || entry.user_id;
+                      const isConcurrent = concurrentUsers.has(userId) || concurrentUsers.has(username);
+
+                      return (
+                        <tr
+                          key={entry.id || idx}
+                          style={{
+                            borderBottom: '1px solid var(--border)',
+                            backgroundColor: !success ? 'rgba(220, 38, 38, 0.06)' : 'transparent'
+                          }}
+                        >
+                          <td style={{
+                            padding: '12px 16px',
+                            fontSize: '13px',
+                            color: 'var(--text-900)',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {timestamp ? new Date(timestamp).toLocaleString() : '-'}
+                          </td>
+                          <td style={{
+                            padding: '12px 16px',
+                            fontSize: '13px',
+                            color: 'var(--text-900)',
+                            fontWeight: '500'
+                          }}>
+                            {username}
+                            {isConcurrent && success && (
+                              <span
+                                title="Concurrent sessions detected (2+ IPs in last 30 min)"
+                                style={{
+                                  display: 'inline-block',
+                                  marginLeft: '8px',
+                                  padding: '2px 6px',
+                                  borderRadius: '8px',
+                                  fontSize: '10px',
+                                  fontWeight: '700',
+                                  backgroundColor: '#fbbf24',
+                                  color: '#78350f'
+                                }}
+                              >
+                                MULTI-IP
+                              </span>
+                            )}
+                          </td>
+                          <td style={{
+                            padding: '12px 16px',
+                            fontSize: '13px',
+                            color: 'var(--text-500)',
+                            fontFamily: 'monospace'
+                          }}>
+                            {ip}
+                          </td>
+                          <td style={{
+                            padding: '12px 16px',
+                            fontSize: '13px',
+                            color: 'var(--text-500)'
+                          }}>
+                            {parseUserAgent(ua)}
+                          </td>
+                          <td style={{
+                            padding: '12px 16px',
+                            fontSize: '13px'
+                          }}>
+                            <span style={{
+                              padding: '3px 10px',
+                              borderRadius: '12px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              backgroundColor: success ? '#d4edda' : '#f8d7da',
+                              color: success ? '#155724' : '#721c24'
+                            }}>
+                              {success ? 'Success' : 'Failed'}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Users List */}
       <div className="dash-panel" style={{
         padding: 0,
@@ -715,6 +1012,24 @@ function UserManagement() {
                         onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--warning)'}
                       >
                         Reset Password
+                      </button>
+                      <button
+                        onClick={() => handlePerUserActivity(user.id)}
+                        style={{
+                          padding: '6px 12px',
+                          backgroundColor: '#6b7280',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          transition: 'background-color 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#4b5563'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = '#6b7280'}
+                      >
+                        Activity
                       </button>
                     </div>
                   </td>
