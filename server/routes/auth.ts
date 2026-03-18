@@ -21,6 +21,80 @@ import { requireAdmin } from '../middleware/auth.ts';
 
 const router = Router();
 
+// Ensure login_activity table exists (safe with IF NOT EXISTS)
+(async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS login_activity (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        username VARCHAR(255),
+        ip_address VARCHAR(45),
+        user_agent TEXT,
+        login_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        success BOOLEAN DEFAULT true
+      );
+      CREATE INDEX IF NOT EXISTS idx_login_activity_user ON login_activity(user_id);
+      CREATE INDEX IF NOT EXISTS idx_login_activity_time ON login_activity(login_at);
+    `);
+    console.log('[AUTH] login_activity table ready');
+  } catch (err: unknown) {
+    console.error('[AUTH] Failed to create login_activity table:', (err as any).message);
+  }
+})();
+
+// Helper to extract client IP from request
+function getClientIp(req: Request): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string') return forwarded.split(',')[0].trim();
+  return req.ip || (req as any).connection?.remoteAddress || 'unknown';
+}
+
+// Log login activity to database
+async function logLoginActivity(
+  userId: string,
+  username: string,
+  ip: string,
+  userAgent: string | undefined,
+  success: boolean
+): Promise<void> {
+  try {
+    await pool.query(
+      `INSERT INTO login_activity (user_id, username, ip_address, user_agent, login_at, success)
+       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5)`,
+      [userId, username, ip, userAgent || null, success]
+    );
+  } catch (err: unknown) {
+    console.warn('[AUTH] Failed to log login activity:', (err as any).message);
+  }
+}
+
+// Check for concurrent sessions from different IPs in the last 30 minutes
+async function checkConcurrentSessions(
+  userId: string,
+  currentIp: string
+): Promise<{ warning: boolean; otherIp?: string }> {
+  try {
+    const result = await pool.query(
+      `SELECT DISTINCT ip_address FROM login_activity
+       WHERE user_id = $1
+         AND success = true
+         AND ip_address != $2
+         AND login_at > NOW() - INTERVAL '30 minutes'
+       ORDER BY ip_address
+       LIMIT 1`,
+      [userId, currentIp]
+    );
+    if (result.rows.length > 0) {
+      return { warning: true, otherIp: result.rows[0].ip_address };
+    }
+    return { warning: false };
+  } catch (err: unknown) {
+    console.warn('[AUTH] Failed to check concurrent sessions:', (err as any).message);
+    return { warning: false };
+  }
+}
+
 // JWT secrets (MUST be set in environment variables)
 const JWT_SECRET: string = process.env.JWT_SECRET as string;
 const JWT_REFRESH_SECRET: string = process.env.JWT_REFRESH_SECRET || JWT_SECRET + '_refresh';
@@ -286,6 +360,9 @@ router.post('/register', validateRegister, async (req: Request, res: Response) =
   }
 });
 
+// Password expiry constant (90 days in milliseconds)
+const PASSWORD_EXPIRY_DAYS = 90;
+
 // POST /api/auth/login - Login user
 router.post('/login', validateLogin, async (req: Request, res: Response) => {
   try {
@@ -295,6 +372,10 @@ router.post('/login', validateLogin, async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
+    // Extract IP and user agent for login activity tracking
+    const clientIp = getClientIp(req);
+    const userAgent = req.headers['user-agent'];
+
     // Check account lockout
     const lockout = checkAccountLockout(username);
     if (lockout.locked) {
@@ -302,14 +383,23 @@ router.post('/login', validateLogin, async (req: Request, res: Response) => {
       return res.status(429).json({ error: `Account temporarily locked. Try again in ${minutes} minute(s).` });
     }
 
-    // Find user (include password_hash for authentication)
+    // Ensure password_changed_at column exists
+    try {
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP`);
+    } catch (err) {
+      console.warn('Could not ensure password_changed_at column:', (err as any).message);
+    }
+
+    // Find user (include password_hash and password_changed_at for authentication)
     const result = await pool.query(
-      'SELECT id, username, email, full_name, role, is_active, password_hash FROM users WHERE username = $1',
+      'SELECT id, username, email, full_name, role, is_active, password_hash, password_changed_at FROM users WHERE username = $1',
       [username]
     );
 
     if (result.rows.length === 0) {
       recordFailedLogin(username);
+      // Log failed attempt (unknown user — use username as user_id placeholder)
+      await logLoginActivity(username, username, clientIp, userAgent, false);
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
@@ -317,6 +407,7 @@ router.post('/login', validateLogin, async (req: Request, res: Response) => {
 
     // Check if user is active
     if (!user.is_active) {
+      await logLoginActivity(user.id, username, clientIp, userAgent, false);
       return res.status(403).json({ error: 'Account is deactivated' });
     }
 
@@ -325,10 +416,23 @@ router.post('/login', validateLogin, async (req: Request, res: Response) => {
 
     if (!validPassword) {
       recordFailedLogin(username);
+      // Log failed login attempt
+      await logLoginActivity(user.id, username, clientIp, userAgent, false);
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
     clearLoginAttempts(username);
+
+    // Log successful login activity
+    await logLoginActivity(user.id, username, clientIp, userAgent, true);
+
+    // Check for concurrent sessions from different IPs
+    const concurrentCheck = await checkConcurrentSessions(user.id, clientIp);
+
+    // Check if password is expired (older than 90 days)
+    const passwordChangedAt: Date = user.password_changed_at ? new Date(user.password_changed_at) : new Date(0);
+    const daysSinceChange: number = (Date.now() - passwordChangedAt.getTime()) / (1000 * 60 * 60 * 24);
+    const passwordExpired: boolean = daysSinceChange >= PASSWORD_EXPIRY_DAYS;
 
     // Generate access token (short-lived)
     const accessToken: string = jwt.sign(
@@ -347,10 +451,14 @@ router.post('/login', validateLogin, async (req: Request, res: Response) => {
     console.log('[AUTH] Login successful for user:', user.username, {
       tokenLength: accessToken.length,
       refreshTokenLength: refreshToken.length,
-      expiresIn: ACCESS_TOKEN_EXPIRY
+      expiresIn: ACCESS_TOKEN_EXPIRY,
+      passwordExpired,
+      ip: clientIp,
+      concurrentSessionWarning: concurrentCheck.warning
     });
 
-    res.json({
+    // Build response with optional concurrent session warning
+    const responseData: any = {
       message: 'Login successful',
       user: {
         id: user.id,
@@ -362,8 +470,16 @@ router.post('/login', validateLogin, async (req: Request, res: Response) => {
       },
       accessToken,
       refreshToken,
-      expiresIn: 900 // 15 minutes in seconds
-    });
+      expiresIn: 900, // 15 minutes in seconds
+      passwordExpired
+    };
+
+    if (concurrentCheck.warning) {
+      responseData.concurrentSessionWarning = true;
+      responseData.concurrentSessionIp = concurrentCheck.otherIp;
+    }
+
+    res.json(responseData);
   } catch (error: unknown) {
     console.error('Error in login:', error);
     res.status(500).json({ error: 'Failed to login' });
@@ -396,6 +512,97 @@ router.get('/me', authenticateToken, async (req: Request, res: Response) => {
   } catch (error: unknown) {
     console.error('Error in get current user:', error);
     res.status(500).json({ error: 'Failed to get user' });
+  }
+});
+
+// GET /api/auth/password-status - Check if current user's password is expired
+router.get('/password-status', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    // Ensure column exists
+    try {
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP`);
+    } catch (err) {
+      console.warn('Could not ensure password_changed_at column:', (err as any).message);
+    }
+
+    const result = await pool.query(
+      'SELECT password_changed_at FROM users WHERE id = $1',
+      [(req as any).user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = result.rows[0];
+    const passwordChangedAt: Date = user.password_changed_at ? new Date(user.password_changed_at) : new Date(0);
+    const daysSinceChange: number = (Date.now() - passwordChangedAt.getTime()) / (1000 * 60 * 60 * 24);
+    const passwordExpired: boolean = daysSinceChange >= PASSWORD_EXPIRY_DAYS;
+    const daysUntilExpiry: number = Math.max(0, Math.ceil(PASSWORD_EXPIRY_DAYS - daysSinceChange));
+
+    res.json({
+      passwordExpired,
+      passwordChangedAt: user.password_changed_at,
+      daysUntilExpiry,
+      expiryDays: PASSWORD_EXPIRY_DAYS
+    });
+  } catch (error: unknown) {
+    console.error('Error checking password status:', error);
+    res.status(500).json({ error: 'Failed to check password status' });
+  }
+});
+
+// GET /api/auth/admin/login-activity - Get recent login activity (admin only)
+router.get('/admin/login-activity', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, user_id, username, ip_address, user_agent, login_at, success
+       FROM login_activity
+       ORDER BY login_at DESC
+       LIMIT 100`
+    );
+
+    res.json(result.rows.map((row: any) => ({
+      id: row.id,
+      userId: row.user_id,
+      username: row.username,
+      ipAddress: row.ip_address,
+      userAgent: row.user_agent,
+      loginAt: row.login_at,
+      success: row.success
+    })));
+  } catch (error: unknown) {
+    console.error('Error fetching login activity:', error);
+    res.status(500).json({ error: 'Failed to fetch login activity' });
+  }
+});
+
+// GET /api/auth/admin/login-activity/:userId - Get login activity for a specific user (admin only)
+router.get('/admin/login-activity/:userId', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+
+    const result = await pool.query(
+      `SELECT id, user_id, username, ip_address, user_agent, login_at, success
+       FROM login_activity
+       WHERE user_id = $1
+       ORDER BY login_at DESC
+       LIMIT 100`,
+      [userId]
+    );
+
+    res.json(result.rows.map((row: any) => ({
+      id: row.id,
+      userId: row.user_id,
+      username: row.username,
+      ipAddress: row.ip_address,
+      userAgent: row.user_agent,
+      loginAt: row.login_at,
+      success: row.success
+    })));
+  } catch (error: unknown) {
+    console.error('Error fetching user login activity:', error);
+    res.status(500).json({ error: 'Failed to fetch user login activity' });
   }
 });
 
@@ -559,9 +766,9 @@ router.post('/admin/users/:id/reset-password', authenticateToken, requireAdmin, 
     // Hash new password
     const passwordHash: string = await bcrypt.hash(newPassword, 10);
 
-    // Update password
+    // Update password and reset password_changed_at
     await pool.query(
-      'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      'UPDATE users SET password_hash = $1, password_changed_at = NOW(), updated_at = CURRENT_TIMESTAMP WHERE id = $2',
       [passwordHash, id]
     );
 
@@ -738,9 +945,9 @@ router.post('/change-password', authenticateToken, validateChangePassword, async
     // Hash new password
     const newPasswordHash: string = await bcrypt.hash(newPassword, 10);
 
-    // Update password
+    // Update password and reset password_changed_at
     await pool.query(
-      'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      'UPDATE users SET password_hash = $1, password_changed_at = NOW(), updated_at = CURRENT_TIMESTAMP WHERE id = $2',
       [newPasswordHash, (req as any).user.id]
     );
 
@@ -863,9 +1070,9 @@ router.post('/reset-password', async (req: Request, res: Response) => {
     // Hash new password
     const passwordHash: string = await bcrypt.hash(password, 10);
 
-    // Update password and clear reset token
+    // Update password, clear reset token, and reset password_changed_at
     await pool.query(
-      `UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expiry = NULL, updated_at = CURRENT_TIMESTAMP
+      `UPDATE users SET password_hash = $1, password_changed_at = NOW(), reset_token = NULL, reset_token_expiry = NULL, updated_at = CURRENT_TIMESTAMP
        WHERE id = $2`,
       [passwordHash, user.id]
     );

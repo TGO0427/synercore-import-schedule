@@ -61,16 +61,16 @@ export class SupplierController {
       // Hash password
       const passwordHash = await bcrypt.hash(password, 10);
 
-      // Create account
+      // Create account (inactive by default — requires admin approval)
       const result = await pool.query(
-        `INSERT INTO supplier_accounts (supplier_id, email, password_hash, is_verified)
-         VALUES ($1, $2, $3, true)
+        `INSERT INTO supplier_accounts (supplier_id, email, password_hash, is_verified, is_active)
+         VALUES ($1, $2, $3, true, false)
          RETURNING id, supplier_id, email, created_at`,
         [supplierId, email, passwordHash]
       );
 
       res.status(201).json({
-        message: 'Supplier account created successfully',
+        message: 'Registration submitted! Your account is pending admin approval.',
         account: result.rows[0]
       });
     } catch (error) {
@@ -109,7 +109,7 @@ export class SupplierController {
       const account = result.rows[0];
 
       if (!account.is_active) {
-        return res.status(403).json({ error: 'Account is disabled' });
+        return res.status(403).json({ error: 'Your account is pending admin approval. Please contact the administrator.' });
       }
 
       // Verify password
@@ -441,6 +441,74 @@ export class SupplierController {
     } catch (error) {
       console.error('Error generating reports:', error);
       res.status(500).json({ error: 'Failed to generate reports' });
+    }
+  }
+
+  /**
+   * List pending (inactive) supplier accounts — admin only
+   */
+  static async getPendingAccounts(req, res) {
+    try {
+      const result = await pool.query(
+        `SELECT sa.id, sa.supplier_id, sa.email, sa.created_at, s.name as company_name
+         FROM supplier_accounts sa
+         JOIN suppliers s ON sa.supplier_id = s.id
+         WHERE sa.is_active = false
+         ORDER BY sa.created_at DESC`
+      );
+
+      res.json({ pending: result.rows });
+    } catch (error) {
+      console.error('Error fetching pending accounts:', error);
+      res.status(500).json({ error: 'Failed to fetch pending accounts' });
+    }
+  }
+
+  /**
+   * Approve a supplier account — admin only
+   */
+  static async approveAccount(req, res) {
+    try {
+      const { id } = req.params;
+
+      const result = await pool.query(
+        `UPDATE supplier_accounts SET is_active = true WHERE id = $1
+         RETURNING id, supplier_id, email`,
+        [id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Supplier account not found' });
+      }
+
+      res.json({ message: 'Supplier account approved', account: result.rows[0] });
+    } catch (error) {
+      console.error('Error approving supplier account:', error);
+      res.status(500).json({ error: 'Failed to approve account' });
+    }
+  }
+
+  /**
+   * Reject (delete) a supplier account — admin only
+   */
+  static async rejectAccount(req, res) {
+    try {
+      const { id } = req.params;
+
+      const result = await pool.query(
+        `DELETE FROM supplier_accounts WHERE id = $1 AND is_active = false
+         RETURNING id, supplier_id, email`,
+        [id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Pending supplier account not found' });
+      }
+
+      res.json({ message: 'Supplier account rejected and removed', account: result.rows[0] });
+    } catch (error) {
+      console.error('Error rejecting supplier account:', error);
+      res.status(500).json({ error: 'Failed to reject account' });
     }
   }
 

@@ -88,7 +88,7 @@ function LoginPage({ onLogin, onForgotPassword }) {
 
       authUtils.setAuth(accessToken, refreshToken, data.user, expiresIn);
 
-      onLogin(data.user.username);
+      onLogin(data.user.username, data.passwordExpired === true);
     } catch (err) {
       console.error('Login error:', err);
       setError('Network error. Please check your connection and try again.');

@@ -51,6 +51,10 @@ function SupplierLogin({ onClose }) {
       const data = await res.json();
 
       if (!res.ok) {
+        if (res.status === 403) {
+          setMessage('⏳ ' + (data.error || 'Your account is pending admin approval. Please contact the administrator.'));
+          return;
+        }
         throw new Error(data.error || 'Login failed');
       }
 
@@ -102,7 +106,7 @@ function SupplierLogin({ onClose }) {
         throw new Error(data.error || 'Registration failed');
       }
 
-      setMessage('✅ Account created successfully! Please log in.');
+      setMessage('✅ Registration submitted! Your account is pending admin approval. You\'ll be able to log in once an admin approves your account.');
       setRegisterForm({
         supplierId: '',
         email: '',
@@ -110,7 +114,6 @@ function SupplierLogin({ onClose }) {
         confirmPassword: '',
         companyName: ''
       });
-      setTimeout(() => setActiveForm('login'), 2000);
     } catch (error) {
       console.error('Registration error:', error);
       setMessage('❌ ' + error.message);
@@ -154,8 +157,8 @@ function SupplierLogin({ onClose }) {
             <div style={{
               padding: '1rem',
               marginBottom: '1.5rem',
-              backgroundColor: message.includes('✅') ? '#d4edda' : '#f8d7da',
-              color: message.includes('✅') ? '#155724' : '#721c24',
+              backgroundColor: message.includes('✅') ? '#d4edda' : message.includes('⏳') ? '#fff3cd' : '#f8d7da',
+              color: message.includes('✅') ? '#155724' : message.includes('⏳') ? '#856404' : '#721c24',
               borderRadius: '4px',
               fontSize: '0.9rem'
             }}>

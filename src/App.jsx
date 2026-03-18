@@ -88,6 +88,13 @@ function App() {
   });
   const [showSupplierPortal, setShowSupplierPortal] = useState(false);
 
+  // Password expiry state
+  const [passwordExpired, setPasswordExpired] = useState(false);
+  const [pwChangeForm, setPwChangeForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [pwChangeError, setPwChangeError] = useState('');
+  const [pwChangeLoading, setPwChangeLoading] = useState(false);
+  const [pwChangeSuccess, setPwChangeSuccess] = useState('');
+
   // UI panel state
   const [alertHubOpen, setAlertHubOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -153,6 +160,19 @@ function App() {
     return unsubscribe;
   }, [onDocumentUpload, showInfo]);
 
+  // ---------- check password expiry ----------
+  const checkPasswordExpiry = async () => {
+    try {
+      const res = await authFetch(getApiUrl('/api/auth/password-status'));
+      if (res.ok) {
+        const data = await res.json();
+        setPasswordExpired(data.passwordExpired === true);
+      }
+    } catch (err) {
+      console.warn('Could not check password status:', err);
+    }
+  };
+
   // ---------- boot ----------
   useEffect(() => {
     if (initializedRef.current) return;
@@ -164,6 +184,7 @@ function App() {
       setUsername(user.username);
       fetchShipments();
       fetchSuppliers();
+      checkPasswordExpiry();
     } else {
       if (authUtils.isAuthenticated() || authUtils.getUser()) {
         authUtils.clearAuth();
@@ -206,7 +227,7 @@ function App() {
   }, [isAuthenticated]);
 
   // ---------- auth ----------
-  const handleLogin = (loginUsername) => {
+  const handleLogin = (loginUsername, loginPasswordExpired) => {
     localStorage.setItem('isAuthenticated', 'true');
     localStorage.setItem('username', loginUsername);
     setIsAuthenticated(true);
@@ -214,12 +235,67 @@ function App() {
     initializedRef.current = true;
     fetchShipments();
     fetchSuppliers();
+    if (loginPasswordExpired) {
+      setPasswordExpired(true);
+    } else {
+      checkPasswordExpiry();
+    }
   };
 
   const handleLogout = () => {
     authUtils.clearAuth();
     setIsAuthenticated(false);
     setUsername('');
+    setPasswordExpired(false);
+  };
+
+  const handleExpiredPasswordChange = async (e) => {
+    e.preventDefault();
+    setPwChangeError('');
+    setPwChangeSuccess('');
+
+    const { currentPassword, newPassword, confirmPassword } = pwChangeForm;
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPwChangeError('All fields are required.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPwChangeError('New password must be at least 6 characters.');
+      return;
+    }
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(newPassword)) {
+      setPwChangeError('Password must contain at least one uppercase letter, one lowercase letter, and one number.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPwChangeError('New password and confirmation do not match.');
+      return;
+    }
+
+    setPwChangeLoading(true);
+    try {
+      const res = await authFetch(getApiUrl('/api/auth/change-password'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPwChangeError(data.error || 'Failed to change password.');
+        return;
+      }
+      setPwChangeSuccess('Password changed successfully.');
+      setPwChangeForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setTimeout(() => {
+        setPasswordExpired(false);
+        setPwChangeSuccess('');
+      }, 1500);
+    } catch (err) {
+      setPwChangeError('Network error. Please try again.');
+    } finally {
+      setPwChangeLoading(false);
+    }
   };
 
   // ---------- helper: derive active view from URL ----------
@@ -696,6 +772,134 @@ function App() {
       )}
       {helpOpen && (
         <HelpGuide onClose={() => setHelpOpen(false)} />
+      )}
+
+      {/* Password Expiry Modal — cannot be dismissed */}
+      {passwordExpired && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div style={{
+            backgroundColor: 'var(--surface, #fff)',
+            borderRadius: '12px',
+            padding: '32px',
+            width: '100%',
+            maxWidth: '440px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            border: '1px solid var(--border, #e2e8f0)'
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+              <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔒</div>
+              <h2 style={{ margin: '0 0 8px', fontSize: '20px', color: 'var(--text-900, #1a202c)' }}>
+                Password Expired
+              </h2>
+              <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-500, #718096)', lineHeight: '1.5' }}>
+                Your password has expired. Please set a new password to continue.
+              </p>
+            </div>
+
+            <form onSubmit={handleExpiredPasswordChange}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-700, #4a5568)', marginBottom: '6px' }}>
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  value={pwChangeForm.currentPassword}
+                  onChange={e => setPwChangeForm(f => ({ ...f, currentPassword: e.target.value }))}
+                  disabled={pwChangeLoading}
+                  style={{
+                    width: '100%', padding: '10px 12px', fontSize: '14px',
+                    border: '1px solid var(--border, #e2e8f0)', borderRadius: '6px',
+                    backgroundColor: 'var(--bg, #fff)', color: 'var(--text-900, #1a202c)',
+                    outline: 'none', boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-700, #4a5568)', marginBottom: '6px' }}>
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  value={pwChangeForm.newPassword}
+                  onChange={e => setPwChangeForm(f => ({ ...f, newPassword: e.target.value }))}
+                  disabled={pwChangeLoading}
+                  style={{
+                    width: '100%', padding: '10px 12px', fontSize: '14px',
+                    border: '1px solid var(--border, #e2e8f0)', borderRadius: '6px',
+                    backgroundColor: 'var(--bg, #fff)', color: 'var(--text-900, #1a202c)',
+                    outline: 'none', boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-700, #4a5568)', marginBottom: '6px' }}>
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  value={pwChangeForm.confirmPassword}
+                  onChange={e => setPwChangeForm(f => ({ ...f, confirmPassword: e.target.value }))}
+                  disabled={pwChangeLoading}
+                  style={{
+                    width: '100%', padding: '10px 12px', fontSize: '14px',
+                    border: '1px solid var(--border, #e2e8f0)', borderRadius: '6px',
+                    backgroundColor: 'var(--bg, #fff)', color: 'var(--text-900, #1a202c)',
+                    outline: 'none', boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <div style={{
+                padding: '10px 12px', marginBottom: '16px',
+                backgroundColor: 'var(--info-bg, #ebf8ff)', borderRadius: '6px',
+                border: '1px solid var(--info-border, #bee3f8)',
+                fontSize: '12px', color: 'var(--text-600, #4a5568)', lineHeight: '1.5'
+              }}>
+                Password requirements: minimum 6 characters, at least one uppercase letter, one lowercase letter, and one number.
+              </div>
+
+              {pwChangeError && (
+                <div style={{
+                  backgroundColor: '#fee2e2', border: '1px solid #fecaca',
+                  color: '#dc2626', padding: '10px 12px', borderRadius: '6px',
+                  marginBottom: '16px', fontSize: '13px'
+                }}>
+                  {pwChangeError}
+                </div>
+              )}
+
+              {pwChangeSuccess && (
+                <div style={{
+                  backgroundColor: '#d1fae5', border: '1px solid #a7f3d0',
+                  color: '#059669', padding: '10px 12px', borderRadius: '6px',
+                  marginBottom: '16px', fontSize: '13px'
+                }}>
+                  {pwChangeSuccess}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={pwChangeLoading}
+                style={{
+                  width: '100%', padding: '12px',
+                  background: pwChangeLoading ? '#94a3b8' : 'linear-gradient(135deg, #059669, #10b981)',
+                  color: '#fff', border: 'none', borderRadius: '8px',
+                  fontSize: '15px', fontWeight: 600,
+                  cursor: pwChangeLoading ? 'not-allowed' : 'pointer',
+                  transition: 'opacity 0.2s'
+                }}
+              >
+                {pwChangeLoading ? 'Changing Password...' : 'Change Password'}
+              </button>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

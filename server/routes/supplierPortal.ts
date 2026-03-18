@@ -6,6 +6,7 @@
 import { Router, Request, Response } from 'express';
 import SupplierController from '../controllers/supplierController.js';
 import { createSingleFileUpload, validateFilesPresent } from '../middleware/fileUpload.js';
+import { authenticateToken, requireAdmin } from '../middleware/auth.ts';
 
 const router = Router();
 
@@ -24,6 +25,27 @@ router.post('/register', async (req: Request, res: Response) => {
  */
 router.post('/login', async (req: Request, res: Response) => {
   await SupplierController.login(req, res);
+});
+
+/**
+ * GET /api/supplier/pending - List pending supplier accounts (admin only)
+ */
+router.get('/pending', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+  await SupplierController.getPendingAccounts(req, res);
+});
+
+/**
+ * PUT /api/supplier/:id/approve - Approve a supplier account (admin only)
+ */
+router.put('/:id/approve', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+  await SupplierController.approveAccount(req, res);
+});
+
+/**
+ * PUT /api/supplier/:id/reject - Reject a supplier account (admin only)
+ */
+router.put('/:id/reject', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+  await SupplierController.rejectAccount(req, res);
 });
 
 // All routes below require supplier authentication
