@@ -24,8 +24,8 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)" options={{ headerShown: false, animationEnabled: true }} />
-        <Stack.Screen name="(app)" options={{ headerShown: false, animationEnabled: true }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false, animation: 'default' }} />
+        <Stack.Screen name="(app)" options={{ headerShown: false, animation: 'default' }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
       <StatusBar style="auto" />

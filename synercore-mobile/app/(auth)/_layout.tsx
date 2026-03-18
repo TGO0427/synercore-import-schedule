@@ -5,7 +5,7 @@ export default function AuthLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        animationEnabled: true,
+        animation: 'default',
       }}
     >
       <Stack.Screen
@@ -18,7 +18,7 @@ export default function AuthLayout() {
         name="register"
         options={{
           title: 'Register',
-          cardStyle: { cardOverlayEnabled: true },
+          contentStyle: { backgroundColor: 'transparent' },
         }}
       />
       <Stack.Screen
