@@ -219,7 +219,11 @@ router.post(
       success: true,
       message: `Imported ${result.imported} new shipments, skipped ${result.skipped} duplicates`,
       imported: result.imported,
-      skipped: result.skipped
+      skipped: result.skipped,
+      skippedRefs: result.skippedRefs,
+      importedRefs: result.importedRefs,
+      emptyRows: result.emptyRows,
+      totalInFile: req.body.length,
     });
   })
 );

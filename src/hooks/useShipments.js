@@ -25,6 +25,7 @@ export function useShipments() {
   const [shipments, setShipments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState(null);
+  const [importResult, setImportResult] = useState(null);
   const loadingCountRef = useRef(0);
   const lastFetchRef = useRef(0);
   const { showSuccess, showError } = useNotification();
@@ -248,10 +249,20 @@ export function useShipments() {
         }
       }
 
+      // Store detailed import result for summary modal
+      setImportResult(result);
+
+      // Also show a quick toast
       const parts = [];
       if (result.imported > 0) parts.push(`${result.imported} new shipments imported`);
       if (result.skipped > 0) parts.push(`${result.skipped} duplicates skipped`);
-      showSuccess(parts.join(', ') || 'No new shipments to import');
+      if (result.emptyRows > 0) parts.push(`${result.emptyRows} empty rows ignored`);
+      if (parts.length === 0) parts.push('No new shipments to import');
+      if (result.skipped > 0) {
+        showError(parts.join(', '));
+      } else {
+        showSuccess(parts.join(', '));
+      }
       await fetchShipments();
 
       // Ensure palletQty is preserved in UI after import (match by orderRef)
@@ -274,6 +285,8 @@ export function useShipments() {
     handleDeleteShipment,
     handleArchiveShipment,
     handleFileUpload,
+    importResult,
+    setImportResult,
     startLoading,
     stopLoading,
   };

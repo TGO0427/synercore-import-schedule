@@ -668,9 +668,10 @@ export class ShipmentController {
    */
   static async bulkImport(
     shipmentsData: BulkImportShipment[]
-  ): Promise<{ imported: number; skipped: number }> {
+  ): Promise<{ imported: number; skipped: number; skippedRefs: string[]; importedRefs: string[]; emptyRows: number }> {
     // Filter out empty rows (no supplier)
     const validData = shipmentsData.filter(s => s.supplier && s.supplier.trim());
+    const emptyRows = shipmentsData.length - validData.length;
 
     return transaction(async (client) => {
       // Get existing order_refs to skip duplicates
@@ -681,7 +682,9 @@ export class ShipmentController {
 
       // Split incoming shipments into new vs duplicates
       const newShipments = validData.filter(s => !s.orderRef || !existingRefs.has(s.orderRef));
-      const skipped = validData.length - newShipments.length;
+      const skippedShipments = validData.filter(s => s.orderRef && existingRefs.has(s.orderRef));
+      const skipped = skippedShipments.length;
+      const skippedRefs = skippedShipments.map(s => s.orderRef);
 
       // Insert only new shipments
       for (const shipment of newShipments) {
@@ -717,7 +720,13 @@ export class ShipmentController {
         );
       }
 
-      return { imported: newShipments.length, skipped };
+      return {
+        imported: newShipments.length,
+        skipped,
+        skippedRefs,
+        importedRefs: newShipments.map(s => s.orderRef || 'N/A'),
+        emptyRows,
+      };
     });
   }
 

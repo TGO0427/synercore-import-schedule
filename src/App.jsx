@@ -65,6 +65,7 @@ function App() {
     shipments, setShipments, loading, lastSyncTime,
     fetchShipments, handleCreateShipment, handleUpdateShipment,
     handleDeleteShipment, handleArchiveShipment, handleFileUpload,
+    importResult, setImportResult,
   } = useShipments();
 
   const {
@@ -772,6 +773,95 @@ function App() {
       )}
       {helpOpen && (
         <HelpGuide onClose={() => setHelpOpen(false)} />
+      )}
+
+      {/* Import Summary Modal */}
+      {importResult && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center',
+          zIndex: 9000,
+        }}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '12px', padding: '24px', width: '95%', maxWidth: '550px',
+            maxHeight: '80vh', overflow: 'auto', boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a' }}>Import Summary</h3>
+              <button onClick={() => setImportResult(null)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }}>x</button>
+            </div>
+
+            {/* Stats tiles */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: '#f0fdf4', textAlign: 'center', border: '1px solid #bbf7d0' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#16a34a' }}>{importResult.imported}</div>
+                <div style={{ fontSize: '0.75rem', color: '#166534', fontWeight: '600' }}>Imported</div>
+              </div>
+              <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: importResult.skipped > 0 ? '#fef2f2' : '#f9fafb', textAlign: 'center', border: `1px solid ${importResult.skipped > 0 ? '#fecaca' : '#e5e7eb'}` }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: importResult.skipped > 0 ? '#dc2626' : '#6b7280' }}>{importResult.skipped}</div>
+                <div style={{ fontSize: '0.75rem', color: importResult.skipped > 0 ? '#991b1b' : '#6b7280', fontWeight: '600' }}>Duplicates Skipped</div>
+              </div>
+              <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: '#f9fafb', textAlign: 'center', border: '1px solid #e5e7eb' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#6b7280' }}>{importResult.totalInFile || 0}</div>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '600' }}>Total in File</div>
+              </div>
+            </div>
+
+            {importResult.emptyRows > 0 && (
+              <div style={{ padding: '8px 12px', backgroundColor: '#fffbeb', borderRadius: '6px', fontSize: '0.85rem', color: '#92400e', marginBottom: '12px', border: '1px solid #fde68a' }}>
+                {importResult.emptyRows} empty row(s) were ignored (no supplier name).
+              </div>
+            )}
+
+            {/* Skipped duplicates list */}
+            {importResult.skipped > 0 && importResult.skippedRefs?.length > 0 && (
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: '600', color: '#dc2626', marginBottom: '6px' }}>
+                  Duplicate Order References (already in system):
+                </div>
+                <div style={{
+                  maxHeight: '150px', overflow: 'auto', padding: '8px', backgroundColor: '#fef2f2',
+                  borderRadius: '6px', border: '1px solid #fecaca', fontSize: '0.8rem', color: '#991b1b',
+                }}>
+                  {importResult.skippedRefs.map((ref, i) => (
+                    <div key={i} style={{ padding: '2px 0', borderBottom: i < importResult.skippedRefs.length - 1 ? '1px solid #fecaca' : 'none' }}>
+                      {ref}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Imported list */}
+            {importResult.imported > 0 && importResult.importedRefs?.length > 0 && (
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: '600', color: '#16a34a', marginBottom: '6px' }}>
+                  Successfully Imported:
+                </div>
+                <div style={{
+                  maxHeight: '150px', overflow: 'auto', padding: '8px', backgroundColor: '#f0fdf4',
+                  borderRadius: '6px', border: '1px solid #bbf7d0', fontSize: '0.8rem', color: '#166534',
+                }}>
+                  {importResult.importedRefs.map((ref, i) => (
+                    <div key={i} style={{ padding: '2px 0', borderBottom: i < importResult.importedRefs.length - 1 ? '1px solid #bbf7d0' : 'none' }}>
+                      {ref}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={() => setImportResult(null)}
+              style={{
+                width: '100%', padding: '10px', backgroundColor: '#059669', color: 'white',
+                border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '0.9rem',
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Password Expiry Modal — cannot be dismissed */}
