@@ -686,11 +686,13 @@ async function start() {
         ALTER TABLE truck_arrivals ADD COLUMN IF NOT EXISTS warehouse VARCHAR(50);
       `);
 
-      // Add bin_location and grn_number columns to shipments
+      // Add bin_location, grn_number, and shipment_type columns to shipments
       await getPool().query(`
         ALTER TABLE shipments ADD COLUMN IF NOT EXISTS bin_location VARCHAR(50);
         ALTER TABLE shipments ADD COLUMN IF NOT EXISTS grn_number VARCHAR(50);
+        ALTER TABLE shipments ADD COLUMN IF NOT EXISTS shipment_type VARCHAR(20) DEFAULT 'international';
       `);
+      await getPool().query(`CREATE INDEX IF NOT EXISTS idx_shipments_type ON shipments(shipment_type);`);
 
       // Create truck_shipments junction table (many-to-many: one truck can carry multiple shipments)
       await getPool().query(`

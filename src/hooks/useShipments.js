@@ -127,6 +127,7 @@ export function useShipments() {
         rejectedBy: s.rejected_by || s.rejectedBy,
         reminderDate: s.reminder_date || s.reminderDate || null,
         reminderNote: s.reminder_note || s.reminderNote || '',
+        shipmentType: s.shipment_type || s.shipmentType || 'international',
       }));
 
       setShipments(normalized);

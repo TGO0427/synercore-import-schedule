@@ -174,7 +174,8 @@ router.post(
       forwardingAgent,
       vesselName,
       incoterm,
-      selectedWeekDate
+      selectedWeekDate,
+      shipmentType
     } = req.body;
 
     const shipment = await ShipmentController.createShipment({
@@ -192,7 +193,8 @@ router.post(
       forwardingAgent,
       vesselName,
       incoterm,
-      selectedWeekDate
+      selectedWeekDate,
+      shipmentType,
     });
 
     const user = (req as any).user;

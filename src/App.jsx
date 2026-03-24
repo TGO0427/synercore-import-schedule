@@ -34,6 +34,7 @@ const BolAudit = lazy(() => import('./components/BolAudit'));
 const SupplierPerformance = lazy(() => import('./components/SupplierPerformance'));
 const GoodsReceiving = lazy(() => import('./components/GoodsReceiving'));
 const DockManagement = lazy(() => import('./components/DockManagement'));
+const LocalReceivingSchedule = lazy(() => import('./components/LocalReceivingSchedule'));
 import SupplierLogin from './pages/SupplierLogin';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -405,7 +406,8 @@ function App() {
           const navItems = {
             dashboard: { label: 'Dashboard', icon: '\u{1F4CA}', view: 'dashboard' },
             suppliers: { label: 'Suppliers', icon: '\u{1F3E2}', view: 'suppliers' },
-            shipping: { label: 'Shipping Schedule', icon: '\u{1F4E6}', view: 'shipping', badge: delayedCount, badgeType: 'danger' },
+            shipping: { label: 'International Import', icon: '\u{1F6A2}', view: 'shipping', badge: delayedCount, badgeType: 'danger' },
+            localReceiving: { label: 'Local Receiving', icon: '\u{1F69B}', view: 'local-receiving' },
             workflow: { label: 'Post-Arrival Workflow', icon: '\u{1F4CB}', view: 'workflow', badge: workflowCount, badgeType: 'info' },
             capacity: { label: 'Warehouse Capacity', icon: '\u{1F3ED}', view: 'capacity' },
             stored: { label: 'Stored Stock', icon: '\u{1F3EA}', view: 'stored' },
@@ -501,7 +503,7 @@ function App() {
             <nav className="sidebar-nav">
               {match('Dashboard') && renderItem('dashboard')}
               {renderSection('Master Data', 'masterData', ['suppliers'])}
-              {renderSection('Operations', 'operations', ['shipping', 'workflow', 'archives', 'bolAudit'])}
+              {renderSection('Operations', 'operations', ['shipping', 'localReceiving', 'workflow', 'archives', 'bolAudit'])}
               {renderSection('Warehouse', 'warehouse', ['receiving', 'dockManagement', 'capacity', 'stored'])}
               {renderSection('Finance', 'finance', ['rates', 'costing', 'costingRequests'])}
               {renderSection('Reports', 'reports', ['reports', 'advancedReports', 'supplierPerformance', 'audit'])}
@@ -688,6 +690,9 @@ function App() {
             } />
             <Route path="/dock-management" element={
               <Suspense fallback={<PageLoader />}><ErrorBoundary><DockManagement shipments={shipments} /></ErrorBoundary></Suspense>
+            } />
+            <Route path="/local-receiving" element={
+              <Suspense fallback={<PageLoader />}><ErrorBoundary><LocalReceivingSchedule shipments={shipments} onCreateShipment={handleCreateShipment} onUpdateShipment={handleUpdateShipment} onDeleteShipment={handleDeleteShipment} loading={loading} /></ErrorBoundary></Suspense>
             } />
             <Route path="/capacity" element={
               <Suspense fallback={<PageLoader />}><ErrorBoundary><WarehouseCapacity shipments={shipments} /></ErrorBoundary></Suspense>

@@ -128,6 +128,8 @@ export interface Shipment {
   // Reminder fields
   reminder_date?: string | null;
   reminder_note?: string | null;
+  // Shipment type
+  shipment_type?: 'international' | 'local';
 }
 
 /**

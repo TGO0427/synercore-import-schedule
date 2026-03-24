@@ -28,6 +28,7 @@ export interface CreateShipmentRequest {
   vesselName?: string;
   incoterm?: string;
   selectedWeekDate?: string;
+  shipmentType?: 'international' | 'local';
 }
 
 /**
@@ -204,7 +205,8 @@ export class ShipmentController {
       order_ref: data.orderRef,
       supplier: data.supplier,
       quantity: data.quantity || null,
-      latest_status: (data.latestStatus || 'planned_airfreight') as ShipmentStatus,
+      latest_status: (data.latestStatus || (data.shipmentType === 'local' ? 'in_transit_roadway' : 'planned_airfreight')) as ShipmentStatus,
+      shipment_type: data.shipmentType || 'international',
       week_number: data.weekNumber || null,
       notes: data.notes || null,
       final_pod: data.finalPod || null,

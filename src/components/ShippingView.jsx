@@ -61,8 +61,9 @@ function ShippingView({ shipments, onFileUpload, onUpdateShipment, onDeleteShipm
     setSearchParams(params, { replace: true });
   };
 
-  // Hide items that are in post-arrival workflow, stored, or archived
+  // Only show international shipments, hide post-arrival/stored/archived
   let shippingShipments = shipments.filter(s =>
+    (s.shipmentType || 'international') === 'international' &&
     !SHIPPING_EXCLUDED_STATUSES.includes(s.latestStatus)
   );
 

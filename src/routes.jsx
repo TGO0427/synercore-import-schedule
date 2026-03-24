@@ -18,6 +18,7 @@ export const VIEW_ROUTES = {
   'supplier-performance': '/supplier-performance',
   receiving:             '/receiving',
   'dock-management':     '/dock-management',
+  'local-receiving':     '/local-receiving',
 };
 
 // Reverse map: path -> view name
