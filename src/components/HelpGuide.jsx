@@ -13,6 +13,8 @@ function HelpGuide({ onClose }) {
     'warehouse': 'Warehouse Capacity',
     'stored': 'Stored Stock',
     'workflow': 'Post-Arrival Workflow',
+    'receiving': 'Goods Receiving',
+    'dock-management': 'Dock Management',
     'suppliers': 'Supplier Management',
     'costing': 'Import Costing',
     'reports': 'Reports & Analytics',
@@ -49,12 +51,20 @@ function HelpGuide({ onClose }) {
               <li><strong>Dashboard</strong> — KPI overview, charts, and quick actions</li>
               <li><strong>Shipping Schedule</strong> — Track all active shipments</li>
               <li><strong>Post-Arrival Workflow</strong> — Manage unloading, inspection, receiving</li>
+              <li><strong>Archives</strong> — Access archived shipments</li>
+              <li><strong>BOL Audit</strong> — Bill of Lading document auditing</li>
+            </ul>
+
+            <h4>Warehouse</h4>
+            <ul>
+              <li><strong>Goods Receiving</strong> — Receive shipments, confirm quantities, generate GRNs</li>
+              <li><strong>Dock Management</strong> — Manage truck arrivals, dock assignments, and queues</li>
+              <li><strong>Warehouse Capacity</strong> — Monitor utilization and incoming pallets</li>
               <li><strong>Stored Stock</strong> — View and manage warehouse inventory</li>
             </ul>
 
             <h4>Planning</h4>
             <ul>
-              <li><strong>Warehouse Capacity</strong> — Monitor utilization and incoming pallets</li>
               <li><strong>Suppliers</strong> — Manage supplier database and documents</li>
               <li><strong>Import Costing</strong> — Create and manage cost estimates</li>
             </ul>
@@ -352,6 +362,150 @@ function HelpGuide({ onClose }) {
               <li>Click the Order Ref to view full shipment details</li>
               <li>Shipment cards show a progress bar indicating workflow completion</li>
               <li>Status updates are visible to all users in real time</li>
+            </ul>
+          </div>
+        );
+
+      case 'receiving':
+        return (
+          <div>
+            <h2>Goods Receiving</h2>
+
+            <h3>Overview</h3>
+            <p>The Goods Receiving page is a dedicated view for warehouse staff to receive incoming shipments, confirm quantities, log discrepancies, and generate Goods Received Notes (GRNs). Unlike the Post-Arrival Workflow (which covers the full pipeline), this page focuses specifically on the receiving step.</p>
+
+            <h3>Summary Cards</h3>
+            <p>Four cards at the top provide a quick snapshot:</p>
+            <ul>
+              <li><strong>Pending Receiving</strong> — Shipments that have passed inspection and are waiting to be received</li>
+              <li><strong>Active Receiving</strong> — Shipments currently being received</li>
+              <li><strong>Received Today</strong> — Count of shipments received today</li>
+              <li><strong>Discrepancies</strong> — Number of shipments received today with noted discrepancies</li>
+            </ul>
+
+            <h3>Tabs</h3>
+
+            <h4>Receiving Queue</h4>
+            <p>Shows shipments that have passed inspection and are ready to be received. Click <strong>"Receive"</strong> on a shipment to open the receiving form.</p>
+
+            <h4>Active</h4>
+            <p>Shows shipments currently in the receiving process. Click <strong>"Complete"</strong> to finalize receiving.</p>
+
+            <h4>Recent History</h4>
+            <p>Shows shipments received in the last 7 days. From here you can:</p>
+            <ul>
+              <li><strong>Generate GRN</strong> — Create a Goods Received Note number for the shipment</li>
+              <li><strong>Download GRN</strong> — Download a PDF of the GRN (once generated)</li>
+            </ul>
+
+            <h3>Receiving Form</h3>
+            <p>When you click "Receive" or "Complete", a form opens with the following fields:</p>
+            <ul>
+              <li><strong>Received Quantity</strong> — Pre-filled with the expected quantity; adjust if different</li>
+              <li><strong>Bin Location</strong> — The warehouse bin/rack where the goods will be stored (e.g. A-12-3)</li>
+              <li><strong>Discrepancies</strong> — Note any damage, shortages, or quality issues</li>
+              <li><strong>Notes</strong> — Any additional notes about the receiving</li>
+              <li><strong>Received By</strong> — Pre-filled with your username</li>
+            </ul>
+
+            <h3>GRN (Goods Received Note)</h3>
+            <p>A GRN is a formal receipt confirming goods have been received. The generated PDF includes:</p>
+            <ul>
+              <li>GRN number (format: GRN-YYYYMMDD-NNN)</li>
+              <li>Date, order ref, supplier, product, and quantities</li>
+              <li>Warehouse and bin location</li>
+              <li>Discrepancies and notes (if any)</li>
+              <li>Signature lines for Received By and Authorized By</li>
+            </ul>
+
+            <h3>Search</h3>
+            <p>Use the search box to filter shipments across all tabs by order ref, supplier, product, or warehouse.</p>
+
+            <h3>Tips</h3>
+            <ul>
+              <li>Always check quantities against the delivery note before confirming</li>
+              <li>Record discrepancies immediately — they are saved with the shipment record</li>
+              <li>Generate and file GRNs for audit compliance</li>
+              <li>The receiving queue automatically updates when inspections are completed in the Post-Arrival Workflow</li>
+            </ul>
+          </div>
+        );
+
+      case 'dock-management':
+        return (
+          <div>
+            <h2>Dock Management</h2>
+
+            <h3>Overview</h3>
+            <p>The Dock Management page handles truck arrivals at warehouse loading docks. Schedule incoming trucks, assign them to docks, track unloading progress, and manage queues when all docks are occupied.</p>
+
+            <h3>Warehouse Filter</h3>
+            <p>Use the dropdown at the top to filter by warehouse (Pretoria, Klapmuts, Offsite, or All). All data — docks, schedule, queue, and metrics — updates based on your selection.</p>
+
+            <h3>Metrics Cards</h3>
+            <ul>
+              <li><strong>Trucks Today</strong> — Total truck arrivals scheduled or processed today</li>
+              <li><strong>Avg Wait</strong> — Average time trucks wait from check-in to dock assignment</li>
+              <li><strong>Avg Turnaround</strong> — Average total time from check-in to check-out</li>
+              <li><strong>Dock Utilization</strong> — Percentage of docks currently occupied</li>
+            </ul>
+
+            <h3>Tabs</h3>
+
+            <h4>Schedule</h4>
+            <p>Shows today's truck arrivals in a table with expected time, carrier, driver, vehicle registration, linked shipment, assigned dock, status, and wait time. Actions available depend on the truck's current status.</p>
+
+            <h4>Dock Board</h4>
+            <p>A visual card grid showing the real-time status of every dock:</p>
+            <ul>
+              <li><strong style={{color: '#10b981'}}>Green</strong> — Available and ready for assignment</li>
+              <li><strong style={{color: '#f59e0b'}}>Orange</strong> — Occupied with a truck currently unloading</li>
+              <li><strong style={{color: '#ef4444'}}>Red</strong> — Under maintenance (not available)</li>
+            </ul>
+            <p>Occupied docks show the current truck's carrier, vehicle, driver, and linked shipment. You can click <strong>"Complete Unloading"</strong> directly from the dock card.</p>
+            <p>The dock board auto-refreshes every 30 seconds.</p>
+
+            <h4>Queue</h4>
+            <p>When all docks are occupied, checked-in trucks are placed in a FIFO (first-in, first-out) queue. The queue shows position, carrier, driver, vehicle, check-in time, and how long the truck has been waiting. Click <strong>"Assign Dock"</strong> when a dock becomes available.</p>
+
+            <h3>Truck Lifecycle</h3>
+            <p>Each truck goes through these stages:</p>
+            <ol>
+              <li><strong>Scheduled</strong> — Truck arrival has been registered with expected time and details</li>
+              <li><strong>Check In</strong> — Driver arrives. If a dock is available, the truck is assigned immediately. Otherwise it joins the queue</li>
+              <li><strong>Unloading</strong> — Truck is at a dock and goods are being unloaded</li>
+              <li><strong>Completed</strong> — Unloading finished. The dock is freed automatically and the next queued truck (if any) is auto-assigned</li>
+              <li><strong>Departed</strong> — Truck has left the premises</li>
+            </ol>
+
+            <h3>Scheduling a Truck</h3>
+            <ol>
+              <li>Click <strong>"+ Add Truck"</strong> at the top</li>
+              <li>Fill in: Carrier, Driver Name, Driver Phone, Vehicle Registration, Expected Arrival time, and any notes</li>
+              <li>Click <strong>"Schedule Arrival"</strong></li>
+            </ol>
+
+            <h3>Assigning a Dock</h3>
+            <p>When you click "Assign Dock" on a queued truck, a modal shows all available docks with their warehouse. Click a dock to assign the truck immediately. If no docks are available, the truck remains in the queue.</p>
+
+            <h3>Auto-Assignment</h3>
+            <p>When a truck completes unloading and frees its dock, the system automatically checks the queue and assigns the next waiting truck to the freed dock. You'll see a confirmation message when this happens.</p>
+
+            <h3>Default Docks</h3>
+            <p>The system comes pre-configured with:</p>
+            <ul>
+              <li><strong>Pretoria</strong> — Docks 1–4</li>
+              <li><strong>Klapmuts</strong> — Docks 1–2</li>
+              <li><strong>Offsite</strong> — Dock 1</li>
+            </ul>
+
+            <h3>Tips</h3>
+            <ul>
+              <li>Schedule truck arrivals in advance so warehouse staff can plan dock availability</li>
+              <li>Monitor the queue tab during busy periods to avoid excessive wait times</li>
+              <li>Use the dock board on a wall-mounted screen for real-time visibility</li>
+              <li>Check metrics regularly to identify turnaround bottlenecks</li>
+              <li>Admins can set docks to "maintenance" status when they need repairs</li>
             </ul>
           </div>
         );
