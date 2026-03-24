@@ -630,6 +630,8 @@ function DockManagement({ shipments: propShipments = [] }) {
                 <thead>
                   <tr>
                     <th>Expected</th>
+                    <th>Arrived</th>
+                    <th>Departed</th>
                     <th>Carrier</th>
                     <th>Driver</th>
                     <th>Vehicle</th>
@@ -645,6 +647,8 @@ function DockManagement({ shipments: propShipments = [] }) {
                   {todaySchedule.map(truck => (
                     <tr key={truck.id}>
                       <td>{formatTime(truck.expected_arrival)}</td>
+                      <td style={{ color: truck.actual_arrival ? 'var(--success)' : 'var(--text-500)' }}>{formatTime(truck.actual_arrival)}</td>
+                      <td style={{ color: truck.check_out_time ? 'var(--text-700)' : 'var(--text-500)' }}>{formatTime(truck.check_out_time)}</td>
                       <td>{truck.carrier || '-'}</td>
                       <td>{truck.driver_name || '-'}</td>
                       <td style={{ fontFamily: 'monospace' }}>{truck.vehicle_reg || '-'}</td>
