@@ -16,8 +16,10 @@ export function computeShipmentAlerts(shipments) {
     // Skip archived shipments — they should not generate alerts
     if (s.latestStatus === 'archived') continue;
 
+    // Use orderRef as the dedup key so duplicate APO numbers produce one alert
+    const dedup = s.orderRef || s.id;
     const base = {
-      id: `ship-${s.id}-${s.latestStatus}-${s.weekNumber || 'no-week'}`,
+      id: `ship-${dedup}-${s.latestStatus}-${s.weekNumber || 'no-week'}`,
       ts: now,
       read: false,
       meta: {
@@ -114,7 +116,7 @@ export function computeShipmentAlerts(shipments) {
       if (shipmentWeek === currentWeek) {
         alerts.push({
           ...base,
-          id: `ship-${s.id}-week-current`,
+          id: `ship-${dedup}-week-current`,
           severity: 'info',
           title: 'Arrival This Week',
           description: `${s.supplier} - ${s.productName || s.orderRef} (Week ${shipmentWeek}) - Status: ${s.latestStatus}`
@@ -125,7 +127,7 @@ export function computeShipmentAlerts(shipments) {
       if (shipmentWeek === currentWeek + 1) {
         alerts.push({
           ...base,
-          id: `ship-${s.id}-week-next`,
+          id: `ship-${dedup}-week-next`,
           severity: 'info',
           title: 'Arrival Next Week',
           description: `${s.supplier} - ${s.productName || s.orderRef} (Week ${shipmentWeek}) - Status: ${s.latestStatus}`
@@ -150,7 +152,7 @@ export function computeShipmentAlerts(shipments) {
       if (isOverdue && !['arrived_pta', 'arrived_klm', 'arrived_offsite', 'unloading', 'inspection_pending', 'inspecting', 'inspection_failed', 'inspection_passed', 'receiving', 'received', 'stored', 'delayed_port', 'delayed_customs', 'delayed_documents', 'delayed_supplier', 'cancelled'].includes(s.latestStatus)) {
         alerts.push({
           ...base,
-          id: `ship-${s.id}-overdue`,
+          id: `ship-${dedup}-overdue`,
           severity: 'warning',
           title: 'Overdue Shipment',
           description: `${s.supplier} - ${s.productName || s.orderRef} was scheduled for week ${shipmentWeek} but hasn't arrived yet.`
@@ -171,7 +173,7 @@ export function computeShipmentAlerts(shipments) {
       if (diffDays < 0) {
         alerts.push({
           ...base,
-          id: `ship-${s.id}-reminder-overdue`,
+          id: `ship-${dedup}-reminder-overdue`,
           severity: 'critical',
           title: 'Overdue Reminder',
           description: `${label}: ${noteText} (was due ${Math.abs(diffDays)} day${Math.abs(diffDays) !== 1 ? 's' : ''} ago)`
@@ -179,7 +181,7 @@ export function computeShipmentAlerts(shipments) {
       } else if (diffDays === 0) {
         alerts.push({
           ...base,
-          id: `ship-${s.id}-reminder-today`,
+          id: `ship-${dedup}-reminder-today`,
           severity: 'warning',
           title: 'Reminder Due Today',
           description: `${label}: ${noteText}`
@@ -187,7 +189,7 @@ export function computeShipmentAlerts(shipments) {
       } else if (diffDays <= 3) {
         alerts.push({
           ...base,
-          id: `ship-${s.id}-reminder-upcoming`,
+          id: `ship-${dedup}-reminder-upcoming`,
           severity: 'info',
           title: 'Upcoming Reminder',
           description: `${label}: ${noteText} (due in ${diffDays} day${diffDays !== 1 ? 's' : ''})`
@@ -202,7 +204,7 @@ export function computeShipmentAlerts(shipments) {
       if (daysStored > 30) {
         alerts.push({
           ...base,
-          id: `ship-${s.id}-offsite-long`,
+          id: `ship-${dedup}-offsite-long`,
           severity: 'warning',
           title: 'Offsite Stock > 30 Days',
           description: `${s.orderRef || s.productName || s.supplier} has been stored offsite for ${daysStored} days. Consider moving to main warehouse.`
@@ -216,7 +218,7 @@ export function computeShipmentAlerts(shipments) {
       if (s.latestStatus === 'planned_airfreight' || s.latestStatus === 'planned_seafreight') {
         alerts.push({
           ...base,
-          id: `ship-${s.id}-high-value`,
+          id: `ship-${dedup}-high-value`,
           severity: 'info',
           title: 'High Volume Shipment',
           description: `Large shipment (${Math.round(palletQty) || 1} pallets) from ${s.supplier} requires tracking.`
