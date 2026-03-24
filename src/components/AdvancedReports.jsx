@@ -63,7 +63,7 @@ function AdvancedReports() {
   const fetchShipments = async () => {
     try {
       setLoading(true);
-      const response = await authFetch(getApiUrl('/api/shipments?limit=1000')); // Get more records for reports
+      const response = await authFetch(getApiUrl('/api/shipments?limit=5000')); // Get all records for reports
       if (!response.ok) throw new Error('Failed to fetch shipments');
       const result = await response.json();
 
