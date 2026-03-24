@@ -27,7 +27,7 @@ export interface TruckArrival {
   actual_arrival: Date | null;
   dock_id: number | null;
   warehouse: string | null;
-  status: 'scheduled' | 'checked_in' | 'unloading' | 'completed' | 'departed';
+  status: 'scheduled' | 'checked_in' | 'unloading' | 'completed' | 'departed' | 'cancelled';
   queue_position: number | null;
   check_in_time: Date | null;
   check_out_time: Date | null;
@@ -314,6 +314,10 @@ class DockRepository {
 
       return { truck, dock: { ...dock, status: 'occupied' as const, current_truck_id: truckId } };
     });
+  }
+
+  async deleteTruckArrival(id: number): Promise<void> {
+    await query(`DELETE FROM truck_arrivals WHERE id = $1`, [id]);
   }
 
   async freeDock(dockId: number): Promise<void> {

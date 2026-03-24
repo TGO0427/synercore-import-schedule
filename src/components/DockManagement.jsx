@@ -12,6 +12,7 @@ const TRUCK_STATUS_LABELS = {
   unloading: 'Unloading',
   completed: 'Completed',
   departed: 'Departed',
+  cancelled: 'Cancelled',
 };
 
 const TRUCK_STATUS_COLORS = {
@@ -20,6 +21,7 @@ const TRUCK_STATUS_COLORS = {
   unloading: 'var(--accent)',
   completed: 'var(--success)',
   departed: 'var(--text-500)',
+  cancelled: 'var(--danger)',
 };
 
 const DOCK_STATUS_COLORS = {
@@ -29,7 +31,7 @@ const DOCK_STATUS_COLORS = {
 };
 
 function DockManagement() {
-  const { showSuccess, showError } = useNotification();
+  const { showSuccess, showError, confirm: confirmAction } = useNotification();
   const [activeTab, setActiveTab] = useState('schedule');
   const [selectedWarehouse, setSelectedWarehouse] = useState('All');
   const [docks, setDocks] = useState([]);
@@ -38,10 +40,10 @@ function DockManagement() {
   const [metrics, setMetrics] = useState({ avg_wait_minutes: 0, avg_turnaround_minutes: 0, utilization_percent: 0, trucks_today: 0, trucks_completed_today: 0 });
   const [loading, setLoading] = useState(true);
   const [showAddTruckModal, setShowAddTruckModal] = useState(false);
+  const [showEditTruckModal, setShowEditTruckModal] = useState(false);
   const [showAssignDockModal, setShowAssignDockModal] = useState(false);
   const [selectedTruck, setSelectedTruck] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const currentUser = authUtils.getUser();
 
   const [truckForm, setTruckForm] = useState({
     carrier: '',
@@ -174,24 +176,125 @@ function DockManagement() {
     }
   };
 
+  const openEditTruck = (truck) => {
+    setSelectedTruck(truck);
+    setTruckForm({
+      carrier: truck.carrier || '',
+      driverName: truck.driver_name || '',
+      driverPhone: truck.driver_phone || '',
+      vehicleReg: truck.vehicle_reg || '',
+      warehouse: truck.warehouse || '',
+      expectedArrival: truck.expected_arrival ? new Date(truck.expected_arrival).toISOString().slice(0, 16) : '',
+      shipmentId: truck.shipment_id || '',
+      notes: truck.notes || '',
+    });
+    setShowEditTruckModal(true);
+  };
+
+  const handleUpdateTruck = async () => {
+    if (!selectedTruck) return;
+    setActionLoading(true);
+    try {
+      const res = await authFetch(getApiUrl(`/api/docks/trucks/${selectedTruck.id}`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(truckForm),
+      });
+      if (!res.ok) throw new Error('Failed to update truck arrival');
+      showSuccess('Truck arrival updated');
+      setShowEditTruckModal(false);
+      setSelectedTruck(null);
+      setTruckForm({ carrier: '', driverName: '', driverPhone: '', vehicleReg: '', warehouse: '', expectedArrival: '', shipmentId: '', notes: '' });
+      fetchAll();
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCancelTruck = async (truckId) => {
+    const confirmed = await confirmAction({
+      title: 'Cancel Truck Arrival',
+      message: 'Are you sure you want to cancel this truck arrival?',
+      confirmText: 'Cancel Arrival',
+      cancelText: 'Keep',
+      type: 'warning',
+    });
+    if (!confirmed) return;
+
+    setActionLoading(true);
+    try {
+      const res = await authFetch(getApiUrl(`/api/docks/trucks/${truckId}/cancel`), { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to cancel truck arrival');
+      showSuccess('Truck arrival cancelled');
+      fetchAll();
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRemoveTruck = async (truckId) => {
+    const confirmed = await confirmAction({
+      title: 'Remove Truck',
+      message: 'This will permanently remove the truck arrival record. Continue?',
+      confirmText: 'Remove',
+      cancelText: 'Keep',
+      type: 'warning',
+    });
+    if (!confirmed) return;
+
+    setActionLoading(true);
+    try {
+      const res = await authFetch(getApiUrl(`/api/docks/trucks/${truckId}`), { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to remove truck arrival');
+      showSuccess('Truck arrival removed');
+      fetchAll();
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const getActionButton = (truck) => {
+    const actions = [];
     switch (truck.status) {
       case 'scheduled':
-        return <button className="btn btn-primary" style={btnStyle} onClick={() => handleCheckIn(truck.id, truck.warehouse)}>Check In</button>;
-      case 'checked_in':
-        return (
-          <button className="btn btn-primary" style={btnStyle} onClick={() => {
-            setSelectedTruck(truck);
-            setShowAssignDockModal(true);
-          }}>Assign Dock</button>
+        actions.push(
+          <button key="checkin" className="btn btn-primary" style={btnStyle} onClick={() => handleCheckIn(truck.id, truck.warehouse)}>Check In</button>,
+          <button key="edit" className="btn btn-ghost" style={btnStyle} onClick={() => openEditTruck(truck)}>Amend</button>,
+          <button key="cancel" className="btn btn-ghost danger" style={btnStyle} onClick={() => handleCancelTruck(truck.id)}>Cancel</button>,
         );
+        break;
+      case 'checked_in':
+        actions.push(
+          <button key="assign" className="btn btn-primary" style={btnStyle} onClick={() => { setSelectedTruck(truck); setShowAssignDockModal(true); }}>Assign Dock</button>,
+          <button key="edit" className="btn btn-ghost" style={btnStyle} onClick={() => openEditTruck(truck)}>Amend</button>,
+          <button key="cancel" className="btn btn-ghost danger" style={btnStyle} onClick={() => handleCancelTruck(truck.id)}>Cancel</button>,
+        );
+        break;
       case 'unloading':
-        return <button className="btn btn-primary" style={btnStyle} onClick={() => handleCompleteTruck(truck.id)}>Complete</button>;
+        actions.push(
+          <button key="complete" className="btn btn-primary" style={btnStyle} onClick={() => handleCompleteTruck(truck.id)}>Complete</button>,
+        );
+        break;
       case 'completed':
-        return <button className="btn btn-ghost" style={btnStyle} onClick={() => handleDepartTruck(truck.id)}>Depart</button>;
+        actions.push(
+          <button key="depart" className="btn btn-ghost" style={btnStyle} onClick={() => handleDepartTruck(truck.id)}>Depart</button>,
+        );
+        break;
+      case 'cancelled':
+        actions.push(
+          <button key="remove" className="btn btn-ghost danger" style={btnStyle} onClick={() => handleRemoveTruck(truck.id)}>Remove</button>,
+        );
+        break;
       default:
-        return null;
+        break;
     }
+    return <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>{actions}</div>;
   };
 
   const btnStyle = { fontSize: '0.8rem', padding: '5px 10px' };
@@ -527,6 +630,88 @@ function DockManagement() {
               <button className="btn btn-ghost" onClick={() => setShowAddTruckModal(false)} disabled={actionLoading}>Cancel</button>
               <button className="btn btn-primary" onClick={handleCreateTruck} disabled={actionLoading}>
                 {actionLoading ? 'Saving...' : 'Schedule Arrival'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Truck Modal */}
+      {showEditTruckModal && selectedTruck && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex',
+          alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'var(--surface)', padding: '2rem', borderRadius: '12px',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', width: '90%', maxWidth: '480px',
+            maxHeight: '80vh', overflow: 'auto', border: '1px solid var(--border)'
+          }}>
+            <h3 style={{ margin: '0 0 1rem', color: 'var(--text-900)' }}>Amend Truck Arrival</h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {[
+                { key: 'carrier', label: 'Carrier', placeholder: 'e.g. DSV, DHL' },
+                { key: 'driverName', label: 'Driver Name', placeholder: 'Full name' },
+                { key: 'driverPhone', label: 'Driver Phone', placeholder: '+27...' },
+                { key: 'vehicleReg', label: 'Vehicle Registration', placeholder: 'e.g. GP 123-456' },
+              ].map(field => (
+                <div key={field.key}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-700)', marginBottom: '4px' }}>{field.label}</label>
+                  <input
+                    type="text"
+                    value={truckForm[field.key]}
+                    onChange={e => setTruckForm({ ...truckForm, [field.key]: e.target.value })}
+                    className="input"
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                    placeholder={field.placeholder}
+                  />
+                </div>
+              ))}
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-700)', marginBottom: '4px' }}>Destination Warehouse</label>
+                <select
+                  value={truckForm.warehouse}
+                  onChange={e => setTruckForm({ ...truckForm, warehouse: e.target.value })}
+                  className="select"
+                  style={{ width: '100%', boxSizing: 'border-box' }}
+                >
+                  <option value="">Select warehouse...</option>
+                  <option value="PRETORIA">PRETORIA</option>
+                  <option value="KLAPMUTS">KLAPMUTS</option>
+                  <option value="OFFSITE">OFFSITE</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-700)', marginBottom: '4px' }}>Expected Arrival</label>
+                <input
+                  type="datetime-local"
+                  value={truckForm.expectedArrival}
+                  onChange={e => setTruckForm({ ...truckForm, expectedArrival: e.target.value })}
+                  className="input"
+                  style={{ width: '100%', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-700)', marginBottom: '4px' }}>Notes</label>
+                <textarea
+                  value={truckForm.notes}
+                  onChange={e => setTruckForm({ ...truckForm, notes: e.target.value })}
+                  className="input"
+                  style={{ width: '100%', minHeight: '50px', boxSizing: 'border-box', resize: 'vertical' }}
+                  placeholder="Additional notes..."
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
+              <button className="btn btn-ghost" onClick={() => { setShowEditTruckModal(false); setSelectedTruck(null); }} disabled={actionLoading}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleUpdateTruck} disabled={actionLoading}>
+                {actionLoading ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>

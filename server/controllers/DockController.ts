@@ -58,6 +58,48 @@ export default class DockController {
     return dockRepository.createTruckArrival(data);
   }
 
+  static async updateTruckArrival(truckId: number, data: Partial<TruckArrival>): Promise<TruckArrival> {
+    const truck = await dockRepository.findTruckById(truckId);
+    if (!truck) throw AppError.notFound('Truck arrival not found');
+    if (!['scheduled', 'checked_in'].includes(truck.status)) {
+      throw AppError.conflict('Can only amend trucks that are scheduled or checked in');
+    }
+
+    const updated = await dockRepository.updateTruckArrival(truckId, data);
+    if (!updated) throw AppError.notFound('Truck arrival not found');
+    return updated;
+  }
+
+  static async cancelTruck(truckId: number): Promise<TruckArrival> {
+    const truck = await dockRepository.findTruckById(truckId);
+    if (!truck) throw AppError.notFound('Truck arrival not found');
+    if (['completed', 'departed'].includes(truck.status)) {
+      throw AppError.conflict('Cannot cancel a completed or departed truck');
+    }
+
+    // If truck was occupying a dock, free it
+    if (truck.dock_id) {
+      await dockRepository.freeDock(truck.dock_id);
+    }
+
+    const updated = await dockRepository.updateTruckArrival(truckId, {
+      status: 'cancelled' as TruckArrival['status'],
+      queue_position: null,
+    } as Partial<TruckArrival>);
+    if (!updated) throw AppError.notFound('Truck arrival not found');
+    return updated;
+  }
+
+  static async deleteTruck(truckId: number): Promise<void> {
+    const truck = await dockRepository.findTruckById(truckId);
+    if (!truck) throw AppError.notFound('Truck arrival not found');
+    if (!['scheduled', 'cancelled'].includes(truck.status)) {
+      throw AppError.conflict('Can only remove scheduled or cancelled trucks');
+    }
+
+    await dockRepository.deleteTruckArrival(truckId);
+  }
+
   static async checkIn(truckId: number, warehouse?: string): Promise<{ truck: TruckArrival; dock?: Dock }> {
     const truck = await dockRepository.findTruckById(truckId);
     if (!truck) throw AppError.notFound('Truck arrival not found');

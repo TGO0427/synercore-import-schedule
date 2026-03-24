@@ -127,6 +127,62 @@ router.post(
 );
 
 /**
+ * PUT /api/docks/trucks/:id
+ * Amend a scheduled or checked-in truck arrival
+ */
+router.put(
+  '/trucks/:id',
+  body('carrier').optional().trim(),
+  body('driverName').optional().trim(),
+  body('driverPhone').optional().trim(),
+  body('vehicleReg').optional().trim(),
+  body('warehouse').optional().trim(),
+  body('expectedArrival').optional(),
+  body('notes').optional().trim(),
+  asyncHandler(async (req: BodyRequest, res: Response) => {
+    const truckId = parseInt(req.params.id!, 10);
+    const { carrier, driverName, driverPhone, vehicleReg, warehouse, expectedArrival, notes } = req.body;
+    const updateData: Record<string, any> = {};
+    if (carrier !== undefined) updateData.carrier = carrier;
+    if (driverName !== undefined) updateData.driver_name = driverName;
+    if (driverPhone !== undefined) updateData.driver_phone = driverPhone;
+    if (vehicleReg !== undefined) updateData.vehicle_reg = vehicleReg;
+    if (warehouse !== undefined) updateData.warehouse = warehouse;
+    if (expectedArrival !== undefined) updateData.expected_arrival = expectedArrival ? new Date(expectedArrival) : null;
+    if (notes !== undefined) updateData.notes = notes;
+
+    const truck = await DockController.updateTruckArrival(truckId, updateData);
+    res.json({ message: 'Truck arrival updated', data: truck });
+  })
+);
+
+/**
+ * POST /api/docks/trucks/:id/cancel
+ * Cancel a truck arrival (frees dock if assigned)
+ */
+router.post(
+  '/trucks/:id/cancel',
+  asyncHandler(async (req: Request, res: Response) => {
+    const truckId = parseInt(req.params.id!, 10);
+    const truck = await DockController.cancelTruck(truckId);
+    res.json({ message: 'Truck arrival cancelled', data: truck });
+  })
+);
+
+/**
+ * DELETE /api/docks/trucks/:id
+ * Remove a scheduled or cancelled truck arrival
+ */
+router.delete(
+  '/trucks/:id',
+  asyncHandler(async (req: Request, res: Response) => {
+    const truckId = parseInt(req.params.id!, 10);
+    await DockController.deleteTruck(truckId);
+    res.json({ message: 'Truck arrival removed' });
+  })
+);
+
+/**
  * POST /api/docks/trucks/:id/check-in
  * Check in a truck (auto-assign dock if available, otherwise queue)
  */
