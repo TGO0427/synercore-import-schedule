@@ -1,9 +1,11 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, lazy } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
 import { useNotification } from '../contexts/NotificationContext';
-import { STATUS_LABELS, STATUS_COLORS, SHIPPING_EXCLUDED_STATUSES } from '../types/shipment';
+import { STATUS_COLORS, SHIPPING_EXCLUDED_STATUSES } from '../types/shipment';
+
+const LocalFileUpload = lazy(() => import('./LocalFileUpload'));
 
 const WAREHOUSES = ['PRETORIA', 'KLAPMUTS', 'OFFSITE'];
 
@@ -24,7 +26,7 @@ const STAT_CARDS = [
   { key: 'delayed', status: 'delayed', label: 'Delayed', icon: '\u26A0\uFE0F', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
 ];
 
-function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment, onDeleteShipment, loading }) {
+function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment, onDeleteShipment, onFileUpload, loading }) {
   const { showSuccess, showError, confirm: confirmAction } = useNotification();
   const [searchParams, setSearchParams] = useSearchParams();
   const statusFilter = searchParams.get('status') || null;
@@ -369,6 +371,11 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
             className="btn btn-sm" style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}>Clear</button>
         </div>
       )}
+
+      {/* File Import */}
+      <React.Suspense fallback={null}>
+        <LocalFileUpload onFileUpload={onFileUpload} loading={loading} />
+      </React.Suspense>
 
       {/* Search */}
       <div style={{ marginBottom: '1rem' }}>

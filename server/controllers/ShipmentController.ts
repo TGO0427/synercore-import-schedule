@@ -91,6 +91,7 @@ export interface BulkImportShipment {
   updatedAt?: string;
   reminderDate?: string;
   reminderNote?: string;
+  shipmentType?: 'international' | 'local';
 }
 
 /**
@@ -795,8 +796,8 @@ export class ShipmentController {
             id, supplier, order_ref, final_pod, latest_status, week_number,
             product_name, quantity, cbm, pallet_qty, receiving_warehouse, notes, updated_at,
             forwarding_agent, incoterm, vessel_name, selected_week_date,
-            reminder_date, reminder_note
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
+            reminder_date, reminder_note, shipment_type
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
           [
             id,
             shipment.supplier,
@@ -816,7 +817,8 @@ export class ShipmentController {
             shipment.vesselName || null,
             shipment.selectedWeekDate || null,
             shipment.reminderDate || null,
-            shipment.reminderNote || null
+            shipment.reminderNote || null,
+            shipment.shipmentType || 'international'
           ]
         );
       }

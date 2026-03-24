@@ -201,7 +201,7 @@ export function useShipments() {
     } catch (err) { showError(err.message); }
   }, [fetchShipments, showSuccess, showError]);
 
-  const handleFileUpload = useCallback(async (file, handleAddSupplier) => {
+  const handleFileUpload = useCallback(async (file, handleAddSupplier, shipmentType = 'international') => {
     try {
       startLoading();
 
@@ -213,7 +213,7 @@ export function useShipments() {
         supplier: s.supplier,
         orderRef: s.orderRef,
         finalPod: s.finalPod,
-        latestStatus: s.latestStatus,
+        latestStatus: shipmentType === 'local' ? (s.latestStatus || 'in_transit_roadway') : s.latestStatus,
         weekNumber: Number(s.weekNumber) || 0,
         productName: s.productName,
         quantity: Number(s.quantity) || 0,
@@ -223,6 +223,7 @@ export function useShipments() {
         vesselName: s.vesselName ?? '',
         incoterm: s.incoterm ?? '',
         notes: s.notes ?? '',
+        shipmentType,
       });
 
       const payload = processedShipments.map(toPlain);

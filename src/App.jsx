@@ -692,7 +692,7 @@ function App() {
               <Suspense fallback={<PageLoader />}><ErrorBoundary><DockManagement shipments={shipments} /></ErrorBoundary></Suspense>
             } />
             <Route path="/local-receiving" element={
-              <Suspense fallback={<PageLoader />}><ErrorBoundary><LocalReceivingSchedule shipments={shipments} onCreateShipment={handleCreateShipment} onUpdateShipment={handleUpdateShipment} onDeleteShipment={handleDeleteShipment} loading={loading} /></ErrorBoundary></Suspense>
+              <Suspense fallback={<PageLoader />}><ErrorBoundary><LocalReceivingSchedule shipments={shipments} onCreateShipment={handleCreateShipment} onUpdateShipment={handleUpdateShipment} onDeleteShipment={handleDeleteShipment} onFileUpload={handleFileUpload} loading={loading} /></ErrorBoundary></Suspense>
             } />
             <Route path="/capacity" element={
               <Suspense fallback={<PageLoader />}><ErrorBoundary><WarehouseCapacity shipments={shipments} /></ErrorBoundary></Suspense>
