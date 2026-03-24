@@ -480,7 +480,7 @@ function DockManagement({ shipments: propShipments = [] }) {
 
   const formatTime = (d) => {
     if (!d) return '-';
-    return new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Date(d).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   };
 
   const getWaitTime = (truck) => {
