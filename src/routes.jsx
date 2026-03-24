@@ -16,6 +16,8 @@ export const VIEW_ROUTES = {
   audit:             '/audit',
   'bol-audit':       '/bol-audit',
   'supplier-performance': '/supplier-performance',
+  receiving:             '/receiving',
+  'dock-management':     '/dock-management',
 };
 
 // Reverse map: path -> view name

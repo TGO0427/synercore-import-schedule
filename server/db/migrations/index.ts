@@ -1156,6 +1156,112 @@ export const migrations: Migration[] = [
       return true;
     },
   },
+
+  // Phase 14: Dock Management & Goods Receiving
+  {
+    name: 'create-docks-table',
+    version: '022',
+    description: 'Create docks table for warehouse dock management',
+    depends_on: ['schema.sql'],
+    execute: async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS docks (
+          id SERIAL PRIMARY KEY,
+          dock_number VARCHAR(20) NOT NULL,
+          warehouse VARCHAR(50) NOT NULL,
+          status VARCHAR(30) DEFAULT 'available',
+          current_truck_id INTEGER,
+          notes TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(dock_number, warehouse)
+        );
+      `);
+
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_docks_warehouse ON docks(warehouse);
+        CREATE INDEX IF NOT EXISTS idx_docks_status ON docks(status);
+      `);
+
+      // Seed default docks per warehouse
+      const dockSeeds = [
+        { warehouse: 'PRETORIA', docks: ['Dock 1', 'Dock 2', 'Dock 3', 'Dock 4'] },
+        { warehouse: 'KLAPMUTS', docks: ['Dock 1', 'Dock 2'] },
+        { warehouse: 'OFFSITE', docks: ['Dock 1'] },
+      ];
+
+      for (const seed of dockSeeds) {
+        for (const dockNumber of seed.docks) {
+          await pool.query(
+            `INSERT INTO docks (dock_number, warehouse) VALUES ($1, $2) ON CONFLICT (dock_number, warehouse) DO NOTHING`,
+            [dockNumber, seed.warehouse]
+          );
+        }
+      }
+
+      logInfo('Docks table created and seeded successfully');
+      return true;
+    },
+  },
+
+  {
+    name: 'create-truck-arrivals-table',
+    version: '023',
+    description: 'Create truck_arrivals table for tracking truck check-in/check-out at docks',
+    depends_on: ['create-docks-table'],
+    execute: async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS truck_arrivals (
+          id SERIAL PRIMARY KEY,
+          shipment_id VARCHAR(255) REFERENCES shipments(id) ON DELETE SET NULL,
+          carrier VARCHAR(255),
+          driver_name VARCHAR(255),
+          driver_phone VARCHAR(50),
+          vehicle_reg VARCHAR(50),
+          expected_arrival TIMESTAMP WITH TIME ZONE,
+          actual_arrival TIMESTAMP WITH TIME ZONE,
+          dock_id INTEGER REFERENCES docks(id) ON DELETE SET NULL,
+          status VARCHAR(30) DEFAULT 'scheduled',
+          queue_position INTEGER,
+          check_in_time TIMESTAMP WITH TIME ZONE,
+          check_out_time TIMESTAMP WITH TIME ZONE,
+          notes TEXT,
+          created_by VARCHAR(255),
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_truck_arrivals_shipment ON truck_arrivals(shipment_id);
+        CREATE INDEX IF NOT EXISTS idx_truck_arrivals_dock ON truck_arrivals(dock_id);
+        CREATE INDEX IF NOT EXISTS idx_truck_arrivals_status ON truck_arrivals(status);
+        CREATE INDEX IF NOT EXISTS idx_truck_arrivals_expected ON truck_arrivals(expected_arrival);
+      `);
+
+      // Add bin_location and grn_number columns to shipments
+      const shipmentColumns = [
+        'bin_location VARCHAR(50)',
+        'grn_number VARCHAR(50)',
+      ];
+
+      for (const colDef of shipmentColumns) {
+        const colName = colDef.split(' ')[0];
+        const checkResult = await pool.query(
+          `SELECT column_name FROM information_schema.columns
+           WHERE table_name='shipments' AND column_name=$1`,
+          [colName]
+        );
+        if (checkResult.rows.length === 0) {
+          await pool.query(`ALTER TABLE shipments ADD COLUMN ${colDef}`);
+          logInfo(`Added column ${colName} to shipments`);
+        }
+      }
+
+      logInfo('Truck arrivals table created successfully');
+      return true;
+    },
+  },
 ];
 
 /**

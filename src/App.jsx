@@ -32,6 +32,8 @@ const LiveBoard = lazy(() => import('./components/LiveBoard'));
 const AuditLog = lazy(() => import('./components/AuditLog'));
 const BolAudit = lazy(() => import('./components/BolAudit'));
 const SupplierPerformance = lazy(() => import('./components/SupplierPerformance'));
+const GoodsReceiving = lazy(() => import('./components/GoodsReceiving'));
+const DockManagement = lazy(() => import('./components/DockManagement'));
 import SupplierLogin from './pages/SupplierLogin';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -114,6 +116,7 @@ function App() {
   const [sidebarSections, setSidebarSections] = useState({
     masterData: true,
     operations: true,
+    warehouse: true,
     finance: true,
     reports: true,
     resources: false,
@@ -317,6 +320,8 @@ function App() {
     if (path === '/supplier-performance') return 'supplier-performance';
     if (path === '/users') return 'users';
     if (path === '/audit') return 'audit';
+    if (path === '/receiving') return 'receiving';
+    if (path === '/dock-management') return 'dock-management';
     return 'shipping';
   })();
 
@@ -411,6 +416,8 @@ function App() {
             reports: { label: 'Reports', icon: '\u{1F4CA}', view: 'reports' },
             advancedReports: { label: 'Advanced Reports', icon: '\u{1F4C8}', view: 'advanced-reports' },
             supplierPerformance: { label: 'Supplier Performance', icon: '\u{1F3AF}', view: 'supplier-performance' },
+            receiving: { label: 'Goods Receiving', icon: '\u{1F4E5}', view: 'receiving' },
+            dockManagement: { label: 'Dock Management', icon: '\u{1F69B}', view: 'dock-management' },
             bolAudit: { label: 'BOL Audit', icon: '\u{1F4DC}', view: 'bol-audit' },
             audit: { label: 'Activity Log', icon: '\u{1F4DD}', view: 'audit', adminOnly: true },
           };
@@ -494,7 +501,8 @@ function App() {
             <nav className="sidebar-nav">
               {match('Dashboard') && renderItem('dashboard')}
               {renderSection('Master Data', 'masterData', ['suppliers'])}
-              {renderSection('Operations', 'operations', ['shipping', 'workflow', 'capacity', 'stored', 'archives', 'bolAudit'])}
+              {renderSection('Operations', 'operations', ['shipping', 'workflow', 'archives', 'bolAudit'])}
+              {renderSection('Warehouse', 'warehouse', ['receiving', 'dockManagement', 'capacity', 'stored'])}
               {renderSection('Finance', 'finance', ['rates', 'costing', 'costingRequests'])}
               {renderSection('Reports', 'reports', ['reports', 'advancedReports', 'supplierPerformance', 'audit'])}
 
@@ -674,6 +682,12 @@ function App() {
             } />
             <Route path="/workflow" element={
               <Suspense fallback={<PageLoader />}><ErrorBoundary><PostArrivalWorkflow /></ErrorBoundary></Suspense>
+            } />
+            <Route path="/receiving" element={
+              <Suspense fallback={<PageLoader />}><ErrorBoundary><GoodsReceiving /></ErrorBoundary></Suspense>
+            } />
+            <Route path="/dock-management" element={
+              <Suspense fallback={<PageLoader />}><ErrorBoundary><DockManagement /></ErrorBoundary></Suspense>
             } />
             <Route path="/capacity" element={
               <Suspense fallback={<PageLoader />}><ErrorBoundary><WarehouseCapacity shipments={shipments} /></ErrorBoundary></Suspense>

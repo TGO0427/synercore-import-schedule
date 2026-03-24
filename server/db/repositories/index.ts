@@ -25,3 +25,7 @@ export { default as quoteRepository } from './QuoteRepository.js';
 export { WarehouseRepository } from './WarehouseRepository.js';
 export type { WarehouseFilter, WarehouseHistory } from './WarehouseRepository.js';
 export { default as warehouseRepository } from './WarehouseRepository.js';
+
+export { DockRepository } from './DockRepository.js';
+export type { Dock, TruckArrival, DockMetrics } from './DockRepository.js';
+export { default as dockRepository } from './DockRepository.js';

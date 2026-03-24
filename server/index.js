@@ -53,6 +53,7 @@ import costingRequestsRouter from './routes/costingRequests.ts';
 import auditRouter from './routes/audit.ts';
 import newsRouter from './routes/news.ts';
 import bolAuditRouter from './routes/bolAudit.ts';
+import docksRouter from './routes/docks.ts';
 
 import { helmetConfig, apiRateLimiter, authRateLimiter, createRateLimiter, authenticateToken } from './middleware/security.js';
 import { csrfProtection } from './middleware/csrf.js';
@@ -180,6 +181,7 @@ app.use('/api/costing', costingRouter); // Import costing routes (auth within ro
 app.use('/api/costing-requests', costingRequestsRouter); // Costing request routes (auth within router)
 app.use('/api/audit', authenticateToken, auditRouter);
 app.use('/api/bol-audit', authenticateToken, bolAuditRouter);
+app.use('/api/docks', authenticateToken, docksRouter);
 app.use('/api/news', newsRouter); // Public - freight news feed proxy
 
 /* ---------------- Endpoints ---------------- */

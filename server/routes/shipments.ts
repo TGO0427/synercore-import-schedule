@@ -423,6 +423,57 @@ router.post(
   })
 );
 
+// ─── Goods Receiving Routes ───
+
+/**
+ * GET /api/shipments/receiving/queue
+ * Get shipments ready for receiving (passed inspection)
+ */
+router.get(
+  '/receiving/queue',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const shipments = await ShipmentController.getReceivingQueue();
+    res.json(shipments);
+  })
+);
+
+/**
+ * GET /api/shipments/receiving/active
+ * Get shipments currently being received
+ */
+router.get(
+  '/receiving/active',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const shipments = await ShipmentController.getActiveReceiving();
+    res.json(shipments);
+  })
+);
+
+/**
+ * GET /api/shipments/receiving/recent
+ * Get recently received shipments
+ */
+router.get(
+  '/receiving/recent',
+  asyncHandler(async (req: Request, res: Response) => {
+    const days = parseInt(req.query.days as string, 10) || 7;
+    const shipments = await ShipmentController.getRecentlyReceived(days);
+    res.json(shipments);
+  })
+);
+
+/**
+ * GET /api/shipments/receiving/summary
+ * Get receiving summary stats
+ */
+router.get(
+  '/receiving/summary',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const summary = await ShipmentController.getReceivingSummary();
+    res.json(summary);
+  })
+);
+
 /**
  * GET /api/shipments/:id
  * Get single shipment by ID
@@ -706,18 +757,39 @@ router.post(
   '/:id/complete-receiving',
   body('receivedQuantity').optional().isInt({ min: 0 }).withMessage('Received quantity must be a non-negative integer'),
   body('receivedBy').optional().trim(),
-  asyncHandler(async (req: BodyRequest<{ receivedQuantity?: number; receivedBy?: string }>, res: Response) => {
+  body('binLocation').optional().trim(),
+  body('discrepancies').optional().trim(),
+  body('receivingNotes').optional().trim(),
+  asyncHandler(async (req: BodyRequest<{ receivedQuantity?: number; receivedBy?: string; binLocation?: string; discrepancies?: string; receivingNotes?: string }>, res: Response) => {
     if (!handleValidationErrors(req, res)) return;
 
     const shipment = await ShipmentController.completeReceiving(
       req.params.id!,
       req.body.receivedQuantity,
-      req.body.receivedBy
+      req.body.receivedBy,
+      req.body.binLocation,
+      req.body.discrepancies,
+      req.body.receivingNotes
     );
 
     res.status(200).json({
       data: shipment,
       message: 'Receiving completed successfully'
+    });
+  })
+);
+
+/**
+ * POST /api/shipments/:id/generate-grn
+ * Generate a Goods Received Note number for a shipment
+ */
+router.post(
+  '/:id/generate-grn',
+  asyncHandler(async (req: Request, res: Response) => {
+    const shipment = await ShipmentController.generateGRN(req.params.id!);
+    res.status(200).json({
+      data: shipment,
+      message: `GRN generated: ${shipment.grn_number}`
     });
   })
 );

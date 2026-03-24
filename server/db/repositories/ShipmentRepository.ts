@@ -58,7 +58,9 @@ export class ShipmentRepository extends BaseRepository<Shipment> {
     'rejection_reason',
     'rejected_by',
     'reminder_date',
-    'reminder_note'
+    'reminder_note',
+    'bin_location',
+    'grn_number'
   ];
 
   /**

@@ -545,7 +545,10 @@ export class ShipmentController {
   static async completeReceiving(
     id: string,
     receivedQuantity?: number,
-    receivedBy?: string
+    receivedBy?: string,
+    binLocation?: string,
+    discrepancies?: string,
+    receivingNotes?: string
   ): Promise<Shipment> {
     // Verify shipment exists
     const shipment = await this.getShipment(id);
@@ -556,11 +559,107 @@ export class ShipmentController {
     }
 
     // Update status to received
-    const updated = await shipmentRepository.update(id, {
+    const updateData: Record<string, any> = {
       latest_status: 'received' as ShipmentStatus,
       receiving_status: 'completed',
       received_quantity: receivedQuantity,
       received_by: receivedBy || shipment.received_by || '',
+      updated_at: new Date()
+    };
+    if (binLocation !== undefined) updateData.bin_location = binLocation;
+    if (discrepancies !== undefined) updateData.discrepancies = discrepancies;
+    if (receivingNotes !== undefined) updateData.receiving_notes = receivingNotes;
+
+    const updated = await shipmentRepository.update(id, updateData as Partial<Shipment>);
+
+    return updated;
+  }
+
+  // ─── Goods Receiving Endpoints ───
+
+  /**
+   * Get shipments ready for receiving (passed inspection)
+   */
+  static async getReceivingQueue(): Promise<Shipment[]> {
+    return shipmentRepository.findByStatus('inspection_passed' as ShipmentStatus);
+  }
+
+  /**
+   * Get shipments currently being received
+   */
+  static async getActiveReceiving(): Promise<Shipment[]> {
+    return shipmentRepository.findByStatus('receiving' as ShipmentStatus);
+  }
+
+  /**
+   * Get recently received shipments (last N days)
+   */
+  static async getRecentlyReceived(days: number = 7): Promise<Shipment[]> {
+    return queryAll<Shipment>(
+      `SELECT * FROM shipments
+       WHERE latest_status IN ('received', 'stored')
+         AND receiving_date >= NOW() - ($1 || ' days')::interval
+       ORDER BY receiving_date DESC`,
+      [days]
+    );
+  }
+
+  /**
+   * Get receiving summary stats for today
+   */
+  static async getReceivingSummary(): Promise<{
+    pendingReceiving: number;
+    activeReceiving: number;
+    receivedToday: number;
+    discrepanciesToday: number;
+  }> {
+    const result = await queryOne<{
+      pending: string;
+      active: string;
+      received_today: string;
+      discrepancies_today: string;
+    }>(
+      `SELECT
+        COUNT(*) FILTER (WHERE latest_status = 'inspection_passed')::int as pending,
+        COUNT(*) FILTER (WHERE latest_status = 'receiving')::int as active,
+        COUNT(*) FILTER (WHERE latest_status IN ('received', 'stored') AND receiving_date::date = CURRENT_DATE)::int as received_today,
+        COUNT(*) FILTER (WHERE latest_status IN ('received', 'stored') AND receiving_date::date = CURRENT_DATE AND discrepancies IS NOT NULL AND discrepancies != '')::int as discrepancies_today
+      FROM shipments`
+    );
+
+    return {
+      pendingReceiving: parseInt(result?.pending || '0', 10),
+      activeReceiving: parseInt(result?.active || '0', 10),
+      receivedToday: parseInt(result?.received_today || '0', 10),
+      discrepanciesToday: parseInt(result?.discrepancies_today || '0', 10),
+    };
+  }
+
+  /**
+   * Generate a GRN (Goods Received Note) number for a shipment
+   */
+  static async generateGRN(id: string): Promise<Shipment> {
+    const shipment = await this.getShipment(id);
+
+    if (shipment.grn_number) {
+      return shipment; // Already has a GRN
+    }
+
+    if (!['received', 'stored'].includes(shipment.latest_status)) {
+      throw AppError.conflict('Shipment must be received to generate a GRN');
+    }
+
+    // Generate GRN: GRN-YYYYMMDD-NNN
+    const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    const countResult = await queryOne<{ count: string }>(
+      `SELECT COUNT(*)::int as count FROM shipments WHERE grn_number LIKE $1`,
+      [`GRN-${today}-%`]
+    );
+    const seq = (parseInt(countResult?.count || '0', 10) + 1).toString().padStart(3, '0');
+    const grnNumber = `GRN-${today}-${seq}`;
+
+    const updated = await shipmentRepository.update(id, {
+      grn_number: grnNumber,
       updated_at: new Date()
     } as Partial<Shipment>);
 
