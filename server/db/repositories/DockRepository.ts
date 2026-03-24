@@ -16,6 +16,13 @@ export interface Dock {
   updated_at: Date;
 }
 
+export interface LinkedShipment {
+  id: string;
+  order_ref: string;
+  supplier: string;
+  product_name: string;
+}
+
 export interface TruckArrival {
   id: number;
   shipment_id: string | null;
@@ -40,6 +47,9 @@ export interface TruckArrival {
   order_ref?: string;
   supplier?: string;
   product_name?: string;
+  // Multi-shipment fields
+  shipment_ids?: string[];
+  shipments?: LinkedShipment[];
 }
 
 export interface DockMetrics {
@@ -56,15 +66,61 @@ const TRUCK_COLUMNS = `
   t.id, t.shipment_id, t.carrier, t.driver_name, t.driver_phone, t.vehicle_reg,
   t.expected_arrival, t.actual_arrival, t.dock_id, t.warehouse, t.status, t.queue_position,
   t.check_in_time, t.check_out_time, t.notes, t.created_by, t.created_at, t.updated_at,
-  d.dock_number,
-  s.order_ref, s.supplier, s.product_name
+  d.dock_number
 `;
 
 const TRUCK_JOINS = `
   FROM truck_arrivals t
   LEFT JOIN docks d ON t.dock_id = d.id
-  LEFT JOIN shipments s ON t.shipment_id = s.id
 `;
+
+/**
+ * Post-fetch: attach linked shipments from truck_shipments junction table
+ */
+async function attachLinkedShipments(trucks: TruckArrival[]): Promise<TruckArrival[]> {
+  if (trucks.length === 0) return trucks;
+
+  const truckIds = trucks.map(t => t.id);
+  const placeholders = truckIds.map((_, i) => `$${i + 1}`).join(',');
+
+  const links = await queryAll<{
+    truck_id: number;
+    shipment_id: string;
+    order_ref: string;
+    supplier: string;
+    product_name: string;
+  }>(
+    `SELECT ts.truck_id, ts.shipment_id, s.order_ref, s.supplier, s.product_name
+     FROM truck_shipments ts
+     JOIN shipments s ON ts.shipment_id = s.id
+     WHERE ts.truck_id IN (${placeholders})
+     ORDER BY ts.created_at`,
+    truckIds
+  );
+
+  const linkMap = new Map<number, LinkedShipment[]>();
+  for (const row of links) {
+    if (!linkMap.has(row.truck_id)) linkMap.set(row.truck_id, []);
+    linkMap.get(row.truck_id)!.push({
+      id: row.shipment_id,
+      order_ref: row.order_ref,
+      supplier: row.supplier,
+      product_name: row.product_name,
+    });
+  }
+
+  for (const truck of trucks) {
+    const linked = linkMap.get(truck.id) || [];
+    truck.shipments = linked;
+    truck.shipment_ids = linked.map(s => s.id);
+    // Set order_ref to comma-separated list for backward compat
+    if (linked.length > 0) {
+      truck.order_ref = linked.map(s => s.order_ref).filter(Boolean).join(', ');
+    }
+  }
+
+  return trucks;
+}
 
 class DockRepository {
   // ─── Dock Operations ───
@@ -120,14 +176,18 @@ class DockRepository {
     }
 
     sql += ' ORDER BY t.expected_arrival ASC NULLS LAST, t.created_at DESC';
-    return queryAll<TruckArrival>(sql, params.length ? params : undefined);
+    const trucks = await queryAll<TruckArrival>(sql, params.length ? params : undefined);
+    return attachLinkedShipments(trucks);
   }
 
   async findTruckById(id: number): Promise<TruckArrival | null> {
-    return queryOne<TruckArrival>(
+    const truck = await queryOne<TruckArrival>(
       `SELECT ${TRUCK_COLUMNS} ${TRUCK_JOINS} WHERE t.id = $1`,
       [id]
     );
+    if (!truck) return null;
+    const [enriched] = await attachLinkedShipments([truck]);
+    return enriched;
   }
 
   async getTodaySchedule(warehouse?: string): Promise<TruckArrival[]> {
@@ -141,16 +201,17 @@ class DockRepository {
       params.push(warehouse);
     }
     sql += ' ORDER BY t.expected_arrival ASC NULLS LAST';
-    return queryAll<TruckArrival>(sql, params.length ? params : undefined);
+    const trucks = await queryAll<TruckArrival>(sql, params.length ? params : undefined);
+    return attachLinkedShipments(trucks);
   }
 
-  async createTruckArrival(data: Partial<TruckArrival>): Promise<TruckArrival> {
+  async createTruckArrival(data: Partial<TruckArrival> & { shipmentIds?: string[] }): Promise<TruckArrival> {
     const result = await queryOne<TruckArrival>(
       `INSERT INTO truck_arrivals (shipment_id, carrier, driver_name, driver_phone, vehicle_reg, expected_arrival, warehouse, notes, created_by)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [
-        data.shipment_id || null,
+        null, // stop writing to legacy shipment_id column
         data.carrier || null,
         data.driver_name || null,
         data.driver_phone || null,
@@ -162,7 +223,13 @@ class DockRepository {
       ]
     );
     if (!result) throw new Error('Failed to create truck arrival');
-    return result;
+
+    // Link shipments via junction table
+    if (data.shipmentIds && data.shipmentIds.length > 0) {
+      await this.linkShipments(result.id, data.shipmentIds);
+    }
+
+    return (await this.findTruckById(result.id))!;
   }
 
   async updateTruckArrival(id: number, data: Partial<TruckArrival>): Promise<TruckArrival | null> {
@@ -188,7 +255,8 @@ class DockRepository {
       params.push(warehouse);
     }
     sql += ' ORDER BY t.queue_position ASC NULLS LAST, t.check_in_time ASC';
-    return queryAll<TruckArrival>(sql, params.length ? params : undefined);
+    const trucks = await queryAll<TruckArrival>(sql, params.length ? params : undefined);
+    return attachLinkedShipments(trucks);
   }
 
   async getNextQueuePosition(): Promise<number> {
@@ -283,6 +351,55 @@ class DockRepository {
       trucks_today: todayResult?.trucks_today || 0,
       trucks_completed_today: todayResult?.completed_today || 0,
     };
+  }
+
+  // ─── Junction Table Operations ───
+
+  async linkShipments(truckId: number, shipmentIds: string[]): Promise<void> {
+    if (shipmentIds.length === 0) return;
+    const values: any[] = [];
+    const placeholders: string[] = [];
+    shipmentIds.forEach((sid, i) => {
+      placeholders.push(`($${i * 2 + 1}, $${i * 2 + 2})`);
+      values.push(truckId, sid);
+    });
+    await query(
+      `INSERT INTO truck_shipments (truck_id, shipment_id) VALUES ${placeholders.join(', ')} ON CONFLICT (truck_id, shipment_id) DO NOTHING`,
+      values
+    );
+  }
+
+  async unlinkShipment(truckId: number, shipmentId: string): Promise<void> {
+    await query(`DELETE FROM truck_shipments WHERE truck_id = $1 AND shipment_id = $2`, [truckId, shipmentId]);
+  }
+
+  async replaceShipmentLinks(truckId: number, shipmentIds: string[]): Promise<void> {
+    await query(`DELETE FROM truck_shipments WHERE truck_id = $1`, [truckId]);
+    if (shipmentIds.length > 0) {
+      await this.linkShipments(truckId, shipmentIds);
+    }
+  }
+
+  async getShipmentIdsForTruck(truckId: number): Promise<string[]> {
+    const rows = await queryAll<{ shipment_id: string }>(
+      `SELECT shipment_id FROM truck_shipments WHERE truck_id = $1`,
+      [truckId]
+    );
+    return rows.map(r => r.shipment_id);
+  }
+
+  // ─── Truck info for a shipment (reverse lookup) ───
+
+  async getTruckForShipment(shipmentId: string): Promise<{ carrier: string; vehicle_reg: string; dock_number: string } | null> {
+    return queryOne<{ carrier: string; vehicle_reg: string; dock_number: string }>(
+      `SELECT t.carrier, t.vehicle_reg, d.dock_number
+       FROM truck_shipments ts
+       JOIN truck_arrivals t ON ts.truck_id = t.id
+       LEFT JOIN docks d ON t.dock_id = d.id
+       WHERE ts.shipment_id = $1
+       ORDER BY t.created_at DESC LIMIT 1`,
+      [shipmentId]
+    );
   }
 
   // ─── Transactional dock assignment ───

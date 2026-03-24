@@ -692,7 +692,28 @@ async function start() {
         ALTER TABLE shipments ADD COLUMN IF NOT EXISTS grn_number VARCHAR(50);
       `);
 
-      logger.info('Docks and truck_arrivals tables ready');
+      // Create truck_shipments junction table (many-to-many: one truck can carry multiple shipments)
+      await getPool().query(`
+        CREATE TABLE IF NOT EXISTS truck_shipments (
+          id SERIAL PRIMARY KEY,
+          truck_id INTEGER NOT NULL REFERENCES truck_arrivals(id) ON DELETE CASCADE,
+          shipment_id VARCHAR(255) NOT NULL REFERENCES shipments(id) ON DELETE CASCADE,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(truck_id, shipment_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_truck_shipments_truck ON truck_shipments(truck_id);
+        CREATE INDEX IF NOT EXISTS idx_truck_shipments_shipment ON truck_shipments(shipment_id);
+      `);
+
+      // Migrate existing single shipment_id data into junction table
+      await getPool().query(`
+        INSERT INTO truck_shipments (truck_id, shipment_id)
+        SELECT id, shipment_id FROM truck_arrivals
+        WHERE shipment_id IS NOT NULL
+        ON CONFLICT (truck_id, shipment_id) DO NOTHING;
+      `);
+
+      logger.info('Docks, truck_arrivals, and truck_shipments tables ready');
     } catch (error) {
       logWarn('Docks/truck_arrivals migration warning', { error: error.message });
     }

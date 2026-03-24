@@ -106,10 +106,10 @@ router.post(
   body('vehicleReg').optional().trim(),
   body('expectedArrival').optional(),
   body('warehouse').optional().trim(),
-  body('shipmentId').optional().trim(),
+  body('shipmentIds').optional().isArray(),
   body('notes').optional().trim(),
   asyncHandler(async (req: BodyRequest, res: Response) => {
-    const { carrier, driverName, driverPhone, vehicleReg, expectedArrival, warehouse, shipmentId, notes } = req.body;
+    const { carrier, driverName, driverPhone, vehicleReg, expectedArrival, warehouse, shipmentIds, notes } = req.body;
     const currentUser = (req as any).user;
     const truck = await DockController.createTruckArrival({
       carrier,
@@ -118,7 +118,7 @@ router.post(
       vehicle_reg: vehicleReg,
       expected_arrival: expectedArrival ? new Date(expectedArrival) : undefined,
       warehouse: warehouse || null,
-      shipment_id: shipmentId || null,
+      shipmentIds: shipmentIds || [],
       notes,
       created_by: currentUser?.username || currentUser?.id || null,
     });
@@ -138,10 +138,11 @@ router.put(
   body('vehicleReg').optional().trim(),
   body('warehouse').optional().trim(),
   body('expectedArrival').optional(),
+  body('shipmentIds').optional().isArray(),
   body('notes').optional().trim(),
   asyncHandler(async (req: BodyRequest, res: Response) => {
     const truckId = parseInt(req.params.id!, 10);
-    const { carrier, driverName, driverPhone, vehicleReg, warehouse, expectedArrival, notes } = req.body;
+    const { carrier, driverName, driverPhone, vehicleReg, warehouse, expectedArrival, shipmentIds, notes } = req.body;
     const updateData: Record<string, any> = {};
     if (carrier !== undefined) updateData.carrier = carrier;
     if (driverName !== undefined) updateData.driver_name = driverName;
@@ -149,6 +150,7 @@ router.put(
     if (vehicleReg !== undefined) updateData.vehicle_reg = vehicleReg;
     if (warehouse !== undefined) updateData.warehouse = warehouse;
     if (expectedArrival !== undefined) updateData.expected_arrival = expectedArrival ? new Date(expectedArrival) : null;
+    if (shipmentIds !== undefined) updateData.shipmentIds = shipmentIds;
     if (notes !== undefined) updateData.notes = notes;
 
     const truck = await DockController.updateTruckArrival(truckId, updateData);
@@ -252,6 +254,18 @@ router.post(
     const truckId = parseInt(req.params.id!, 10);
     const truck = await DockController.departTruck(truckId);
     res.json({ message: 'Truck departed', data: truck });
+  })
+);
+
+/**
+ * GET /api/docks/truck-for-shipment/:shipmentId
+ * Get truck info linked to a specific shipment (reverse lookup)
+ */
+router.get(
+  '/truck-for-shipment/:shipmentId',
+  asyncHandler(async (req: Request, res: Response) => {
+    const truckInfo = await DockController.getTruckForShipment(req.params.shipmentId!);
+    res.json(truckInfo || null);
   })
 );
 

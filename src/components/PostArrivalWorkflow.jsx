@@ -21,6 +21,8 @@ function PostArrivalWorkflow() {
   const [detailShipment, setDetailShipment] = useState(null);
   const [searchTerm, setSearchTerm] = useState(globalSearchTerm || '');
 
+  const [truckInfoMap, setTruckInfoMap] = useState({});
+
   const [workflowData, setWorkflowData] = useState({
     inspectedBy: '',
     inspectionNotes: '',
@@ -65,6 +67,19 @@ function PostArrivalWorkflow() {
       if (response.ok) {
         const shipments = await response.json();
         setPostArrivalShipments(shipments);
+        // Fetch truck info for each shipment
+        const truckMap = {};
+        await Promise.all(shipments.map(async (s) => {
+          try {
+            const sid = s.id || s._id;
+            const truckRes = await authFetch(getApiUrl(`/api/docks/truck-for-shipment/${sid}`));
+            if (truckRes.ok) {
+              const info = await truckRes.json();
+              if (info) truckMap[sid] = info;
+            }
+          } catch { /* ignore */ }
+        }));
+        setTruckInfoMap(truckMap);
       } else {
         console.error('Failed to fetch post-arrival shipments');
       }
@@ -495,6 +510,11 @@ function PostArrivalWorkflow() {
                     <div style={{ color: 'var(--text-500)', fontSize: '0.9rem' }}>
                       📍 {shipment.finalPod} | 📦 {shipment.quantity} units | 🏭 {shipment.receivingWarehouse}
                     </div>
+                    {truckInfoMap[shipment.id] && (
+                      <div style={{ color: 'var(--info)', fontSize: '0.82rem', marginTop: '2px' }}>
+                        🚛 {truckInfoMap[shipment.id].carrier || 'Truck'}{truckInfoMap[shipment.id].vehicle_reg ? ` (${truckInfoMap[shipment.id].vehicle_reg})` : ''}{truckInfoMap[shipment.id].dock_number ? ` — ${truckInfoMap[shipment.id].dock_number}` : ''}
+                      </div>
+                    )}
                   </div>
 
                   <div style={{

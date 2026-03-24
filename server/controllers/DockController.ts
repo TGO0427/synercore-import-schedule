@@ -1,11 +1,14 @@
 /**
  * Dock Controller
  * Handles dock management and truck arrival business logic
+ * Auto-advances linked shipments through the workflow when truck events occur
  */
 
 import { AppError } from '../utils/AppError.ts';
 import dockRepository from '../db/repositories/DockRepository.js';
 import type { Dock, TruckArrival, DockMetrics } from '../db/repositories/DockRepository.js';
+import ShipmentController from './ShipmentController.js';
+import { logWarn } from '../utils/logger.js';
 
 export default class DockController {
   // ─── Dock Operations ───
@@ -54,20 +57,31 @@ export default class DockController {
     return dockRepository.getQueuedTrucks(warehouse);
   }
 
-  static async createTruckArrival(data: Partial<TruckArrival>): Promise<TruckArrival> {
+  static async createTruckArrival(data: Partial<TruckArrival> & { shipmentIds?: string[] }): Promise<TruckArrival> {
     return dockRepository.createTruckArrival(data);
   }
 
-  static async updateTruckArrival(truckId: number, data: Partial<TruckArrival>): Promise<TruckArrival> {
+  static async updateTruckArrival(truckId: number, data: Partial<TruckArrival> & { shipmentIds?: string[] }): Promise<TruckArrival> {
     const truck = await dockRepository.findTruckById(truckId);
     if (!truck) throw AppError.notFound('Truck arrival not found');
     if (!['scheduled', 'checked_in'].includes(truck.status)) {
       throw AppError.conflict('Can only amend trucks that are scheduled or checked in');
     }
 
-    const updated = await dockRepository.updateTruckArrival(truckId, data);
-    if (!updated) throw AppError.notFound('Truck arrival not found');
-    return updated;
+    // Handle shipment link updates separately
+    if (data.shipmentIds !== undefined) {
+      await dockRepository.replaceShipmentLinks(truckId, data.shipmentIds);
+      delete (data as any).shipmentIds;
+    }
+
+    // Only update truck_arrivals columns if there are fields left
+    const keys = Object.keys(data);
+    if (keys.length > 0) {
+      const updated = await dockRepository.updateTruckArrival(truckId, data);
+      if (!updated) throw AppError.notFound('Truck arrival not found');
+    }
+
+    return (await dockRepository.findTruckById(truckId))!;
   }
 
   static async cancelTruck(truckId: number): Promise<TruckArrival> {
@@ -100,6 +114,36 @@ export default class DockController {
     await dockRepository.deleteTruckArrival(truckId);
   }
 
+  /**
+   * Auto-advance linked shipments to unloading when truck is assigned to dock
+   */
+  private static async autoStartUnloading(truckId: number): Promise<void> {
+    const shipmentIds = await dockRepository.getShipmentIdsForTruck(truckId);
+    for (const sid of shipmentIds) {
+      try {
+        await ShipmentController.startUnloading(sid);
+      } catch (err: any) {
+        // Skip if shipment is already past this status or not in valid state
+        logWarn('Auto-startUnloading skipped', { shipmentId: sid, reason: err.message });
+      }
+    }
+  }
+
+  /**
+   * Auto-advance linked shipments to inspection_pending when truck completes unloading
+   */
+  private static async autoCompleteUnloading(truckId: number): Promise<void> {
+    const shipmentIds = await dockRepository.getShipmentIdsForTruck(truckId);
+    for (const sid of shipmentIds) {
+      try {
+        await ShipmentController.completeUnloading(sid);
+      } catch (err: any) {
+        // Skip if shipment is already past this status
+        logWarn('Auto-completeUnloading skipped', { shipmentId: sid, reason: err.message });
+      }
+    }
+  }
+
   static async checkIn(truckId: number, warehouse?: string): Promise<{ truck: TruckArrival; dock?: Dock }> {
     const truck = await dockRepository.findTruckById(truckId);
     if (!truck) throw AppError.notFound('Truck arrival not found');
@@ -128,6 +172,9 @@ export default class DockController {
           current_truck_id: truckId,
         } as Partial<Dock>);
 
+        // AUTO-ADVANCE: start unloading for linked shipments
+        await this.autoStartUnloading(truckId);
+
         const updatedTruck = await dockRepository.findTruckById(truckId);
         return { truck: updatedTruck!, dock: { ...availableDock, status: 'occupied' as const, current_truck_id: truckId } };
       }
@@ -154,6 +201,10 @@ export default class DockController {
     }
 
     const result = await dockRepository.assignDockToTruck(truckId, dockId);
+
+    // AUTO-ADVANCE: start unloading for linked shipments
+    await this.autoStartUnloading(truckId);
+
     return result;
   }
 
@@ -168,6 +219,10 @@ export default class DockController {
       status: 'unloading' as TruckArrival['status'],
     } as Partial<TruckArrival>);
     if (!updated) throw AppError.notFound('Truck arrival not found');
+
+    // AUTO-ADVANCE: start unloading for linked shipments
+    await this.autoStartUnloading(truckId);
+
     return updated;
   }
 
@@ -184,6 +239,9 @@ export default class DockController {
       check_out_time: now,
     } as Partial<TruckArrival>);
 
+    // AUTO-ADVANCE: complete unloading for linked shipments → inspection_pending
+    await this.autoCompleteUnloading(truckId);
+
     // Free the dock and auto-assign next queued truck
     let nextAssigned: TruckArrival | undefined;
     if (truck.dock_id) {
@@ -197,6 +255,9 @@ export default class DockController {
           const nextTruck = queue[0];
           const assigned = await dockRepository.assignDockToTruck(nextTruck.id, dock.id);
           nextAssigned = assigned.truck;
+
+          // AUTO-ADVANCE: start unloading for next truck's linked shipments
+          await this.autoStartUnloading(nextTruck.id);
         }
       }
     }
@@ -217,6 +278,12 @@ export default class DockController {
     } as Partial<TruckArrival>);
     if (!updated) throw AppError.notFound('Truck arrival not found');
     return updated;
+  }
+
+  // ─── Reverse lookup: get truck info for a shipment ───
+
+  static async getTruckForShipment(shipmentId: string) {
+    return dockRepository.getTruckForShipment(shipmentId);
   }
 
   // ─── Metrics ───

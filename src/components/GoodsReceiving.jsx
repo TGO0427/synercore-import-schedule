@@ -22,6 +22,8 @@ function GoodsReceiving() {
 
   const currentUser = authUtils.getUser();
 
+  const [truckInfoMap, setTruckInfoMap] = useState({});
+
   const [formData, setFormData] = useState({
     receivedQuantity: '',
     binLocation: '',
@@ -29,6 +31,21 @@ function GoodsReceiving() {
     receivingNotes: '',
     receivedBy: currentUser?.username || '',
   });
+
+  const fetchTruckInfo = useCallback(async (shipments) => {
+    const truckMap = {};
+    await Promise.all(shipments.map(async (s) => {
+      try {
+        const sid = s.id || s._id;
+        const truckRes = await authFetch(getApiUrl(`/api/docks/truck-for-shipment/${sid}`));
+        if (truckRes.ok) {
+          const info = await truckRes.json();
+          if (info) truckMap[sid] = info;
+        }
+      } catch { /* ignore */ }
+    }));
+    setTruckInfoMap(prev => ({ ...prev, ...truckMap }));
+  }, []);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -40,16 +57,20 @@ function GoodsReceiving() {
         authFetch(getApiUrl('/api/shipments/receiving/summary')),
       ]);
 
-      if (queueRes.ok) setReceivingQueue(await queueRes.json());
-      if (activeRes.ok) setActiveReceiving(await activeRes.json());
-      if (recentRes.ok) setRecentHistory(await recentRes.json());
+      const allShipments = [];
+      if (queueRes.ok) { const data = await queueRes.json(); setReceivingQueue(data); allShipments.push(...data); }
+      if (activeRes.ok) { const data = await activeRes.json(); setActiveReceiving(data); allShipments.push(...data); }
+      if (recentRes.ok) { const data = await recentRes.json(); setRecentHistory(data); allShipments.push(...data); }
       if (summaryRes.ok) setSummary(await summaryRes.json());
+
+      // Fetch truck info for all shipments
+      if (allShipments.length > 0) fetchTruckInfo(allShipments);
     } catch (err) {
       console.error('Error fetching receiving data:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchTruckInfo]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -273,6 +294,7 @@ function GoodsReceiving() {
               <th>Qty</th>
               <th>Pallets</th>
               <th>Warehouse</th>
+              <th>Truck</th>
               <th>Status</th>
               {activeTab === 'history' && <th>GRN</th>}
               {activeTab === 'history' && <th>Bin</th>}
@@ -288,6 +310,11 @@ function GoodsReceiving() {
                 <td>{s.received_quantity || s.quantity || '-'}</td>
                 <td>{Math.round(s.pallet_qty) || 1}</td>
                 <td>{s.receiving_warehouse || '-'}</td>
+                <td style={{ fontSize: '0.78rem', color: 'var(--text-500)' }}>
+                  {truckInfoMap[s.id] ? (
+                    <span>{truckInfoMap[s.id].carrier || 'Truck'}{truckInfoMap[s.id].vehicle_reg ? ` (${truckInfoMap[s.id].vehicle_reg})` : ''}</span>
+                  ) : '-'}
+                </td>
                 <td>
                   <span className={`pill ${s.latest_status === 'received' || s.latest_status === 'stored' ? 'pill-ok' : s.latest_status === 'receiving' ? 'pill-info' : 'pill-warn'}`}>
                     {STATUS_LABELS[s.latest_status] || s.latest_status}

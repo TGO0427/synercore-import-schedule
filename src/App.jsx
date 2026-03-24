@@ -687,7 +687,7 @@ function App() {
               <Suspense fallback={<PageLoader />}><ErrorBoundary><GoodsReceiving /></ErrorBoundary></Suspense>
             } />
             <Route path="/dock-management" element={
-              <Suspense fallback={<PageLoader />}><ErrorBoundary><DockManagement /></ErrorBoundary></Suspense>
+              <Suspense fallback={<PageLoader />}><ErrorBoundary><DockManagement shipments={shipments} /></ErrorBoundary></Suspense>
             } />
             <Route path="/capacity" element={
               <Suspense fallback={<PageLoader />}><ErrorBoundary><WarehouseCapacity shipments={shipments} /></ErrorBoundary></Suspense>

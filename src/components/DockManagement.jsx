@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { authFetch } from '../utils/authFetch';
 import { authUtils } from '../utils/auth';
 import { getApiUrl } from '../config/api';
@@ -30,7 +30,151 @@ const DOCK_STATUS_COLORS = {
   maintenance: '#ef4444',
 };
 
-function DockManagement() {
+const ELIGIBLE_STATUSES = ['arrived_pta', 'arrived_klm', 'arrived_offsite'];
+
+// ─── Shipment Picker Component ───
+function ShipmentPicker({ shipments = [], selectedIds = [], onChange }) {
+  const [search, setSearch] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [freeText, setFreeText] = useState('');
+  const wrapperRef = useRef(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handle = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setShowDropdown(false);
+    };
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, []);
+
+  const eligible = useMemo(() =>
+    shipments.filter(s => ELIGIBLE_STATUSES.includes(s.latest_status || s.latestStatus)),
+    [shipments]
+  );
+
+  const filtered = useMemo(() => {
+    if (!search) return eligible;
+    const q = search.toLowerCase();
+    return eligible.filter(s =>
+      (s.order_ref || s.orderRef || '').toLowerCase().includes(q) ||
+      (s.supplier || '').toLowerCase().includes(q) ||
+      (s.product_name || s.productName || '').toLowerCase().includes(q)
+    );
+  }, [eligible, search]);
+
+  const toggleShipment = (id) => {
+    if (selectedIds.includes(id)) {
+      onChange(selectedIds.filter(x => x !== id));
+    } else {
+      onChange([...selectedIds, id]);
+    }
+  };
+
+  const addFreeText = () => {
+    const val = freeText.trim();
+    if (val && !selectedIds.includes(val)) {
+      onChange([...selectedIds, val]);
+      setFreeText('');
+    }
+  };
+
+  const getLabel = (id) => {
+    const s = shipments.find(x => (x.id || x._id) === id);
+    if (s) return s.order_ref || s.orderRef || id;
+    return id; // free-text entry
+  };
+
+  return (
+    <div ref={wrapperRef}>
+      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-700)', marginBottom: '4px' }}>
+        Link Shipments
+      </label>
+
+      {/* Selected chips */}
+      {selectedIds.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
+          {selectedIds.map(id => (
+            <span key={id} style={{
+              display: 'inline-flex', alignItems: 'center', gap: '4px',
+              padding: '3px 8px', borderRadius: '999px', fontSize: '0.78rem', fontWeight: 600,
+              backgroundColor: 'var(--accent-light, #e0e7ff)', color: 'var(--accent)',
+              border: '1px solid var(--accent)',
+            }}>
+              {getLabel(id)}
+              <span
+                onClick={() => toggleShipment(id)}
+                style={{ cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', lineHeight: 1 }}
+              >&times;</span>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Search input */}
+      <input
+        type="text"
+        value={search}
+        onChange={e => { setSearch(e.target.value); setShowDropdown(true); }}
+        onFocus={() => setShowDropdown(true)}
+        className="input"
+        style={{ width: '100%', boxSizing: 'border-box' }}
+        placeholder="Search arrived shipments by order ref, supplier..."
+      />
+
+      {/* Dropdown */}
+      {showDropdown && (
+        <div style={{
+          maxHeight: '160px', overflowY: 'auto', border: '1px solid var(--border)',
+          borderRadius: '6px', marginTop: '2px', background: 'var(--surface)',
+          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+        }}>
+          {filtered.length === 0 ? (
+            <div style={{ padding: '8px 12px', color: 'var(--text-500)', fontSize: '0.82rem' }}>
+              No arrived shipments found
+            </div>
+          ) : filtered.map(s => {
+            const sid = s.id || s._id;
+            const isSelected = selectedIds.includes(sid);
+            return (
+              <div
+                key={sid}
+                onClick={() => { toggleShipment(sid); setSearch(''); }}
+                style={{
+                  padding: '6px 12px', cursor: 'pointer', fontSize: '0.82rem',
+                  backgroundColor: isSelected ? 'var(--accent-light, #e0e7ff)' : 'transparent',
+                  borderBottom: '1px solid var(--border)',
+                }}
+              >
+                <span style={{ fontWeight: 600 }}>{s.order_ref || s.orderRef}</span>
+                <span style={{ color: 'var(--text-500)', marginLeft: '8px' }}>
+                  {s.supplier} — {s.product_name || s.productName}
+                </span>
+                {isSelected && <span style={{ float: 'right', color: 'var(--accent)' }}>&#10003;</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Free-text fallback */}
+      <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
+        <input
+          type="text"
+          value={freeText}
+          onChange={e => setFreeText(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addFreeText(); } }}
+          className="input"
+          style={{ flex: 1, boxSizing: 'border-box', fontSize: '0.82rem' }}
+          placeholder="Or type order ref manually..."
+        />
+        <button type="button" className="btn btn-ghost" style={{ fontSize: '0.8rem', padding: '4px 10px' }} onClick={addFreeText}>Add</button>
+      </div>
+    </div>
+  );
+}
+
+function DockManagement({ shipments: propShipments = [] }) {
   const { showSuccess, showError, confirm: confirmAction } = useNotification();
   const [activeTab, setActiveTab] = useState('schedule');
   const [selectedWarehouse, setSelectedWarehouse] = useState('All');
@@ -52,7 +196,7 @@ function DockManagement() {
     vehicleReg: '',
     warehouse: '',
     expectedArrival: '',
-    shipmentId: '',
+    shipmentIds: [],
     notes: '',
   });
 
@@ -88,6 +232,8 @@ function DockManagement() {
     return () => clearInterval(interval);
   }, [fetchAll]);
 
+  const resetForm = () => setTruckForm({ carrier: '', driverName: '', driverPhone: '', vehicleReg: '', warehouse: '', expectedArrival: '', shipmentIds: [], notes: '' });
+
   const handleCreateTruck = async () => {
     setActionLoading(true);
     try {
@@ -99,7 +245,7 @@ function DockManagement() {
       if (!res.ok) throw new Error('Failed to create truck arrival');
       showSuccess('Truck arrival scheduled');
       setShowAddTruckModal(false);
-      setTruckForm({ carrier: '', driverName: '', driverPhone: '', vehicleReg: '', warehouse: '', expectedArrival: '', shipmentId: '', notes: '' });
+      resetForm();
       fetchAll();
     } catch (err) {
       showError(err.message);
@@ -185,7 +331,7 @@ function DockManagement() {
       vehicleReg: truck.vehicle_reg || '',
       warehouse: truck.warehouse || '',
       expectedArrival: truck.expected_arrival ? new Date(truck.expected_arrival).toISOString().slice(0, 16) : '',
-      shipmentId: truck.shipment_id || '',
+      shipmentIds: truck.shipment_ids || [],
       notes: truck.notes || '',
     });
     setShowEditTruckModal(true);
@@ -204,7 +350,7 @@ function DockManagement() {
       showSuccess('Truck arrival updated');
       setShowEditTruckModal(false);
       setSelectedTruck(null);
-      setTruckForm({ carrier: '', driverName: '', driverPhone: '', vehicleReg: '', warehouse: '', expectedArrival: '', shipmentId: '', notes: '' });
+      resetForm();
       fetchAll();
     } catch (err) {
       showError(err.message);
@@ -299,6 +445,26 @@ function DockManagement() {
 
   const btnStyle = { fontSize: '0.8rem', padding: '5px 10px' };
 
+  const renderShipmentPills = (truck) => {
+    const shipments = truck.shipments || [];
+    if (shipments.length === 0) return '-';
+    return (
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+        {shipments.map(s => (
+          <span key={s.id} style={{
+            display: 'inline-block', padding: '2px 6px', borderRadius: '999px',
+            fontSize: '0.72rem', fontWeight: 600,
+            backgroundColor: 'var(--accent-light, #e0e7ff)', color: 'var(--accent)',
+            border: '1px solid var(--accent)',
+            whiteSpace: 'nowrap',
+          }}>
+            {s.order_ref || s.id}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
   const metricsCards = [
     { label: 'Trucks Today', value: metrics.trucks_today, color: 'var(--info)', icon: '\u{1F69B}' },
     { label: 'Avg Wait', value: `${Math.round(metrics.avg_wait_minutes)}m`, color: 'var(--warning)', icon: '\u23F1\uFE0F' },
@@ -317,11 +483,6 @@ function DockManagement() {
     return new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const formatDateTime = (d) => {
-    if (!d) return '-';
-    return new Date(d).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  };
-
   const getWaitTime = (truck) => {
     if (!truck.check_in_time) return '-';
     const start = new Date(truck.check_in_time);
@@ -330,6 +491,73 @@ function DockManagement() {
     if (mins < 60) return `${mins}m`;
     return `${Math.floor(mins / 60)}h ${mins % 60}m`;
   };
+
+  const renderTruckFormFields = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      {[
+        { key: 'carrier', label: 'Carrier', placeholder: 'e.g. DSV, DHL' },
+        { key: 'driverName', label: 'Driver Name', placeholder: 'Full name' },
+        { key: 'driverPhone', label: 'Driver Phone', placeholder: '+27...' },
+        { key: 'vehicleReg', label: 'Vehicle Registration', placeholder: 'e.g. GP 123-456' },
+      ].map(field => (
+        <div key={field.key}>
+          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-700)', marginBottom: '4px' }}>{field.label}</label>
+          <input
+            type="text"
+            value={truckForm[field.key]}
+            onChange={e => setTruckForm({ ...truckForm, [field.key]: e.target.value })}
+            className="input"
+            style={{ width: '100%', boxSizing: 'border-box' }}
+            placeholder={field.placeholder}
+          />
+        </div>
+      ))}
+
+      <div>
+        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-700)', marginBottom: '4px' }}>Destination Warehouse *</label>
+        <select
+          value={truckForm.warehouse}
+          onChange={e => setTruckForm({ ...truckForm, warehouse: e.target.value })}
+          className="select"
+          style={{ width: '100%', boxSizing: 'border-box' }}
+        >
+          <option value="">Select warehouse...</option>
+          <option value="PRETORIA">PRETORIA</option>
+          <option value="KLAPMUTS">KLAPMUTS</option>
+          <option value="OFFSITE">OFFSITE</option>
+        </select>
+      </div>
+
+      <div>
+        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-700)', marginBottom: '4px' }}>Expected Arrival</label>
+        <input
+          type="datetime-local"
+          value={truckForm.expectedArrival}
+          onChange={e => setTruckForm({ ...truckForm, expectedArrival: e.target.value })}
+          className="input"
+          style={{ width: '100%', boxSizing: 'border-box' }}
+        />
+      </div>
+
+      {/* Shipment Picker */}
+      <ShipmentPicker
+        shipments={propShipments}
+        selectedIds={truckForm.shipmentIds}
+        onChange={ids => setTruckForm({ ...truckForm, shipmentIds: ids })}
+      />
+
+      <div>
+        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-700)', marginBottom: '4px' }}>Notes</label>
+        <textarea
+          value={truckForm.notes}
+          onChange={e => setTruckForm({ ...truckForm, notes: e.target.value })}
+          className="input"
+          style={{ width: '100%', minHeight: '50px', boxSizing: 'border-box', resize: 'vertical' }}
+          placeholder="Additional notes..."
+        />
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ padding: '2rem' }}>
@@ -405,7 +633,7 @@ function DockManagement() {
                     <th>Carrier</th>
                     <th>Driver</th>
                     <th>Vehicle</th>
-                    <th>Shipment</th>
+                    <th>Shipments</th>
                     <th>Warehouse</th>
                     <th>Dock</th>
                     <th>Status</th>
@@ -420,7 +648,7 @@ function DockManagement() {
                       <td>{truck.carrier || '-'}</td>
                       <td>{truck.driver_name || '-'}</td>
                       <td style={{ fontFamily: 'monospace' }}>{truck.vehicle_reg || '-'}</td>
-                      <td>{truck.order_ref || '-'}</td>
+                      <td>{renderShipmentPills(truck)}</td>
                       <td style={{ fontSize: '0.8rem', fontWeight: 600 }}>{truck.warehouse || '-'}</td>
                       <td>{truck.dock_number || '-'}</td>
                       <td>
@@ -484,7 +712,9 @@ function DockManagement() {
                   }}>
                     <div style={{ fontWeight: 600, color: 'var(--text-900)' }}>{occupyingTruck.carrier || 'Unknown carrier'}</div>
                     <div style={{ color: 'var(--text-500)' }}>{occupyingTruck.vehicle_reg || ''} {occupyingTruck.driver_name ? `- ${occupyingTruck.driver_name}` : ''}</div>
-                    {occupyingTruck.order_ref && <div style={{ color: 'var(--text-500)', marginTop: '2px' }}>Shipment: {occupyingTruck.order_ref}</div>}
+                    {occupyingTruck.shipments && occupyingTruck.shipments.length > 0 && (
+                      <div style={{ marginTop: '4px' }}>{renderShipmentPills(occupyingTruck)}</div>
+                    )}
                     <div style={{ marginTop: '0.5rem' }}>
                       <button className="btn btn-primary" style={{ fontSize: '0.75rem', padding: '4px 8px' }} onClick={() => handleCompleteTruck(occupyingTruck.id)}>
                         Complete Unloading
@@ -567,65 +797,7 @@ function DockManagement() {
             maxHeight: '80vh', overflow: 'auto', border: '1px solid var(--border)'
           }}>
             <h3 style={{ margin: '0 0 1rem', color: 'var(--text-900)' }}>Schedule Truck Arrival</h3>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {[
-                { key: 'carrier', label: 'Carrier', placeholder: 'e.g. DSV, DHL' },
-                { key: 'driverName', label: 'Driver Name', placeholder: 'Full name' },
-                { key: 'driverPhone', label: 'Driver Phone', placeholder: '+27...' },
-                { key: 'vehicleReg', label: 'Vehicle Registration', placeholder: 'e.g. GP 123-456' },
-              ].map(field => (
-                <div key={field.key}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-700)', marginBottom: '4px' }}>{field.label}</label>
-                  <input
-                    type="text"
-                    value={truckForm[field.key]}
-                    onChange={e => setTruckForm({ ...truckForm, [field.key]: e.target.value })}
-                    className="input"
-                    style={{ width: '100%', boxSizing: 'border-box' }}
-                    placeholder={field.placeholder}
-                  />
-                </div>
-              ))}
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-700)', marginBottom: '4px' }}>Destination Warehouse *</label>
-                <select
-                  value={truckForm.warehouse}
-                  onChange={e => setTruckForm({ ...truckForm, warehouse: e.target.value })}
-                  className="select"
-                  style={{ width: '100%', boxSizing: 'border-box' }}
-                >
-                  <option value="">Select warehouse...</option>
-                  <option value="PRETORIA">PRETORIA</option>
-                  <option value="KLAPMUTS">KLAPMUTS</option>
-                  <option value="OFFSITE">OFFSITE</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-700)', marginBottom: '4px' }}>Expected Arrival</label>
-                <input
-                  type="datetime-local"
-                  value={truckForm.expectedArrival}
-                  onChange={e => setTruckForm({ ...truckForm, expectedArrival: e.target.value })}
-                  className="input"
-                  style={{ width: '100%', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-700)', marginBottom: '4px' }}>Notes</label>
-                <textarea
-                  value={truckForm.notes}
-                  onChange={e => setTruckForm({ ...truckForm, notes: e.target.value })}
-                  className="input"
-                  style={{ width: '100%', minHeight: '50px', boxSizing: 'border-box', resize: 'vertical' }}
-                  placeholder="Additional notes..."
-                />
-              </div>
-            </div>
-
+            {renderTruckFormFields()}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
               <button className="btn btn-ghost" onClick={() => setShowAddTruckModal(false)} disabled={actionLoading}>Cancel</button>
               <button className="btn btn-primary" onClick={handleCreateTruck} disabled={actionLoading}>
@@ -649,65 +821,7 @@ function DockManagement() {
             maxHeight: '80vh', overflow: 'auto', border: '1px solid var(--border)'
           }}>
             <h3 style={{ margin: '0 0 1rem', color: 'var(--text-900)' }}>Amend Truck Arrival</h3>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {[
-                { key: 'carrier', label: 'Carrier', placeholder: 'e.g. DSV, DHL' },
-                { key: 'driverName', label: 'Driver Name', placeholder: 'Full name' },
-                { key: 'driverPhone', label: 'Driver Phone', placeholder: '+27...' },
-                { key: 'vehicleReg', label: 'Vehicle Registration', placeholder: 'e.g. GP 123-456' },
-              ].map(field => (
-                <div key={field.key}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-700)', marginBottom: '4px' }}>{field.label}</label>
-                  <input
-                    type="text"
-                    value={truckForm[field.key]}
-                    onChange={e => setTruckForm({ ...truckForm, [field.key]: e.target.value })}
-                    className="input"
-                    style={{ width: '100%', boxSizing: 'border-box' }}
-                    placeholder={field.placeholder}
-                  />
-                </div>
-              ))}
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-700)', marginBottom: '4px' }}>Destination Warehouse</label>
-                <select
-                  value={truckForm.warehouse}
-                  onChange={e => setTruckForm({ ...truckForm, warehouse: e.target.value })}
-                  className="select"
-                  style={{ width: '100%', boxSizing: 'border-box' }}
-                >
-                  <option value="">Select warehouse...</option>
-                  <option value="PRETORIA">PRETORIA</option>
-                  <option value="KLAPMUTS">KLAPMUTS</option>
-                  <option value="OFFSITE">OFFSITE</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-700)', marginBottom: '4px' }}>Expected Arrival</label>
-                <input
-                  type="datetime-local"
-                  value={truckForm.expectedArrival}
-                  onChange={e => setTruckForm({ ...truckForm, expectedArrival: e.target.value })}
-                  className="input"
-                  style={{ width: '100%', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-700)', marginBottom: '4px' }}>Notes</label>
-                <textarea
-                  value={truckForm.notes}
-                  onChange={e => setTruckForm({ ...truckForm, notes: e.target.value })}
-                  className="input"
-                  style={{ width: '100%', minHeight: '50px', boxSizing: 'border-box', resize: 'vertical' }}
-                  placeholder="Additional notes..."
-                />
-              </div>
-            </div>
-
+            {renderTruckFormFields()}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
               <button className="btn btn-ghost" onClick={() => { setShowEditTruckModal(false); setSelectedTruck(null); }} disabled={actionLoading}>Cancel</button>
               <button className="btn btn-primary" onClick={handleUpdateTruck} disabled={actionLoading}>
