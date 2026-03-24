@@ -26,6 +26,7 @@ export interface TruckArrival {
   expected_arrival: Date | null;
   actual_arrival: Date | null;
   dock_id: number | null;
+  warehouse: string | null;
   status: 'scheduled' | 'checked_in' | 'unloading' | 'completed' | 'departed';
   queue_position: number | null;
   check_in_time: Date | null;
@@ -36,7 +37,6 @@ export interface TruckArrival {
   updated_at: Date;
   // Joined fields
   dock_number?: string;
-  warehouse?: string;
   order_ref?: string;
   supplier?: string;
   product_name?: string;
@@ -54,9 +54,9 @@ const DOCK_COLUMNS = 'id, dock_number, warehouse, status, current_truck_id, note
 
 const TRUCK_COLUMNS = `
   t.id, t.shipment_id, t.carrier, t.driver_name, t.driver_phone, t.vehicle_reg,
-  t.expected_arrival, t.actual_arrival, t.dock_id, t.status, t.queue_position,
+  t.expected_arrival, t.actual_arrival, t.dock_id, t.warehouse, t.status, t.queue_position,
   t.check_in_time, t.check_out_time, t.notes, t.created_by, t.created_at, t.updated_at,
-  d.dock_number, d.warehouse,
+  d.dock_number,
   s.order_ref, s.supplier, s.product_name
 `;
 
@@ -110,7 +110,7 @@ class DockRepository {
       params.push(filters.status);
     }
     if (filters.warehouse) {
-      sql += ` AND d.warehouse = $${idx++}`;
+      sql += ` AND t.warehouse = $${idx++}`;
       params.push(filters.warehouse);
     }
     if (filters.date) {
@@ -137,7 +137,7 @@ class DockRepository {
         OR (t.status NOT IN ('completed', 'departed') AND t.created_at::date = CURRENT_DATE))`;
     const params: any[] = [];
     if (warehouse) {
-      sql += ' AND d.warehouse = $1';
+      sql += ' AND t.warehouse = $1';
       params.push(warehouse);
     }
     sql += ' ORDER BY t.expected_arrival ASC NULLS LAST';
@@ -146,8 +146,8 @@ class DockRepository {
 
   async createTruckArrival(data: Partial<TruckArrival>): Promise<TruckArrival> {
     const result = await queryOne<TruckArrival>(
-      `INSERT INTO truck_arrivals (shipment_id, carrier, driver_name, driver_phone, vehicle_reg, expected_arrival, notes, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO truck_arrivals (shipment_id, carrier, driver_name, driver_phone, vehicle_reg, expected_arrival, warehouse, notes, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [
         data.shipment_id || null,
@@ -156,6 +156,7 @@ class DockRepository {
         data.driver_phone || null,
         data.vehicle_reg || null,
         data.expected_arrival || null,
+        data.warehouse || null,
         data.notes || null,
         data.created_by || null,
       ]

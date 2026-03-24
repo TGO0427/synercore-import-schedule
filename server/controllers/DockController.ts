@@ -67,9 +67,12 @@ export default class DockController {
 
     const now = new Date();
 
+    // Use truck's own warehouse if not explicitly provided
+    const targetWarehouse = warehouse || truck.warehouse;
+
     // Try to find an available dock
-    if (warehouse) {
-      const availableDock = await dockRepository.getAvailableDock(warehouse);
+    if (targetWarehouse) {
+      const availableDock = await dockRepository.getAvailableDock(targetWarehouse);
       if (availableDock) {
         // Direct assignment
         await dockRepository.updateTruckArrival(truckId, {

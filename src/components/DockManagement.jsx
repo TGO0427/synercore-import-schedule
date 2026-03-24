@@ -48,6 +48,7 @@ function DockManagement() {
     driverName: '',
     driverPhone: '',
     vehicleReg: '',
+    warehouse: '',
     expectedArrival: '',
     shipmentId: '',
     notes: '',
@@ -96,7 +97,7 @@ function DockManagement() {
       if (!res.ok) throw new Error('Failed to create truck arrival');
       showSuccess('Truck arrival scheduled');
       setShowAddTruckModal(false);
-      setTruckForm({ carrier: '', driverName: '', driverPhone: '', vehicleReg: '', expectedArrival: '', shipmentId: '', notes: '' });
+      setTruckForm({ carrier: '', driverName: '', driverPhone: '', vehicleReg: '', warehouse: '', expectedArrival: '', shipmentId: '', notes: '' });
       fetchAll();
     } catch (err) {
       showError(err.message);
@@ -105,13 +106,13 @@ function DockManagement() {
     }
   };
 
-  const handleCheckIn = async (truckId) => {
+  const handleCheckIn = async (truckId, truckWarehouse) => {
     setActionLoading(true);
     try {
       const res = await authFetch(getApiUrl(`/api/docks/trucks/${truckId}/check-in`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ warehouse: warehouseParam || 'PRETORIA' }),
+        body: JSON.stringify({ warehouse: truckWarehouse || warehouseParam || undefined }),
       });
       if (!res.ok) throw new Error('Failed to check in truck');
       const data = await res.json();
@@ -176,7 +177,7 @@ function DockManagement() {
   const getActionButton = (truck) => {
     switch (truck.status) {
       case 'scheduled':
-        return <button className="btn btn-primary" style={btnStyle} onClick={() => handleCheckIn(truck.id)}>Check In</button>;
+        return <button className="btn btn-primary" style={btnStyle} onClick={() => handleCheckIn(truck.id, truck.warehouse)}>Check In</button>;
       case 'checked_in':
         return (
           <button className="btn btn-primary" style={btnStyle} onClick={() => {
@@ -302,6 +303,7 @@ function DockManagement() {
                     <th>Driver</th>
                     <th>Vehicle</th>
                     <th>Shipment</th>
+                    <th>Warehouse</th>
                     <th>Dock</th>
                     <th>Status</th>
                     <th>Wait</th>
@@ -316,6 +318,7 @@ function DockManagement() {
                       <td>{truck.driver_name || '-'}</td>
                       <td style={{ fontFamily: 'monospace' }}>{truck.vehicle_reg || '-'}</td>
                       <td>{truck.order_ref || '-'}</td>
+                      <td style={{ fontSize: '0.8rem', fontWeight: 600 }}>{truck.warehouse || '-'}</td>
                       <td>{truck.dock_number || '-'}</td>
                       <td>
                         <span style={{
@@ -483,6 +486,21 @@ function DockManagement() {
               ))}
 
               <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-700)', marginBottom: '4px' }}>Destination Warehouse *</label>
+                <select
+                  value={truckForm.warehouse}
+                  onChange={e => setTruckForm({ ...truckForm, warehouse: e.target.value })}
+                  className="select"
+                  style={{ width: '100%', boxSizing: 'border-box' }}
+                >
+                  <option value="">Select warehouse...</option>
+                  <option value="PRETORIA">PRETORIA</option>
+                  <option value="KLAPMUTS">KLAPMUTS</option>
+                  <option value="OFFSITE">OFFSITE</option>
+                </select>
+              </div>
+
+              <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-700)', marginBottom: '4px' }}>Expected Arrival</label>
                 <input
                   type="datetime-local"
@@ -534,7 +552,7 @@ function DockManagement() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {docks
-                .filter(d => d.status === 'available')
+                .filter(d => d.status === 'available' && (!selectedTruck.warehouse || d.warehouse === selectedTruck.warehouse))
                 .map(dock => (
                   <button
                     key={dock.id}
@@ -552,7 +570,7 @@ function DockManagement() {
                   </button>
                 ))
               }
-              {docks.filter(d => d.status === 'available').length === 0 && (
+              {docks.filter(d => d.status === 'available' && (!selectedTruck.warehouse || d.warehouse === selectedTruck.warehouse)).length === 0 && (
                 <p style={{ textAlign: 'center', color: 'var(--text-500)', fontSize: '0.85rem', padding: '1rem' }}>
                   No docks available. Truck will remain in queue.
                 </p>

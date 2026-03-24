@@ -681,6 +681,11 @@ async function start() {
         CREATE INDEX IF NOT EXISTS idx_truck_arrivals_expected ON truck_arrivals(expected_arrival);
       `);
 
+      // Add warehouse column to truck_arrivals
+      await getPool().query(`
+        ALTER TABLE truck_arrivals ADD COLUMN IF NOT EXISTS warehouse VARCHAR(50);
+      `);
+
       // Add bin_location and grn_number columns to shipments
       await getPool().query(`
         ALTER TABLE shipments ADD COLUMN IF NOT EXISTS bin_location VARCHAR(50);

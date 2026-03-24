@@ -105,10 +105,11 @@ router.post(
   body('driverPhone').optional().trim(),
   body('vehicleReg').optional().trim(),
   body('expectedArrival').optional(),
+  body('warehouse').optional().trim(),
   body('shipmentId').optional().trim(),
   body('notes').optional().trim(),
   asyncHandler(async (req: BodyRequest, res: Response) => {
-    const { carrier, driverName, driverPhone, vehicleReg, expectedArrival, shipmentId, notes } = req.body;
+    const { carrier, driverName, driverPhone, vehicleReg, expectedArrival, warehouse, shipmentId, notes } = req.body;
     const currentUser = (req as any).user;
     const truck = await DockController.createTruckArrival({
       carrier,
@@ -116,6 +117,7 @@ router.post(
       driver_phone: driverPhone,
       vehicle_reg: vehicleReg,
       expected_arrival: expectedArrival ? new Date(expectedArrival) : undefined,
+      warehouse: warehouse || null,
       shipment_id: shipmentId || null,
       notes,
       created_by: currentUser?.username || currentUser?.id || null,
