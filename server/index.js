@@ -621,6 +621,77 @@ async function start() {
       logWarn('Clearing/invoice tables warning', { error: error.message });
     }
 
+    // Create docks and truck_arrivals tables for dock management
+    try {
+      await getPool().query(`
+        CREATE TABLE IF NOT EXISTS docks (
+          id SERIAL PRIMARY KEY,
+          dock_number VARCHAR(20) NOT NULL,
+          warehouse VARCHAR(50) NOT NULL,
+          status VARCHAR(30) DEFAULT 'available',
+          current_truck_id INTEGER,
+          notes TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(dock_number, warehouse)
+        );
+        CREATE INDEX IF NOT EXISTS idx_docks_warehouse ON docks(warehouse);
+        CREATE INDEX IF NOT EXISTS idx_docks_status ON docks(status);
+      `);
+
+      // Seed default docks if empty
+      const dockCount = await getPool().query('SELECT COUNT(*)::int as count FROM docks');
+      if (parseInt(dockCount.rows[0].count, 10) === 0) {
+        const dockSeeds = [
+          ['Dock 1', 'PRETORIA'], ['Dock 2', 'PRETORIA'], ['Dock 3', 'PRETORIA'], ['Dock 4', 'PRETORIA'],
+          ['Dock 1', 'KLAPMUTS'], ['Dock 2', 'KLAPMUTS'],
+          ['Dock 1', 'OFFSITE'],
+        ];
+        for (const [dockNumber, warehouse] of dockSeeds) {
+          await getPool().query(
+            'INSERT INTO docks (dock_number, warehouse) VALUES ($1, $2) ON CONFLICT (dock_number, warehouse) DO NOTHING',
+            [dockNumber, warehouse]
+          );
+        }
+      }
+
+      await getPool().query(`
+        CREATE TABLE IF NOT EXISTS truck_arrivals (
+          id SERIAL PRIMARY KEY,
+          shipment_id VARCHAR(255) REFERENCES shipments(id) ON DELETE SET NULL,
+          carrier VARCHAR(255),
+          driver_name VARCHAR(255),
+          driver_phone VARCHAR(50),
+          vehicle_reg VARCHAR(50),
+          expected_arrival TIMESTAMP WITH TIME ZONE,
+          actual_arrival TIMESTAMP WITH TIME ZONE,
+          dock_id INTEGER REFERENCES docks(id) ON DELETE SET NULL,
+          status VARCHAR(30) DEFAULT 'scheduled',
+          queue_position INTEGER,
+          check_in_time TIMESTAMP WITH TIME ZONE,
+          check_out_time TIMESTAMP WITH TIME ZONE,
+          notes TEXT,
+          created_by VARCHAR(255),
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_truck_arrivals_shipment ON truck_arrivals(shipment_id);
+        CREATE INDEX IF NOT EXISTS idx_truck_arrivals_dock ON truck_arrivals(dock_id);
+        CREATE INDEX IF NOT EXISTS idx_truck_arrivals_status ON truck_arrivals(status);
+        CREATE INDEX IF NOT EXISTS idx_truck_arrivals_expected ON truck_arrivals(expected_arrival);
+      `);
+
+      // Add bin_location and grn_number columns to shipments
+      await getPool().query(`
+        ALTER TABLE shipments ADD COLUMN IF NOT EXISTS bin_location VARCHAR(50);
+        ALTER TABLE shipments ADD COLUMN IF NOT EXISTS grn_number VARCHAR(50);
+      `);
+
+      logger.info('Docks and truck_arrivals tables ready');
+    } catch (error) {
+      logWarn('Docks/truck_arrivals migration warning', { error: error.message });
+    }
+
     // Initialize notification scheduler
     try {
       const { default: NotificationScheduler } = await import('./jobs/notificationScheduler.js');
