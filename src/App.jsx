@@ -502,7 +502,7 @@ function App() {
             <nav className="sidebar-nav">
               {match('Dashboard') && renderItem('dashboard')}
               {renderSection('Master Data', 'masterData', ['suppliers'])}
-              {renderSection('Operations', 'operations', ['shipping', 'localReceiving', 'workflow', 'archives', 'bolAudit'])}
+              {renderSection('Operations', 'operations', ['shipping', 'localReceiving', 'workflow', 'bolAudit'])}
               {renderSection('Warehouse', 'warehouse', ['receiving', 'dockManagement', 'capacity', 'stored'])}
               {renderSection('Finance', 'finance', ['rates', 'costing', 'costingRequests'])}
               {renderSection('Reports', 'reports', ['reports', 'advancedReports', 'supplierPerformance', 'audit'])}
