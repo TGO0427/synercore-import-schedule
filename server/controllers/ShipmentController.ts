@@ -561,9 +561,9 @@ export class ShipmentController {
       throw AppError.conflict('Shipment must be in receiving state to complete receiving');
     }
 
-    // Update status to received
+    // Update status to stored (auto-advance past received)
     const updateData: Record<string, any> = {
-      latest_status: 'received' as ShipmentStatus,
+      latest_status: 'stored' as ShipmentStatus,
       receiving_status: 'completed',
       received_quantity: receivedQuantity,
       received_by: receivedBy || shipment.received_by || '',
