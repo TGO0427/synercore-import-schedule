@@ -205,8 +205,25 @@ export function useShipments() {
     try {
       startLoading();
 
-      const processedShipments = await ExcelProcessor.parseExcelFile(file);
+      // International suppliers to exclude from local imports
+      const EXCLUDED_SUPPLIERS = [
+        'SACCO S.R.L', 'QIDA CHEMICAL CO. LTD', 'SHAKTI CHEMICALS',
+        'AROMSA BESIN AROMA VE KATKI MADDELERI SAN. VE TIC. A.S.',
+        'AROMSA BESIN AROMA VE KATKI MADDELERI SAN. VE TIC. A.Ş.',
+        'AB MAURI', 'ECOLEX SDN. BHD', 'MARCEL CARRAGEENAN', 'TRISTAR GLOBAL SDN. BHD',
+      ];
+
+      let processedShipments = await ExcelProcessor.parseExcelFile(file);
       if (processedShipments.length === 0) throw new Error('No data found in Excel file');
+
+      // Filter out international suppliers for local imports
+      if (shipmentType === 'local') {
+        processedShipments = processedShipments.filter(s => {
+          const sup = (s.supplier || '').trim().toUpperCase();
+          return !EXCLUDED_SUPPLIERS.some(exc => sup.includes(exc) || exc.includes(sup));
+        });
+        if (processedShipments.length === 0) throw new Error('No local suppliers found after filtering international suppliers');
+      }
 
       const toPlain = (s) => ({
         id: s.id,
