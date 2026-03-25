@@ -19,10 +19,11 @@ function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplica
         // Filter by transport mode
         if (transportModeFilter !== 'all' && (est.transport_mode || 'sea') !== transportModeFilter) return false;
         if (!searchTerm) return true;
+        const search = searchTerm.toLowerCase();
         const ref = (est.reference_number || '').toLowerCase();
         const supplier = (est.supplier_name || '').toLowerCase();
-        const search = searchTerm.toLowerCase();
-        return ref.includes(search) || supplier.includes(search);
+        const products = (est.products || []).map(p => (p.name || '').toLowerCase()).join(' ');
+        return ref.includes(search) || supplier.includes(search) || products.includes(search);
       })
       .sort((a, b) => {
         const refA = (a.reference_number || '').toLowerCase();
@@ -68,7 +69,7 @@ function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplica
         <div style={{ flex: '1', minWidth: '200px', maxWidth: '300px' }}>
           <input
             type="text"
-            placeholder="Search by reference or supplier..."
+            placeholder="Search by reference, supplier, or product..."
             aria-label="Search import costings"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -106,6 +107,7 @@ function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplica
           <thead>
             <tr style={{ backgroundColor: '#f8fafc' }}>
               <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Reference</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Date</th>
               <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Supplier</th>
               <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Port</th>
               <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Container</th>
@@ -119,7 +121,7 @@ function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplica
           <tbody>
             {filteredEstimates.length === 0 ? (
               <tr>
-                <td colSpan={9} style={{ padding: '48px', textAlign: 'center', color: '#9ca3af' }}>
+                <td colSpan={10} style={{ padding: '48px', textAlign: 'center', color: '#9ca3af' }}>
                   {searchTerm ? 'No estimates match your search.' : 'No cost estimates yet. Create your first estimate to get started.'}
                 </td>
               </tr>
@@ -136,6 +138,13 @@ function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplica
                           <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '600', backgroundColor: '#ede9fe', color: '#7c3aed' }}>AIR</span>
                         )}
                       </div>
+                    </td>
+                    <td style={{ padding: '12px 16px', color: '#6b7280', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                      {est.costing_date
+                        ? new Date(est.costing_date).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })
+                        : est.created_at
+                          ? new Date(est.created_at).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })
+                          : '-'}
                     </td>
                     <td style={{ padding: '12px 16px', color: '#374151' }}>{est.supplier_name || '-'}</td>
                     <td style={{ padding: '12px 16px', color: '#374151' }}>
