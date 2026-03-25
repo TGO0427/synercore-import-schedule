@@ -60,7 +60,8 @@ export class ShipmentRepository extends BaseRepository<Shipment> {
     'reminder_date',
     'reminder_note',
     'bin_location',
-    'grn_number'
+    'grn_number',
+    'shipment_type'
   ];
 
   /**
