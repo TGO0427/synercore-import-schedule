@@ -722,11 +722,12 @@ async function start() {
       }
 
       // Fix local shipments where delivery date is in notes instead of vessel_name
+      // For local shipments, notes contains the expected delivery date from the Excel import
       const fixedDates = await getPool().query(
-        `UPDATE shipments SET vessel_name = notes, notes = NULL, updated_at = NOW()
+        `UPDATE shipments SET vessel_name = TRIM(notes), notes = NULL, updated_at = NOW()
          WHERE shipment_type = 'local'
-           AND (vessel_name IS NULL OR vessel_name = '')
-           AND notes ~ '^\\d{4}[/-]\\d{2}[/-]\\d{2}$'`
+           AND (vessel_name IS NULL OR TRIM(vessel_name) = '')
+           AND notes IS NOT NULL AND TRIM(notes) != ''`
       );
       if (fixedDates.rowCount > 0) {
         logger.info(`Fixed ${fixedDates.rowCount} local shipments: moved delivery date from notes to vessel_name`);
