@@ -708,6 +708,19 @@ async function start() {
         logger.info(`Migrated ${migratedArchived.rowCount} shipments from archived → stored`);
       }
 
+      // Cleanup: remove international suppliers mistakenly imported as local
+      const cleanedUp = await getPool().query(
+        `DELETE FROM shipments WHERE shipment_type = 'local' AND UPPER(TRIM(supplier)) IN (
+          'SACCO S.R.L', 'QIDA CHEMICAL CO. LTD', 'SHAKTI CHEMICALS',
+          'AROMSA BESIN AROMA VE KATKI MADDELERI SAN. VE TIC. A.S.',
+          'AROMSA BESİN AROMA VE KATKI MADDELERİ SAN. VE TİC. A.Ş.',
+          'AB MAURI', 'ECOLEX SDN. BHD', 'MARCEL CARRAGEENAN', 'TRISTAR GLOBAL SDN. BHD'
+        )`
+      );
+      if (cleanedUp.rowCount > 0) {
+        logger.info(`Cleaned up ${cleanedUp.rowCount} international suppliers from local shipments`);
+      }
+
       // Create truck_shipments junction table (many-to-many: one truck can carry multiple shipments)
       await getPool().query(`
         CREATE TABLE IF NOT EXISTS truck_shipments (
