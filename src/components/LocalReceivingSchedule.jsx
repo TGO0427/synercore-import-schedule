@@ -28,6 +28,8 @@ const LOCAL_STATUSES = [
 
 const STAT_CARDS = [
   { key: 'total', status: null, label: 'Total Local', icon: '\u{1F69B}', ring: 'ring-accent', tint: 'rgba(5,150,105,0.1)' },
+  { key: 'overdue', status: 'overdue', label: 'Overdue', icon: '\u{1F6A8}', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
+  { key: 'due_this_week', status: 'due_this_week', label: 'Due This Week', icon: '\u{1F4C5}', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
   { key: 'in_transit_roadway', status: 'in_transit_roadway', label: 'In Transit', icon: '\u{1F69B}', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
   { key: 'arrived', status: 'arrived', label: 'Arrived', icon: '\u{1F4E6}', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
   { key: 'post_arrival', status: 'post_arrival', label: 'Post-Arrival', icon: '\u{1F50D}', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
@@ -88,6 +90,43 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
     fetchTruckInfo();
   }, [localShipments]);
 
+  // Date helpers (used by stats, sorting, and overdue detection)
+  const parseExpectedDate = (d) => {
+    if (!d) return null;
+    try {
+      const num = Number(d);
+      if (!isNaN(num) && num > 30000 && num < 60000) {
+        const excelEpoch = new Date(1899, 11, 30);
+        return new Date(excelEpoch.getTime() + num * 86400000);
+      }
+      const parsed = new Date(d);
+      if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 2000) return parsed;
+      return null;
+    } catch { return null; }
+  };
+
+  const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
+  const endOfWeek = useMemo(() => {
+    const d = new Date(today);
+    d.setDate(d.getDate() + (7 - d.getDay()));
+    return d;
+  }, [today]);
+
+  const isOverdue = (s) => {
+    if (['arrived_pta', 'arrived_klm', 'arrived_offsite', 'unloading', 'inspection_pending',
+         'inspecting', 'inspection_passed', 'receiving', 'stored'].includes(s.latestStatus)) return false;
+    const expected = parseExpectedDate(s.vesselName);
+    if (!expected) return false;
+    return expected < today;
+  };
+
+  const isDueThisWeek = (s) => {
+    if (!['in_transit_roadway'].includes(s.latestStatus)) return false;
+    const expected = parseExpectedDate(s.vesselName);
+    if (!expected) return false;
+    return expected >= today && expected <= endOfWeek;
+  };
+
   // Stats
   const stats = useMemo(() => {
     const arrivedStatuses = ['arrived_pta', 'arrived_klm', 'arrived_offsite'];
@@ -95,13 +134,15 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
     const delayedStatuses = ['delayed_supplier', 'delayed_documents', 'delayed_port', 'delayed_customs'];
     return {
       total: localShipments.length,
+      overdue: localShipments.filter(s => isOverdue(s)).length,
+      due_this_week: localShipments.filter(s => isDueThisWeek(s)).length,
       in_transit_roadway: localShipments.filter(s => s.latestStatus === 'in_transit_roadway').length,
       arrived: localShipments.filter(s => arrivedStatuses.includes(s.latestStatus)).length,
       post_arrival: localShipments.filter(s => postArrivalStatuses.includes(s.latestStatus)).length,
       stored: localShipments.filter(s => s.latestStatus === 'stored').length,
       delayed: localShipments.filter(s => delayedStatuses.includes(s.latestStatus)).length,
     };
-  }, [localShipments]);
+  }, [localShipments, today, endOfWeek]);
 
   // Filter
   const filtered = useMemo(() => {
@@ -111,7 +152,11 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
       const arrivedStatuses = ['arrived_pta', 'arrived_klm', 'arrived_offsite'];
       const postArrivalStatuses = ['unloading', 'inspection_pending', 'inspecting', 'inspection_passed', 'inspection_failed', 'receiving'];
       const delayedStatuses = ['delayed_supplier', 'delayed_documents', 'delayed_port', 'delayed_customs'];
-      if (statusFilter === 'arrived') {
+      if (statusFilter === 'overdue') {
+        list = list.filter(s => isOverdue(s));
+      } else if (statusFilter === 'due_this_week') {
+        list = list.filter(s => isDueThisWeek(s));
+      } else if (statusFilter === 'arrived') {
         list = list.filter(s => arrivedStatuses.includes(s.latestStatus));
       } else if (statusFilter === 'post_arrival') {
         list = list.filter(s => postArrivalStatuses.includes(s.latestStatus));
@@ -131,8 +176,18 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
       );
     }
 
+    // Sort by earliest expected date first, no-date at bottom
+    list.sort((a, b) => {
+      const dateA = parseExpectedDate(a.vesselName);
+      const dateB = parseExpectedDate(b.vesselName);
+      if (!dateA && !dateB) return 0;
+      if (!dateA) return 1;
+      if (!dateB) return -1;
+      return dateA - dateB;
+    });
+
     return list;
-  }, [localShipments, statusFilter, searchTerm]);
+  }, [localShipments, statusFilter, searchTerm, today, endOfWeek]);
 
   const handleStatusCardClick = (status) => {
     const params = new URLSearchParams(searchParams);
@@ -256,22 +311,9 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
 
   const formatDate = (d) => {
     if (!d) return '-';
-    try {
-      // Detect Excel serial date numbers (typically 40000-50000 range for 2009-2036)
-      const num = Number(d);
-      if (!isNaN(num) && num > 30000 && num < 60000) {
-        // Excel serial date: days since 1899-12-30
-        const excelEpoch = new Date(1899, 11, 30);
-        const date = new Date(excelEpoch.getTime() + num * 86400000);
-        return date.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
-      }
-      // Try YYYY/MM/DD or YYYY-MM-DD
-      const parsed = new Date(d);
-      if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 2000) {
-        return parsed.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
-      }
-      return d;
-    } catch { return String(d); }
+    const parsed = parseExpectedDate(d);
+    if (parsed) return parsed.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
+    return String(d);
   };
 
   const btnStyle = { fontSize: '0.8rem', padding: '5px 10px' };
@@ -454,15 +496,22 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(s => (
-                  <tr key={s.id}>
+                {filtered.map(s => {
+                  const overdue = isOverdue(s);
+                  const dueThisWeek = !overdue && isDueThisWeek(s);
+                  return (
+                  <tr key={s.id} style={overdue ? { backgroundColor: 'rgba(239,68,68,0.08)' } : dueThisWeek ? { backgroundColor: 'rgba(245,158,11,0.06)' } : {}}>
                     <td style={{ fontWeight: 600 }}>{s.orderRef || '-'}</td>
                     <td>{s.supplier || '-'}</td>
                     <td>{s.productName || '-'}</td>
                     <td>{s.quantity || '-'}</td>
                     <td>{s.palletQty ? (Math.round(s.palletQty) || 1) : '-'}</td>
                     <td>{s.forwardingAgent || '-'}</td>
-                    <td>{formatDate(s.vesselName)}</td>
+                    <td style={overdue ? { color: 'var(--danger)', fontWeight: 600 } : dueThisWeek ? { color: '#d97706', fontWeight: 600 } : {}}>
+                      {formatDate(s.vesselName)}
+                      {overdue && <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--danger)' }}>OVERDUE</span>}
+                      {dueThisWeek && <span style={{ display: 'block', fontSize: '0.65rem', color: '#d97706' }}>THIS WEEK</span>}
+                    </td>
                     <td style={{ fontWeight: 600, fontSize: '0.8rem' }}>{s.receivingWarehouse || '-'}</td>
                     <td style={{ fontSize: '0.78rem', color: 'var(--text-500)' }}>
                       {truckInfoMap[s.id] ? (
@@ -503,7 +552,8 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
