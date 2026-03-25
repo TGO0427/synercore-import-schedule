@@ -3,26 +3,35 @@ import { useSearchParams } from 'react-router-dom';
 import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
 import { useNotification } from '../contexts/NotificationContext';
-import { STATUS_COLORS, SHIPPING_EXCLUDED_STATUSES } from '../types/shipment';
+import { STATUS_COLORS } from '../types/shipment';
 
 const LocalFileUpload = lazy(() => import('./LocalFileUpload'));
 
 const WAREHOUSES = ['PRETORIA', 'KLAPMUTS', 'OFFSITE'];
 
 const LOCAL_STATUSES = [
-  { value: 'in_transit_roadway', label: 'In Transit Road' },
-  { value: 'arrived_pta', label: 'Arrived PTA' },
-  { value: 'arrived_klm', label: 'Arrived KLM' },
-  { value: 'arrived_offsite', label: 'Arrived Offsite' },
-  { value: 'delayed_supplier', label: 'Delayed - Supplier' },
-  { value: 'delayed_documents', label: 'Delayed - Documents' },
-  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'in_transit_roadway', label: 'In Transit Road', group: 'Transit' },
+  { value: 'arrived_pta', label: 'Arrived PTA', group: 'Arrived' },
+  { value: 'arrived_klm', label: 'Arrived KLM', group: 'Arrived' },
+  { value: 'arrived_offsite', label: 'Arrived Offsite', group: 'Arrived' },
+  { value: 'unloading', label: 'Unloading', group: 'Post-Arrival' },
+  { value: 'inspection_pending', label: 'Inspection Pending', group: 'Post-Arrival' },
+  { value: 'inspecting', label: 'Inspecting', group: 'Post-Arrival' },
+  { value: 'inspection_passed', label: 'Inspection Passed', group: 'Post-Arrival' },
+  { value: 'inspection_failed', label: 'Inspection Failed', group: 'Post-Arrival' },
+  { value: 'receiving', label: 'Receiving', group: 'Warehouse' },
+  { value: 'stored', label: 'Stored', group: 'Warehouse' },
+  { value: 'delayed_supplier', label: 'Delayed - Supplier', group: 'Delayed' },
+  { value: 'delayed_documents', label: 'Delayed - Documents', group: 'Delayed' },
+  { value: 'cancelled', label: 'Cancelled', group: 'Other' },
 ];
 
 const STAT_CARDS = [
   { key: 'total', status: null, label: 'Total Local', icon: '\u{1F69B}', ring: 'ring-accent', tint: 'rgba(5,150,105,0.1)' },
   { key: 'in_transit_roadway', status: 'in_transit_roadway', label: 'In Transit', icon: '\u{1F69B}', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
   { key: 'arrived', status: 'arrived', label: 'Arrived', icon: '\u{1F4E6}', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
+  { key: 'post_arrival', status: 'post_arrival', label: 'Post-Arrival', icon: '\u{1F50D}', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
+  { key: 'stored', status: 'stored', label: 'Stored', icon: '\u{1F3EA}', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
   { key: 'delayed', status: 'delayed', label: 'Delayed', icon: '\u26A0\uFE0F', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
 ];
 
@@ -50,12 +59,9 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
     notes: '',
   });
 
-  // Filter to local shipments only
+  // Filter to local shipments only (show all statuses including post-arrival)
   const localShipments = useMemo(() =>
-    shipments.filter(s =>
-      s.shipmentType === 'local' &&
-      !SHIPPING_EXCLUDED_STATUSES.includes(s.latestStatus)
-    ),
+    shipments.filter(s => s.shipmentType === 'local'),
     [shipments]
   );
 
@@ -85,11 +91,14 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
   // Stats
   const stats = useMemo(() => {
     const arrivedStatuses = ['arrived_pta', 'arrived_klm', 'arrived_offsite'];
+    const postArrivalStatuses = ['unloading', 'inspection_pending', 'inspecting', 'inspection_passed', 'inspection_failed', 'receiving'];
     const delayedStatuses = ['delayed_supplier', 'delayed_documents', 'delayed_port', 'delayed_customs'];
     return {
       total: localShipments.length,
       in_transit_roadway: localShipments.filter(s => s.latestStatus === 'in_transit_roadway').length,
       arrived: localShipments.filter(s => arrivedStatuses.includes(s.latestStatus)).length,
+      post_arrival: localShipments.filter(s => postArrivalStatuses.includes(s.latestStatus)).length,
+      stored: localShipments.filter(s => s.latestStatus === 'stored').length,
       delayed: localShipments.filter(s => delayedStatuses.includes(s.latestStatus)).length,
     };
   }, [localShipments]);
@@ -100,9 +109,12 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
 
     if (statusFilter) {
       const arrivedStatuses = ['arrived_pta', 'arrived_klm', 'arrived_offsite'];
+      const postArrivalStatuses = ['unloading', 'inspection_pending', 'inspecting', 'inspection_passed', 'inspection_failed', 'receiving'];
       const delayedStatuses = ['delayed_supplier', 'delayed_documents', 'delayed_port', 'delayed_customs'];
       if (statusFilter === 'arrived') {
         list = list.filter(s => arrivedStatuses.includes(s.latestStatus));
+      } else if (statusFilter === 'post_arrival') {
+        list = list.filter(s => postArrivalStatuses.includes(s.latestStatus));
       } else if (statusFilter === 'delayed') {
         list = list.filter(s => delayedStatuses.includes(s.latestStatus));
       } else {
@@ -303,7 +315,20 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
         <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-700)', marginBottom: '4px' }}>Status</label>
         <select value={form.latestStatus} onChange={e => setForm({ ...form, latestStatus: e.target.value })}
           className="select" style={{ width: '100%', boxSizing: 'border-box' }}>
-          {LOCAL_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          {(() => {
+            const groups = {};
+            LOCAL_STATUSES.forEach(st => {
+              if (!groups[st.group]) groups[st.group] = [];
+              groups[st.group].push(st);
+            });
+            return Object.entries(groups).map(([group, statuses]) => (
+              <optgroup key={group} label={group}>
+                {statuses.map(st => (
+                  <option key={st.value} value={st.value}>{st.label}</option>
+                ))}
+              </optgroup>
+            ));
+          })()}
         </select>
       </div>
 
@@ -436,15 +461,26 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
                         value={s.latestStatus}
                         onChange={e => handleStatusChange(s.id, e.target.value)}
                         style={{
-                          padding: '3px 6px', borderRadius: '999px', border: 'none',
+                          padding: '3px 6px', borderRadius: '20px', border: 'none',
                           fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
                           backgroundColor: `${STATUS_COLORS[s.latestStatus] || '#6c757d'}20`,
                           color: STATUS_COLORS[s.latestStatus] || '#6c757d',
                         }}
                       >
-                        {LOCAL_STATUSES.map(st => (
-                          <option key={st.value} value={st.value}>{st.label}</option>
-                        ))}
+                        {(() => {
+                          const groups = {};
+                          LOCAL_STATUSES.forEach(st => {
+                            if (!groups[st.group]) groups[st.group] = [];
+                            groups[st.group].push(st);
+                          });
+                          return Object.entries(groups).map(([group, statuses]) => (
+                            <optgroup key={group} label={group}>
+                              {statuses.map(st => (
+                                <option key={st.value} value={st.value}>{st.label}</option>
+                              ))}
+                            </optgroup>
+                          ));
+                        })()}
                       </select>
                     </td>
                     <td>
