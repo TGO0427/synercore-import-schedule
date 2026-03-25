@@ -5,8 +5,27 @@ import { useNotification } from '../contexts/NotificationContext';
 import XLSX from 'xlsx';
 import './FileUpload.css';
 
+// International suppliers to exclude from local receiving imports
+const EXCLUDED_SUPPLIERS = [
+  'SACCO S.R.L',
+  'QIDA CHEMICAL CO. LTD',
+  'SHAKTI CHEMICALS',
+  'AROMSA BESIN AROMA VE KATKI MADDELERI SAN. VE TIC. A.S.',
+  'AROMSA BESIN AROMA VE KATKI MADDELERI SAN. VE TIC. A.Ş.',
+  'AB MAURI',
+  'ECOLEX SDN. BHD',
+  'MARCEL CARRAGEENAN',
+  'TRISTAR GLOBAL SDN. BHD',
+];
+
+function isExcludedSupplier(supplier) {
+  if (!supplier) return false;
+  const normalized = supplier.trim().toUpperCase();
+  return EXCLUDED_SUPPLIERS.some(exc => normalized.includes(exc) || exc.includes(normalized));
+}
+
 function LocalFileUpload({ onFileUpload, loading }) {
-  const { showError, showWarning } = useNotification();
+  const { showError, showWarning, showSuccess } = useNotification();
   const [isOpen, setIsOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [validationData, setValidationData] = useState(null);
@@ -27,10 +46,28 @@ function LocalFileUpload({ onFileUpload, loading }) {
     if (files.length > 0) handleFileSelection(files[0]);
   };
 
+  const [excludedCount, setExcludedCount] = useState(0);
+
   const handleValidateFile = async (file) => {
     try {
       setValidationLoading(true);
       const result = await ExcelProcessor.parseExcelFileWithValidation(file);
+
+      // Filter out international suppliers
+      if (result.validRows && result.validRows.length > 0) {
+        const before = result.validRows.length;
+        result.validRows = result.validRows.filter(row => {
+          const supplier = row.supplier || row.SUPPLIER || row.Supplier || '';
+          return !isExcludedSupplier(supplier);
+        });
+        const removed = before - result.validRows.length;
+        setExcludedCount(removed);
+        if (removed > 0) {
+          // Also filter preview
+          result.preview = result.validRows.slice(0, 5);
+        }
+      }
+
       setValidationData(result);
       currentFileRef.current = file;
     } catch (error) {
@@ -53,9 +90,13 @@ function LocalFileUpload({ onFileUpload, loading }) {
 
   const handleProceedWithImport = () => {
     if (validationData?.validRows && validationData.validRows.length > 0) {
+      if (excludedCount > 0) {
+        showSuccess(`${excludedCount} international supplier row(s) excluded`);
+      }
       // Pass shipmentType='local' as third argument
       onFileUpload(currentFileRef.current, undefined, 'local');
       setValidationData(null);
+      setExcludedCount(0);
     }
   };
 
@@ -159,6 +200,9 @@ function LocalFileUpload({ onFileUpload, loading }) {
               <p>
                 <strong>Expected columns:</strong> SUPPLIER, ORDER/REF, PRODUCT NAME,
                 QUANTITY, PALLET QTY, RECEIVING WAREHOUSE, FORWARDING AGENT (carrier), LATEST STATUS, NOTES
+              </p>
+              <p style={{ color: 'var(--text-500)', fontSize: '0.8rem' }}>
+                <strong>Note:</strong> International suppliers (Sacco, Qida, Shakti, Aromsa, AB Mauri, Ecolex, Marcel Carrageenan, Tristar) are automatically excluded.
               </p>
             </div>
           </div>
