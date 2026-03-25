@@ -7,7 +7,6 @@ import {
 
 function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplicate, onGeneratePDF, onEmailEstimate }) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortDirection, setSortDirection] = useState('desc'); // 'asc' or 'desc'
   const [transportModeFilter, setTransportModeFilter] = useState('all'); // 'all', 'sea', 'air'
 
   // Filter and sort estimates (exclude archived - those show under Suppliers)
@@ -26,14 +25,11 @@ function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplica
         return ref.includes(search) || supplier.includes(search) || products.includes(search);
       })
       .sort((a, b) => {
-        const refA = (a.reference_number || '').toLowerCase();
-        const refB = (b.reference_number || '').toLowerCase();
-        if (sortDirection === 'asc') {
-          return refA.localeCompare(refB);
-        }
-        return refB.localeCompare(refA);
+        const dateA = new Date(a.costing_date || a.created_at || 0);
+        const dateB = new Date(b.costing_date || b.created_at || 0);
+        return dateB - dateA; // newest first
       });
-  }, [estimates, searchTerm, sortDirection, transportModeFilter]);
+  }, [estimates, searchTerm, transportModeFilter]);
 
   return (
     <div className="dash-panel" style={{ overflow: 'hidden' }}>
@@ -82,22 +78,6 @@ function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplica
             }}
           />
         </div>
-        <button
-          onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
-          style={{
-            padding: '8px 12px',
-            backgroundColor: '#f3f4f6',
-            border: '1px solid #d1d5db',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: '0.85rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-          }}
-        >
-          Reference {sortDirection === 'asc' ? '↑ A-Z' : '↓ Z-A'}
-        </button>
         <span style={{ color: '#6b7280', fontSize: '0.85rem' }}>
           {filteredEstimates.length} of {estimates.filter(e => e.status !== 'archived').length} estimates
         </span>
