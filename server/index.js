@@ -694,6 +694,14 @@ async function start() {
       `);
       await getPool().query(`CREATE INDEX IF NOT EXISTS idx_shipments_type ON shipments(shipment_type);`);
 
+      // Migrate any shipments stuck at 'received' → 'stored'
+      const migrated = await getPool().query(
+        `UPDATE shipments SET latest_status = 'stored', updated_at = NOW() WHERE latest_status = 'received'`
+      );
+      if (migrated.rowCount > 0) {
+        logger.info(`Migrated ${migrated.rowCount} shipments from received → stored`);
+      }
+
       // Create truck_shipments junction table (many-to-many: one truck can carry multiple shipments)
       await getPool().query(`
         CREATE TABLE IF NOT EXISTS truck_shipments (
