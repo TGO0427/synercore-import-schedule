@@ -257,8 +257,21 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
   const formatDate = (d) => {
     if (!d) return '-';
     try {
-      return new Date(d).toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch { return d; }
+      // Detect Excel serial date numbers (typically 40000-50000 range for 2009-2036)
+      const num = Number(d);
+      if (!isNaN(num) && num > 30000 && num < 60000) {
+        // Excel serial date: days since 1899-12-30
+        const excelEpoch = new Date(1899, 11, 30);
+        const date = new Date(excelEpoch.getTime() + num * 86400000);
+        return date.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
+      }
+      // Try YYYY/MM/DD or YYYY-MM-DD
+      const parsed = new Date(d);
+      if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 2000) {
+        return parsed.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
+      }
+      return d;
+    } catch { return String(d); }
   };
 
   const btnStyle = { fontSize: '0.8rem', padding: '5px 10px' };

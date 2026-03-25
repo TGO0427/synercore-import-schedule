@@ -721,16 +721,31 @@ async function start() {
         logger.info(`Cleaned up ${cleanedUp.rowCount} international suppliers from local shipments`);
       }
 
-      // Fix local shipments where delivery date is in notes instead of vessel_name
-      // For local shipments, notes contains the expected delivery date from the Excel import
-      const fixedDates = await getPool().query(
-        `UPDATE shipments SET vessel_name = TRIM(notes), notes = NULL, updated_at = NOW()
+      // Fix local shipments: convert Excel serial date numbers in vessel_name to YYYY-MM-DD
+      const fixedSerialDates = await getPool().query(
+        `UPDATE shipments SET
+           vessel_name = TO_CHAR(DATE '1899-12-30' + CAST(TRIM(vessel_name) AS INTEGER), 'YYYY-MM-DD'),
+           updated_at = NOW()
+         WHERE shipment_type = 'local'
+           AND vessel_name IS NOT NULL
+           AND TRIM(vessel_name) ~ '^[0-9]{4,5}$'`
+      );
+      if (fixedSerialDates.rowCount > 0) {
+        logger.info(`Converted ${fixedSerialDates.rowCount} Excel serial dates to YYYY-MM-DD in local shipments`);
+      }
+      // Also fix notes that still contain serial dates (move to vessel_name)
+      const fixedNotes = await getPool().query(
+        `UPDATE shipments SET
+           vessel_name = TO_CHAR(DATE '1899-12-30' + CAST(TRIM(notes) AS INTEGER), 'YYYY-MM-DD'),
+           notes = NULL,
+           updated_at = NOW()
          WHERE shipment_type = 'local'
            AND (vessel_name IS NULL OR TRIM(vessel_name) = '')
-           AND notes IS NOT NULL AND TRIM(notes) != ''`
+           AND notes IS NOT NULL
+           AND TRIM(notes) ~ '^[0-9]{4,5}$'`
       );
-      if (fixedDates.rowCount > 0) {
-        logger.info(`Fixed ${fixedDates.rowCount} local shipments: moved delivery date from notes to vessel_name`);
+      if (fixedNotes.rowCount > 0) {
+        logger.info(`Moved ${fixedNotes.rowCount} serial dates from notes to vessel_name in local shipments`);
       }
 
       // Create truck_shipments junction table (many-to-many: one truck can carry multiple shipments)

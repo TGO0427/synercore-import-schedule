@@ -226,15 +226,25 @@ export function useShipments() {
       }
 
       const toPlain = (s) => {
-        // For local imports: if notes looks like a date, use it as expected delivery
+        // For local imports: if notes looks like a date or Excel serial number, use it as expected delivery
         let vesselName = s.vesselName ?? '';
         let notes = s.notes ?? '';
         if (shipmentType === 'local' && !vesselName && notes) {
-          // Match date patterns: YYYY/MM/DD, YYYY-MM-DD, DD/MM/YYYY, etc.
-          const dateMatch = notes.match(/^\d{4}[\/-]\d{2}[\/-]\d{2}$/) || notes.match(/^\d{2}[\/-]\d{2}[\/-]\d{4}$/);
-          if (dateMatch) {
-            vesselName = notes; // move date to expected delivery field
-            notes = ''; // clear notes
+          const trimmed = String(notes).trim();
+          // Excel serial date number (e.g. 46142 = 2026/03/25)
+          const num = Number(trimmed);
+          if (!isNaN(num) && num > 30000 && num < 60000) {
+            const excelEpoch = new Date(1899, 11, 30);
+            const d = new Date(excelEpoch.getTime() + num * 86400000);
+            vesselName = d.toISOString().split('T')[0]; // YYYY-MM-DD
+            notes = '';
+          } else {
+            // Match date patterns: YYYY/MM/DD, YYYY-MM-DD, DD/MM/YYYY
+            const dateMatch = trimmed.match(/^\d{4}[\/-]\d{2}[\/-]\d{2}$/) || trimmed.match(/^\d{2}[\/-]\d{2}[\/-]\d{4}$/);
+            if (dateMatch) {
+              vesselName = trimmed;
+              notes = '';
+            }
           }
         }
         return {
