@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
+import { ALL_STATUSES, STATUS_LABELS } from '../types/shipment';
 import FilterPresetBar from './FilterPresetBar';
 import { jsPDF } from 'jspdf';
 import { applyPlugin } from 'jspdf-autotable';
@@ -104,7 +105,7 @@ function AdvancedReports() {
   // Get unique values for filter dropdowns
   const filterOptions = useMemo(() => {
     return {
-      statuses: [...new Set(shipments.map(s => s.latestStatus))].filter(Boolean).sort(),
+      statuses: ALL_STATUSES.filter(s => s !== 'archived').sort(),
       warehouses: [...new Set(shipments.map(s => s.receivingWarehouse))].filter(Boolean).sort(),
       suppliers: [...new Set(shipments.map(s => s.supplier))].filter(Boolean).sort(),
       products: [...new Set(shipments.map(s => s.productName))].filter(Boolean).sort(),
@@ -557,7 +558,7 @@ function AdvancedReports() {
             <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 'bold' }}>
               Status ({filters.statuses.length} selected):
             </label>
-            <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #ddd', borderRadius: '4px', padding: '5px' }}>
+            <div style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid #ddd', borderRadius: '4px', padding: '5px' }}>
               {filterOptions.statuses.map(status => (
                 <label key={status} style={{ display: 'block', padding: '3px', fontSize: '0.85rem' }}>
                   <input
@@ -566,7 +567,7 @@ function AdvancedReports() {
                     onChange={() => toggleFilterOption('statuses', status)}
                     style={{ marginRight: '5px' }}
                   />
-                  {status}
+                  {STATUS_LABELS[status] || status}
                 </label>
               ))}
             </div>
