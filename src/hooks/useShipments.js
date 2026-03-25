@@ -225,23 +225,36 @@ export function useShipments() {
         if (processedShipments.length === 0) throw new Error('No local suppliers found after filtering international suppliers');
       }
 
-      const toPlain = (s) => ({
-        id: s.id,
-        supplier: s.supplier,
-        orderRef: s.orderRef,
-        finalPod: s.finalPod,
-        latestStatus: shipmentType === 'local' ? (s.latestStatus || 'in_transit_roadway') : s.latestStatus,
-        weekNumber: Number(s.weekNumber) || 0,
-        productName: s.productName,
-        quantity: Number(s.quantity) || 0,
-        palletQty: Number(s.palletQty) || 0,
-        receivingWarehouse: s.receivingWarehouse,
-        forwardingAgent: s.forwardingAgent ?? '',
-        vesselName: s.vesselName ?? '',
-        incoterm: s.incoterm ?? '',
-        notes: s.notes ?? '',
-        shipmentType,
-      });
+      const toPlain = (s) => {
+        // For local imports: if notes looks like a date, use it as expected delivery
+        let vesselName = s.vesselName ?? '';
+        let notes = s.notes ?? '';
+        if (shipmentType === 'local' && !vesselName && notes) {
+          // Match date patterns: YYYY/MM/DD, YYYY-MM-DD, DD/MM/YYYY, etc.
+          const dateMatch = notes.match(/^\d{4}[\/-]\d{2}[\/-]\d{2}$/) || notes.match(/^\d{2}[\/-]\d{2}[\/-]\d{4}$/);
+          if (dateMatch) {
+            vesselName = notes; // move date to expected delivery field
+            notes = ''; // clear notes
+          }
+        }
+        return {
+          id: s.id,
+          supplier: s.supplier,
+          orderRef: s.orderRef,
+          finalPod: s.finalPod,
+          latestStatus: shipmentType === 'local' ? (s.latestStatus || 'in_transit_roadway') : s.latestStatus,
+          weekNumber: Number(s.weekNumber) || 0,
+          productName: s.productName,
+          quantity: Number(s.quantity) || 0,
+          palletQty: Number(s.palletQty) || 0,
+          receivingWarehouse: s.receivingWarehouse,
+          forwardingAgent: s.forwardingAgent ?? '',
+          vesselName,
+          incoterm: s.incoterm ?? '',
+          notes,
+          shipmentType,
+        };
+      };
 
       const payload = processedShipments.map(toPlain);
 

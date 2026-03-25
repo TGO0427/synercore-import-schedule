@@ -721,6 +721,17 @@ async function start() {
         logger.info(`Cleaned up ${cleanedUp.rowCount} international suppliers from local shipments`);
       }
 
+      // Fix local shipments where delivery date is in notes instead of vessel_name
+      const fixedDates = await getPool().query(
+        `UPDATE shipments SET vessel_name = notes, notes = NULL, updated_at = NOW()
+         WHERE shipment_type = 'local'
+           AND (vessel_name IS NULL OR vessel_name = '')
+           AND notes ~ '^\\d{4}[/-]\\d{2}[/-]\\d{2}$'`
+      );
+      if (fixedDates.rowCount > 0) {
+        logger.info(`Fixed ${fixedDates.rowCount} local shipments: moved delivery date from notes to vessel_name`);
+      }
+
       // Create truck_shipments junction table (many-to-many: one truck can carry multiple shipments)
       await getPool().query(`
         CREATE TABLE IF NOT EXISTS truck_shipments (
