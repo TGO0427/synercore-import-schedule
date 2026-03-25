@@ -694,12 +694,18 @@ async function start() {
       `);
       await getPool().query(`CREATE INDEX IF NOT EXISTS idx_shipments_type ON shipments(shipment_type);`);
 
-      // Migrate any shipments stuck at 'received' → 'stored'
-      const migrated = await getPool().query(
+      // Migrate any shipments stuck at 'received' or 'archived' → 'stored'
+      const migratedReceived = await getPool().query(
         `UPDATE shipments SET latest_status = 'stored', updated_at = NOW() WHERE latest_status = 'received'`
       );
-      if (migrated.rowCount > 0) {
-        logger.info(`Migrated ${migrated.rowCount} shipments from received → stored`);
+      if (migratedReceived.rowCount > 0) {
+        logger.info(`Migrated ${migratedReceived.rowCount} shipments from received → stored`);
+      }
+      const migratedArchived = await getPool().query(
+        `UPDATE shipments SET latest_status = 'stored', updated_at = NOW() WHERE latest_status = 'archived'`
+      );
+      if (migratedArchived.rowCount > 0) {
+        logger.info(`Migrated ${migratedArchived.rowCount} shipments from archived → stored`);
       }
 
       // Create truck_shipments junction table (many-to-many: one truck can carry multiple shipments)

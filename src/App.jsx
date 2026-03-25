@@ -327,14 +327,13 @@ function App() {
   })();
 
   const StoredWrapper = () => {
-    const storedShipments = shipments.filter(s => s.latestStatus === 'stored' || s.latestStatus === 'archived');
+    const storedShipments = shipments.filter(s => s.latestStatus === 'stored');
     return (
       <WarehouseStored
         shipments={storedShipments}
         onUpdateShipment={handleUpdateShipment}
         onCreateShipment={handleCreateShipment}
         onDeleteShipment={handleDeleteShipment}
-        onArchiveShipment={handleArchiveShipment}
         loading={loading}
       />
     );

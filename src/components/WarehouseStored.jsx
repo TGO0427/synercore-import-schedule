@@ -11,27 +11,24 @@ import { applyPlugin } from 'jspdf-autotable';
 applyPlugin(jsPDF);
 import * as XLSX from 'xlsx';
 
-function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArchiveShipment, onCreateShipment, loading }) {
+function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onCreateShipment, loading }) {
   const { showSuccess, showError, confirm: confirmAction } = useNotification();
   const [searchParamsObj, setSearchParamsObj] = useSearchParams();
   const globalSearchTerm = searchParamsObj.get('search') || '';
   const [searchTerm, setSearchTerm] = useState(globalSearchTerm || '');
   const [weekFilters, setWeekFilters] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: 'storedDate', direction: 'desc' });
-  const [archivedShipments, setArchivedShipments] = useState([]);
-  const [loadingArchives, setLoadingArchives] = useState(false);
   const [showWeekDropdown, setShowWeekDropdown] = useState(false);
-  const [archivingAll, setArchivingAll] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const [collapsedWarehouses, setCollapsedWarehouses] = useState({});
-  const [editingDate, setEditingDate] = useState(null); // shipment id being date-edited
-  const [moveModal, setMoveModal] = useState(null); // { shipment, destination, moveQty, movePallets }
-  const [editingDateValue, setEditingDateValue] = useState(''); // temp date value while editing
-  const [selectedShipment, setSelectedShipment] = useState(null); // shipment detail card
-  const [editShipment, setEditShipment] = useState(null); // shipment being edited
+  const [editingDate, setEditingDate] = useState(null);
+  const [moveModal, setMoveModal] = useState(null);
+  const [editingDateValue, setEditingDateValue] = useState('');
+  const [selectedShipment, setSelectedShipment] = useState(null);
+  const [editShipment, setEditShipment] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [bulkSelectedIds, setBulkSelectedIds] = useState(new Set());
   const [bulkSelectAll, setBulkSelectAll] = useState(false);
-  const [bulkArchiving, setBulkArchiving] = useState(false);
   const [storageRates, setStorageRates] = useState({ week1: 43, week2Plus: 53 });
 
   // Mobile responsiveness
@@ -52,51 +49,6 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
       setSearchParamsObj(params, { replace: true });
     }
   }, [globalSearchTerm]);
-
-  // Fetch archived shipments
-  useEffect(() => {
-    const fetchArchivedShipments = async () => {
-      try {
-        setLoadingArchives(true);
-        const response = await authFetch(getApiUrl('/api/shipments/archives'));
-        if (!response.ok) return;
-
-        const archives = await response.json();
-        const allArchivedShipments = [];
-
-        for (const archive of archives) {
-          try {
-            const archiveResponse = await authFetch(getApiUrl(`/api/shipments/archives/${archive.fileName}`));
-            if (!archiveResponse.ok) continue;
-
-            const archiveData = await archiveResponse.json();
-            if (archiveData && archiveData.data) {
-              const storedArchivedShipments = archiveData.data.filter(shipment =>
-                shipment.latestStatus === 'stored'
-              );
-              storedArchivedShipments.forEach(shipment => {
-                shipment.isArchived = true;
-                shipment.archiveSource = archive.fileName;
-              });
-              allArchivedShipments.push(...storedArchivedShipments);
-            }
-          } catch (error) {
-            console.error(`Error fetching archive ${archive.fileName}:`, error);
-          }
-        }
-
-        setArchivedShipments(allArchivedShipments);
-      } catch (error) {
-        console.error('Error fetching archives:', error);
-      } finally {
-        setLoadingArchives(false);
-      }
-    };
-
-    fetchArchivedShipments();
-    const interval = setInterval(fetchArchivedShipments, 10000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Fetch storage benchmark rates
   useEffect(() => {
@@ -121,10 +73,20 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     fetchStorageRates();
   }, []);
 
-  const filteredAndSortedShipments = useMemo(() => {
-    const allStoredShipments = [...shipments, ...archivedShipments];
+  const ninetyDaysAgo = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 90);
+    return d;
+  }, []);
 
-    let filtered = allStoredShipments.filter(shipment => {
+  const filteredAndSortedShipments = useMemo(() => {
+    let filtered = shipments.filter(shipment => {
+      // 90-day filter (unless Show All toggled)
+      if (!showAll) {
+        const storedDate = new Date(shipment.receivingDate || shipment.updatedAt || shipment.createdAt);
+        if (storedDate < ninetyDaysAgo) return false;
+      }
+
       const matchesSearch = searchTerm === '' ||
         shipment.orderRef?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         shipment.supplier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -153,7 +115,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     }
 
     return filtered;
-  }, [shipments, archivedShipments, searchTerm, weekFilters, sortConfig]);
+  }, [shipments, searchTerm, weekFilters, sortConfig, showAll, ninetyDaysAgo]);
 
   // Group filtered shipments by warehouse
   const groupedByWarehouse = useMemo(() => {
@@ -186,9 +148,8 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
   };
 
   const availableWeeks = useMemo(() => {
-    const allShipments = [...shipments, ...archivedShipments];
-    return [...new Set(allShipments.map(s => s.weekNumber))].filter(Boolean).sort((a, b) => parseInt(a) - parseInt(b));
-  }, [shipments, archivedShipments]);
+    return [...new Set(shipments.map(s => s.weekNumber))].filter(Boolean).sort((a, b) => parseInt(a) - parseInt(b));
+  }, [shipments]);
 
   const getSortIcon = (columnKey) => {
     if (sortConfig.key !== columnKey) return '';
@@ -201,68 +162,12 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
     return date.toLocaleDateString('en-ZA', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
-  const activeStoredShipments = shipments.filter(s => s.latestStatus === 'stored');
-  const activeShipmentsCount = activeStoredShipments.length;
-
-  const handleArchiveAll = async () => {
-    if (activeShipmentsCount === 0) return;
-
-    const confirmArchive = await confirmAction({ title: 'Archive All Stored', message: `Are you sure you want to archive all ${activeShipmentsCount} stored shipment(s)? This will move them to the archive for record-keeping.`, type: 'warning', confirmText: 'Archive All' });
-    if (!confirmArchive) return;
-
-    setArchivingAll(true);
-    let successCount = 0;
-    let failCount = 0;
-
-    for (const shipment of activeStoredShipments) {
-      try {
-        if (onArchiveShipment) {
-          await onArchiveShipment(shipment.id);
-          successCount++;
-        }
-      } catch (error) {
-        console.error(`Failed to archive shipment ${shipment.orderRef}:`, error);
-        failCount++;
-      }
-    }
-
-    setArchivingAll(false);
-    if (successCount > 0 && showSuccess) showSuccess(`Successfully archived ${successCount} shipment(s)`);
-    if (failCount > 0 && showError) showError(`Failed to archive ${failCount} shipment(s)`);
-  };
-
-  const handleBulkArchive = async () => {
-    if (bulkSelectedIds.size === 0) return;
-    const doArchive = await confirmAction({
-      title: 'Bulk Archive',
-      message: `Are you sure you want to archive ${bulkSelectedIds.size} stored shipment(s)?`,
-      type: 'warning',
-      confirmText: `Archive ${bulkSelectedIds.size}`
-    });
-    if (!doArchive) return;
-
-    setBulkArchiving(true);
-    try {
-      const res = await authFetch(getApiUrl('/api/shipments/bulk/archive'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: [...bulkSelectedIds] })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        showSuccess(`Archived ${data.archived} shipment(s)${data.failed > 0 ? `, ${data.failed} failed` : ''}`);
-        setBulkSelectedIds(new Set());
-        setBulkSelectAll(false);
-        window.location.reload();
-      } else {
-        showError('Failed to archive shipments');
-      }
-    } catch (err) {
-      showError('Error archiving shipments');
-    } finally {
-      setBulkArchiving(false);
-    }
-  };
+  const olderCount = useMemo(() => {
+    return shipments.filter(s => {
+      const storedDate = new Date(s.receivingDate || s.updatedAt || s.createdAt);
+      return storedDate < ninetyDaysAgo;
+    }).length;
+  }, [shipments, ninetyDaysAgo]);
 
   const toggleWarehouse = (name) => {
     setCollapsedWarehouses(prev => ({ ...prev, [name]: !prev[name] }));
@@ -416,8 +321,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
       'Final POD': s.finalPod || '',
       'Stored Date': formatDate(s.receivingDate || s.updatedAt || s.estimatedArrival),
       'Days in Storage': (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE' ? getDaysInStorage(s) : '-',
-      'Storage Cost (ZAR)': (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE' ? getStorageCost(s) : '-',
-      'Archived': s.isArchived || s.latestStatus === 'archived' ? 'Yes' : 'No'
+      'Storage Cost (ZAR)': (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE' ? getStorageCost(s) : '-'
     }));
     // Add total storage cost row
     const totalStorageCost = filteredAndSortedShipments
@@ -435,8 +339,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
       'Final POD': '',
       'Stored Date': '',
       'Days in Storage': 'TOTAL',
-      'Storage Cost (ZAR)': totalStorageCost,
-      'Archived': ''
+      'Storage Cost (ZAR)': totalStorageCost
     });
     const dataWS = XLSX.utils.json_to_sheet(dataRows);
     XLSX.utils.book_append_sheet(wb, dataWS, 'Stored Stock');
@@ -447,8 +350,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
       'Items': wh.length,
       'Total Quantity': wh.reduce((sum, s) => sum + (Number(s.quantity) || 0), 0),
       'Total Pallets': Math.round(wh.reduce((sum, s) => sum + (Number(s.palletQty) || 0), 0)),
-      'Active': wh.filter(s => !s.isArchived && s.latestStatus !== 'archived').length,
-      'Archived': wh.filter(s => s.isArchived || s.latestStatus === 'archived').length
+      'Total Items': wh.length
     }));
     const whWS = XLSX.utils.json_to_sheet(whRows);
     XLSX.utils.book_append_sheet(wb, whWS, 'Warehouse Breakdown');
@@ -535,14 +437,12 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
 
       doc.autoTable({
         startY: afterStock + 5,
-        head: [['Warehouse', 'Items', 'Quantity', 'Pallets', 'Active', 'Archived']],
+        head: [['Warehouse', 'Items', 'Quantity', 'Pallets']],
         body: groupedByWarehouse.map(({ name, shipments: wh }) => [
           name,
           wh.length,
           wh.reduce((sum, s) => sum + (Number(s.quantity) || 0), 0),
           Math.round(wh.reduce((sum, s) => sum + (Number(s.palletQty) || 0), 0)),
-          wh.filter(s => !s.isArchived && s.latestStatus !== 'archived').length,
-          wh.filter(s => s.isArchived || s.latestStatus === 'archived').length
         ]),
         styles: { fontSize: 9 },
         headStyles: { fillColor: [5, 150, 105] }
@@ -698,16 +598,13 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
               </div>
             )}
           </div>
-          {activeShipmentsCount > 0 && (
-            <button
-              className="btn btn-ghost"
-              onClick={handleArchiveAll}
-              disabled={archivingAll}
-              style={{ fontSize: 13, padding: '6px 10px' }}
-            >
-              {archivingAll ? 'Archiving...' : `Archive All (${activeShipmentsCount})`}
-            </button>
-          )}
+          <button
+            className={`btn ${showAll ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setShowAll(!showAll)}
+            style={{ fontSize: 13, padding: '6px 10px' }}
+          >
+            {showAll ? 'Show Recent (90 days)' : `Show All${olderCount > 0 ? ` (+${olderCount} older)` : ''}`}
+          </button>
           <button
             onClick={exportToExcel}
             style={{
@@ -750,16 +647,6 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
         }}>
           <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{bulkSelectedIds.size} selected</span>
           <button
-            style={{
-              fontSize: '0.8rem', padding: '6px 12px', background: 'var(--accent, #3b82f6)', color: 'white',
-              border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600
-            }}
-            disabled={bulkArchiving}
-            onClick={handleBulkArchive}
-          >
-            {bulkArchiving ? 'Archiving...' : `Archive Selected (${bulkSelectedIds.size})`}
-          </button>
-          <button
             className="btn btn-ghost"
             style={{ fontSize: '0.8rem', padding: '6px 12px' }}
             onClick={() => { setBulkSelectedIds(new Set()); setBulkSelectAll(false); }}
@@ -783,8 +670,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
           {groupedByWarehouse.map(({ name, shipments: warehouseShipments }) => {
             const isCollapsed = collapsedWarehouses[name];
             const whPallets = Math.round(warehouseShipments.reduce((sum, s) => sum + (Number(s.palletQty) || 0), 0));
-            const activeCount = warehouseShipments.filter(s => !s.isArchived && s.latestStatus !== 'archived').length;
-            const archivedCount = warehouseShipments.length - activeCount;
+            const activeCount = warehouseShipments.length;
 
             return (
               <div key={name} className="dash-panel" style={{ padding: 0, overflow: 'hidden' }}>
@@ -807,7 +693,6 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                   <span style={{ fontSize: 12, color: 'var(--text-500)', fontWeight: 500 }}>
                     {warehouseShipments.length} item{warehouseShipments.length !== 1 ? 's' : ''}
                     {whPallets > 0 && <> &middot; {whPallets} pallets</>}
-                    {archivedCount > 0 && <> &middot; {archivedCount} archived</>}
                     {name.toUpperCase() === 'OFFSITE' && (() => {
                       const totalCost = warehouseShipments.reduce((sum, s) => sum + getStorageCost(s), 0);
                       return totalCost > 0 ? <> &middot; <span style={{ fontWeight: 600, color: 'var(--navy-900)' }}>R{totalCost.toLocaleString('en-ZA', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span></> : null;
@@ -819,7 +704,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                 {!isCollapsed && isMobile && (
                   <div className="mobile-card-list" style={{ padding: '8px' }}>
                     {warehouseShipments.map((shipment) => {
-                      const isArch = shipment.isArchived || shipment.latestStatus === 'archived';
+                      const isArch = false; // all shipments are active (no archive workflow)
                       const isOffsite = name.toUpperCase() === 'OFFSITE';
                       return (
                         <div key={shipment.id} className="mobile-shipment-card">
@@ -880,7 +765,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                             {!isArch && (
                               <button
                                 className="btn btn-ghost"
-                                onClick={() => onArchiveShipment ? onArchiveShipment(shipment.id) : onDeleteShipment(shipment.id)}
+                                onClick={() => onDeleteShipment(shipment.id)}
                                 style={{ fontSize: 12, padding: '6px 12px' }}
                               >
                                 Archive
@@ -907,12 +792,12 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                               onChange={(e) => {
                                 const next = new Set(bulkSelectedIds);
                                 if (e.target.checked) {
-                                  warehouseShipments.forEach(s => { if (!s.isArchived && s.latestStatus !== 'archived') next.add(s.id); });
+                                  warehouseShipments.forEach(s => next.add(s.id));
                                 } else {
                                   warehouseShipments.forEach(s => next.delete(s.id));
                                 }
                                 setBulkSelectedIds(next);
-                                setBulkSelectAll(next.size === filteredAndSortedShipments.filter(s => !s.isArchived && s.latestStatus !== 'archived').length);
+                                setBulkSelectAll(next.size === filteredAndSortedShipments.length);
                               }}
                               title="Select all in this warehouse"
                             />
@@ -937,7 +822,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''}
                           >
                             {(() => {
-                              const isArch = shipment.isArchived || shipment.latestStatus === 'archived';
+                              const isArch = false; // all shipments are active (no archive workflow)
                               return (<>
                             <td style={{ width: 36, textAlign: 'center', padding: '8px 4px' }}>
                               {!isArch && (
@@ -948,7 +833,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                                     if (e.target.checked) next.add(shipment.id);
                                     else next.delete(shipment.id);
                                     setBulkSelectedIds(next);
-                                    setBulkSelectAll(next.size === filteredAndSortedShipments.filter(s => !s.isArchived && s.latestStatus !== 'archived').length);
+                                    setBulkSelectAll(next.size === filteredAndSortedShipments.length);
                                   }}
                                   title="Select for bulk action"
                                 />
@@ -1055,7 +940,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onArch
                               {!isArch && (
                                 <button
                                   className="btn btn-ghost"
-                                  onClick={() => onArchiveShipment ? onArchiveShipment(shipment.id) : onDeleteShipment(shipment.id)}
+                                  onClick={() => onDeleteShipment(shipment.id)}
                                   style={{ fontSize: 12, padding: '4px 10px', marginLeft: 4 }}
                                 >
                                   Archive
