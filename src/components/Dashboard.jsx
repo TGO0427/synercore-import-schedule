@@ -257,6 +257,19 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       }
     });
 
+    // Aggregate by supplier, warehouse, carrier for charts
+    const bySupplier = {};
+    const byWarehouse = {};
+    const byCarrier = {};
+    localShipments.forEach(s => {
+      const sup = s.supplier || 'Unknown';
+      bySupplier[sup] = (bySupplier[sup] || 0) + 1;
+      const wh = s.receivingWarehouse || 'Unassigned';
+      byWarehouse[wh] = (byWarehouse[wh] || 0) + 1;
+      const carrier = s.forwardingAgent || 'Unknown';
+      byCarrier[carrier] = (byCarrier[carrier] || 0) + 1;
+    });
+
     return {
       total: localShipments.length,
       overdue,
@@ -266,6 +279,9 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       postArrival: localShipments.filter(s => postArrivalStatuses.includes(s.latestStatus)).length,
       stored: localShipments.filter(s => s.latestStatus === 'stored').length,
       delayed: localShipments.filter(s => delayedStatuses.includes(s.latestStatus)).length,
+      bySupplier,
+      byWarehouse,
+      byCarrier,
     };
   }, [localShipments]);
 
@@ -761,45 +777,170 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
         ))}
       </div>
 
-      {/* Local Receiving Summary */}
-      {localStats.total > 0 && (
-        <div
-          className="dash-panel"
-          style={{ marginTop: '1rem', cursor: 'pointer' }}
-          onClick={() => navigate('/local-receiving')}
-          role="button" tabIndex={0}
-          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/local-receiving'); } }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-900)' }}>Local Receiving</h4>
-              <span style={{ fontSize: 11, color: 'var(--text-500)' }}>Road deliveries & inter-warehouse transfers</span>
-            </div>
-            <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>View All &rarr;</span>
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {[
-              { label: 'Total', value: localStats.total, color: 'var(--accent)', bg: 'rgba(5,150,105,0.08)' },
-              ...(localStats.overdue > 0 ? [{ label: 'Overdue', value: localStats.overdue, color: 'var(--danger)', bg: 'rgba(239,68,68,0.08)' }] : []),
-              ...(localStats.dueThisWeek > 0 ? [{ label: 'Due This Week', value: localStats.dueThisWeek, color: '#d97706', bg: 'rgba(245,158,11,0.08)' }] : []),
-              ...(localStats.inTransit > 0 ? [{ label: 'In Transit', value: localStats.inTransit, color: 'var(--info)', bg: 'rgba(59,130,246,0.08)' }] : []),
-              ...(localStats.arrived > 0 ? [{ label: 'Arrived', value: localStats.arrived, color: 'var(--success)', bg: 'rgba(16,185,129,0.08)' }] : []),
-              ...(localStats.postArrival > 0 ? [{ label: 'Post-Arrival', value: localStats.postArrival, color: '#d97706', bg: 'rgba(245,158,11,0.08)' }] : []),
-              ...(localStats.stored > 0 ? [{ label: 'Stored', value: localStats.stored, color: 'var(--success)', bg: 'rgba(16,185,129,0.08)' }] : []),
-              ...(localStats.delayed > 0 ? [{ label: 'Delayed', value: localStats.delayed, color: 'var(--danger)', bg: 'rgba(239,68,68,0.08)' }] : []),
-            ].map(item => (
-              <div key={item.label} style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '5px 12px', borderRadius: 20, background: item.bg,
-                border: `1px solid ${item.color}20`,
-              }}>
-                <span style={{ fontSize: 15, fontWeight: 700, color: item.color }}>{item.value}</span>
-                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-600)' }}>{item.label}</span>
+      {/* Local Receiving Section */}
+      {localStats.total > 0 && (() => {
+        const localStatusData = [
+          { name: 'In Transit', value: localStats.inTransit, color: '#3b82f6' },
+          { name: 'Arrived', value: localStats.arrived, color: '#10b981' },
+          { name: 'Post-Arrival', value: localStats.postArrival, color: '#f59e0b' },
+          { name: 'Stored', value: localStats.stored, color: '#059669' },
+          { name: 'Delayed', value: localStats.delayed, color: '#ef4444' },
+          { name: 'Overdue', value: localStats.overdue, color: '#dc2626' },
+        ].filter(d => d.value > 0);
+        const localStatusTotal = localStatusData.reduce((s, d) => s + d.value, 0);
+        const localSupplierData = Object.entries(localStats.bySupplier)
+          .sort(([, a], [, b]) => b - a).slice(0, 5)
+          .map(([name, count]) => ({ name, count }));
+        const localSupplierTotal = localSupplierData.reduce((s, d) => s + d.count, 0);
+        const localWarehouseData = Object.entries(localStats.byWarehouse)
+          .sort(([, a], [, b]) => b - a)
+          .map(([name, count]) => ({ name, count }));
+        const localCarrierData = Object.entries(localStats.byCarrier)
+          .filter(([name]) => name !== 'Unknown')
+          .sort(([, a], [, b]) => b - a).slice(0, 5)
+          .map(([name, count]) => ({ name, count }));
+
+        return (
+          <>
+            {/* Header + stat chips */}
+            <div style={{ marginTop: '1.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--navy-900)', letterSpacing: '0.3px' }}>
+                  Local Receiving
+                </h3>
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-500)' }}>
+                  Road deliveries & inter-warehouse transfers
+                </p>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+              <button className="btn btn-ghost" style={{ fontSize: 12, padding: '5px 12px' }}
+                onClick={() => navigate('/local-receiving')}>
+                View All &rarr;
+              </button>
+            </div>
+
+            {/* Stat pills */}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+              {[
+                { label: 'Total', value: localStats.total, color: 'var(--accent)', bg: 'rgba(5,150,105,0.08)' },
+                ...(localStats.overdue > 0 ? [{ label: 'Overdue', value: localStats.overdue, color: 'var(--danger)', bg: 'rgba(239,68,68,0.08)' }] : []),
+                ...(localStats.dueThisWeek > 0 ? [{ label: 'Due This Week', value: localStats.dueThisWeek, color: '#d97706', bg: 'rgba(245,158,11,0.08)' }] : []),
+                ...(localStats.inTransit > 0 ? [{ label: 'In Transit', value: localStats.inTransit, color: 'var(--info)', bg: 'rgba(59,130,246,0.08)' }] : []),
+                ...(localStats.arrived > 0 ? [{ label: 'Arrived', value: localStats.arrived, color: 'var(--success)', bg: 'rgba(16,185,129,0.08)' }] : []),
+                ...(localStats.stored > 0 ? [{ label: 'Stored', value: localStats.stored, color: 'var(--success)', bg: 'rgba(16,185,129,0.08)' }] : []),
+                ...(localStats.delayed > 0 ? [{ label: 'Delayed', value: localStats.delayed, color: 'var(--danger)', bg: 'rgba(239,68,68,0.08)' }] : []),
+              ].map(item => (
+                <div key={item.label} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '4px 10px', borderRadius: 20, background: item.bg,
+                  border: `1px solid ${item.color}20`,
+                }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: item.color }}>{item.value}</span>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-600)' }}>{item.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Local charts — compact 2-column grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+              {/* Status Distribution Donut */}
+              {localStatusData.length > 0 && (
+                <ChartCard title="Status Breakdown" subtitle="Local shipments">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                    <div style={{ width: 130, height: 130 }}>
+                      <Doughnut
+                        data={{
+                          labels: localStatusData.map(d => d.name),
+                          datasets: [{
+                            data: localStatusData.map(d => d.value),
+                            backgroundColor: localStatusData.map(d => d.color),
+                            borderWidth: 2, borderColor: '#fff', hoverBorderWidth: 0, hoverOffset: 3,
+                          }],
+                        }}
+                        options={{ responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.raw}` } } } }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                      {localStatusData.map(item => {
+                        const pct = localStatusTotal > 0 ? Math.round((item.value / localStatusTotal) * 100) : 0;
+                        return (
+                          <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: item.color, flexShrink: 0 }} />
+                            <span style={{ fontSize: 12, color: 'var(--text-700)', minWidth: 65 }}>{item.name}</span>
+                            <strong style={{ fontSize: 12, color: 'var(--text-900)' }}>{item.value}</strong>
+                            <span style={{ fontSize: 10, color: 'var(--text-500)' }}>({pct}%)</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </ChartCard>
+              )}
+
+              {/* By Warehouse — horizontal bar */}
+              {localWarehouseData.length > 0 && (
+                <ChartCard title="By Warehouse" subtitle={`${localWarehouseData.length} destinations`}>
+                  <div style={{ height: Math.max(localWarehouseData.length * 40 + 10, 80) }}>
+                    <BarChart
+                      data={{
+                        labels: localWarehouseData.map(d => d.name),
+                        datasets: [{
+                          data: localWarehouseData.map(d => d.count),
+                          backgroundColor: localWarehouseData.map((_, i) => WAREHOUSE_COLORS[i % WAREHOUSE_COLORS.length]),
+                          borderRadius: 4, barThickness: 18,
+                        }],
+                      }}
+                      options={{ indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.raw} shipments` } } }, scales: { x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false }, ticks: { precision: 0, font: { size: 10 } } }, y: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 11, weight: 600 } } } } }}
+                    />
+                  </div>
+                </ChartCard>
+              )}
+
+              {/* Top Suppliers */}
+              {localSupplierData.length > 0 && (
+                <ChartCard title="Top Suppliers" subtitle="By local shipment volume">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {localSupplierData.map((supplier, idx) => (
+                      <div key={supplier.name} style={{ padding: '8px 10px', backgroundColor: 'var(--surface-2)', borderRadius: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <span style={{
+                            width: 20, height: 20, borderRadius: '50%', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700,
+                            color: '#fff', backgroundColor: RANK_COLORS[idx] || '#64748b', flexShrink: 0,
+                          }}>{idx + 1}</span>
+                          <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-900)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{supplier.name}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-700)', backgroundColor: 'var(--surface)', padding: '2px 8px', borderRadius: 10, border: '1px solid var(--border)' }}>{supplier.count}</span>
+                        </div>
+                        <div style={{ height: 3, backgroundColor: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${localSupplierTotal > 0 ? (supplier.count / localSupplierTotal) * 100 : 0}%`, backgroundColor: RANK_COLORS[idx] || '#64748b', borderRadius: 2, opacity: 0.6 }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ChartCard>
+              )}
+
+              {/* By Carrier */}
+              {localCarrierData.length > 0 && (
+                <ChartCard title="By Carrier" subtitle="Delivery partners">
+                  <div style={{ height: Math.max(localCarrierData.length * 40 + 10, 80) }}>
+                    <BarChart
+                      data={{
+                        labels: localCarrierData.map(d => d.name),
+                        datasets: [{
+                          data: localCarrierData.map(d => d.count),
+                          backgroundColor: localCarrierData.map((_, i) => ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'][i % 5]),
+                          borderRadius: 4, barThickness: 18,
+                        }],
+                      }}
+                      options={{ indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.raw} shipments` } } }, scales: { x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false }, ticks: { precision: 0, font: { size: 10 } } }, y: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 11, weight: 600 } } } } }}
+                    />
+                  </div>
+                </ChartCard>
+              )}
+            </div>
+          </>
+        );
+      })()}
 
       {/* Charts Grid */}
       <div className="charts-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem', marginTop: '1.5rem' }}>
