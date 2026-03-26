@@ -132,22 +132,23 @@ function LocalFileUpload({ onFileUpload, loading }) {
     <>
       <div className="fu-section" style={{ padding: isOpen ? undefined : 0 }}>
         <button
+          id="local-import-toggle"
           onClick={() => setIsOpen(prev => !prev)}
           type="button"
           style={{
             display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-            padding: '10px 16px', background: 'var(--surface-2)', border: 'none',
+            padding: '8px 14px', background: isOpen ? 'var(--surface-2)' : 'transparent', border: 'none',
             borderBottom: isOpen ? '1px solid var(--border)' : 'none',
-            borderRadius: isOpen ? '8px 8px 0 0' : 8,
-            cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text-700)',
+            borderRadius: isOpen ? '8px 8px 0 0' : 6,
+            cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--text-600)',
             transition: 'background 0.15s',
           }}
-          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--border)'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'var(--surface-2)'}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-2)'}
+          onMouseLeave={(e) => { if (!isOpen) e.currentTarget.style.background = 'transparent'; }}
         >
-          <span style={{ transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s', fontSize: 11 }}>▶</span>
+          <span style={{ transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s', fontSize: 10 }}>▶</span>
           Import Excel File
-          <span style={{ fontWeight: 400, color: 'var(--text-500)', fontSize: 12 }}>Upload a local receiving schedule spreadsheet</span>
+          <span style={{ fontWeight: 400, color: 'var(--text-400)', fontSize: 11 }}>Upload a local receiving schedule spreadsheet</span>
         </button>
 
         {isOpen && (

@@ -459,40 +459,63 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
         {/* Spacer */}
         <div style={{ flex: 1, minWidth: 8 }} />
 
-        {/* Search with icon */}
-        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-400)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-            style={{ position: 'absolute', left: 8, pointerEvents: 'none' }}>
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-          </svg>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="input"
-            style={{ width: 240, boxSizing: 'border-box', fontSize: '0.82rem', padding: '5px 10px 5px 28px' }}
-            placeholder="Search shipments..."
-          />
+        {/* Right group: search + import, visually connected */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {/* Filter chip — inline next to search when active */}
+          {statusFilter && (
+            <div style={{
+              padding: '3px 8px', backgroundColor: 'rgba(59,130,246,0.08)',
+              border: '1px solid rgba(59,130,246,0.25)', borderRadius: 12,
+              display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', whiteSpace: 'nowrap',
+            }}>
+              <span style={{ color: 'var(--info)', fontWeight: 600 }}>
+                {statusFilter.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+              </span>
+              <button onClick={() => { const p = new URLSearchParams(searchParams); p.delete('status'); setSearchParams(p, { replace: true }); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-400)', fontSize: '0.85rem', lineHeight: 1, padding: 0 }}
+                title="Clear filter">&times;</button>
+            </div>
+          )}
+
+          {/* Search with icon */}
+          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-400)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              style={{ position: 'absolute', left: 8, pointerEvents: 'none' }}>
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+            </svg>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="input"
+              style={{ width: 200, boxSizing: 'border-box', fontSize: '0.8rem', padding: '4px 10px 4px 26px' }}
+              placeholder="Search..."
+            />
+          </div>
+
+          {/* Import button — compact, sits with search */}
+          <button
+            onClick={() => document.getElementById('local-import-toggle')?.click()}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)',
+              background: 'var(--surface)', cursor: 'pointer', fontSize: '0.78rem',
+              fontWeight: 500, color: 'var(--text-600)', whiteSpace: 'nowrap',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-2)'; e.currentTarget.style.borderColor = 'var(--text-400)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+            title="Import from Excel file"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            Import
+          </button>
         </div>
       </div>
 
-      {/* Filter chip — only when filtered */}
-      {statusFilter && (
-        <div style={{
-          margin: '0.4rem 0', padding: '4px 10px',
-          backgroundColor: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.25)',
-          borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: '0.8rem',
-        }}>
-          <span style={{ color: 'var(--info)', fontWeight: 600 }}>
-            {statusFilter.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-          </span>
-          <button onClick={() => { const p = new URLSearchParams(searchParams); p.delete('status'); setSearchParams(p, { replace: true }); }}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-500)', fontSize: '1rem', lineHeight: 1, padding: '0 2px' }}
-            title="Clear filter">&times;</button>
-        </div>
-      )}
-
-      {/* File Import — collapsible, tucked below toolbar */}
+      {/* File Import — collapsible panel, triggered by Import button above */}
       <React.Suspense fallback={null}>
         <LocalFileUpload onFileUpload={onFileUpload} loading={loading} />
       </React.Suspense>
@@ -568,25 +591,35 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
                       ) : '-'}
                     </td>
                     <td>
-                      <select
-                        value={s.latestStatus}
-                        onChange={e => handleStatusChange(s.id, e.target.value)}
-                        style={{
-                          padding: '3px 22px 3px 8px', borderRadius: '12px',
-                          border: `1.5px solid ${statusColor}35`,
-                          fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
-                          backgroundColor: `${statusColor}10`,
-                          color: statusColor,
-                          appearance: 'none',
-                          WebkitAppearance: 'none',
-                          backgroundImage: `url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l3 3 3-3' stroke='${encodeURIComponent(statusColor)}' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'right 7px center',
-                          lineHeight: 1.3,
-                          boxShadow: `0 1px 2px ${statusColor}15`,
-                          letterSpacing: '0.01em',
-                        }}
-                      >
+                      <div style={{ display: 'inline-flex', alignItems: 'center', position: 'relative' }}>
+                        {/* Status dot */}
+                        <span style={{
+                          position: 'absolute', left: 7, top: '50%', transform: 'translateY(-50%)',
+                          width: 6, height: 6, borderRadius: '50%', backgroundColor: statusColor,
+                          pointerEvents: 'none', zIndex: 1,
+                        }} />
+                        <select
+                          value={s.latestStatus}
+                          onChange={e => handleStatusChange(s.id, e.target.value)}
+                          style={{
+                            padding: '3px 22px 3px 18px', borderRadius: '12px',
+                            border: `1.5px solid ${statusColor}30`,
+                            fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
+                            backgroundColor: `${statusColor}14`,
+                            color: statusColor,
+                            appearance: 'none',
+                            WebkitAppearance: 'none',
+                            backgroundImage: `url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l3 3 3-3' stroke='${encodeURIComponent(statusColor)}' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'right 7px center',
+                            lineHeight: 1.3,
+                            boxShadow: `0 1px 3px ${statusColor}18`,
+                            letterSpacing: '0.01em',
+                            transition: 'box-shadow 0.15s, border-color 0.15s',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.boxShadow = `0 2px 6px ${statusColor}28`; e.currentTarget.style.borderColor = `${statusColor}60`; }}
+                          onMouseLeave={e => { e.currentTarget.style.boxShadow = `0 1px 3px ${statusColor}18`; e.currentTarget.style.borderColor = `${statusColor}30`; }}
+                        >
                         {(() => {
                           const groups = {};
                           LOCAL_STATUSES.forEach(st => {
@@ -601,7 +634,8 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
                             </optgroup>
                           ));
                         })()}
-                      </select>
+                        </select>
+                      </div>
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '2px' }}>
