@@ -215,6 +215,60 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
   }, [costingEstimates]);
 
   // Consolidated single-pass computation: stats, percentage deltas, and offsite average
+  // Separate international and local shipments
+  const internationalShipments = useMemo(() =>
+    (shipments || []).filter(s => s.shipmentType !== 'local'), [shipments]);
+  const localShipments = useMemo(() =>
+    (shipments || []).filter(s => s.shipmentType === 'local'), [shipments]);
+
+  // Local receiving summary stats
+  const localStats = useMemo(() => {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const endOfWeek = new Date(today); endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()));
+    const arrivedStatuses = ['arrived_pta', 'arrived_klm', 'arrived_offsite'];
+    const postArrivalStatuses = ['unloading', 'inspection_pending', 'inspecting', 'inspection_passed', 'inspection_failed', 'receiving'];
+    const delayedStatuses = ['delayed_supplier', 'delayed_documents', 'delayed_port', 'delayed_customs'];
+
+    const parseDate = (d) => {
+      if (!d) return null;
+      try {
+        const num = Number(d);
+        if (!isNaN(num) && num > 30000 && num < 60000) {
+          const epoch = new Date(1899, 11, 30);
+          return new Date(epoch.getTime() + num * 86400000);
+        }
+        const parsed = new Date(d);
+        if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 2000) return parsed;
+        return null;
+      } catch { return null; }
+    };
+
+    let overdue = 0;
+    let dueThisWeek = 0;
+    localShipments.forEach(s => {
+      const expected = parseDate(s.vesselName);
+      if (expected && expected < today &&
+        !arrivedStatuses.includes(s.latestStatus) && !postArrivalStatuses.includes(s.latestStatus) &&
+        s.latestStatus !== 'stored' && s.latestStatus !== 'cancelled') {
+        overdue++;
+      }
+      if (expected && expected >= today && expected <= endOfWeek && s.latestStatus === 'in_transit_roadway') {
+        dueThisWeek++;
+      }
+    });
+
+    return {
+      total: localShipments.length,
+      overdue,
+      dueThisWeek,
+      inTransit: localShipments.filter(s => s.latestStatus === 'in_transit_roadway').length,
+      arrived: localShipments.filter(s => arrivedStatuses.includes(s.latestStatus)).length,
+      postArrival: localShipments.filter(s => postArrivalStatuses.includes(s.latestStatus)).length,
+      stored: localShipments.filter(s => s.latestStatus === 'stored').length,
+      delayed: localShipments.filter(s => delayedStatuses.includes(s.latestStatus)).length,
+    };
+  }, [localShipments]);
+
   const { stats, pctDeltas, avgDaysOffsite } = useMemo(() => {
     const supplierOrderRefs = {};
     const warehouseOrderRefs = {};
@@ -263,7 +317,8 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
     let offsiteDaysSum = 0;
     let offsiteCount = 0;
 
-    shipments.forEach(shipment => {
+    // Use only international shipments for dashboard stats
+    internationalShipments.forEach(shipment => {
       const orderRef = shipment.orderRef;
       if (!orderRef) return;
 
@@ -366,7 +421,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       }
     });
 
-    const uniqueOrderRefs = new Set(shipments.map(s => s.orderRef).filter(Boolean));
+    const uniqueOrderRefs = new Set(internationalShipments.map(s => s.orderRef).filter(Boolean));
 
     const result = {
       total: uniqueOrderRefs.size,
@@ -409,7 +464,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       },
       avgDaysOffsite: offsiteCount > 0 ? Math.round(offsiteDaysSum / offsiteCount) : 0,
     };
-  }, [shipments]);
+  }, [internationalShipments]);
 
   // Supplier on-time trend (last 8 weeks)
   const supplierOnTimeTrend = useMemo(() => {
@@ -424,7 +479,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
     for (let i = 7; i >= 0; i--) {
       const weekStart = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
       const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
-      const weekShipments = (shipments || []).filter(s => {
+      const weekShipments = internationalShipments.filter(s => {
         const d = new Date(s.updatedAt || s.createdAt);
         return d >= weekStart && d < weekEnd;
       });
@@ -434,7 +489,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       weeks.push({ label: `W${weekNum}`, pct });
     }
     return weeks;
-  }, [shipments]);
+  }, [internationalShipments]);
 
   // Status donut data
   const statusChartData = useMemo(() => [
@@ -478,7 +533,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
     const currentWeek = getCurrentWeek();
     const maxWeek = currentWeek + 2;
     const weeks = {};
-    (shipments || []).forEach(s => {
+    internationalShipments.forEach(s => {
       const wk = Number(s.weekNumber) || 0;
       if (wk === 0 || wk > maxWeek) return;
       if (!weeks[wk]) weeks[wk] = { products: 0, pallets: 0 };
@@ -488,7 +543,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
     const sorted = Object.keys(weeks).map(Number).sort((a, b) => a - b).slice(-12);
     if (sorted.length < 2) return null;
     return sorted.map(w => ({ week: `W${w}`, products: weeks[w].products, pallets: weeks[w].pallets }));
-  }, [shipments]);
+  }, [internationalShipments]);
 
   // Offsite storage duration
   const offsiteChartData = useMemo(() => {
@@ -500,7 +555,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       ShipmentStatus.RECEIVING, ShipmentStatus.RECEIVED,
       ShipmentStatus.STORED, ShipmentStatus.ARCHIVED,
     ];
-    const offsite = (shipments || []).filter(s =>
+    const offsite = internationalShipments.filter(s =>
       offsiteStatuses.includes(s.latestStatus) &&
       (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE'
     );
@@ -513,7 +568,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
         return { label, days };
       })
       .sort((a, b) => b.days - a.days);
-  }, [shipments]);
+  }, [internationalShipments]);
 
   // Total offsite storage cost
   const totalStorageCost = useMemo(() => {
@@ -524,7 +579,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       ShipmentStatus.RECEIVING, ShipmentStatus.RECEIVED,
       ShipmentStatus.STORED, ShipmentStatus.ARCHIVED,
     ];
-    const offsite = (shipments || []).filter(s =>
+    const offsite = internationalShipments.filter(s =>
       offsiteStatuses.includes(s.latestStatus) &&
       (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE'
     );
@@ -540,7 +595,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
         : pallets * (storageRates.week1 + (totalWeeks - 1) * storageRates.week2Plus);
       return sum + cost;
     }, 0);
-  }, [shipments, storageRates]);
+  }, [internationalShipments, storageRates]);
 
   const formattedStorageCost = `R${Math.round(totalStorageCost).toLocaleString('en-ZA')}`;
 
@@ -553,7 +608,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       ShipmentStatus.MOORED, ShipmentStatus.BERTH_WORKING, ShipmentStatus.BERTH_COMPLETE, ShipmentStatus.GATED_IN_PORT,
       ...DELAYED_STATUSES,
     ];
-    return shipments
+    return internationalShipments
       .filter(s =>
         s.weekNumber && s.weekNumber >= currentWeek &&
         activeStatuses.includes(s.latestStatus)
@@ -705,6 +760,46 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
           </div>
         ))}
       </div>
+
+      {/* Local Receiving Summary */}
+      {localStats.total > 0 && (
+        <div
+          className="dash-panel"
+          style={{ marginTop: '1rem', cursor: 'pointer' }}
+          onClick={() => navigate('/local-receiving')}
+          role="button" tabIndex={0}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/local-receiving'); } }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-900)' }}>Local Receiving</h4>
+              <span style={{ fontSize: 11, color: 'var(--text-500)' }}>Road deliveries & inter-warehouse transfers</span>
+            </div>
+            <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>View All &rarr;</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {[
+              { label: 'Total', value: localStats.total, color: 'var(--accent)', bg: 'rgba(5,150,105,0.08)' },
+              ...(localStats.overdue > 0 ? [{ label: 'Overdue', value: localStats.overdue, color: 'var(--danger)', bg: 'rgba(239,68,68,0.08)' }] : []),
+              ...(localStats.dueThisWeek > 0 ? [{ label: 'Due This Week', value: localStats.dueThisWeek, color: '#d97706', bg: 'rgba(245,158,11,0.08)' }] : []),
+              ...(localStats.inTransit > 0 ? [{ label: 'In Transit', value: localStats.inTransit, color: 'var(--info)', bg: 'rgba(59,130,246,0.08)' }] : []),
+              ...(localStats.arrived > 0 ? [{ label: 'Arrived', value: localStats.arrived, color: 'var(--success)', bg: 'rgba(16,185,129,0.08)' }] : []),
+              ...(localStats.postArrival > 0 ? [{ label: 'Post-Arrival', value: localStats.postArrival, color: '#d97706', bg: 'rgba(245,158,11,0.08)' }] : []),
+              ...(localStats.stored > 0 ? [{ label: 'Stored', value: localStats.stored, color: 'var(--success)', bg: 'rgba(16,185,129,0.08)' }] : []),
+              ...(localStats.delayed > 0 ? [{ label: 'Delayed', value: localStats.delayed, color: 'var(--danger)', bg: 'rgba(239,68,68,0.08)' }] : []),
+            ].map(item => (
+              <div key={item.label} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '5px 12px', borderRadius: 20, background: item.bg,
+                border: `1px solid ${item.color}20`,
+              }}>
+                <span style={{ fontSize: 15, fontWeight: 700, color: item.color }}>{item.value}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-600)' }}>{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Charts Grid */}
       <div className="charts-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem', marginTop: '1.5rem' }}>
@@ -1143,6 +1238,10 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
         <button className="btn btn-primary" style={{ padding: '10px 20px', fontSize: 13 }}
           onClick={() => navigate('/shipping')}>
           Shipping Schedule
+        </button>
+        <button className="btn btn-ghost" style={{ padding: '10px 20px', fontSize: 13 }}
+          onClick={() => navigate('/local-receiving')}>
+          Local Receiving
         </button>
         <button className="btn btn-ghost" style={{ padding: '10px 20px', fontSize: 13 }}
           onClick={() => navigate('/reports')}>
