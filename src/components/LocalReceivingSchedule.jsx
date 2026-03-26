@@ -316,7 +316,19 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
     return String(d);
   };
 
-  const btnStyle = { fontSize: '0.8rem', padding: '5px 10px' };
+  // SVG icon helpers for action buttons
+  const EditIcon = () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+      <path d="m15 5 4 4"/>
+    </svg>
+  );
+  const TrashIcon = () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+    </svg>
+  );
 
   const renderFormFields = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -399,12 +411,16 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
   return (
     <div className="window-content">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        marginBottom: '1.25rem', paddingBottom: '1rem',
+        borderBottom: '1px solid var(--border)', flexWrap: 'wrap', gap: '0.5rem',
+      }}>
         <div className="page-header" style={{ marginBottom: 0 }}>
-          <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-900)' }}>
+          <h2 style={{ margin: '0 0 0.25rem 0', color: 'var(--text-900)', fontSize: '1.25rem' }}>
             Local Receiving Schedule
           </h2>
-          <p style={{ margin: 0, color: 'var(--text-500)', fontSize: '0.9rem' }}>
+          <p style={{ margin: 0, color: 'var(--text-500)', fontSize: '0.85rem' }}>
             Track local deliveries, road shipments, and inter-warehouse transfers
           </p>
         </div>
@@ -413,24 +429,23 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
         </button>
       </div>
 
-      {/* Stat Cards */}
-      <div className="stats-grid" style={{ marginBottom: '1rem' }}>
+      {/* Stat Cards — compact strip */}
+      <div style={{
+        display: 'flex', gap: 8, marginBottom: '1rem', flexWrap: 'wrap',
+      }}>
         {statCards.map(card => (
           <div key={card.key}
             className={`stat-card ${card.ring} clickable ${statusFilter === card.status ? 'active' : ''}`}
             onClick={() => handleStatusCardClick(card.status)}
+            style={{ minWidth: 100, maxWidth: 140, flex: '0 1 auto', padding: '8px 12px', cursor: 'pointer' }}
           >
-            <div style={{
-              width: 24, height: 24, borderRadius: '50%', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', fontSize: 12,
-              backgroundColor: card.tint, marginBottom: 6,
-            }}>
-              {card.icon}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 14 }}>{card.icon}</span>
+              <h3 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: 'var(--navy-900)' }}>
+                {card.value}
+              </h3>
             </div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 1px', color: 'var(--navy-900)' }}>
-              {card.value}
-            </h3>
-            <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>
+            <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600, color: 'var(--text-500)', margin: '2px 0 0' }}>
               {card.label}
             </p>
           </div>
@@ -452,25 +467,25 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
         </div>
       )}
 
-      {/* File Import */}
-      <React.Suspense fallback={null}>
-        <LocalFileUpload onFileUpload={onFileUpload} loading={loading} />
-      </React.Suspense>
-
-      {/* Search */}
-      <div style={{ marginBottom: '1rem' }}>
+      {/* Search + Import row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
         <input
           type="text"
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
           className="input"
-          style={{ width: '100%', maxWidth: '400px', boxSizing: 'border-box' }}
+          style={{ flex: '1 1 280px', maxWidth: '400px', boxSizing: 'border-box' }}
           placeholder="Search by order ref, supplier, product..."
         />
       </div>
 
+      {/* File Import — collapsible utility */}
+      <React.Suspense fallback={null}>
+        <LocalFileUpload onFileUpload={onFileUpload} loading={loading} />
+      </React.Suspense>
+
       {/* Table */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="card" style={{ padding: 0, overflow: 'hidden', marginTop: '0.5rem' }}>
         {loading ? (
           <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-500)' }}>Loading...</div>
         ) : filtered.length === 0 ? (
@@ -499,18 +514,39 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
                 {filtered.map(s => {
                   const overdue = isOverdue(s);
                   const dueThisWeek = !overdue && isDueThisWeek(s);
+                  const statusColor = STATUS_COLORS[s.latestStatus] || '#6c757d';
                   return (
-                  <tr key={s.id} style={overdue ? { backgroundColor: 'rgba(239,68,68,0.08)' } : dueThisWeek ? { backgroundColor: 'rgba(245,158,11,0.06)' } : {}}>
+                  <tr key={s.id} style={
+                    overdue ? { boxShadow: 'inset 3px 0 0 var(--danger)' }
+                    : dueThisWeek ? { boxShadow: 'inset 3px 0 0 #d97706' }
+                    : {}
+                  }>
                     <td style={{ fontWeight: 600 }}>{s.orderRef || '-'}</td>
                     <td>{s.supplier || '-'}</td>
-                    <td>{s.productName || '-'}</td>
+                    <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.productName || '-'}</td>
                     <td>{s.quantity || '-'}</td>
                     <td>{s.palletQty ? (Math.round(s.palletQty) || 1) : '-'}</td>
                     <td>{s.forwardingAgent || '-'}</td>
-                    <td style={overdue ? { color: 'var(--danger)', fontWeight: 600 } : dueThisWeek ? { color: '#d97706', fontWeight: 600 } : {}}>
-                      {formatDate(s.vesselName)}
-                      {overdue && <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--danger)' }}>OVERDUE</span>}
-                      {dueThisWeek && <span style={{ display: 'block', fontSize: '0.65rem', color: '#d97706' }}>THIS WEEK</span>}
+                    <td>
+                      <span style={{ fontWeight: overdue || dueThisWeek ? 600 : 400, color: overdue ? 'var(--danger)' : dueThisWeek ? '#d97706' : 'inherit' }}>
+                        {formatDate(s.vesselName)}
+                      </span>
+                      {overdue && (
+                        <span style={{
+                          display: 'inline-block', marginLeft: 6, fontSize: '0.6rem', fontWeight: 700,
+                          padding: '1px 5px', borderRadius: 4,
+                          backgroundColor: 'rgba(239,68,68,0.1)', color: 'var(--danger)',
+                          verticalAlign: 'middle', letterSpacing: '0.3px',
+                        }}>OVERDUE</span>
+                      )}
+                      {dueThisWeek && (
+                        <span style={{
+                          display: 'inline-block', marginLeft: 6, fontSize: '0.6rem', fontWeight: 700,
+                          padding: '1px 5px', borderRadius: 4,
+                          backgroundColor: 'rgba(245,158,11,0.1)', color: '#d97706',
+                          verticalAlign: 'middle', letterSpacing: '0.3px',
+                        }}>THIS WEEK</span>
+                      )}
                     </td>
                     <td style={{ fontWeight: 600, fontSize: '0.8rem' }}>{s.receivingWarehouse || '-'}</td>
                     <td style={{ fontSize: '0.78rem', color: 'var(--text-500)' }}>
@@ -523,10 +559,17 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
                         value={s.latestStatus}
                         onChange={e => handleStatusChange(s.id, e.target.value)}
                         style={{
-                          padding: '3px 6px', borderRadius: '20px', border: 'none',
-                          fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
-                          backgroundColor: `${STATUS_COLORS[s.latestStatus] || '#6c757d'}20`,
-                          color: STATUS_COLORS[s.latestStatus] || '#6c757d',
+                          padding: '4px 20px 4px 8px', borderRadius: '20px',
+                          border: `1.5px solid ${statusColor}40`,
+                          fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
+                          backgroundColor: `${statusColor}12`,
+                          color: statusColor,
+                          appearance: 'none',
+                          WebkitAppearance: 'none',
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='${encodeURIComponent(statusColor)}' stroke-width='1.5' fill='none'/%3E%3C/svg%3E")`,
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'right 6px center',
+                          lineHeight: 1.4,
                         }}
                       >
                         {(() => {
@@ -546,9 +589,19 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
                       </select>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <button className="btn btn-ghost" style={btnStyle} onClick={() => openEdit(s)}>Edit</button>
-                        <button className="btn btn-ghost danger" style={btnStyle} onClick={() => handleDelete(s.id)}>Delete</button>
+                      <div style={{ display: 'flex', gap: '2px' }}>
+                        <button
+                          className="btn btn-ghost"
+                          style={{ padding: '5px 7px', fontSize: '0.8rem', borderRadius: 6 }}
+                          onClick={() => openEdit(s)}
+                          title="Edit shipment"
+                        ><EditIcon /></button>
+                        <button
+                          className="btn btn-ghost danger"
+                          style={{ padding: '5px 7px', fontSize: '0.8rem', borderRadius: 6 }}
+                          onClick={() => handleDelete(s.id)}
+                          title="Delete shipment"
+                        ><TrashIcon /></button>
                       </div>
                     </td>
                   </tr>
