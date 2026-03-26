@@ -459,15 +459,21 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
         {/* Spacer */}
         <div style={{ flex: 1, minWidth: 8 }} />
 
-        {/* Search */}
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          className="input"
-          style={{ width: 220, boxSizing: 'border-box', fontSize: '0.82rem', padding: '5px 10px' }}
-          placeholder="Search..."
-        />
+        {/* Search with icon */}
+        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-400)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            style={{ position: 'absolute', left: 8, pointerEvents: 'none' }}>
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+          </svg>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="input"
+            style={{ width: 240, boxSizing: 'border-box', fontSize: '0.82rem', padding: '5px 10px 5px 28px' }}
+            placeholder="Search shipments..."
+          />
+        </div>
       </div>
 
       {/* Filter chip — only when filtered */}
@@ -566,17 +572,19 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
                         value={s.latestStatus}
                         onChange={e => handleStatusChange(s.id, e.target.value)}
                         style={{
-                          padding: '4px 20px 4px 8px', borderRadius: '20px',
-                          border: `1.5px solid ${statusColor}40`,
+                          padding: '3px 22px 3px 8px', borderRadius: '12px',
+                          border: `1.5px solid ${statusColor}35`,
                           fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
-                          backgroundColor: `${statusColor}12`,
+                          backgroundColor: `${statusColor}10`,
                           color: statusColor,
                           appearance: 'none',
                           WebkitAppearance: 'none',
-                          backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='${encodeURIComponent(statusColor)}' stroke-width='1.5' fill='none'/%3E%3C/svg%3E")`,
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l3 3 3-3' stroke='${encodeURIComponent(statusColor)}' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
                           backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'right 6px center',
-                          lineHeight: 1.4,
+                          backgroundPosition: 'right 7px center',
+                          lineHeight: 1.3,
+                          boxShadow: `0 1px 2px ${statusColor}15`,
+                          letterSpacing: '0.01em',
                         }}
                       >
                         {(() => {
