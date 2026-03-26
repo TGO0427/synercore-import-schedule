@@ -410,82 +410,89 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
 
   return (
     <div className="window-content">
-      {/* Header */}
+      {/* Header row: title left, action right */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        marginBottom: '1.25rem', paddingBottom: '1rem',
-        borderBottom: '1px solid var(--border)', flexWrap: 'wrap', gap: '0.5rem',
+        marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.5rem',
       }}>
-        <div className="page-header" style={{ marginBottom: 0 }}>
-          <h2 style={{ margin: '0 0 0.25rem 0', color: 'var(--text-900)', fontSize: '1.25rem' }}>
+        <div>
+          <h2 style={{ margin: 0, color: 'var(--text-900)', fontSize: '1.2rem', lineHeight: 1.3 }}>
             Local Receiving Schedule
           </h2>
-          <p style={{ margin: 0, color: 'var(--text-500)', fontSize: '0.85rem' }}>
+          <p style={{ margin: '2px 0 0', color: 'var(--text-500)', fontSize: '0.8rem' }}>
             Track local deliveries, road shipments, and inter-warehouse transfers
           </p>
         </div>
-        <button className="btn btn-primary" style={{ fontSize: '0.85rem' }} onClick={() => { resetForm(); setShowCreateModal(true); }}>
+        <button className="btn btn-primary" style={{ fontSize: '0.82rem', padding: '7px 14px' }} onClick={() => { resetForm(); setShowCreateModal(true); }}>
           + New Local Shipment
         </button>
       </div>
 
-      {/* Stat Cards — compact strip */}
+      {/* Compact toolbar: stat chips + search + import — one unified zone */}
       <div style={{
-        display: 'flex', gap: 8, marginBottom: '1rem', flexWrap: 'wrap',
+        display: 'flex', alignItems: 'center', gap: 6, marginBottom: '0.5rem',
+        flexWrap: 'wrap', padding: '6px 0',
+        borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)',
       }}>
+        {/* Stat chips — inline, minimal */}
         {statCards.map(card => (
-          <div key={card.key}
-            className={`stat-card ${card.ring} clickable ${statusFilter === card.status ? 'active' : ''}`}
+          <button key={card.key}
+            className={statusFilter === card.status ? 'active' : ''}
             onClick={() => handleStatusCardClick(card.status)}
-            style={{ minWidth: 100, maxWidth: 140, flex: '0 1 auto', padding: '8px 12px', cursor: 'pointer' }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              padding: '4px 10px', borderRadius: 20, border: '1px solid var(--border)',
+              background: statusFilter === card.status ? 'var(--accent-100)' : 'var(--surface)',
+              cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
+              color: statusFilter === card.status ? 'var(--accent)' : 'var(--text-700)',
+              outline: statusFilter === card.status ? '2px solid var(--accent)' : 'none',
+              outlineOffset: -1, transition: 'all 0.15s',
+              whiteSpace: 'nowrap',
+            }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 14 }}>{card.icon}</span>
-              <h3 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: 'var(--navy-900)' }}>
-                {card.value}
-              </h3>
-            </div>
-            <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600, color: 'var(--text-500)', margin: '2px 0 0' }}>
-              {card.label}
-            </p>
-          </div>
+            <span style={{ fontSize: 12 }}>{card.icon}</span>
+            <span style={{ fontWeight: 700, fontSize: '0.8rem' }}>{card.value}</span>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-500)', fontWeight: 500 }}>{card.label}</span>
+          </button>
         ))}
-      </div>
 
-      {/* Filter chip */}
-      {statusFilter && (
-        <div style={{
-          margin: '0.75rem 0', padding: '0.5rem 1rem',
-          backgroundColor: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.3)',
-          borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-        }}>
-          <span style={{ color: 'var(--info)', fontWeight: 'bold', fontSize: '0.85rem' }}>
-            Filtered: {statusFilter.replace(/_/g, ' ').toUpperCase()}
-          </span>
-          <button onClick={() => { const p = new URLSearchParams(searchParams); p.delete('status'); setSearchParams(p, { replace: true }); }}
-            className="btn btn-sm" style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}>Clear</button>
-        </div>
-      )}
+        {/* Spacer */}
+        <div style={{ flex: 1, minWidth: 8 }} />
 
-      {/* Search + Import row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+        {/* Search */}
         <input
           type="text"
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
           className="input"
-          style={{ flex: '1 1 280px', maxWidth: '400px', boxSizing: 'border-box' }}
-          placeholder="Search by order ref, supplier, product..."
+          style={{ width: 220, boxSizing: 'border-box', fontSize: '0.82rem', padding: '5px 10px' }}
+          placeholder="Search..."
         />
       </div>
 
-      {/* File Import — collapsible utility */}
+      {/* Filter chip — only when filtered */}
+      {statusFilter && (
+        <div style={{
+          margin: '0.4rem 0', padding: '4px 10px',
+          backgroundColor: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.25)',
+          borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: '0.8rem',
+        }}>
+          <span style={{ color: 'var(--info)', fontWeight: 600 }}>
+            {statusFilter.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+          </span>
+          <button onClick={() => { const p = new URLSearchParams(searchParams); p.delete('status'); setSearchParams(p, { replace: true }); }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-500)', fontSize: '1rem', lineHeight: 1, padding: '0 2px' }}
+            title="Clear filter">&times;</button>
+        </div>
+      )}
+
+      {/* File Import — collapsible, tucked below toolbar */}
       <React.Suspense fallback={null}>
         <LocalFileUpload onFileUpload={onFileUpload} loading={loading} />
       </React.Suspense>
 
       {/* Table */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden', marginTop: '0.5rem' }}>
+      <div className="card" style={{ padding: 0, overflow: 'hidden', marginTop: '0.35rem' }}>
         {loading ? (
           <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-500)' }}>Loading...</div>
         ) : filtered.length === 0 ? (
@@ -523,7 +530,7 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
                   }>
                     <td style={{ fontWeight: 600 }}>{s.orderRef || '-'}</td>
                     <td>{s.supplier || '-'}</td>
-                    <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.productName || '-'}</td>
+                    <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={s.productName || ''}>{s.productName || '-'}</td>
                     <td>{s.quantity || '-'}</td>
                     <td>{s.palletQty ? (Math.round(s.palletQty) || 1) : '-'}</td>
                     <td>{s.forwardingAgent || '-'}</td>
