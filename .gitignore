@@ -78,3 +78,4 @@ data/
 # Claude settings (keep local)
 .claude/
 .vercel
+eng.traineddata

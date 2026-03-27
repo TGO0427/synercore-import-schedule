@@ -443,7 +443,14 @@ async function ocrPdfBuffer(pdfBuffer: Buffer): Promise<string> {
     if (!foundLargeImage) {
       logInfo(`Page ${p}: no large images found — rendering full page for OCR`);
       try {
-        const { createCanvas } = await import('@napi-rs/canvas');
+        // @napi-rs/canvas is an optional dep — may not be available on all platforms
+        let createCanvas: any;
+        try {
+          createCanvas = (await import('@napi-rs/canvas')).createCanvas;
+        } catch {
+          logWarn('Full-page OCR unavailable: @napi-rs/canvas not installed');
+          continue;
+        }
         const scale = 2.0; // 2x for readable OCR quality
         const viewport = page.getViewport({ scale });
         const canvas = createCanvas(Math.floor(viewport.width), Math.floor(viewport.height));
