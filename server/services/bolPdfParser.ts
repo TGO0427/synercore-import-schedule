@@ -173,9 +173,14 @@ const PORT_LOADING_PATTERNS = [
 
 const PORT_DISCHARGE_PATTERNS = [
   // Standalone SA port with country: "DURBAN, SOUTH AFRICA" or "Cape Town, South Africa"
-  /\b(DURBAN|Cape\s+Town|Port\s+Elizabeth),?\s+South\s+Africa\b/i,
+  // OCR-tolerant: "South Afica", "South Af" etc.
+  /\b(DURBAN|Cape\s+Town|Port\s+Elizabeth),?\s+South\s+Af\w*\b/i,
+  // OCR: "Cape Town South Afica" without comma
+  /\b(Cape\s+Town)\s+South/i,
   // OOCL/MSC: "PORT OF DISCHARGE" on one line, port name on next line (single line only)
   /PORT\s+OF\s+DISCHARGE\s*\n\s*([A-Z][A-Za-z ,\-\.]{3,40})/im,
+  // OCR: port name appears after booking ref line near "PORT OF DISCHARGE"
+  /PORT\s+OF\s+DISCHARGE[^\n]*\n[^\n]*?(Cape\s+Town|Durban|Port\s+Elizabeth)[^\n]*/im,
   // MSC BOL OCR: booking ref line "177DPPPED60245 Cape Town, South Africa OOOO XXXX"
   /[A-Z0-9]{8,}\s+(.+?)\s+[OX]{4}/i,
   /(?:Port\s+of\s+Discharge)\s*[:\s]+([A-Z][A-Za-z\s,]{3,45}?)(?:\s*(?:Port\s+of|Vessel|Notify|Consignee|Place|$|\n))/i,
@@ -185,6 +190,8 @@ const PORT_DISCHARGE_PATTERNS = [
 ];
 
 const CONSIGNEE_PATTERNS = [
+  // OCR-tolerant: "AFRICAN FOOD" appears in garbled text near KLAPMUTS address
+  /\b(AFRICAN\s+FOOD\s+\w+[^\n]{0,40}?(?:PTY|LTD|@\w+LTD)[^\n]{0,20})/i,
   // OOCL: "CONSIGNEE (COMPLETE NAME AND ADDRESS)" — company may span two lines: "(PTY)\nLTD"
   /CONSIGNEE\s*\(?(?:COMPLETE\s+)?NAME\s+AND\s+ADDRESS\)?[^\n]*\n\s*([A-Z][^\n]*?\(PTY\)\s*\n\s*LTD)/i,
   /CONSIGNEE\s*\(?(?:COMPLETE\s+)?NAME\s+AND\s+ADDRESS\)?[^\n]*\n\s*([A-Z][^\n]*?(?:PTY|LTD|INC|CORP|LLC)[^\n]{0,20}?\bLTD\b)/i,
@@ -204,6 +211,13 @@ const CONSIGNEE_PATTERNS = [
 ];
 
 const SHIPPER_PATTERNS = [
+  // Known suppliers (OCR-tolerant) — direct company name detection
+  /\b(QIDA\s+CHEMICAL[^\n]{0,30})/i,
+  /\b(SACCO\s+S\.?R\.?L[^\n]{0,30})/i,
+  /\b(SHAKTI\s+CHEMICAL[^\n]{0,30})/i,
+  /\b(AROMSA\s+BESIN[^\n]{0,40})/i,
+  /\b(AB\s+MAURI[^\n]{0,30})/i,
+  /\b(ECOLEX\s+SDN[^\n]{0,30})/i,
   // OOCL: "SHIPPER/EXPORTER (COMPLETE NAME AND ADDRESS)" then company on next line
   /SHIPPER\s*\/\s*EXPORTER[^\n]*\n\s*([A-Z][^\n]*?(?:CO\.?,?\s*LTD|PTY\)?\s*LTD|INC\.?|CORP\.?|LLC|GMBH|S\.?A\.?))/i,
   /SHIPPER\s*\/\s*EXPORTER[^\n]*\n\s*([A-Z][^\n]{4,100})/i,
@@ -234,12 +248,15 @@ const WEIGHT_PATTERNS = [
   // Summary weight in rightmost column (large values, 4+ digits before KGS)
   /([\d,]{4,}\.?\d*)\s*KGS\b/i,
   // Total/Gross weight in summary line (prefer over individual tare/net weights)
+  /Total\s+Gross\s+Weight\s+([\d,\.]+)\s*(?:KGS?|Kgs?|kgs?|Ks)/i,
   /Total\s*[:\s|]*\s*([\d,\.]+)\s*(?:KGS?|Kgs?|kgs?)/i,
   /(?:Gross\s*(?:Cargo\s*)?Weight|G\.?W\.?)\s*[:\s]*([\d,\.]+)\s*(?:KGS?|Kgs?|kg)/i,
   /(?:Total\s*Weight)\s*[:\s]*([\d,\.]+)\s*(?:KGS?|Kgs?|kg)/i,
   /([\d,\.]+)\s*(?:KGS|KG)\s*(?:Gross)/i,
   // Standalone large weight values near "kgs" (skip tare weight which is smaller)
   /([\d,]{5,}\.?\d*)\s*kgs?\./i,
+  // OCR-tolerant: "22401000 Ks" (missing decimal, "Ks" instead of "Kgs")
+  /(?:Gross\s+Weight|Total\s+Gross)\s+([\d,]{5,}\.?\d*)\s*K\w{0,2}\b/i,
 ];
 
 const VOLUME_PATTERNS = [
@@ -251,8 +268,8 @@ const VOLUME_PATTERNS = [
 ];
 
 const PACKAGES_PATTERNS = [
-  // MSC: "Total Items :   600"
-  /Total\s+Items\s*[:\s]+(\d[\d,]*)/i,
+  // MSC: "Total Items :   600" / OCR: "Total ems es" → "Total Items 890"
+  /Total\s+(?:Items|ems|lte?ms)\s*[:\s]*(\d[\d,]*)/i,
   // OOCL TOTAL line: "TOTAL:  960"
   /TOTAL\s*:?\s*(\d{2,})\s+[\d,]+\.?\d*\s*KGS/i,
   /(?:No\.?\s*of\s*(?:Packages|Pkgs|Pieces)|Packages|Quantity)\s*[:\s]*([\d,]+)/i,
@@ -277,6 +294,8 @@ const VALUE_PATTERNS = [
 const DATE_PATTERNS = [
   /(?:Date\s+of\s+Issue|Issued?\s+Date)\s*[:\s]*(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i,
   /(?:Date\s+of\s+Issue|Issued?\s+Date)\s*[:\s]*(\d{1,2}\s+\w{3,9}\s+\d{4})/i,
+  // MSC: "PLACE AND DATE OF ISSUE" then "Qingdao, China\n19-Dec-2025" or "19:Dec 2025"
+  /DATE\s+OF\s+(?:ISSUE|SUE)\s*\n[^\n]*\n\s*(\d{1,2}[\-:\/]\w{3,9}[\-\s\/]\d{4})/im,
 ];
 
 const ONBOARD_DATE_PATTERNS = [
@@ -344,7 +363,7 @@ function parseDate(text: string | null): string | null {
       jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
       jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'
     };
-    const monMatch = text.match(/(\d{1,2})[\-\/\s]+(\w{3,9})[\-\/\s]+(\d{4})/);
+    const monMatch = text.match(/(\d{1,2})[\-\/:\s]+(\w{3,9})[\-\/:\s]+(\d{4})/);
     if (monMatch) {
       const mon = monthMap[monMatch[2].substring(0, 3).toLowerCase()];
       if (mon) {
@@ -392,8 +411,9 @@ async function ocrPdfBuffer(pdfBuffer: Buffer): Promise<string> {
   for (let p = 1; p <= pageCount; p++) {
     const page = await doc.getPage(p);
     const ops = await page.getOperatorList();
+    let foundLargeImage = false;
 
-    // Find embedded images in the page
+    // Try embedded images first (scanned PDFs)
     for (let i = 0; i < ops.fnArray.length; i++) {
       const fn = ops.fnArray[i];
       if (fn === (pdfjsLib as any).OPS.paintImageXObject || fn === (pdfjsLib as any).OPS.paintJpegXObject) {
@@ -401,6 +421,7 @@ async function ocrPdfBuffer(pdfBuffer: Buffer): Promise<string> {
         try {
           const img = await page.objs.get(imgName);
           if (!img || !img.data || img.width < 200 || img.height < 200) continue;
+          foundLargeImage = true;
           // kind=2 is RGB (3ch), kind=1 is RGBA (4ch), kind=3 is grayscale (1ch)
           const channels = img.kind === 2 ? 3 : img.kind === 3 ? 1 : 4;
           const pngBuf = await sharp(Buffer.from(img.data), {
@@ -414,6 +435,34 @@ async function ocrPdfBuffer(pdfBuffer: Buffer): Promise<string> {
         } catch (e) {
           logWarn('OCR image extraction failed', { imgName, error: (e as Error).message });
         }
+      }
+    }
+
+    // If no large embedded images found, the PDF likely uses vector/path rendering.
+    // Render the full page to a high-res image and OCR that.
+    if (!foundLargeImage) {
+      logInfo(`Page ${p}: no large images found — rendering full page for OCR`);
+      try {
+        const { createCanvas } = await import('@napi-rs/canvas');
+        const scale = 2.0; // 2x for readable OCR quality
+        const viewport = page.getViewport({ scale });
+        const canvas = createCanvas(Math.floor(viewport.width), Math.floor(viewport.height));
+        const ctx = canvas.getContext('2d');
+
+        // White background
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        await page.render({ canvasContext: ctx as any, viewport }).promise;
+        const pngBuf = canvas.toBuffer('image/png');
+
+        const { data } = await worker.recognize(pngBuf);
+        if (data.text && data.text.trim().length > 20) {
+          allText.push(data.text);
+          logInfo(`Page ${p}: full-page OCR extracted ${data.text.length} chars`);
+        }
+      } catch (e) {
+        logWarn('Full-page render OCR failed', { page: p, error: (e as Error).message });
       }
     }
   }
@@ -496,11 +545,20 @@ export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
     descriptionOfGoods = null;
     confidence['description_of_goods'] = 0;
   }
-  const containers = findAllContainers(text);
+  let containers = findAllContainers(text);
+  // Filter out false positives: substrings of the BOL number (e.g., "EDUR9513553" from "MEDUR9513553")
+  if (bolNumber) {
+    containers = containers.filter(c => !bolNumber.includes(c) && !c.includes(bolNumber));
+  }
   confidence['container_numbers'] = containers.length > 0 ? 0.9 : 0;
 
   const weightStr = firstMatch(text, WEIGHT_PATTERNS);
-  const grossWeightKg = parseNumber(weightStr);
+  let grossWeightKg = parseNumber(weightStr);
+  // OCR often merges decimal "22401.000 Kgs" into "22401000 Ks" — detect and fix
+  // Typical single-container sea freight is 5,000–30,000 kg; values >100,000 are suspect
+  if (grossWeightKg && grossWeightKg > 100000 && grossWeightKg % 1000 === 0) {
+    grossWeightKg = grossWeightKg / 1000;
+  }
   confidence['gross_weight_kg'] = grossWeightKg ? 0.85 : 0;
 
   const volumeStr = firstMatch(text, VOLUME_PATTERNS);
@@ -580,6 +638,23 @@ export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
     consignee = null;
     confidence['consignee'] = 0;
   }
+
+  // Post-processing: normalize OCR-garbled known company names
+  const KNOWN_COMPANIES: [RegExp, string][] = [
+    [/AFRICAN\s+FOOD\s+(?:MOUS\s+TRES|INDUSTRIES|INDUSTR\w+|IND\w+)[^\n]{0,30}?(?:@TILTD|PTY\)?\.?\s*LTD|\(PTY\)\s*LTD)/i, 'AFRICAN FOOD INDUSTRIES (PTY) LTD'],
+    [/QIDA\s+CHEM\w+[^\n]{0,20}?(?:PTY|LTD)/i, 'QIDA CHEMICAL PTY LTD'],
+    [/SACCO\s+S\.?R\.?L/i, 'SACCO S.R.L'],
+    [/SHAKTI\s+CHEM\w+/i, 'SHAKTI CHEMICALS'],
+  ];
+  const normalizeCompany = (val: string | null): string | null => {
+    if (!val) return null;
+    for (const [pattern, canonical] of KNOWN_COMPANIES) {
+      if (pattern.test(val)) return canonical;
+    }
+    return val;
+  };
+  consignee = normalizeCompany(consignee);
+  shipper = normalizeCompany(shipper);
 
   // Supplier — try shipper as fallback, or consignee for customs worksheets (importer)
   const supplierName = shipper || null;
