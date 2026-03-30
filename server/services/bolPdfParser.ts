@@ -130,10 +130,12 @@ const VESSEL_PATTERNS = [
   /ORIGINALS\s+TO\s+BE\s+RELEASED\s+AT\s*\n[^\n]*\n\s*([A-Z][A-Za-z\s]+\w*\s+\d+\w*)\s*\n/i,
   // OOCL fallback: look for "VESSEL/VOYAGE/FLAG" then scan ahead for vessel-like name
   /VESSEL\s*\/\s*VOYAGE[^\n]*\n[\s\S]*?^([A-Z][A-Z\s]{2,20}\s+\d+\w{0,3})\s*$/im,
-  // MSC: standalone "MSC KALAMATA VII - ZF602A" (vessel name - voyage)
-  /\b(MSC\s+[A-Z][A-Z\s]{2,25}?\w+)\s*[\-–]\s*[A-Z0-9]{3,15}\b/,
+  // MSC: standalone "MSC <NAME> - <VOYAGE>" anywhere in text (OCR-tolerant, min 2-char name)
+  /\b(MSC\s+[A-Z][A-Z\s]{1,25}?\w+)\s*[\-–—]\s*[A-Z0-9]{3,15}\b/,
   // MSC BOL: "VESSEL AND VOYAGE NO" on one line, then "MSC TARANTO - GA601W" on next
   /VESSEL\s+AND\s+VOYAGE\s+NO[^\n]*\n([A-Z][A-Za-z0-9\s]{2,30}?)\s*[\-–]\s*[A-Z0-9]/i,
+  // OCR fallback: "MSC EVA" or "MSC VITTORIA" etc. — short vessel names
+  /\b(MSC\s+[A-Z]{2,15})\s*[\-–—]\s*[A-Z0-9]{3,}/,
   /(?:Vessel\s*(?:Name)?|Motor\s*Vessel|M\/V|Ocean\s*Vessel)\s*[:\s]+([A-Z][A-Za-z0-9\s\-\.]{2,40}?)(?:\s*(?:Voyage|Voy|V\/|$|\n))/i,
   /(?:Vessel\s*(?:Name)?|Motor\s*Vessel|M\/V)\s*[:\s]+([A-Z][A-Za-z0-9][A-Za-z0-9\s\-\.]{1,38})/i,
 ];
@@ -148,8 +150,8 @@ const VOYAGE_PATTERNS = [
   /VESSEL\s+VOYAGE\s*:\s*[A-Z][A-Z\s]+?\s+(\d+\w?)(?:B\/L|$|\n)/i,
   // OOCL: vessel+voyage on one line "CHIBA C 91W" — voyage is trailing code with digits
   /ORIGINALS\s+TO\s+BE\s+RELEASED\s+AT\s*\n[^\n]*\n\s*[A-Z][A-Za-z\s]+?\s+(\d+\w{0,3})\s*\n/i,
-  // MSC: standalone "MSC KALAMATA VII - ZF602A" — extract voyage after dash
-  /\bMSC\s+[A-Z][A-Z\s]{2,25}?\w+\s*[\-–]\s*([A-Z0-9]{3,15})\b/,
+  // MSC: standalone "MSC KALAMATA VII - ZF602A" — extract voyage after dash (min 1-char name)
+  /\bMSC\s+[A-Z][A-Z\s]{1,25}?\w+\s*[\-–—]\s*([A-Z0-9]{3,15})\b/,
   // MSC BOL: vessel and voyage on same line "MSC TARANTO - GA601W"
   /VESSEL\s+AND\s+VOYAGE\s+NO[^\n]*\n[A-Za-z0-9\s]+[\-–]\s*([A-Z0-9]{3,15})/i,
   /(?:Voyage|Voy\.?)\s*(?:No\.?|#)?\s*[:\s]*([A-Z0-9][\w\-]{2,20})/i,
@@ -157,7 +159,12 @@ const VOYAGE_PATTERNS = [
 
 // Ports: require the full label, capture only proper location names (not clause text)
 // Port names: typically capitalized words, city/country names, 4+ chars
+// Known loading port names (for OCR-tolerant matching)
+const KNOWN_LOADING_PORTS = 'Qingdao|QINGDAO|Shanghai|SHANGHAI|Dalian|DALIAN|Tianjin|TIANJIN|Ningbo|NINGBO|Jakarta|JAKARTA|Port\\s+Klang|PORT\\s+KLANG|Xingang|XINGANG|Xiamen|XIAMEN|Busan|BUSAN|Mumbai|MUMBAI|Chennai|CHENNAI';
+
 const PORT_LOADING_PATTERNS = [
+  // Known port names anywhere near loading context (highest priority for OCR)
+  new RegExp(`\\b(${KNOWN_LOADING_PORTS})\\b`, 'i'),
   // Standalone: "Port Klang, Malaysia" or "QINGDAO" near loading context
   /(?:PLACE\s+OF\s+RECEIPT|PRE-CARRIAGE)[^\n]*\n[^\n]*?\b(PORT\s+KLANG|QINGDAO|SHANGHAI|DALIAN|TIANJIN|NINGBO|JAKARTA)\b/im,
   // OOCL/MSC: "PORT OF LOADING" on one line, port name on next line (single line only)
@@ -190,7 +197,8 @@ const PORT_DISCHARGE_PATTERNS = [
 ];
 
 const CONSIGNEE_PATTERNS = [
-  // OCR-tolerant: "AFRICAN FOOD" appears in garbled text near KLAPMUTS address
+  // OCR-tolerant: variations of "AFRICAN FOOD INDUSTRIES" in garbled text
+  /\b(A\w{3,10}N?\s*Fo.?D\s+\w*DUSTR\w*[^\n]{0,40}?(?:PTY|PT\b|LTD|@\w+LTD)[^\n]{0,20})/i,
   /\b(AFRICAN\s+FOOD\s+\w+[^\n]{0,40}?(?:PTY|LTD|@\w+LTD)[^\n]{0,20})/i,
   // OOCL: "CONSIGNEE (COMPLETE NAME AND ADDRESS)" — company may span two lines: "(PTY)\nLTD"
   /CONSIGNEE\s*\(?(?:COMPLETE\s+)?NAME\s+AND\s+ADDRESS\)?[^\n]*\n\s*([A-Z][^\n]*?\(PTY\)\s*\n\s*LTD)/i,
@@ -247,6 +255,9 @@ const WEIGHT_PATTERNS = [
   /TOTAL\s*:?\s*\d*\s+([\d,]+\.?\d*)\s*KGS/i,
   // Summary weight in rightmost column (large values, 4+ digits before KGS)
   /([\d,]{4,}\.?\d*)\s*KGS\b/i,
+  // MSC BOL: "24,192.000 kgs" in the cargo description area — OCR may garble as "2000kas"
+  // Look for the larger weight value (>1000) near "kgs/kas/kg"
+  /([\d,]{4,}\.?\d*)\s*k[gsa]{1,3}s?\.?\b/i,
   // Total/Gross weight in summary line (prefer over individual tare/net weights)
   /Total\s+Gross\s+Weight\s+([\d,\.]+)\s*(?:KGS?|Kgs?|kgs?|Ks)/i,
   /Total\s*[:\s|]*\s*([\d,\.]+)\s*(?:KGS?|Kgs?|kgs?)/i,
@@ -257,6 +268,8 @@ const WEIGHT_PATTERNS = [
   /([\d,]{5,}\.?\d*)\s*kgs?\./i,
   // OCR-tolerant: "22401000 Ks" (missing decimal, "Ks" instead of "Kgs")
   /(?:Gross\s+Weight|Total\s+Gross)\s+([\d,]{5,}\.?\d*)\s*K\w{0,2}\b/i,
+  // OCR: "N.W:24000 KG" or "NW24000KG"
+  /N\.?W\.?\s*:?\s*([\d,]{4,}\.?\d*)\s*KG/i,
 ];
 
 const VOLUME_PATTERNS = [
@@ -487,8 +500,11 @@ export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
   const pdfData = await pdf(pdfBuffer);
   let text = pdfData.text;
 
-  // If text extraction returned minimal content, try OCR (scanned/image PDF)
-  if (text.trim().length < 50) {
+  // If text extraction returned minimal meaningful content, try OCR (scanned/image PDF)
+  // Some PDFs return whitespace-only text; others use custom font encodings that produce
+  // Unicode Private Use Area chars (U+E000–U+F8FF / U+F0000–U+FFFFD) which are unreadable.
+  const meaningfulText = text.replace(/[\s\uE000-\uF8FF\u{F0000}-\u{FFFFD}]/gu, '').length;
+  if (meaningfulText < 50) {
     logInfo('PDF has minimal text — attempting OCR for scanned document');
     try {
       text = await ocrPdfBuffer(pdfBuffer);
@@ -648,10 +664,17 @@ export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
 
   // Post-processing: normalize OCR-garbled known company names
   const KNOWN_COMPANIES: [RegExp, string][] = [
-    [/AFRICAN\s+FOOD\s+(?:MOUS\s+TRES|INDUSTRIES|INDUSTR\w+|IND\w+)[^\n]{0,30}?(?:@TILTD|PTY\)?\.?\s*LTD|\(PTY\)\s*LTD)/i, 'AFRICAN FOOD INDUSTRIES (PTY) LTD'],
-    [/QIDA\s+CHEM\w+[^\n]{0,20}?(?:PTY|LTD)/i, 'QIDA CHEMICAL PTY LTD'],
+    // OCR variants: "ArmcANFo0D NDUSTRES", "AFRICAN FOOD MOUS TRES", etc.
+    [/A\w{3,10}N?\s*Fo.?D\s+\w*DUSTR\w*/i, 'AFRICAN FOOD INDUSTRIES (PTY) LTD'],
+    [/AFRICAN\s+FOOD/i, 'AFRICAN FOOD INDUSTRIES (PTY) LTD'],
+    [/QIDA\s+CHEM\w*/i, 'QIDA CHEMICAL PTY LTD'],
     [/SACCO\s+S\.?R\.?L/i, 'SACCO S.R.L'],
-    [/SHAKTI\s+CHEM\w+/i, 'SHAKTI CHEMICALS'],
+    [/SHAKTI\s+CHEM\w*/i, 'SHAKTI CHEMICALS'],
+    [/AROMSA\s+BESIN/i, 'AROMSA BESIN AROMA VE KATKI MADDELERI SAN. VE TIC. A.S.'],
+    [/ECOLEX\s+SDN/i, 'ECOLEX SDN. BHD'],
+    [/MARCEL\s+CARRAG/i, 'MARCEL CARRAGEENAN'],
+    [/TRISTAR\s+GLOBAL/i, 'TRISTAR GLOBAL SDN. BHD'],
+    [/AB\s+MAURI/i, 'AB MAURI'],
   ];
   const normalizeCompany = (val: string | null): string | null => {
     if (!val) return null;
