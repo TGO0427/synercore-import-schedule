@@ -4,7 +4,8 @@
  */
 
 import { query, queryOne, queryAll } from '../connection.js';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
+const uuidv4 = randomUUID;
 
 export interface Product {
   name?: string;
