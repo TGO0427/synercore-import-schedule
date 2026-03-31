@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useState, useEffect, useRef, Suspense, lazy, startTransition } from 'react';
+import React, { useState, useEffect, useRef, useMemo, Suspense, lazy, startTransition } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import LoginPage from './components/LoginPage';
 import SynercoreLogo from './components/SynercoreLogo';
@@ -116,6 +116,21 @@ function App() {
   // Sidebar calendar filter
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
   const [calendarMonth, setCalendarMonth] = useState(null); // null = All Months
+
+  // Calendar-filtered shipments — used by Dashboard and other pages
+  const calendarFilteredShipments = useMemo(() => {
+    if (calendarMonth === null && calendarYear === new Date().getFullYear()) return shipments;
+    return shipments.filter(s => {
+      // Use the most relevant date: estimatedArrival, updatedAt, or createdAt
+      const dateStr = s.estimatedArrival || s.updatedAt || s.createdAt;
+      if (!dateStr) return calendarMonth === null; // include dateless shipments only when "All Months"
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return calendarMonth === null;
+      if (d.getFullYear() !== calendarYear) return false;
+      if (calendarMonth !== null && d.getMonth() !== calendarMonth) return false;
+      return true;
+    });
+  }, [shipments, calendarYear, calendarMonth]);
 
   // Sidebar collapsible sections
   const [sidebarSections, setSidebarSections] = useState({
@@ -571,13 +586,13 @@ function App() {
               Quick Stats {calendarMonth !== null ? `· ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][calendarMonth]} ${calendarYear}` : `· ${calendarYear}`}
             </div>
             <div className="sidebar-qs-row">
-              <span>Total Items</span><strong>{shipments.length}</strong>
+              <span>Total Items</span><strong>{calendarFilteredShipments.length}</strong>
             </div>
             <div className="sidebar-qs-row">
-              <span>In Transit</span><strong>{shipments.filter(s => s.latestStatus === 'in_transit_roadway' || s.latestStatus === 'in_transit_seaway').length}</strong>
+              <span>In Transit</span><strong>{calendarFilteredShipments.filter(s => s.latestStatus === 'in_transit_roadway' || s.latestStatus === 'in_transit_seaway').length}</strong>
             </div>
             <div className="sidebar-qs-row">
-              <span>Delayed</span><strong style={{ color: '#fbbf24' }}>{shipments.filter(s => s.latestStatus && s.latestStatus.startsWith('delayed_')).length}</strong>
+              <span>Delayed</span><strong style={{ color: '#fbbf24' }}>{calendarFilteredShipments.filter(s => s.latestStatus && s.latestStatus.startsWith('delayed_')).length}</strong>
             </div>
           </div>
         )}
@@ -693,7 +708,7 @@ function App() {
             <Route path="/dashboard" element={
               <Suspense fallback={<PageLoader />}>
                 <ErrorBoundary>
-                  <Dashboard shipments={shipments} onOpenLiveBoard={() => setLiveBoardOpen(true)} />
+                  <Dashboard shipments={calendarFilteredShipments} onOpenLiveBoard={() => setLiveBoardOpen(true)} />
                 </ErrorBoundary>
               </Suspense>
             } />
