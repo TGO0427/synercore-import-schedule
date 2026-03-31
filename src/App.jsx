@@ -113,6 +113,10 @@ function App() {
   const [navSearch, setNavSearch] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+  // Sidebar calendar filter
+  const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState(null); // null = All Months
+
   // Sidebar collapsible sections
   const [sidebarSections, setSidebarSections] = useState({
     masterData: true,
@@ -373,8 +377,8 @@ function App() {
         {/* Header */}
         <div className="sidebar-header">
           <div className="sidebar-title">
-            <h1>Import SCM</h1>
-            <p className="sidebar-subtitle">Supply Chain Management</p>
+            <h1>Synercore</h1>
+            <p className="sidebar-subtitle">Import Supply Chain</p>
           </div>
           <button
             className="sidebar-collapse-btn"
@@ -384,6 +388,34 @@ function App() {
             {sidebarCollapsed ? '\u00BB' : '\u00AB'}
           </button>
         </div>
+
+        {/* Calendar Filter */}
+        {!sidebarCollapsed && (
+          <div className="sidebar-calendar">
+            <div className="sidebar-calendar-year">
+              <button onClick={() => setCalendarYear(y => y - 1)} title="Previous year">&lsaquo;</button>
+              <span>{calendarYear}</span>
+              <button onClick={() => setCalendarYear(y => y + 1)} title="Next year">&rsaquo;</button>
+            </div>
+            <button
+              className={`sidebar-calendar-all ${calendarMonth === null ? 'active' : ''}`}
+              onClick={() => setCalendarMonth(null)}
+            >
+              All Months
+            </button>
+            <div className="sidebar-calendar-grid">
+              {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((m, i) => (
+                <button
+                  key={m}
+                  className={`sidebar-calendar-month ${calendarMonth === i ? 'active' : ''}`}
+                  onClick={() => setCalendarMonth(calendarMonth === i ? null : i)}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Search */}
         <div className="sidebar-search">
@@ -533,23 +565,22 @@ function App() {
         })()}
 
         {/* Quick Stats */}
-        <div className="sidebar-quick-stats" style={{
-          margin: '0 12px 8px', padding: '10px 12px',
-          backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '8px',
-          border: '1px solid rgba(255,255,255,0.08)',
-          fontSize: '12px', color: '#94a3b8'
-        }}>
-          <div style={{ fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#64748b', marginBottom: '6px' }}>Quick Stats</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-            <span>Total Items</span><strong>{shipments.length}</strong>
+        {!sidebarCollapsed && (
+          <div className="sidebar-quick-stats">
+            <div className="sidebar-qs-title">
+              Quick Stats {calendarMonth !== null ? `· ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][calendarMonth]} ${calendarYear}` : `· ${calendarYear}`}
+            </div>
+            <div className="sidebar-qs-row">
+              <span>Total Items</span><strong>{shipments.length}</strong>
+            </div>
+            <div className="sidebar-qs-row">
+              <span>In Transit</span><strong>{shipments.filter(s => s.latestStatus === 'in_transit_roadway' || s.latestStatus === 'in_transit_seaway').length}</strong>
+            </div>
+            <div className="sidebar-qs-row">
+              <span>Delayed</span><strong style={{ color: '#fbbf24' }}>{shipments.filter(s => s.latestStatus && s.latestStatus.startsWith('delayed_')).length}</strong>
+            </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-            <span>In Transit</span><strong>{shipments.filter(s => s.latestStatus === 'in_transit_roadway' || s.latestStatus === 'in_transit_seaway').length}</strong>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span>Delayed</span><strong style={{ color: '#fbbf24' }}>{shipments.filter(s => s.latestStatus && s.latestStatus.startsWith('delayed_')).length}</strong>
-          </div>
-        </div>
+        )}
 
         {/* Footer */}
         <div className="sidebar-footer">
