@@ -121,7 +121,7 @@ body { margin: 0; font-family: 'Poppins', ui-sans-serif, system-ui, -apple-syste
 
 /* Sidebar */
 .sidebar {
-  background: linear-gradient(180deg, #0c2e1e 0%, #0a2618 100%);
+  background: linear-gradient(180deg, #1a4a35 0%, #153d2b 100%);
   color: #b8d4c8;
   padding: 0;
   border-right: 1px solid rgba(255,255,255,0.08);
