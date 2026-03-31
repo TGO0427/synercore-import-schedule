@@ -107,8 +107,12 @@ function cleanExtraction(value: string | null): string | null {
 const BOL_NUMBER_PATTERNS = [
   // MSC-style BOL numbers (e.g., MEDUHW533143, MEDUWA201799) — highest priority
   /\b(MEDU[A-Z]{1,3}\d{5,10})\b/,
+  // Hapag-Lloyd: "HLCUMN2260101370" or similar HLC prefix
+  /\b(HLC[A-Z]{0,4}\d{7,15})\b/,
   // OOCL-style BOL numbers (e.g., OOLU8881386790)
   /\b(OOLU\d{7,15})\b/,
+  // Hapag-Lloyd: "B/L-No.:" label followed by BOL number
+  /B\/L[\-\s]*No\.?\s*:?\s*\n?\s*(?:\d+\s+)?([A-Z]{3,5}\w{8,20})/i,
   // OOCL Sea Waybill: "SEA WAYBILL NO. (WAYBILL) OOLU8881386790"
   /WAYBILL\s+NO\.?\s*\(WAYBILL\)\s*\n?\s*([A-Z]{4}\d{7,15})/i,
   // Customs Worksheet: "TRANSPORT DOCUMENT NUMBER : OOLU8881386790"
@@ -136,6 +140,9 @@ const VESSEL_PATTERNS = [
   /VESSEL\s+AND\s+VOYAGE\s+NO[^\n]*\n([A-Z][A-Za-z0-9\s]{2,30}?)\s*[\-–]\s*[A-Z0-9]/i,
   // OCR fallback: "MSC EVA" or "MSC VITTORIA" etc. — short vessel names
   /\b(MSC\s+[A-Z]{2,15})\s*[\-–—]\s*[A-Z0-9]{3,}/,
+  // Hapag-Lloyd: "Vessel(s):" then vessel name on next line, or "VESSEL NAME: DALLAS EXPRESS"
+  /VESSEL\s*NAME\s*:\s*([A-Z][A-Z\s]{2,30}?)(?:\s+VOYAGE|\s*$)/im,
+  /Vessel\s*\(?s?\)?\s*:\s*\n?\s*([A-Z][A-Z\s]{3,30}?)\s+\d/im,
   /(?:Vessel\s*(?:Name)?|Motor\s*Vessel|M\/V|Ocean\s*Vessel)\s*[:\s]+([A-Z][A-Za-z0-9\s\-\.]{2,40}?)(?:\s*(?:Voyage|Voy|V\/|$|\n))/i,
   /(?:Vessel\s*(?:Name)?|Motor\s*Vessel|M\/V)\s*[:\s]+([A-Z][A-Za-z0-9][A-Za-z0-9\s\-\.]{1,38})/i,
 ];
@@ -146,6 +153,10 @@ const VESSEL_BLACKLIST = /^(?:BILL\s+OF\s+LADING|BILL\s+OF\s+ENTRY|CUSTOMS\s+WOR
 // Voyage: require explicit "Voyage" or "Voy" label (NOT just "V." which is too ambiguous)
 // Voyage numbers typically have digits: e.g., 2401E, 025W, V.123, GA601W
 const VOYAGE_PATTERNS = [
+  // Hapag-Lloyd/generic: "VESSEL NAME: DALLAS EXPRESS VOYAGE: 603S"
+  /VOYAGE\s*:\s*(\d{2,5}[A-Z]?)\b/i,
+  // Hapag-Lloyd: "Voyage-No.:" then voyage on same/next line (must start with digit)
+  /Voyage[\-\s]*No\.?\s*:?\s*\n?\s*(\d{2,5}[A-Z]?)\b/i,
   // ONE: "VESSEL VOYAGE: CHIBA C 091W" — voyage is trailing code (may run into B/L)
   /VESSEL\s+VOYAGE\s*:\s*[A-Z][A-Z\s]+?\s+(\d+\w?)(?:B\/L|$|\n)/i,
   // OOCL: vessel+voyage on one line "CHIBA C 91W" — voyage is trailing code with digits
@@ -154,13 +165,14 @@ const VOYAGE_PATTERNS = [
   /\bMSC\s+[A-Z][A-Z\s]{1,25}?\w+\s*[\-–—]\s*([A-Z0-9]{3,15})\b/,
   // MSC BOL: vessel and voyage on same line "MSC TARANTO - GA601W"
   /VESSEL\s+AND\s+VOYAGE\s+NO[^\n]*\n[A-Za-z0-9\s]+[\-–]\s*([A-Z0-9]{3,15})/i,
-  /(?:Voyage|Voy\.?)\s*(?:No\.?|#)?\s*[:\s]*([A-Z0-9][\w\-]{2,20})/i,
+  // Generic fallback: "Voyage" or "Voy" label, value must contain at least one digit
+  /(?:Voyage|Voy\.?)\s*(?:No\.?|#)?\s*[:\s]+(\d[\w\-]{1,20})/i,
 ];
 
 // Ports: require the full label, capture only proper location names (not clause text)
 // Port names: typically capitalized words, city/country names, 4+ chars
 // Known loading port names (for OCR-tolerant matching)
-const KNOWN_LOADING_PORTS = 'Qingdao|QINGDAO|Shanghai|SHANGHAI|Dalian|DALIAN|Tianjin|TIANJIN|Ningbo|NINGBO|Jakarta|JAKARTA|Port\\s+Klang|PORT\\s+KLANG|Xingang|XINGANG|Xiamen|XIAMEN|Busan|BUSAN|Mumbai|MUMBAI|Chennai|CHENNAI';
+const KNOWN_LOADING_PORTS = 'Qingdao|QINGDAO|Shanghai|SHANGHAI|Dalian|DALIAN|Tianjin|TIANJIN|Ningbo|NINGBO|Jakarta|JAKARTA|Port\\s+Klang|PORT\\s+KLANG|Xingang|XINGANG|Xiamen|XIAMEN|Busan|BUSAN|Mumbai|MUMBAI|Chennai|CHENNAI|Manila|MANILA|Ho\\s+Chi\\s+Minh|Colombo|COLOMBO';
 
 const PORT_LOADING_PATTERNS = [
   // Known port names anywhere near loading context (highest priority for OCR)
@@ -226,6 +238,8 @@ const SHIPPER_PATTERNS = [
   /\b(AROMSA\s+BESIN[^\n]{0,40})/i,
   /\b(AB\s+MAURI[^\n]{0,30})/i,
   /\b(ECOLEX\s+SDN[^\n]{0,30})/i,
+  /\b(MARCEL\s+TRADING[^\n]{0,30})/i,
+  /\b(TRISTAR\s+GLOBAL[^\n]{0,30})/i,
   // OOCL: "SHIPPER/EXPORTER (COMPLETE NAME AND ADDRESS)" then company on next line
   /SHIPPER\s*\/\s*EXPORTER[^\n]*\n\s*([A-Z][^\n]*?(?:CO\.?,?\s*LTD|PTY\)?\s*LTD|INC\.?|CORP\.?|LLC|GMBH|S\.?A\.?))/i,
   /SHIPPER\s*\/\s*EXPORTER[^\n]*\n\s*([A-Z][^\n]{4,100})/i,
@@ -675,6 +689,7 @@ export async function parseBolPdf(pdfBuffer: Buffer): Promise<ParsedBolData> {
     [/MARCEL\s+CARRAG/i, 'MARCEL CARRAGEENAN'],
     [/TRISTAR\s+GLOBAL/i, 'TRISTAR GLOBAL SDN. BHD'],
     [/AB\s+MAURI/i, 'AB MAURI'],
+    [/MARCEL\s+TRAD\w*/i, 'MARCEL TRADING CORPORATION'],
   ];
   const normalizeCompany = (val: string | null): string | null => {
     if (!val) return null;
