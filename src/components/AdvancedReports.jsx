@@ -449,11 +449,17 @@ function AdvancedReports() {
   };
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div style={{ padding: '1rem' }}>
       <div className="brand-strip" />
-      <div className="page-header">
-        <h2>Advanced Reports</h2>
-        <p>Custom filters, aggregations, and data analysis</p>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        marginBottom: '0.75rem', paddingBottom: '0.75rem',
+        borderBottom: '1px solid var(--border)', flexWrap: 'wrap', gap: '0.5rem',
+      }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-900)' }}>Advanced Reports</h2>
+          <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--text-500)' }}>Custom filters, aggregations, and data analysis</p>
+        </div>
       </div>
 
       <FilterPresetBar
@@ -785,98 +791,43 @@ function AdvancedReports() {
             <h3 style={{ margin: 0 }}>
               Results ({aggregation.groupBy === 'none' ? filteredShipments.length : aggregatedData.length} {aggregation.groupBy === 'none' ? 'shipments' : 'groups'})
             </h3>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                onClick={exportToExcel}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#10b981',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#10b981'}
-              >
-                📊 Export Excel
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-ghost" onClick={exportToExcel} style={{ fontSize: 13, padding: '6px 12px' }}>
+                Export Excel
               </button>
-              <button
-                onClick={exportToPDF}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#e53e3e',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#c53030'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#e53e3e'}
-              >
-                📄 Export PDF
+              <button className="btn btn-ghost" onClick={exportToPDF} style={{ fontSize: 13, padding: '6px 12px' }}>
+                Export PDF
               </button>
             </div>
           </div>
 
           {/* Summary Stats */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-            gap: '15px',
-            marginBottom: '20px'
-          }}>
-            <div style={{
-              padding: '15px',
-              backgroundColor: '#e3f2fd',
-              borderRadius: '8px',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--info)' }}>
+          <div className="stats-grid" style={{ marginBottom: '1rem' }}>
+            <div className="stat-card ring-info">
+              <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 2px', color: 'var(--navy-900)' }}>
                 {filteredShipments.length}
-              </div>
-              <div style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>Total Shipments</div>
+              </h3>
+              <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>Total Shipments</p>
             </div>
-            <div style={{
-              padding: '15px',
-              backgroundColor: '#f3e5f5',
-              borderRadius: '8px',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#7b1fa2' }}>
+            <div className="stat-card ring-accent">
+              <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 2px', color: 'var(--navy-900)' }}>
                 {filteredShipments.reduce((sum, s) => sum + (s.quantity || 0), 0).toLocaleString()}
-              </div>
-              <div style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>Total Quantity</div>
+              </h3>
+              <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>Total Quantity</p>
             </div>
-            <div style={{
-              padding: '15px',
-              backgroundColor: '#e8f5e9',
-              borderRadius: '8px',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--success)' }}>
+            <div className="stat-card ring-success">
+              <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 2px', color: 'var(--navy-900)' }}>
                 {Math.round(filteredShipments.reduce((sum, s) => sum + (s.palletQty || 0), 0)).toLocaleString()}
-              </div>
-              <div style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>Total Pallets</div>
+              </h3>
+              <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>Total Pallets</p>
             </div>
-            <div style={{
-              padding: '15px',
-              backgroundColor: '#fff3e0',
-              borderRadius: '8px',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--warning)' }}>
-                {aggregation.groupBy === 'none'
-                  ? filteredShipments.length
-                  : aggregatedData.length}
-              </div>
-              <div style={{ fontSize: '0.9rem', color: 'var(--text-500)' }}>
+            <div className="stat-card ring-warning">
+              <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 2px', color: 'var(--navy-900)' }}>
+                {aggregation.groupBy === 'none' ? filteredShipments.length : aggregatedData.length}
+              </h3>
+              <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>
                 {aggregation.groupBy === 'none' ? 'Records' : 'Groups'}
-              </div>
+              </p>
             </div>
           </div>
 

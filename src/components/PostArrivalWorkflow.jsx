@@ -448,14 +448,17 @@ function PostArrivalWorkflow() {
   }
 
   return (
-    <div style={{ padding: '2rem' }}>
+    <div style={{ padding: '1rem' }}>
       <div className="brand-strip" />
-      <div className="page-header" style={{ marginBottom: '2rem' }}>
-        <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-900)' }}>
-          📋 Post-Arrival Workflow Management
+      <div style={{
+        marginBottom: '0.75rem', paddingBottom: '0.75rem',
+        borderBottom: '1px solid var(--border)',
+      }}>
+        <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-900)' }}>
+          Post-Arrival Workflow
         </h2>
-        <p style={{ margin: 0, color: 'var(--text-500)', fontSize: '0.9rem' }}>
-          Manage shipments through the post-arrival workflow: unloading → inspection → receiving → storage
+        <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--text-500)' }}>
+          Manage shipments through unloading, inspection, receiving, and storage
         </p>
       </div>
 

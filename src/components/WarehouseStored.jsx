@@ -529,12 +529,16 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onCrea
       <div className="brand-strip" />
 
       {/* Compact header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--navy-900)' }}>Stored Stock</h2>
-          <span style={{ fontSize: 12, color: 'var(--text-500)', fontWeight: 500 }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: '0.75rem', paddingBottom: '0.75rem',
+        borderBottom: '1px solid var(--border)', flexWrap: 'wrap', gap: 8,
+      }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-900)' }}>Stored Stock</h2>
+          <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--text-500)' }}>
             {filteredAndSortedShipments.length} items &middot; {groupedByWarehouse.length} warehouses &middot; {totalPallets} pallets
-          </span>
+          </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <input
@@ -605,28 +609,10 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onCrea
           >
             {showAll ? 'Show Recent (90 days)' : `Show All${olderCount > 0 ? ` (+${olderCount} older)` : ''}`}
           </button>
-          <button
-            onClick={exportToExcel}
-            style={{
-              background: '#10b981', color: 'white', border: 'none',
-              padding: '6px 12px', borderRadius: 6, cursor: 'pointer',
-              fontWeight: 500, fontSize: 13, transition: 'all 0.2s'
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = '#059669'}
-            onMouseLeave={e => e.currentTarget.style.background = '#10b981'}
-          >
+          <button className="btn btn-ghost" onClick={exportToExcel} style={{ fontSize: 13, padding: '6px 10px' }}>
             Export Excel
           </button>
-          <button
-            onClick={exportToPDF}
-            style={{
-              background: '#e53e3e', color: 'white', border: 'none',
-              padding: '6px 12px', borderRadius: 6, cursor: 'pointer',
-              fontWeight: 500, fontSize: 13, transition: 'all 0.2s'
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = '#c53030'}
-            onMouseLeave={e => e.currentTarget.style.background = '#e53e3e'}
-          >
+          <button className="btn btn-ghost" onClick={exportToPDF} style={{ fontSize: 13, padding: '6px 10px' }}>
             Export PDF
           </button>
         </div>

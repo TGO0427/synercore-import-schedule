@@ -1434,14 +1434,18 @@ function WarehouseCapacity({ shipments }) {
       )}
 
       {/* ── Header Row ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--navy-900)' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: '0.75rem', paddingBottom: '0.75rem',
+        borderBottom: '1px solid var(--border)',
+      }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-900)' }}>
             Warehouse Capacity
           </h2>
-          <span style={{ fontSize: 12, color: 'var(--text-500)', fontWeight: 500 }}>
-            {Object.keys(warehouseData.warehouseStats).length} location{Object.keys(warehouseData.warehouseStats).length !== 1 ? 's' : ''}
-          </span>
+          <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--text-500)' }}>
+            {Object.keys(warehouseData.warehouseStats).length} location{Object.keys(warehouseData.warehouseStats).length !== 1 ? 's' : ''} &middot; Bin management & forecasting
+          </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <select value={selectedWarehouse} onChange={(e) => setSelectedWarehouse(e.target.value)}

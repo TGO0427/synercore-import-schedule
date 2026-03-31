@@ -576,10 +576,14 @@ function ImportCosting() {
     <div style={{ padding: '1rem' }}>
       <div className="brand-strip" />
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <div className="page-header">
-          <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a' }}>Import Costing</h2>
-          <p style={{ margin: '0.25rem 0 0', color: 'var(--text-500)', fontSize: '0.8rem' }}>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        marginBottom: '0.75rem', paddingBottom: '0.75rem',
+        borderBottom: '1px solid var(--border)', flexWrap: 'wrap', gap: '0.5rem',
+      }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-900)' }}>Import Costing</h2>
+          <p style={{ margin: '2px 0 0', color: 'var(--text-500)', fontSize: '0.8rem' }}>
             Sea & Air Freight Import Cost Comparison
           </p>
         </div>

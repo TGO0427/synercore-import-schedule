@@ -691,17 +691,15 @@ function RatesQuotes({ loading }) {
         <div className="brand-strip" />
         {/* Header */}
         <div
-          className="page-header"
           style={{
             padding: "1rem 1.5rem 0.75rem 1.5rem",
             borderBottom: "1px solid var(--border)",
-            backgroundColor: "white",
           }}
         >
-          <h1 style={{ margin: 0, color: "var(--text-900)", fontSize: "1.3rem" }}>
-            💰 Rates & Quotes Management
-          </h1>
-          <p style={{ margin: "0.25rem 0 0 0", color: "#6c757d", fontSize: "0.85rem" }}>
+          <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700, color: "var(--text-900)" }}>
+            Rates & Quotes Management
+          </h2>
+          <p style={{ margin: "2px 0 0", fontSize: "0.8rem", color: "var(--text-500)" }}>
             Upload and manage quotes from freight forwarding partners
           </p>
         </div>

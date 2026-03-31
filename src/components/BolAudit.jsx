@@ -52,15 +52,11 @@ function StatusBadge({ status }) {
 
 function StatCard({ label, value, color, prefix }) {
   return (
-    <div style={{
-      flex: '1 1 140px', padding: '14px 18px', borderRadius: '10px',
-      backgroundColor: 'var(--surface-1, #fff)', border: '1px solid var(--border-color, #e5e7eb)',
-      minWidth: 140,
-    }}>
-      <div style={{ fontSize: '0.78rem', color: 'var(--text-500, #6b7280)', marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: '1.4rem', fontWeight: 700, color: color || 'var(--text-900, #111)' }}>
+    <div className="stat-card" style={{ flex: '1 1 140px', minWidth: 130 }}>
+      <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600, color: 'var(--text-500)', margin: '0 0 2px' }}>{label}</p>
+      <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: color || 'var(--navy-900)' }}>
         {prefix}{typeof value === 'number' ? value.toLocaleString() : value}
-      </div>
+      </h3>
     </div>
   );
 }
@@ -933,8 +929,8 @@ function BolAudit() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-900)' }}>Bill of Lading Audit</h1>
-          <p style={{ margin: '4px 0 0', fontSize: '0.88rem', color: 'var(--text-500)' }}>
+          <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-900)' }}>Bill of Lading Audit</h2>
+          <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--text-500)' }}>
             Review, verify, and audit bills of lading for freight compliance
           </p>
         </div>
