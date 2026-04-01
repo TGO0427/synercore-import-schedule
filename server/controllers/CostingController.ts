@@ -215,7 +215,20 @@ export class CostingController {
       (Number(data.port_health_inspection_zar) || 0) +
       (Number(data.daff_inspection_zar) || 0) +
       (Number(data.state_vet_cancellation_fee_zar) || 0) +
-      (Number(data.jnb_turn_in_zar) || 0);
+      (Number(data.jnb_turn_in_zar) || 0) +
+      (Number(data.bill_of_lading_fee_zar) || 0) +
+      (Number(data.manifest_filing_zar) || 0) +
+      (Number(data.currency_adjustment_factor_zar) || 0) +
+      (Number(data.degrouping_zar) || 0) +
+      (Number(data.edi_fee_zar) || 0) +
+      (Number(data.communication_dest_zar) || 0) +
+      (Number(data.documentation_fee_dest_zar) || 0) +
+      (Number(data.cfs_lcl_handling_out_zar) || 0) +
+      (Number(data.delivery_release_order_zar) || 0) +
+      (Number(data.cartage_dest_zar) || 0) +
+      (Number(data.fuel_surcharge_dest_zar) || 0) +
+      (Number(data.agency_fee_dest_zar) || 0) +
+      (Number(data.facility_fee_zar) || 0);
 
     // Agency fee: 3.5% of customs value, min R1187
     const agencyFeeZar = this.calculateAgencyFee(customsValueZar);

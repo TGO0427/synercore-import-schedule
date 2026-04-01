@@ -174,7 +174,11 @@ const COST_ESTIMATE_COLUMNS = [
   // Destination Charges
   'shipping_line_charges_zar', 'cargo_dues_20ft_zar', 'cargo_dues_40ft_zar', 'cto_fee_zar',
   'port_health_inspection_zar', 'daff_inspection_zar', 'state_vet_cancellation_fee_zar',
-  'jnb_turn_in_zar', 'destination_charges_subtotal_zar',
+  'jnb_turn_in_zar', 'bill_of_lading_fee_zar', 'manifest_filing_zar',
+  'currency_adjustment_factor_zar', 'degrouping_zar', 'edi_fee_zar', 'communication_zar',
+  'documentation_fee_dest_zar', 'cfs_lcl_handling_out_zar', 'delivery_release_order_zar',
+  'cartage_dest_zar', 'fuel_surcharge_dest_zar', 'agency_fee_dest_zar', 'facility_fee_zar',
+  'destination_charges_subtotal_zar',
   // Customs & Duties
   'duties_zar', 'total_duties_zar', 'customs_vat_zar', 'import_vat_zar', 'customs_declaration_zar', 'agency_fee_zar',
   'agency_fee_percentage', 'agency_fee_min', 'customs_duty_not_applicable', 'customs_subtotal_zar',

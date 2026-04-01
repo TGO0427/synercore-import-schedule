@@ -1262,6 +1262,44 @@ export const migrations: Migration[] = [
       return true;
     },
   },
+
+  // Phase 15: Additional destination charge columns for clearing agent fees
+  {
+    name: 'add-destination-charge-columns',
+    run: async () => {
+      const newColumns = [
+        'bill_of_lading_fee_zar NUMERIC(12,2) DEFAULT 0',
+        'manifest_filing_zar NUMERIC(12,2) DEFAULT 0',
+        'currency_adjustment_factor_zar NUMERIC(12,2) DEFAULT 0',
+        'degrouping_zar NUMERIC(12,2) DEFAULT 0',
+        'edi_fee_zar NUMERIC(12,2) DEFAULT 0',
+        'communication_dest_zar NUMERIC(12,2) DEFAULT 0',
+        'documentation_fee_dest_zar NUMERIC(12,2) DEFAULT 0',
+        'cfs_lcl_handling_out_zar NUMERIC(12,2) DEFAULT 0',
+        'delivery_release_order_zar NUMERIC(12,2) DEFAULT 0',
+        'cartage_dest_zar NUMERIC(12,2) DEFAULT 0',
+        'fuel_surcharge_dest_zar NUMERIC(12,2) DEFAULT 0',
+        'agency_fee_dest_zar NUMERIC(12,2) DEFAULT 0',
+        'facility_fee_zar NUMERIC(12,2) DEFAULT 0',
+      ];
+
+      for (const colDef of newColumns) {
+        const colName = colDef.split(' ')[0];
+        const checkResult = await pool.query(
+          `SELECT column_name FROM information_schema.columns
+           WHERE table_name='import_cost_estimates' AND column_name=$1`,
+          [colName]
+        );
+        if (checkResult.rows.length === 0) {
+          await pool.query(`ALTER TABLE import_cost_estimates ADD COLUMN ${colDef}`);
+          logInfo(`Added column ${colName} to import_cost_estimates`);
+        }
+      }
+
+      logInfo('Added destination charge columns to import_cost_estimates');
+      return true;
+    },
+  },
 ];
 
 /**

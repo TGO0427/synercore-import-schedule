@@ -75,13 +75,13 @@ const INITIAL_FORM_STATE = {
   currency_adjustment_factor_zar: 0,
   degrouping_zar: 0,
   edi_fee_zar: 0,
-  communication_zar: 0,
-  documentation_fee_zar: 0,
+  communication_dest_zar: 0,
+  documentation_fee_dest_zar: 0,
   cfs_lcl_handling_out_zar: 0,
   delivery_release_order_zar: 0,
-  cartage_zar: 0,
-  fuel_surcharge_zar: 0,
-  agency_fee_zar: 0,
+  cartage_dest_zar: 0,
+  fuel_surcharge_dest_zar: 0,
+  agency_fee_dest_zar: 0,
   facility_fee_zar: 0,
   // Products - each product in the container
   products: [

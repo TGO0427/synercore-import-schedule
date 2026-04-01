@@ -70,13 +70,13 @@ export const calculateDestinationSubtotal = (data) => {
     (parseFloat(data.currency_adjustment_factor_zar) || 0) +
     (parseFloat(data.degrouping_zar) || 0) +
     (parseFloat(data.edi_fee_zar) || 0) +
-    (parseFloat(data.communication_zar) || 0) +
-    (parseFloat(data.documentation_fee_zar) || 0) +
+    (parseFloat(data.communication_dest_zar) || 0) +
+    (parseFloat(data.documentation_fee_dest_zar) || 0) +
     (parseFloat(data.cfs_lcl_handling_out_zar) || 0) +
     (parseFloat(data.delivery_release_order_zar) || 0) +
-    (parseFloat(data.cartage_zar) || 0) +
-    (parseFloat(data.fuel_surcharge_zar) || 0) +
-    (parseFloat(data.agency_fee_zar) || 0) +
+    (parseFloat(data.cartage_dest_zar) || 0) +
+    (parseFloat(data.fuel_surcharge_dest_zar) || 0) +
+    (parseFloat(data.agency_fee_dest_zar) || 0) +
     (parseFloat(data.facility_fee_zar) || 0)
   );
 };
