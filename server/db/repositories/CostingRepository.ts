@@ -205,11 +205,13 @@ const DESTINATION_CHARGE_EXTRA_COLUMNS = [
   'fuel_surcharge_dest_zar', 'agency_fee_dest_zar', 'facility_fee_zar',
 ];
 
-// Mutable set — starts with base columns, extra columns added after migration check
+// Mutable set — starts with base columns, extra columns added after detection
 const ALL_ALLOWED_COLUMNS = new Set(COST_ESTIMATE_COLUMNS);
+let extraColumnsDetected = false;
 
 // Check if new columns exist and add them to the allowed set
-async function detectExtraColumns() {
+async function ensureExtraColumns() {
+  if (extraColumnsDetected) return;
   try {
     const result = await queryAll<{ column_name: string }>(
       `SELECT column_name FROM information_schema.columns WHERE table_name = 'import_cost_estimates' AND column_name = ANY($1)`,
@@ -219,14 +221,13 @@ async function detectExtraColumns() {
       ALL_ALLOWED_COLUMNS.add(row.column_name);
     }
     if (result.length > 0) {
+      extraColumnsDetected = true;
       logInfo(`Detected ${result.length} extra destination charge columns`);
     }
   } catch {
-    // Silently ignore — columns will be added after migration
+    // Silently ignore
   }
 }
-// Run detection (non-blocking)
-detectExtraColumns();
 
 export class CostingRepository {
   /**
@@ -307,6 +308,7 @@ export class CostingRepository {
    * Create a new cost estimate
    */
   async create(data: Partial<ImportCostEstimate>): Promise<ImportCostEstimate> {
+    await ensureExtraColumns();
     const id = data.id || uuidv4();
     const now = new Date().toISOString();
 
@@ -405,6 +407,7 @@ export class CostingRepository {
    * Update a cost estimate
    */
   async update(id: string, data: Partial<ImportCostEstimate>): Promise<ImportCostEstimate> {
+    await ensureExtraColumns();
     const updateData: Record<string, any> = { ...data, updated_at: new Date().toISOString() };
     delete updateData.id;
     delete updateData.created_at;
