@@ -70,6 +70,19 @@ const INITIAL_FORM_STATE = {
   daff_inspection_zar: 620,
   state_vet_cancellation_fee_zar: 290,
   jnb_turn_in_zar: 0,
+  bill_of_lading_fee_zar: 0,
+  manifest_filing_zar: 0,
+  currency_adjustment_factor_zar: 0,
+  degrouping_zar: 0,
+  edi_fee_zar: 0,
+  communication_zar: 0,
+  documentation_fee_zar: 0,
+  cfs_lcl_handling_out_zar: 0,
+  delivery_release_order_zar: 0,
+  cartage_zar: 0,
+  fuel_surcharge_zar: 0,
+  agency_fee_zar: 0,
+  facility_fee_zar: 0,
   // Products - each product in the container
   products: [
     { _id: Date.now(), name: '', hs_code: '', pack_size: '', pack_type: '', weight_kg: 0, rate_per_kg: 0, duty_percent: 0, duty_schedule1_percent: 0, currency: 'USD', invoice_value: 0 }

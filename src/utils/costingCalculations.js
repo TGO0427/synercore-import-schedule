@@ -64,7 +64,20 @@ export const calculateDestinationSubtotal = (data) => {
     (parseFloat(data.port_health_inspection_zar) || 0) +
     (parseFloat(data.daff_inspection_zar) || 0) +
     (parseFloat(data.state_vet_cancellation_fee_zar) || 0) +
-    (parseFloat(data.jnb_turn_in_zar) || 0)
+    (parseFloat(data.jnb_turn_in_zar) || 0) +
+    (parseFloat(data.bill_of_lading_fee_zar) || 0) +
+    (parseFloat(data.manifest_filing_zar) || 0) +
+    (parseFloat(data.currency_adjustment_factor_zar) || 0) +
+    (parseFloat(data.degrouping_zar) || 0) +
+    (parseFloat(data.edi_fee_zar) || 0) +
+    (parseFloat(data.communication_zar) || 0) +
+    (parseFloat(data.documentation_fee_zar) || 0) +
+    (parseFloat(data.cfs_lcl_handling_out_zar) || 0) +
+    (parseFloat(data.delivery_release_order_zar) || 0) +
+    (parseFloat(data.cartage_zar) || 0) +
+    (parseFloat(data.fuel_surcharge_zar) || 0) +
+    (parseFloat(data.agency_fee_zar) || 0) +
+    (parseFloat(data.facility_fee_zar) || 0)
   );
 };
 

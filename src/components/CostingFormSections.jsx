@@ -543,6 +543,19 @@ function CostingFormSections({
           {currencyInput('DAFF Inspection', 'daff_inspection_zar')}
           {currencyInput('State Vet Cancellation Fee', 'state_vet_cancellation_fee_zar')}
           {currencyInput('JNB Turn In (At Cost)', 'jnb_turn_in_zar')}
+          {currencyInput('Bill of Lading Fee', 'bill_of_lading_fee_zar')}
+          {currencyInput('RCG Manifest Filing', 'manifest_filing_zar')}
+          {currencyInput('Currency Adjustment Factor (CAF)', 'currency_adjustment_factor_zar')}
+          {currencyInput('Degrouping', 'degrouping_zar')}
+          {currencyInput('EDI Fee', 'edi_fee_zar')}
+          {currencyInput('Communication', 'communication_zar')}
+          {currencyInput('Documentation Fee', 'documentation_fee_zar')}
+          {currencyInput('CFS LCL Handling Out', 'cfs_lcl_handling_out_zar')}
+          {currencyInput('Delivery Release Order (DRO)', 'delivery_release_order_zar')}
+          {currencyInput('Cartage', 'cartage_zar')}
+          {currencyInput('Fuel Surcharge', 'fuel_surcharge_zar')}
+          {currencyInput('Agency Fee', 'agency_fee_zar')}
+          {currencyInput('Facility Fee', 'facility_fee_zar')}
           <div style={{ marginBottom: '12px' }}>
             <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>
               Destination Sub-Total - Auto
