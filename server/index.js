@@ -774,6 +774,37 @@ async function start() {
       logWarn('Docks/truck_arrivals migration warning', { error: error.message });
     }
 
+    // Add destination charge columns to import_cost_estimates
+    try {
+      const destCols = [
+        'bill_of_lading_fee_zar NUMERIC(12,2) DEFAULT 0',
+        'manifest_filing_zar NUMERIC(12,2) DEFAULT 0',
+        'currency_adjustment_factor_zar NUMERIC(12,2) DEFAULT 0',
+        'degrouping_zar NUMERIC(12,2) DEFAULT 0',
+        'edi_fee_zar NUMERIC(12,2) DEFAULT 0',
+        'communication_dest_zar NUMERIC(12,2) DEFAULT 0',
+        'documentation_fee_dest_zar NUMERIC(12,2) DEFAULT 0',
+        'cfs_lcl_handling_out_zar NUMERIC(12,2) DEFAULT 0',
+        'delivery_release_order_zar NUMERIC(12,2) DEFAULT 0',
+        'cartage_dest_zar NUMERIC(12,2) DEFAULT 0',
+        'fuel_surcharge_dest_zar NUMERIC(12,2) DEFAULT 0',
+        'agency_fee_dest_zar NUMERIC(12,2) DEFAULT 0',
+        'facility_fee_zar NUMERIC(12,2) DEFAULT 0',
+      ];
+      for (const colDef of destCols) {
+        const colName = colDef.split(' ')[0];
+        const check = await getPool().query(
+          `SELECT 1 FROM information_schema.columns WHERE table_name='import_cost_estimates' AND column_name=$1`, [colName]
+        );
+        if (check.rows.length === 0) {
+          await getPool().query(`ALTER TABLE import_cost_estimates ADD COLUMN ${colDef}`);
+          logger.info(`Added column ${colName} to import_cost_estimates`);
+        }
+      }
+    } catch (error) {
+      logWarn('Destination charge columns migration warning', { error: error.message });
+    }
+
     // Initialize notification scheduler
     try {
       const { default: NotificationScheduler } = await import('./jobs/notificationScheduler.js');
