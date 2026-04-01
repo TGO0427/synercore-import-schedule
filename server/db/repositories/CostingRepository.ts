@@ -174,11 +174,7 @@ const COST_ESTIMATE_COLUMNS = [
   // Destination Charges
   'shipping_line_charges_zar', 'cargo_dues_20ft_zar', 'cargo_dues_40ft_zar', 'cto_fee_zar',
   'port_health_inspection_zar', 'daff_inspection_zar', 'state_vet_cancellation_fee_zar',
-  'jnb_turn_in_zar', 'bill_of_lading_fee_zar', 'manifest_filing_zar',
-  'currency_adjustment_factor_zar', 'degrouping_zar', 'edi_fee_zar', 'communication_dest_zar',
-  'documentation_fee_dest_zar', 'cfs_lcl_handling_out_zar', 'delivery_release_order_zar',
-  'cartage_dest_zar', 'fuel_surcharge_dest_zar', 'agency_fee_dest_zar', 'facility_fee_zar',
-  'destination_charges_subtotal_zar',
+  'jnb_turn_in_zar', 'destination_charges_subtotal_zar',
   // Customs & Duties
   'duties_zar', 'total_duties_zar', 'customs_vat_zar', 'import_vat_zar', 'customs_declaration_zar', 'agency_fee_zar',
   'agency_fee_percentage', 'agency_fee_min', 'customs_duty_not_applicable', 'customs_subtotal_zar',
@@ -199,6 +195,18 @@ const COST_ESTIMATE_COLUMNS = [
   // Metadata
   'status', 'notes', 'created_by', 'created_at', 'updated_at'
 ];
+
+// New destination charge columns — added via migration, may not exist yet on older DBs.
+// These are used for INSERT/UPDATE filtering but NOT in SELECT (uses * fallback below).
+const DESTINATION_CHARGE_EXTRA_COLUMNS = [
+  'bill_of_lading_fee_zar', 'manifest_filing_zar', 'currency_adjustment_factor_zar',
+  'degrouping_zar', 'edi_fee_zar', 'communication_dest_zar', 'documentation_fee_dest_zar',
+  'cfs_lcl_handling_out_zar', 'delivery_release_order_zar', 'cartage_dest_zar',
+  'fuel_surcharge_dest_zar', 'agency_fee_dest_zar', 'facility_fee_zar',
+];
+
+// Combined set for INSERT/UPDATE column filtering
+const ALL_ALLOWED_COLUMNS = new Set([...COST_ESTIMATE_COLUMNS, ...DESTINATION_CHARGE_EXTRA_COLUMNS]);
 
 export class CostingRepository {
   /**
@@ -242,7 +250,7 @@ export class CostingRepository {
     const offset = ((options?.page || 1) - 1) * limit;
 
     const dataSql = `
-      SELECT ${COST_ESTIMATE_COLUMNS.join(', ')}
+      SELECT *
       FROM import_cost_estimates
       ${whereClause}
       ORDER BY created_at DESC
@@ -258,7 +266,7 @@ export class CostingRepository {
    * Find cost estimate by ID
    */
   async findById(id: string): Promise<ImportCostEstimate | null> {
-    const sql = `SELECT ${COST_ESTIMATE_COLUMNS.join(', ')} FROM import_cost_estimates WHERE id = $1`;
+    const sql = `SELECT * FROM import_cost_estimates WHERE id = $1`;
     return queryOne<ImportCostEstimate>(sql, [id]);
   }
 
@@ -267,7 +275,7 @@ export class CostingRepository {
    */
   async findByShipmentId(shipmentId: string): Promise<ImportCostEstimate[]> {
     const sql = `
-      SELECT ${COST_ESTIMATE_COLUMNS.join(', ')}
+      SELECT *
       FROM import_cost_estimates
       WHERE shipment_id = $1
       ORDER BY created_at DESC
@@ -349,7 +357,7 @@ export class CostingRepository {
     };
 
     // Filter to only known database columns to prevent errors from extra frontend fields
-    const allowedKeys = new Set(COST_ESTIMATE_COLUMNS);
+    const allowedKeys = ALL_ALLOWED_COLUMNS;
     const filteredData: Record<string, any> = {};
     for (const key of Object.keys(insertData)) {
       if (allowedKeys.has(key)) {
@@ -364,7 +372,7 @@ export class CostingRepository {
     const sql = `
       INSERT INTO import_cost_estimates (${keys.join(', ')})
       VALUES (${placeholders})
-      RETURNING ${COST_ESTIMATE_COLUMNS.join(', ')}
+      RETURNING *
     `;
 
     const result = await queryOne<ImportCostEstimate>(sql, values);
@@ -388,7 +396,7 @@ export class CostingRepository {
     }
 
     // Filter to only known database columns to prevent errors from extra frontend fields
-    const allowedKeys = new Set(COST_ESTIMATE_COLUMNS);
+    const allowedKeys = ALL_ALLOWED_COLUMNS;
     allowedKeys.delete('id');
     allowedKeys.delete('created_at');
     const filteredUpdate: Record<string, any> = {};
@@ -406,7 +414,7 @@ export class CostingRepository {
       UPDATE import_cost_estimates
       SET ${setClause}
       WHERE id = $${keys.length + 1}
-      RETURNING ${COST_ESTIMATE_COLUMNS.join(', ')}
+      RETURNING *
     `;
 
     const result = await queryOne<ImportCostEstimate>(sql, values);
@@ -440,7 +448,7 @@ export class CostingRepository {
       UPDATE import_cost_estimates
       SET shipment_id = NULL, updated_at = $2
       WHERE id = $1
-      RETURNING ${COST_ESTIMATE_COLUMNS.join(', ')}
+      RETURNING *
     `;
     const result = await queryOne<ImportCostEstimate>(sql, [id, new Date().toISOString()]);
     if (!result) {
