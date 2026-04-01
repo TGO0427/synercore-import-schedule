@@ -196,8 +196,8 @@ const COST_ESTIMATE_COLUMNS = [
   'status', 'notes', 'created_by', 'created_at', 'updated_at'
 ];
 
-// New destination charge columns — added via migration, may not exist yet on older DBs.
-// These are used for INSERT/UPDATE filtering but NOT in SELECT (uses * fallback below).
+// New destination charge columns — added via migration.
+// Detected dynamically at startup to avoid referencing non-existent columns.
 const DESTINATION_CHARGE_EXTRA_COLUMNS = [
   'bill_of_lading_fee_zar', 'manifest_filing_zar', 'currency_adjustment_factor_zar',
   'degrouping_zar', 'edi_fee_zar', 'communication_dest_zar', 'documentation_fee_dest_zar',
@@ -205,8 +205,28 @@ const DESTINATION_CHARGE_EXTRA_COLUMNS = [
   'fuel_surcharge_dest_zar', 'agency_fee_dest_zar', 'facility_fee_zar',
 ];
 
-// Combined set for INSERT/UPDATE column filtering
-const ALL_ALLOWED_COLUMNS = new Set([...COST_ESTIMATE_COLUMNS, ...DESTINATION_CHARGE_EXTRA_COLUMNS]);
+// Mutable set — starts with base columns, extra columns added after migration check
+const ALL_ALLOWED_COLUMNS = new Set(COST_ESTIMATE_COLUMNS);
+
+// Check if new columns exist and add them to the allowed set
+async function detectExtraColumns() {
+  try {
+    const result = await queryAll<{ column_name: string }>(
+      `SELECT column_name FROM information_schema.columns WHERE table_name = 'import_cost_estimates' AND column_name = ANY($1)`,
+      [DESTINATION_CHARGE_EXTRA_COLUMNS]
+    );
+    for (const row of result) {
+      ALL_ALLOWED_COLUMNS.add(row.column_name);
+    }
+    if (result.length > 0) {
+      logInfo(`Detected ${result.length} extra destination charge columns`);
+    }
+  } catch {
+    // Silently ignore — columns will be added after migration
+  }
+}
+// Run detection (non-blocking)
+detectExtraColumns();
 
 export class CostingRepository {
   /**
@@ -357,10 +377,9 @@ export class CostingRepository {
     };
 
     // Filter to only known database columns to prevent errors from extra frontend fields
-    const allowedKeys = ALL_ALLOWED_COLUMNS;
     const filteredData: Record<string, any> = {};
     for (const key of Object.keys(insertData)) {
-      if (allowedKeys.has(key)) {
+      if (ALL_ALLOWED_COLUMNS.has(key)) {
         filteredData[key] = insertData[key];
       }
     }
@@ -396,12 +415,9 @@ export class CostingRepository {
     }
 
     // Filter to only known database columns to prevent errors from extra frontend fields
-    const allowedKeys = ALL_ALLOWED_COLUMNS;
-    allowedKeys.delete('id');
-    allowedKeys.delete('created_at');
     const filteredUpdate: Record<string, any> = {};
     for (const key of Object.keys(updateData)) {
-      if (allowedKeys.has(key)) {
+      if (key !== 'id' && key !== 'created_at' && ALL_ALLOWED_COLUMNS.has(key)) {
         filteredUpdate[key] = updateData[key];
       }
     }
