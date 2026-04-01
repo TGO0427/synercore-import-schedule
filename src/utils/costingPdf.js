@@ -582,6 +582,19 @@ export function generateEstimatePDF(estimate) {
       ['DAFF Inspection', formatCurrency(estimate.daff_inspection_zar)],
       ['State Vet Cancellation Fee', formatCurrency(estimate.state_vet_cancellation_fee_zar)],
       ['JNB Turn In (At Cost)', formatCurrency(estimate.jnb_turn_in_zar)],
+      ['Bill of Lading Fee', formatCurrency(estimate.bill_of_lading_fee_zar)],
+      ['RCG Manifest Filing', formatCurrency(estimate.manifest_filing_zar)],
+      ['Currency Adjustment Factor (CAF)', formatCurrency(estimate.currency_adjustment_factor_zar)],
+      ['Degrouping', formatCurrency(estimate.degrouping_zar)],
+      ['EDI Fee', formatCurrency(estimate.edi_fee_zar)],
+      ['Communication', formatCurrency(estimate.communication_dest_zar)],
+      ['Documentation Fee', formatCurrency(estimate.documentation_fee_dest_zar)],
+      ['CFS LCL Handling Out', formatCurrency(estimate.cfs_lcl_handling_out_zar)],
+      ['Delivery Release Order (DRO)', formatCurrency(estimate.delivery_release_order_zar)],
+      ['Cartage', formatCurrency(estimate.cartage_dest_zar)],
+      ['Fuel Surcharge', formatCurrency(estimate.fuel_surcharge_dest_zar)],
+      ['Agency Fee', formatCurrency(estimate.agency_fee_dest_zar)],
+      ['Facility Fee', formatCurrency(estimate.facility_fee_zar)],
     ]);
     if (totals.destination_charges_subtotal_zar > 0) {
       destChargeRows.push(['Sub-Total', formatCurrency(totals.destination_charges_subtotal_zar)]);
