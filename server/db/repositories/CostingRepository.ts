@@ -174,7 +174,11 @@ const COST_ESTIMATE_COLUMNS = [
   // Destination Charges
   'shipping_line_charges_zar', 'cargo_dues_20ft_zar', 'cargo_dues_40ft_zar', 'cto_fee_zar',
   'port_health_inspection_zar', 'daff_inspection_zar', 'state_vet_cancellation_fee_zar',
-  'jnb_turn_in_zar', 'destination_charges_subtotal_zar',
+  'jnb_turn_in_zar', 'bill_of_lading_fee_zar', 'manifest_filing_zar',
+  'currency_adjustment_factor_zar', 'degrouping_zar', 'edi_fee_zar', 'communication_dest_zar',
+  'documentation_fee_dest_zar', 'cfs_lcl_handling_out_zar', 'delivery_release_order_zar',
+  'cartage_dest_zar', 'fuel_surcharge_dest_zar', 'agency_fee_dest_zar', 'facility_fee_zar',
+  'destination_charges_subtotal_zar',
   // Customs & Duties
   'duties_zar', 'total_duties_zar', 'customs_vat_zar', 'import_vat_zar', 'customs_declaration_zar', 'agency_fee_zar',
   'agency_fee_percentage', 'agency_fee_min', 'customs_duty_not_applicable', 'customs_subtotal_zar',
@@ -196,38 +200,8 @@ const COST_ESTIMATE_COLUMNS = [
   'status', 'notes', 'created_by', 'created_at', 'updated_at'
 ];
 
-// New destination charge columns — added via migration.
-// Detected dynamically at startup to avoid referencing non-existent columns.
-const DESTINATION_CHARGE_EXTRA_COLUMNS = [
-  'bill_of_lading_fee_zar', 'manifest_filing_zar', 'currency_adjustment_factor_zar',
-  'degrouping_zar', 'edi_fee_zar', 'communication_dest_zar', 'documentation_fee_dest_zar',
-  'cfs_lcl_handling_out_zar', 'delivery_release_order_zar', 'cartage_dest_zar',
-  'fuel_surcharge_dest_zar', 'agency_fee_dest_zar', 'facility_fee_zar',
-];
-
-// Mutable set — starts with base columns, extra columns added after detection
+// Column set for INSERT/UPDATE filtering
 const ALL_ALLOWED_COLUMNS = new Set(COST_ESTIMATE_COLUMNS);
-let extraColumnsDetected = false;
-
-// Check if new columns exist and add them to the allowed set
-async function ensureExtraColumns() {
-  if (extraColumnsDetected) return;
-  try {
-    const result = await queryAll<{ column_name: string }>(
-      `SELECT column_name FROM information_schema.columns WHERE table_name = 'import_cost_estimates' AND column_name = ANY($1)`,
-      [DESTINATION_CHARGE_EXTRA_COLUMNS]
-    );
-    for (const row of result) {
-      ALL_ALLOWED_COLUMNS.add(row.column_name);
-    }
-    if (result.length > 0) {
-      extraColumnsDetected = true;
-      logInfo(`Detected ${result.length} extra destination charge columns`);
-    }
-  } catch {
-    // Silently ignore
-  }
-}
 
 export class CostingRepository {
   /**
@@ -308,7 +282,6 @@ export class CostingRepository {
    * Create a new cost estimate
    */
   async create(data: Partial<ImportCostEstimate>): Promise<ImportCostEstimate> {
-    await ensureExtraColumns();
     const id = data.id || uuidv4();
     const now = new Date().toISOString();
 
@@ -407,7 +380,6 @@ export class CostingRepository {
    * Update a cost estimate
    */
   async update(id: string, data: Partial<ImportCostEstimate>): Promise<ImportCostEstimate> {
-    await ensureExtraColumns();
     const updateData: Record<string, any> = { ...data, updated_at: new Date().toISOString() };
     delete updateData.id;
     delete updateData.created_at;
