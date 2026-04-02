@@ -249,74 +249,8 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
     },
   });
 
-  // === PRODUCTS TABLE ===
+  // === PRODUCT COST ALLOCATION TABLE ===
   if (products.length > 0) {
-    const roeCustoms = parseFloat(estimate.roe_customs) || parseFloat(estimate.roe_origin) || 0;
-    const roeEur = parseFloat(estimate.roe_eur) || roeCustoms;
-
-    const productRows = products.map(p => {
-      const weight = parseFloat(p.weight_kg) || 0;
-      const ratePerKg = parseFloat(p.rate_per_kg) || 0;
-      const invoiceValue = parseFloat(p.invoice_value) || 0;
-      const currency = p.currency || 'USD';
-
-      let roe = roeCustoms;
-      if (currency === 'EUR') roe = roeEur;
-      if (currency === 'ZAR') roe = 1;
-
-      const customsValue = invoiceValue * roe;
-      const pCost = totals ? getProductCostPerKg(p, estimate, totals, productTotals) : { costPerKg: 0 };
-
-      const purchaseCostPerKg = weight > 0 ? customsValue / weight : 0;
-
-      return [
-        p.name || '-',
-        p.hs_code || '-',
-        `${formatNumber(weight)} kg`,
-        `${formatNumber(ratePerKg, 2)}`,
-        currency,
-        formatNumber(invoiceValue, 2),
-        formatCurrency(customsValue),
-        formatCurrency(purchaseCostPerKg),
-        formatCurrency(pCost.costPerKg),
-      ];
-    });
-
-    // Calculate overall cost/kg
-    const overallCostPerKg = totals ? (totals.all_in_warehouse_cost_per_kg_zar || 0) : 0;
-    const overallPurchaseCostPerKg = productTotals.totalWeight > 0 ? productTotals.totalCustomsValue / productTotals.totalWeight : 0;
-    productRows.push([
-      'TOTAL', '', `${formatNumber(productTotals.totalWeight)} kg`, '', '', '', formatCurrency(productTotals.totalCustomsValue), formatCurrency(overallPurchaseCostPerKg), formatCurrency(overallCostPerKg),
-    ]);
-
-    let prodY = doc.lastAutoTable.finalY + 4;
-    prodY = drawSectionDivider(doc, prodY, 'Products', [245, 158, 11]);
-
-    autoTable(doc, {
-      startY: prodY + 1,
-      head: [['Product', 'HS Code', 'Weight', 'Rate/kg', 'Curr', 'Invoice Val', 'Customs Val (ZAR)', 'Cost/kg (ZAR)', 'Landed/kg']],
-      body: productRows,
-      theme: 'striped',
-      headStyles: { fillColor: [245, 158, 11], textColor: [255, 255, 255] },
-      alternateRowStyles: { fillColor: [255, 251, 235] },
-      styles: { fontSize: 8 },
-      columnStyles: {
-        2: { halign: 'right' },
-        3: { halign: 'right' },
-        5: { halign: 'right' },
-        6: { halign: 'right' },
-        7: { halign: 'right', fontStyle: 'bold' },
-        8: { halign: 'right', fontStyle: 'bold' },
-      },
-      didParseCell: (data) => {
-        if (data.section === 'body' && data.row.index === productRows.length - 1) {
-          data.cell.styles.fontStyle = 'bold';
-          data.cell.styles.fillColor = [243, 244, 246];
-        }
-      },
-    });
-
-    // === PRODUCT COST ALLOCATION TABLE ===
     if (totals) {
       const incoTerms = (estimate.inco_terms || '').toUpperCase();
       const freightIncluded = ['CIF', 'CIP', 'CFR'].includes(incoTerms);
@@ -334,12 +268,14 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
         sumAllocatedShipping += bd.allocatedShipping;
         sumTotalLanded += bd.totalLanded;
 
+        const purchaseCostPerKg = bd.weight > 0 ? bd.customsValue / bd.weight : 0;
         return [
           p.name || '-',
           formatNumber(bd.weight, 0),
           `${(bd.weightRatio * 100).toFixed(1)}%`,
           `${formatNumber(bd.invoiceValue, 2)} ${bd.currency}`,
           formatCurrency(bd.customsValue),
+          formatCurrency(purchaseCostPerKg),
           formatCurrency(bd.importDuty),
           formatCurrency(bd.schedule1Duty),
           formatCurrency(bd.allocatedShipping),
@@ -350,6 +286,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
       });
 
       const sumCostPerKg = sumWeight > 0 ? sumTotalLanded / sumWeight : 0;
+      const sumPurchaseCostPerKg = sumWeight > 0 ? sumCustomsValue / sumWeight : 0;
       const sumTransportCostPerKg = sumWeight > 0 ? sumAllocatedShipping / sumWeight : 0;
       allocationRows.push([
         'TOTAL',
@@ -357,6 +294,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
         '100.0%',
         '',
         formatCurrency(sumCustomsValue),
+        formatCurrency(sumPurchaseCostPerKg),
         formatCurrency(sumImportDuty),
         formatCurrency(sumSchedule1Duty),
         formatCurrency(sumAllocatedShipping),
@@ -370,24 +308,25 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
 
       autoTable(doc, {
         startY: allocY + 1,
-        head: [['Product', 'Weight (kg)', 'Wt %', 'Invoice Value', 'Customs Val (ZAR)', 'Import Duty', 'Sch1 Duty', shippingLabel, 'Transport/kg', 'Total Landed', 'Cost/kg']],
+        head: [['Product', 'Weight (kg)', 'Wt %', 'Invoice Value', 'Customs Val (ZAR)', 'Cost/kg (ZAR)', 'Import Duty', 'Sch1 Duty', shippingLabel, 'Transport/kg', 'Total Landed', 'Cost/kg']],
         body: allocationRows,
         theme: 'striped',
-        headStyles: { fillColor: [22, 101, 52], fontSize: 7, textColor: [255, 255, 255] },
+        headStyles: { fillColor: [22, 101, 52], fontSize: 6.5, textColor: [255, 255, 255] },
         alternateRowStyles: { fillColor: [240, 253, 244] },
-        styles: { fontSize: 7 },
+        styles: { fontSize: 6.5 },
         columnStyles: {
-          0: { cellWidth: 24 },
+          0: { cellWidth: 22 },
           1: { halign: 'right' },
           2: { halign: 'right' },
-          3: { halign: 'right', cellWidth: 22 },
+          3: { halign: 'right', cellWidth: 20 },
           4: { halign: 'right' },
-          5: { halign: 'right' },
+          5: { halign: 'right', fontStyle: 'bold' },
           6: { halign: 'right' },
           7: { halign: 'right' },
-          8: { halign: 'right', fontStyle: 'bold' },
+          8: { halign: 'right' },
           9: { halign: 'right', fontStyle: 'bold' },
           10: { halign: 'right', fontStyle: 'bold' },
+          11: { halign: 'right', fontStyle: 'bold' },
         },
         didParseCell: (data) => {
           if (data.section === 'body' && data.row.index === allocationRows.length - 1) {
