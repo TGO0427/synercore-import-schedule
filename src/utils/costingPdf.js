@@ -1007,29 +1007,35 @@ export async function generateReportPDF({ chartData, selectedProduct, selectedSu
     if (products.length > 0) {
       autoTable(doc, {
         startY: currentY,
-        head: [['Product Name', 'HS Code', 'Pack Size', 'Pack Type', 'Weight (kg)', 'Rate/kg', 'Currency', 'Invoice Value', 'Duty %', 'Sch1 %']],
-        body: products.map(p => [
-          p.name || '-',
-          p.hs_code || '-',
-          p.pack_size || '-',
-          p.pack_type || '-',
-          formatNumber(p.weight_kg),
-          formatNumber(p.rate_per_kg),
-          p.currency || 'USD',
-          formatNumber(p.invoice_value),
-          `${p.duty_percent || 0}%`,
-          `${p.duty_schedule1_percent || 0}%`,
-        ]),
+        head: [['Product Name', 'HS Code', 'Pack Size', 'Pack Type', 'Weight (kg)', 'Rate/kg', 'Currency', 'Invoice Value', 'Cost/kg', 'Duty %', 'Sch1 %']],
+        body: products.map(p => {
+          const w = parseFloat(p.weight_kg) || 0;
+          const iv = parseFloat(p.invoice_value) || 0;
+          return [
+            p.name || '-',
+            p.hs_code || '-',
+            p.pack_size || '-',
+            p.pack_type || '-',
+            formatNumber(w),
+            formatNumber(p.rate_per_kg),
+            p.currency || 'USD',
+            formatNumber(iv),
+            w > 0 ? formatCurrency(iv / w) : '-',
+            `${p.duty_percent || 0}%`,
+            `${p.duty_schedule1_percent || 0}%`,
+          ];
+        }),
         theme: 'grid',
         headStyles: { fillColor: [245, 158, 11], fontSize: 7, textColor: [255, 255, 255] },
         styles: { fontSize: 7 },
         columnStyles: {
-          0: { cellWidth: 30 },
+          0: { cellWidth: 28 },
           4: { halign: 'right' },
           5: { halign: 'right' },
           7: { halign: 'right' },
-          8: { halign: 'center' },
+          8: { halign: 'right', fontStyle: 'bold' },
           9: { halign: 'center' },
+          10: { halign: 'center' },
         },
         margin: { left: 14, right: 14 },
       });
