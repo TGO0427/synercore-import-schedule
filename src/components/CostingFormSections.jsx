@@ -788,6 +788,7 @@ function CostingFormSections({
                   <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600' }}>Customs Value</th>
                   <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600' }}>Duties</th>
                   <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600' }}>Shipping Alloc.</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600' }}>Transport Cost/kg</th>
                   <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', backgroundColor: '#059669' }}>Total Landed</th>
                   <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', backgroundColor: '#059669' }}>Cost/kg</th>
                 </tr>
@@ -817,6 +818,9 @@ function CostingFormSections({
                       <td style={{ padding: '8px', textAlign: 'right' }}>
                         {formatCurrency(allocation.allocatedShippingCost)}
                       </td>
+                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: '600', color: '#047857' }}>
+                        {formatCurrency(allocation.transportCostPerKg)}
+                      </td>
                       <td style={{ padding: '8px', textAlign: 'right', fontWeight: '700', color: '#065f46', backgroundColor: '#a7f3d0' }}>
                         {formatCurrency(allocation.totalProductCost)}
                       </td>
@@ -837,6 +841,14 @@ function CostingFormSections({
                     ['CIF', 'CIP', 'CFR'].includes((formData.inco_terms || '').toUpperCase())
                       ? (calculatedTotals.local_charges_subtotal_zar || 0) + (calculatedTotals.destination_charges_subtotal_zar || 0)
                       : calculatedTotals.total_shipping_cost_zar
+                  )}</td>
+                  <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(
+                    getTotalWeight() > 0
+                      ? (['CIF', 'CIP', 'CFR'].includes((formData.inco_terms || '').toUpperCase())
+                          ? ((calculatedTotals.local_charges_subtotal_zar || 0) + (calculatedTotals.destination_charges_subtotal_zar || 0))
+                          : (calculatedTotals.total_shipping_cost_zar || 0)
+                        ) / getTotalWeight()
+                      : 0
                   )}</td>
                   <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(calculatedTotals.total_landed_cost_zar)}</td>
                   <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(calculatedTotals.all_in_warehouse_cost_per_kg_zar)}</td>
