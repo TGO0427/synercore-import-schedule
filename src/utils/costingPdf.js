@@ -267,6 +267,8 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
       const customsValue = invoiceValue * roe;
       const pCost = totals ? getProductCostPerKg(p, estimate, totals, productTotals) : { costPerKg: 0 };
 
+      const purchaseCostPerKg = weight > 0 ? customsValue / weight : 0;
+
       return [
         p.name || '-',
         p.hs_code || '-',
@@ -275,14 +277,16 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
         currency,
         formatNumber(invoiceValue, 2),
         formatCurrency(customsValue),
+        formatCurrency(purchaseCostPerKg),
         formatCurrency(pCost.costPerKg),
       ];
     });
 
     // Calculate overall cost/kg
     const overallCostPerKg = totals ? (totals.all_in_warehouse_cost_per_kg_zar || 0) : 0;
+    const overallPurchaseCostPerKg = productTotals.totalWeight > 0 ? productTotals.totalCustomsValue / productTotals.totalWeight : 0;
     productRows.push([
-      'TOTAL', '', `${formatNumber(productTotals.totalWeight)} kg`, '', '', '', formatCurrency(productTotals.totalCustomsValue), formatCurrency(overallCostPerKg),
+      'TOTAL', '', `${formatNumber(productTotals.totalWeight)} kg`, '', '', '', formatCurrency(productTotals.totalCustomsValue), formatCurrency(overallPurchaseCostPerKg), formatCurrency(overallCostPerKg),
     ]);
 
     let prodY = doc.lastAutoTable.finalY + 4;
@@ -290,7 +294,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
 
     autoTable(doc, {
       startY: prodY + 1,
-      head: [['Product', 'HS Code', 'Weight', 'Rate/kg', 'Curr', 'Invoice Val', 'Customs Val (ZAR)', 'Cost/kg']],
+      head: [['Product', 'HS Code', 'Weight', 'Rate/kg', 'Curr', 'Invoice Val', 'Customs Val (ZAR)', 'Cost/kg (ZAR)', 'Landed/kg']],
       body: productRows,
       theme: 'striped',
       headStyles: { fillColor: [245, 158, 11], textColor: [255, 255, 255] },
@@ -302,6 +306,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
         5: { halign: 'right' },
         6: { halign: 'right' },
         7: { halign: 'right', fontStyle: 'bold' },
+        8: { halign: 'right', fontStyle: 'bold' },
       },
       didParseCell: (data) => {
         if (data.section === 'body' && data.row.index === productRows.length - 1) {
