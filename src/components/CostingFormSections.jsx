@@ -371,8 +371,11 @@ function CostingFormSections({
                         const iv = parseFloat(product.invoice_value) || 0;
                         const currency = product.currency || 'USD';
                         const roe = currency === 'EUR' ? (parseFloat(formData.roe_eur) || 1) : currency === 'ZAR' ? 1 : (parseFloat(formData.roe_origin) || 1);
-                        const zarValue = iv * roe;
-                        return productWeight > 0 ? formatCurrency(zarValue / productWeight) : '-';
+                        const customsVal = iv * roe;
+                        const dutyPct = parseFloat(product.duty_percent) || 0;
+                        const sch1Pct = parseFloat(product.duty_schedule1_percent) || 0;
+                        const totalWithDuties = customsVal + (customsVal * dutyPct / 100) + (customsVal * sch1Pct / 100);
+                        return productWeight > 0 ? formatCurrency(totalWithDuties / productWeight) : '-';
                       })()}
                     </td>
                     <td style={{ padding: '6px 8px', textAlign: 'center' }}>

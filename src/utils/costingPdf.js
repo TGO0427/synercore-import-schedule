@@ -268,16 +268,17 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
         sumAllocatedShipping += bd.allocatedShipping;
         sumTotalLanded += bd.totalLanded;
 
-        const purchaseCostPerKg = bd.weight > 0 ? bd.customsValue / bd.weight : 0;
+        const productCostZar = bd.customsValue + bd.importDuty + bd.schedule1Duty;
+        const productCostPerKg = bd.weight > 0 ? productCostZar / bd.weight : 0;
         return [
           p.name || '-',
           formatNumber(bd.weight, 0),
           `${(bd.weightRatio * 100).toFixed(1)}%`,
           `${formatNumber(bd.invoiceValue, 2)} ${bd.currency}`,
           formatCurrency(bd.customsValue),
-          formatCurrency(purchaseCostPerKg),
           formatCurrency(bd.importDuty),
           formatCurrency(bd.schedule1Duty),
+          formatCurrency(productCostPerKg),
           formatCurrency(bd.allocatedShipping),
           formatCurrency(bd.transportCostPerKg),
           formatCurrency(bd.totalLanded),
@@ -286,7 +287,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
       });
 
       const sumCostPerKg = sumWeight > 0 ? sumTotalLanded / sumWeight : 0;
-      const sumPurchaseCostPerKg = sumWeight > 0 ? sumCustomsValue / sumWeight : 0;
+      const sumProductCostPerKg = sumWeight > 0 ? (sumCustomsValue + sumImportDuty + sumSchedule1Duty) / sumWeight : 0;
       const sumTransportCostPerKg = sumWeight > 0 ? sumAllocatedShipping / sumWeight : 0;
       allocationRows.push([
         'TOTAL',
@@ -294,9 +295,9 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
         '100.0%',
         '',
         formatCurrency(sumCustomsValue),
-        formatCurrency(sumPurchaseCostPerKg),
         formatCurrency(sumImportDuty),
         formatCurrency(sumSchedule1Duty),
+        formatCurrency(sumProductCostPerKg),
         formatCurrency(sumAllocatedShipping),
         formatCurrency(sumTransportCostPerKg),
         formatCurrency(sumTotalLanded),
@@ -308,7 +309,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
 
       autoTable(doc, {
         startY: allocY + 1,
-        head: [['Product', 'Weight (kg)', 'Wt %', 'Invoice Value', 'Customs Val (ZAR)', 'Cost/kg (ZAR)', 'Import Duty', 'Sch1 Duty', shippingLabel, 'Transport/kg', 'Total Landed', 'Cost/kg']],
+        head: [['Product', 'Weight (kg)', 'Wt %', 'Invoice Value', 'Customs Val (ZAR)', 'Import Duty', 'Sch1 Duty', 'Cost/kg (ZAR)', shippingLabel, 'Transport/kg', 'Total Landed', 'Cost/kg']],
         body: allocationRows,
         theme: 'striped',
         headStyles: { fillColor: [22, 101, 52], fontSize: 6.5, textColor: [255, 255, 255] },
@@ -320,9 +321,9 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
           2: { halign: 'right' },
           3: { halign: 'right', cellWidth: 20 },
           4: { halign: 'right' },
-          5: { halign: 'right', fontStyle: 'bold' },
+          5: { halign: 'right' },
           6: { halign: 'right' },
-          7: { halign: 'right' },
+          7: { halign: 'right', fontStyle: 'bold' },
           8: { halign: 'right' },
           9: { halign: 'right', fontStyle: 'bold' },
           10: { halign: 'right', fontStyle: 'bold' },
