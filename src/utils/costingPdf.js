@@ -116,10 +116,11 @@ const getProductCostBreakdown = (product, estimate, totals, productTotals) => {
     shippingToAllocate = totals.total_shipping_cost_zar || 0;
   }
   const allocatedShipping = shippingToAllocate * weightRatio;
+  const transportCostPerKg = weight > 0 ? allocatedShipping / weight : 0;
   const totalLanded = customsValue + totalDuties + allocatedShipping;
   const costPerKg = weight > 0 ? totalLanded / weight : 0;
 
-  return { weight, weightRatio, invoiceValue, currency, customsValue, importDuty, schedule1Duty, totalDuties, allocatedShipping, totalLanded, costPerKg };
+  return { weight, weightRatio, invoiceValue, currency, customsValue, importDuty, schedule1Duty, totalDuties, allocatedShipping, transportCostPerKg, totalLanded, costPerKg };
 };
 
 // Backward-compatible wrapper
@@ -337,12 +338,14 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
           formatCurrency(bd.importDuty),
           formatCurrency(bd.schedule1Duty),
           formatCurrency(bd.allocatedShipping),
+          formatCurrency(bd.transportCostPerKg),
           formatCurrency(bd.totalLanded),
           formatCurrency(bd.costPerKg),
         ];
       });
 
       const sumCostPerKg = sumWeight > 0 ? sumTotalLanded / sumWeight : 0;
+      const sumTransportCostPerKg = sumWeight > 0 ? sumAllocatedShipping / sumWeight : 0;
       allocationRows.push([
         'TOTAL',
         formatNumber(sumWeight, 0),
@@ -352,6 +355,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
         formatCurrency(sumImportDuty),
         formatCurrency(sumSchedule1Duty),
         formatCurrency(sumAllocatedShipping),
+        formatCurrency(sumTransportCostPerKg),
         formatCurrency(sumTotalLanded),
         formatCurrency(sumCostPerKg),
       ]);
@@ -361,23 +365,24 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
 
       autoTable(doc, {
         startY: allocY + 1,
-        head: [['Product', 'Weight (kg)', 'Wt %', 'Invoice Value', 'Customs Val (ZAR)', 'Import Duty', 'Sch1 Duty', shippingLabel, 'Total Landed', 'Cost/kg']],
+        head: [['Product', 'Weight (kg)', 'Wt %', 'Invoice Value', 'Customs Val (ZAR)', 'Import Duty', 'Sch1 Duty', shippingLabel, 'Transport/kg', 'Total Landed', 'Cost/kg']],
         body: allocationRows,
         theme: 'striped',
         headStyles: { fillColor: [22, 101, 52], fontSize: 7, textColor: [255, 255, 255] },
         alternateRowStyles: { fillColor: [240, 253, 244] },
         styles: { fontSize: 7 },
         columnStyles: {
-          0: { cellWidth: 26 },
+          0: { cellWidth: 24 },
           1: { halign: 'right' },
           2: { halign: 'right' },
-          3: { halign: 'right', cellWidth: 24 },
+          3: { halign: 'right', cellWidth: 22 },
           4: { halign: 'right' },
           5: { halign: 'right' },
           6: { halign: 'right' },
           7: { halign: 'right' },
           8: { halign: 'right', fontStyle: 'bold' },
           9: { halign: 'right', fontStyle: 'bold' },
+          10: { halign: 'right', fontStyle: 'bold' },
         },
         didParseCell: (data) => {
           if (data.section === 'body' && data.row.index === allocationRows.length - 1) {
