@@ -257,10 +257,10 @@ function CostingFormSections({
                 <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Rate/kg <InfoTip text="Purchase price per kilogram in the selected currency." /></th>
                 <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Currency</th>
                 <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #f59e0b', backgroundColor: '#f59e0b', color: 'white' }}>Invoice Value</th>
-                <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #f59e0b', backgroundColor: '#f59e0b', color: 'white' }}>Cost/kg</th>
                 <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Weight % <InfoTip text="This product's weight as a percentage of total shipment weight — used to allocate shared costs." /></th>
                 <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Duty % <InfoTip text="General customs duty rate for this product based on its HS code." /></th>
                 <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}>Sch 1 % <InfoTip text="Schedule 1 (Part 1) additional duty — an extra tariff on specific goods under SA trade policy." /></th>
+                <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #f59e0b', backgroundColor: '#f59e0b', color: 'white' }}>Cost/kg (ZAR)</th>
                 <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #f59e0b' }}></th>
               </tr>
             </thead>
@@ -343,9 +343,6 @@ function CostingFormSections({
                         {formatNumber(product.invoice_value || 0, 2)}
                       </div>
                     </td>
-                    <td style={{ padding: '6px 8px', backgroundColor: '#fde68a', textAlign: 'right', fontWeight: '600', color: '#92400e' }}>
-                      {productWeight > 0 ? formatCurrency((product.invoice_value || 0) / productWeight) : '-'}
-                    </td>
                     <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '600', color: '#92400e' }}>
                       {formatNumber(weightPercent, 1)}%
                     </td>
@@ -368,6 +365,15 @@ function CostingFormSections({
                         step="0.1"
                         placeholder="0"
                       />
+                    </td>
+                    <td style={{ padding: '6px 8px', backgroundColor: '#fde68a', textAlign: 'right', fontWeight: '700', color: '#92400e' }}>
+                      {(() => {
+                        const iv = parseFloat(product.invoice_value) || 0;
+                        const currency = product.currency || 'USD';
+                        const roe = currency === 'EUR' ? (parseFloat(formData.roe_eur) || 1) : currency === 'ZAR' ? 1 : (parseFloat(formData.roe_origin) || 1);
+                        const zarValue = iv * roe;
+                        return productWeight > 0 ? formatCurrency(zarValue / productWeight) : '-';
+                      })()}
                     </td>
                     <td style={{ padding: '6px 8px', textAlign: 'center' }}>
                       {formData.products.length > 1 && (

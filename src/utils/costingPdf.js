@@ -1007,10 +1007,13 @@ export async function generateReportPDF({ chartData, selectedProduct, selectedSu
     if (products.length > 0) {
       autoTable(doc, {
         startY: currentY,
-        head: [['Product Name', 'HS Code', 'Pack Size', 'Pack Type', 'Weight (kg)', 'Rate/kg', 'Currency', 'Invoice Value', 'Cost/kg', 'Duty %', 'Sch1 %']],
+        head: [['Product Name', 'HS Code', 'Pack Size', 'Pack Type', 'Weight (kg)', 'Rate/kg', 'Currency', 'Invoice Value', 'Duty %', 'Sch1 %', 'Cost/kg (ZAR)']],
         body: products.map(p => {
           const w = parseFloat(p.weight_kg) || 0;
           const iv = parseFloat(p.invoice_value) || 0;
+          const currency = p.currency || 'USD';
+          const roe = currency === 'EUR' ? (parseFloat(est.roe_eur) || 1) : currency === 'ZAR' ? 1 : (parseFloat(est.roe_origin) || 1);
+          const zarValue = iv * roe;
           return [
             p.name || '-',
             p.hs_code || '-',
@@ -1018,11 +1021,11 @@ export async function generateReportPDF({ chartData, selectedProduct, selectedSu
             p.pack_type || '-',
             formatNumber(w),
             formatNumber(p.rate_per_kg),
-            p.currency || 'USD',
+            currency,
             formatNumber(iv),
-            w > 0 ? formatCurrency(iv / w) : '-',
             `${p.duty_percent || 0}%`,
             `${p.duty_schedule1_percent || 0}%`,
+            w > 0 ? formatCurrency(zarValue / w) : '-',
           ];
         }),
         theme: 'grid',
@@ -1033,9 +1036,9 @@ export async function generateReportPDF({ chartData, selectedProduct, selectedSu
           4: { halign: 'right' },
           5: { halign: 'right' },
           7: { halign: 'right' },
-          8: { halign: 'right', fontStyle: 'bold' },
+          8: { halign: 'center' },
           9: { halign: 'center' },
-          10: { halign: 'center' },
+          10: { halign: 'right', fontStyle: 'bold' },
         },
         margin: { left: 14, right: 14 },
       });
