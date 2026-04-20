@@ -814,6 +814,15 @@ async function start() {
       logWarn('Notification scheduler warning', { error: error.message });
     }
 
+    // Initialize POPIA retention scheduler
+    try {
+      const { default: RetentionScheduler } = await import('./jobs/retentionScheduler.js');
+      RetentionScheduler.initializeJobs();
+      logger.info('Retention scheduler initialized');
+    } catch (error) {
+      logWarn('Retention scheduler warning', { error: error.message });
+    }
+
     // Initialize Socket.io for real-time updates
     try {
       socketManager.initialize(httpServer);

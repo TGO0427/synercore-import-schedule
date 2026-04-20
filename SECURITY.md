@@ -418,11 +418,18 @@ The application operates within South Africa and must comply with the Protection
 - Database connections use SSL in production.
 - Login activity logged for accountability; no credential values recorded.
 - `.env` files excluded from version control; secrets live in Railway Variables.
+- **Retention jobs** — `server/jobs/retentionScheduler.js` runs nightly at 03:00 and purges:
+  - `login_activity` rows older than `LOGIN_ACTIVITY_RETENTION_DAYS` (default 365)
+  - expired/revoked `refresh_tokens` older than `REFRESH_TOKEN_RETENTION_DAYS` (default 30)
+  - abandoned pending registrations (is_active=false, no audit activity) older than `PENDING_REGISTRATION_TTL_DAYS` (default 90)
+- **Data-subject access (POPIA §23)** — `GET /api/auth/me/data-export` returns the caller's profile, login activity, and audit entries as a JSON download.
+- **Data-subject erasure (POPIA §25)** — `POST /api/auth/admin/users/:id/erase` tombstones the user row, deletes login activity + refresh tokens, and preserves the audit trail.
+- **Privacy notice** — accessible at `/privacy` (linked from login page) covering what is collected, why, retention periods, sub-operators, cross-border transfer, and rights.
 
 ### POPIA controls to implement
 - **Lawful purpose & minimisation**: review whether `address`, `phone`, and `country` on `suppliers` are all necessary; drop fields the workflow doesn't use.
-- **Retention limits**: define and enforce retention periods for login activity, archived shipments, and supplier documents (e.g. archive after 24 months, delete after 7 years to match SARS customs retention).
-- **Data subject rights**: implement request handling for access, correction, and deletion of personal information (POPIA §§23–25). No self-service endpoint exists yet.
+- **Retention for shipment data**: the retention job currently covers auth-related tables; extend to archived shipments and supplier documents with a defined retention period (e.g. 5 years to match SARS customs retention).
+- **Self-service correction & deletion request**: users can currently export their data, but deletion requires admin action. Add a "request deletion" button in user settings that notifies an admin.
 - **Operator agreements**: formal data-processing agreements with Railway (hosting), Vercel (frontend hosting), and Sentry (error monitoring) — these are sub-operators processing Synercore's personal information.
 - **Cross-border transfer**: Railway and Vercel store data in regions outside South Africa. Confirm this is permitted under POPIA §72 (adequate protection / consent) and document the basis.
 - **Breach notification**: define and document an incident response process that meets POPIA §22 — notify the Information Regulator and affected data subjects "as soon as reasonably possible" after a compromise.

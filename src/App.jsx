@@ -38,6 +38,7 @@ const LocalReceivingSchedule = lazy(() => import('./components/LocalReceivingSch
 import SupplierLogin from './pages/SupplierLogin';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import PrivacyNotice from './pages/PrivacyNotice';
 import useWebSocket from './hooks/useWebSocket';
 import useShipments from './hooks/useShipments';
 import useSuppliers from './hooks/useSuppliers';
@@ -370,7 +371,8 @@ function App() {
       <Routes>
         <Route path="/forgot-password" element={<ForgotPassword onBack={() => navigate('/login')} />} />
         <Route path="/reset-password" element={<ResetPassword onBack={() => navigate('/login')} />} />
-        <Route path="/login" element={<LoginPage onLogin={handleLogin} onForgotPassword={() => navigate('/forgot-password')} />} />
+        <Route path="/privacy" element={<PrivacyNotice onBack={() => navigate('/login')} />} />
+        <Route path="/login" element={<LoginPage onLogin={handleLogin} onForgotPassword={() => navigate('/forgot-password')} onPrivacy={() => navigate('/privacy')} />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );

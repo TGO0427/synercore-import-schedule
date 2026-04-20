@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { authUtils } from '../utils/auth';
 
-function LoginPage({ onLogin, onForgotPassword }) {
+function LoginPage({ onLogin, onForgotPassword, onPrivacy }) {
   const [credentials, setCredentials] = useState({
     username: '',
     password: ''
@@ -360,6 +360,26 @@ function LoginPage({ onLogin, onForgotPassword }) {
           >
             Forgot password?
           </button>
+          {onPrivacy && (
+            <>
+              <span style={{ color: '#9ca3af', margin: '0 8px', fontSize: '13px' }}>·</span>
+              <button
+                type="button"
+                onClick={onPrivacy}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#059669',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  padding: 0
+                }}
+              >
+                Privacy notice
+              </button>
+            </>
+          )}
         </div>
 
         {/* Info message */}

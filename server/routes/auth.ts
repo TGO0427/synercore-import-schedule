@@ -787,6 +787,94 @@ router.post('/admin/users/:id/reset-password', authenticateToken, requireAdmin, 
   }
 });
 
+// GET /api/auth/me/data-export - POPIA §23 data-subject access request.
+// Returns the caller's personal data (profile + login activity + audit entries)
+// as a JSON download so they can verify what is held about them.
+router.get('/me/data-export', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+
+    const profile = await pool.query(
+      `SELECT id, username, email, full_name, role, is_active, created_at, updated_at
+       FROM users WHERE id = $1`,
+      [userId]
+    );
+    if (profile.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const loginActivity = await pool.query(
+      `SELECT login_at, ip_address, user_agent, success
+       FROM login_activity WHERE user_id = $1
+       ORDER BY login_at DESC LIMIT 1000`,
+      [userId]
+    );
+
+    const auditEntries = await pool.query(
+      `SELECT action, entity_type, entity_id, entity_label, created_at
+       FROM audit_log WHERE user_id = $1
+       ORDER BY created_at DESC LIMIT 5000`,
+      [userId]
+    );
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="personal-data-${userId}.json"`);
+    res.json({
+      generatedAt: new Date().toISOString(),
+      dataSubject: profile.rows[0],
+      loginActivity: loginActivity.rows,
+      auditEntries: auditEntries.rows,
+      notes: 'This export covers personal data held about you in the Synercore Import Schedule application. For questions or corrections, contact your administrator.'
+    });
+  } catch (error: unknown) {
+    console.error('Error generating data export:', error);
+    res.status(500).json({ error: 'Failed to generate data export' });
+  }
+});
+
+// POST /api/auth/admin/users/:id/erase - POPIA §25 right to deletion.
+// Anonymizes the user record (PII → tombstone values) and deletes
+// login activity. Audit-log entries are preserved (legal obligation /
+// operational integrity) but no longer reference identifiable info
+// on their own — the user row's identifying fields are gone.
+router.post('/admin/users/:id/erase', authenticateToken, requireAdmin, validateId, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (id === (req as any).user.id) {
+      return res.status(400).json({ error: 'Cannot erase your own account' });
+    }
+
+    const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [id]);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const tombstone = `[ERASED-${Date.now()}]`;
+    await pool.query('BEGIN');
+    try {
+      await pool.query(
+        `UPDATE users
+         SET username = $2, email = NULL, full_name = NULL,
+             password_hash = '!', is_active = false, updated_at = NOW()
+         WHERE id = $1`,
+        [id, tombstone]
+      );
+      await pool.query('DELETE FROM login_activity WHERE user_id = $1', [id]);
+      await pool.query('DELETE FROM refresh_tokens WHERE user_id = $1', [id]);
+      await pool.query('COMMIT');
+    } catch (err) {
+      await pool.query('ROLLBACK');
+      throw err;
+    }
+
+    res.json({ message: 'User personal data erased; audit trail preserved', tombstone });
+  } catch (error: unknown) {
+    console.error('Error erasing user:', error);
+    res.status(500).json({ error: 'Failed to erase user' });
+  }
+});
+
 // DELETE /api/auth/admin/users/:id - Delete user (admin only)
 router.delete('/admin/users/:id', authenticateToken, requireAdmin, validateId, async (req: Request, res: Response) => {
   try {
