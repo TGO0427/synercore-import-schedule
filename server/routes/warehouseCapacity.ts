@@ -105,7 +105,7 @@ router.get('/', async (req: Request, res: Response) => {
 
 // PUT/UPDATE total capacity for a specific warehouse
 // MUST be before /:warehouseName to match correctly
-router.put('/:warehouseName/total-capacity', validateWarehouseCapacity, (req: Request, res: Response) => {
+router.put('/:warehouseName/total-capacity', authenticateToken, requireAdmin, validateWarehouseCapacity, (req: Request, res: Response) => {
   // Wrap in explicit error handler
   (async () => {
     try {
@@ -152,7 +152,7 @@ router.put('/:warehouseName/total-capacity', validateWarehouseCapacity, (req: Re
 
 // PUT/UPDATE available bins for a specific warehouse
 // MUST be before /:warehouseName to match correctly
-router.put('/:warehouseName/available-bins', validateWarehouseCapacityUpdate, (req: Request, res: Response) => {
+router.put('/:warehouseName/available-bins', authenticateToken, requireAdmin, validateWarehouseCapacityUpdate, (req: Request, res: Response) => {
   // Wrap in explicit error handler
   (async () => {
     try {
@@ -241,7 +241,7 @@ router.get('/:warehouseName/history', authenticateToken, async (req: Request, re
 
 // PUT/UPDATE warehouse capacity for a specific warehouse (bins used)
 // MUST be last to avoid conflicting with more specific routes
-router.put('/:warehouseName', validateWarehouseCapacityUpdate, async (req: Request, res: Response) => {
+router.put('/:warehouseName', authenticateToken, requireAdmin, validateWarehouseCapacityUpdate, async (req: Request, res: Response) => {
   try {
     const { warehouseName } = req.params;
     const { binsUsed } = req.body as { binsUsed: number };
@@ -250,7 +250,6 @@ router.put('/:warehouseName', validateWarehouseCapacityUpdate, async (req: Reque
       return res.status(400).json({ error: 'Invalid binsUsed value' });
     }
 
-    // Simple update without authentication for now
     const result = await pool.query(
       `INSERT INTO warehouse_capacity (warehouse_name, bins_used, updated_at)
        VALUES ($1::text, $2::integer, CURRENT_TIMESTAMP)

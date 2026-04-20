@@ -315,33 +315,20 @@ router.post('/register', validateRegister, async (req: Request, res: Response) =
     // Hash password
     const passwordHash: string = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create user — pending admin approval (is_active = false).
+    // No tokens are issued until an admin activates the account.
     const id: string = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const result = await pool.query(
       `INSERT INTO users (id, username, email, password_hash, full_name, role, is_active)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id, username, email, full_name, role, is_active, created_at`,
-      [id, username, email || null, passwordHash, fullName || null, 'user', true]
+      [id, username, email || null, passwordHash, fullName || null, 'user', false]
     );
 
     const user = result.rows[0];
 
-    // Generate access token (short-lived)
-    const accessToken: string = jwt.sign(
-      { id: user.id, username: user.username, role: user.role } as JwtTokenPayload,
-      JWT_SECRET,
-      { expiresIn: ACCESS_TOKEN_EXPIRY }
-    );
-
-    // Create and store refresh token
-    const refreshToken: string = await createRefreshToken(
-      user.id,
-      req.ip || (req as any).connection?.remoteAddress || null,
-      req.headers['user-agent'] || null
-    );
-
     res.status(201).json({
-      message: 'User registered successfully',
+      message: 'Registration received. An administrator must approve your account before you can sign in.',
       user: {
         id: user.id,
         username: user.username,
@@ -349,10 +336,7 @@ router.post('/register', validateRegister, async (req: Request, res: Response) =
         fullName: user.full_name,
         role: user.role,
         isActive: user.is_active
-      },
-      accessToken,
-      refreshToken,
-      expiresIn: 900 // 15 minutes in seconds
+      }
     });
   } catch (error: unknown) {
     console.error('Error in register:', error);

@@ -334,7 +334,7 @@ router.post('/:id/import', requireAdmin, async (req: Request, res: Response) => 
 });
 
 // GET /api/suppliers/:id/documents - Get documents for supplier
-router.get('/:id/documents', authenticateToken, async (req: Request, res: Response) => {
+router.get('/:id/documents', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
   try {
     const supplierId: string = req.params.id;
 
@@ -377,7 +377,7 @@ router.get('/:id/documents', authenticateToken, async (req: Request, res: Respon
 });
 
 // GET /api/suppliers/:id/documents/:filename - Download specific document
-router.get('/:id/documents/:filename', authenticateToken, async (req: Request, res: Response) => {
+router.get('/:id/documents/:filename', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
   try {
     const { id: supplierId, filename } = req.params;
     const baseDir: string = path.resolve(DOCUMENTS_DIR, supplierId);

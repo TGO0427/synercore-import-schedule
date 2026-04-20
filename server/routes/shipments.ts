@@ -215,6 +215,7 @@ router.post(
  */
 router.post(
   '/bulk-import',
+  requireAdmin,
   asyncHandler(async (req: BodyRequest<BulkImportShipment[]>, res: Response) => {
     const result = await ShipmentController.bulkImport(req.body);
     res.status(200).json({
@@ -338,6 +339,7 @@ router.get(
  */
 router.post(
   '/bulk/archive',
+  requireAdmin,
   asyncHandler(async (req: Request, res: Response) => {
     const { ids } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) {
@@ -369,6 +371,7 @@ router.post(
  */
 router.post(
   '/bulk/delete',
+  requireAdmin,
   asyncHandler(async (req: Request, res: Response) => {
     const { ids } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) {
@@ -400,6 +403,7 @@ router.post(
  */
 router.post(
   '/bulk/restore',
+  requireAdmin,
   asyncHandler(async (req: Request, res: Response) => {
     const { ids } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) {
@@ -572,6 +576,7 @@ router.patch(
  */
 router.delete(
   '/:id',
+  requireAdmin,
   asyncHandler(async (req: Request, res: Response) => {
     await ShipmentController.deleteShipment(req.params.id!);
 
