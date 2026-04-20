@@ -6,6 +6,41 @@ This document outlines the security measures implemented in the Synercore Import
 
 ## Recent Security Improvements
 
+### Latest Updates (2026-04-20) — Authorization Hardening & Dependency Cleanup
+
+A focused security review identified and remediated three HIGH-severity authorization gaps plus remaining dependency advisories.
+
+**1. Public registration closed (broken auth / mass IDOR)**
+- `POST /api/auth/register` previously created `is_active=true` accounts and issued JWTs immediately, so any internet caller could self-register and obtain a valid token.
+- **Fix**: Registrations now create `is_active=false` accounts and return no tokens. An administrator must approve before the account can sign in. See `server/routes/auth.ts:297`.
+
+**2. Destructive shipment routes gated by `requireAdmin`**
+- Non-admin users could delete / bulk-import / bulk-archive / bulk-delete / bulk-restore shipments.
+- **Fix**: Added `requireAdmin` to `DELETE /api/shipments/:id`, `POST /api/shipments/bulk-import`, `POST /api/shipments/bulk/archive`, `POST /api/shipments/bulk/delete`, `POST /api/shipments/bulk/restore`. PUT/PATCH/single-archive remain available to approved users for normal workflow.
+
+**3. Warehouse-capacity PUT endpoints now require auth + admin**
+- Previously accepted unauthenticated writes (including an explicit `// Simple update without authentication for now` comment).
+- **Fix**: Added `authenticateToken, requireAdmin` to all three PUTs at `server/routes/warehouseCapacity.ts:108,155,244`.
+
+**4. Supplier document reads restricted to admin**
+- `GET /api/suppliers/:id/documents` and `GET /:id/documents/:filename` were gated only by `authenticateToken`, allowing any signed-in user to download any supplier's files.
+- **Fix**: Added `requireAdmin`, matching the existing `DELETE` handler on the same path. Supplier-portal document access (where suppliers see their own docs) is unchanged and correctly gated by `requireSupplier` + ownership check.
+
+**5. Supplier-portal IDOR via substring match**
+- Six queries in `server/controllers/supplierController.js` used `LOWER(supplier) LIKE '%' || $name || '%'`, meaning supplier "ACME" could see rows for "ACME Inc", "ACME Global", etc.
+- **Fix**: Replaced with exact case-insensitive equality (`LOWER(supplier) = LOWER($name)`) in all six queries (shipment list, count, detail, document-upload ownership check, report stats, report status breakdown).
+
+**6. `/api/auth/setup` gated by `SETUP_TOKEN`**
+- `/setup` auto-enabled whenever the `users` table was empty, meaning whoever raced the endpoint first after a DB reset became admin.
+- **Fix**: Endpoint now returns 404 unless `SETUP_TOKEN` is set in env; when set, requires a matching `X-Setup-Token` header. Leave unset in steady-state production and set it only temporarily during DR bootstrap.
+
+**7. `JWT_SECRET` rotated**
+- All outstanding JWTs invalidated. Users re-authenticated.
+
+**8. Dependency audit**
+- `npm audit fix` resolved 13 of 15 advisories (brace-expansion, dompurify, express-rate-limit, jws, lodash, mailparser, minimatch, path-to-regexp via express, qs via body-parser, socket.io-parser).
+- Remaining two require breaking-change bumps and are deferred with regression testing: `jspdf 3 → 4` (critical, PDF generation) and `nodemailer 6 → 8` (moderate, transitive via mailparser; low practical exploit surface here since the app parses rather than sends via nodemailer).
+
 ### Latest Updates (2025-11-19)
 
 **Critical Issue #1 - Input Validation Integration**
@@ -178,14 +213,14 @@ All passwords must meet the following criteria:
 
 ### Authentication Flow
 
-1. **Registration/Login**: User provides credentials
-2. **Token Generation**: Server generates JWT with 7-day expiry
-3. **Token Storage**: Client stores token securely
-4. **API Requests**: Client includes token in Authorization header:
+1. **Registration**: User submits credentials → account created with `is_active=false` → admin approval required before first login
+2. **Login**: Approved user authenticates, server checks `is_active`, issues short-lived access token (15 min) + long-lived refresh token (7 days)
+3. **Token Storage**: Client stores tokens securely
+4. **API Requests**: Client includes access token in Authorization header:
    ```
    Authorization: Bearer <token>
    ```
-5. **Token Verification**: Server validates token on each protected request
+5. **Token Verification**: Server validates token on each protected request; expired access tokens are refreshed via `/api/auth/refresh`
 
 ### Role-Based Access Control
 
@@ -286,19 +321,20 @@ Before deploying to production:
     - `/api/quotes/:forwarder/upload` - Forwarder quote uploads
 - **Impact**: All file uploads now validated for type, MIME type, size, and user permissions
 
-### Issue #4: Supplier Portal Security ⚠️ PENDING
+### Issue #4: Supplier Portal Security ⚠️ PARTIALLY RESOLVED
 - **Severity**: CRITICAL
-- **Status**: NEEDS FIX
-- **Description**: Multiple authentication gaps in supplier portal
-- **What needs fixing**:
-  - Implement account lockout after N failed login attempts
-  - Add email verification for supplier registration
-  - Implement password reset via email
-  - Add session timeout (15 minutes)
-  - Restrict supplier to only view their own data
-  - Add CSRF token protection
-- **Files affected**: `server/routes/supplierPortal.js`, `server/controllers/supplierController.js`
-- **Estimated effort**: 3 hours
+- **Status**: PARTIAL
+- **Fixed 2026-04-20**:
+  - ✅ Restrict supplier to only view their own data — IDOR via `LIKE '%name%'` replaced with exact case-insensitive equality across all six supplier-portal queries
+  - ✅ Admin approval required before a supplier account can sign in (`is_active=false` on registration)
+  - ✅ Short-lived access tokens (15 min) + refresh tokens already in place
+  - ✅ CSRF middleware in place (`server/middleware/csrf.js`)
+- **Still needed**:
+  - Email verification for supplier registration
+  - Self-service password reset via email
+  - Permanent account lockout after repeated failed logins (currently only rate-limited)
+- **Files affected**: `server/routes/supplierPortal.ts`, `server/controllers/supplierController.js`
+- **Estimated remaining effort**: 1–2 hours
 
 ### Issue #5: WebSocket Error Handling ⚠️ PENDING
 - **Severity**: HIGH
@@ -366,6 +402,38 @@ Before deploying to production:
 3. **Password Reset**: Not implemented - users cannot self-service password reset
 4. **Account Lockout**: Failed login attempts trigger rate limiting, but no permanent lockout
 
+## Privacy & POPIA Compliance
+
+The application operates within South Africa and must comply with the Protection of Personal Information Act (POPIA).
+
+### Personal information handled
+- **Internal users** (`users` table): username, email, full name, hashed password, login activity (IP, user-agent, timestamp).
+- **Supplier contacts** (`suppliers` table): supplier company name, contact person, email, phone, address, country.
+- **Supplier portal accounts** (`supplier_accounts` table): login email, hashed password, last login timestamp.
+- **Shipment-attached documents** (`supplier_documents`, filesystem): PODs, invoices, compliance PDFs — may contain PII about third parties.
+
+### POPIA controls currently in place
+- Passwords hashed with bcrypt (10 rounds); no plaintext credential storage.
+- Access to personal information gated by authentication and role (`requireAdmin` on supplier document reads).
+- Database connections use SSL in production.
+- Login activity logged for accountability; no credential values recorded.
+- `.env` files excluded from version control; secrets live in Railway Variables.
+
+### POPIA controls to implement
+- **Lawful purpose & minimisation**: review whether `address`, `phone`, and `country` on `suppliers` are all necessary; drop fields the workflow doesn't use.
+- **Retention limits**: define and enforce retention periods for login activity, archived shipments, and supplier documents (e.g. archive after 24 months, delete after 7 years to match SARS customs retention).
+- **Data subject rights**: implement request handling for access, correction, and deletion of personal information (POPIA §§23–25). No self-service endpoint exists yet.
+- **Operator agreements**: formal data-processing agreements with Railway (hosting), Vercel (frontend hosting), and Sentry (error monitoring) — these are sub-operators processing Synercore's personal information.
+- **Cross-border transfer**: Railway and Vercel store data in regions outside South Africa. Confirm this is permitted under POPIA §72 (adequate protection / consent) and document the basis.
+- **Breach notification**: define and document an incident response process that meets POPIA §22 — notify the Information Regulator and affected data subjects "as soon as reasonably possible" after a compromise.
+- **Information Officer**: register a POPIA Information Officer with the Regulator if not already done.
+
+### Privacy best practices for developers
+- Never log email addresses, full names, or passwords in application logs.
+- Never paste production personal information into tickets, chats, or AI tools without a signed data-processing agreement.
+- When sharing bug reports, sanitise supplier names / emails / document filenames.
+- When exporting data for analysis, prefer aggregated / anonymised views.
+
 ## Security Contacts
 
 Report security vulnerabilities to: [Add contact information]
@@ -377,6 +445,17 @@ Report security vulnerabilities to: [Add contact information]
 - [Node.js Security Checklist](https://github.com/goldbergyoni/nodebestpractices#6-security-best-practices)
 
 ## Changelog
+
+### 2026-04-20 — Authorization hardening, supplier-portal IDOR fix, dependency cleanup
+- Registration (`/api/auth/register`) now creates inactive accounts — admin approval required before login; no tokens issued on signup (commit `c965cf8`)
+- Destructive shipment routes (`DELETE /:id`, `/bulk-import`, `/bulk/archive|delete|restore`) now require `requireAdmin` (commit `c965cf8`)
+- Warehouse-capacity PUT endpoints now require `authenticateToken + requireAdmin` (commit `c965cf8`)
+- Supplier document GET endpoints now require `requireAdmin`, matching existing DELETE handler (commit `c965cf8`)
+- Supplier-portal IDOR fixed: `LOWER(supplier) LIKE '%' || name || '%'` replaced with exact case-insensitive equality across all six queries (commit `5bb6202`)
+- `/api/auth/setup` gated behind `SETUP_TOKEN` env var + `X-Setup-Token` header; returns 404 when unset (commit `f486ec0`)
+- `JWT_SECRET` rotated in Railway — all outstanding tokens invalidated
+- `npm audit fix` resolved 13 of 15 advisories (commit `06884e8`); remaining jspdf 3→4 and nodemailer 6→8 deferred pending regression testing
+- Added Privacy & POPIA Compliance section documenting personal information handled and outstanding compliance controls
 
 ### 2025-11-19 - File Upload Validation Implementation
 - **Fixed**: File uploads missing validation and permission checks (Critical Issue #3)
@@ -428,16 +507,20 @@ Report security vulnerabilities to: [Add contact information]
 
 ---
 
-**Last Updated**: November 19, 2025
+**Last Updated**: April 20, 2026
 **Review Frequency**: Quarterly or after any security incident
-**Next Review**: December 19, 2025 (after critical issue #4-8 fixes)
+**Next Review**: July 20, 2026
 
-**Progress**: 3 of 8 critical issues resolved (37.5%)
+**Progress**: 3.5 of 8 critical issues resolved
 - ✅ Issue #1: Input Validation
 - ✅ Issue #2: Error Handling Inconsistency
 - ✅ Issue #3: File Upload Validation
-- ⏳ Issue #4: Supplier Portal Security (estimated 3 hours)
-- ⏳ Issue #5: WebSocket Error Handling (estimated 1-2 hours)
-- ⏳ Issue #6: Rate Limiting Gaps (estimated 1-2 hours)
-- ⏳ Issue #7: Workflow State Machine (estimated 2-3 hours)
-- ⏳ Issue #8: Certificate Validation (estimated 30 minutes)
+- 🟡 Issue #4: Supplier Portal Security (IDOR + admin-approval resolved 2026-04-20; email verification / password reset / permanent lockout still pending)
+- ⏳ Issue #5: WebSocket Error Handling
+- ⏳ Issue #6: Rate Limiting Gaps
+- ⏳ Issue #7: Workflow State Machine
+- ⏳ Issue #8: Certificate Validation
+
+**Deferred dependency upgrades** (need regression testing):
+- `jspdf` 3 → 4 (critical — PDF generation)
+- `nodemailer` 6 → 8 (moderate — transitive via `mailparser`)
