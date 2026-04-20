@@ -171,8 +171,8 @@ export class SupplierController {
         supplierName = supplierNameResult.rows[0].name;
       }
 
-      // Get all shipments for this supplier by matching supplier names (case-insensitive)
-      // Uses flexible matching: LIKE for partial matches and exact name match
+      // Exact case-insensitive match on supplier name to prevent cross-tenant leakage
+      // (a supplier whose name is a substring of another would otherwise see their rows).
       let query = `
         SELECT s.id, s.order_ref as "orderRef", s.product_name as "productName", s.supplier,
                s.quantity, s.pallet_qty as "palletQty",
@@ -181,12 +181,9 @@ export class SupplierController {
                s.week_number as "weekNumber", s.incoterm, s.created_at, s.updated_at
         FROM shipments s
         WHERE s.supplier IS NOT NULL
-        AND (
-          LOWER(s.supplier) LIKE LOWER('%' || $1 || '%')
-          OR LOWER(s.supplier) = LOWER($2)
-        )
+        AND LOWER(s.supplier) = LOWER($1)
       `;
-      const params = [supplierName, supplierName];
+      const params = [supplierName];
 
       // Filter by status if provided
       if (status) {
@@ -203,12 +200,9 @@ export class SupplierController {
       let countQuery = `
         SELECT COUNT(*) FROM shipments s
         WHERE s.supplier IS NOT NULL
-        AND (
-          LOWER(s.supplier) LIKE LOWER('%' || $1 || '%')
-          OR LOWER(s.supplier) = LOWER($2)
-        )
+        AND LOWER(s.supplier) = LOWER($1)
       `;
-      const countParams = [supplierName, supplierName];
+      const countParams = [supplierName];
 
       if (status) {
         countQuery += ` AND s.latest_status = $${countParams.length + 1}`;
@@ -249,15 +243,12 @@ export class SupplierController {
         supplierName = supplierNameResult.rows[0].name;
       }
 
-      // Verify supplier owns this shipment (with flexible supplier name matching)
+      // Verify supplier owns this shipment (exact case-insensitive name match)
       const shipmentResult = await pool.query(
         `SELECT * FROM shipments s
          WHERE s.id = $1
-         AND (
-           LOWER(s.supplier) LIKE LOWER('%' || $2 || '%')
-           OR LOWER(s.supplier) = LOWER($3)
-         )`,
-        [shipmentId, supplierName, supplierName]
+         AND LOWER(s.supplier) = LOWER($2)`,
+        [shipmentId, supplierName]
       );
 
       if (shipmentResult.rows.length === 0) {
@@ -319,14 +310,11 @@ export class SupplierController {
         supplierName = supplierNameResult.rows[0].name;
       }
 
-      // Verify supplier owns this shipment (with flexible supplier name matching)
+      // Verify supplier owns this shipment (exact case-insensitive name match)
       const shipmentCheck = await pool.query(
         `SELECT id FROM shipments s
-         WHERE s.id = $1 AND (
-           LOWER(s.supplier) LIKE LOWER('%' || $2 || '%')
-           OR LOWER(s.supplier) = LOWER($3)
-         )`,
-        [shipmentId, supplierName, supplierName]
+         WHERE s.id = $1 AND LOWER(s.supplier) = LOWER($2)`,
+        [shipmentId, supplierName]
       );
 
       if (shipmentCheck.rows.length === 0) {
@@ -392,7 +380,7 @@ export class SupplierController {
         supplierName = supplierNameResult.rows[0].name;
       }
 
-      // Get supplier's shipment statistics (with flexible supplier name matching)
+      // Exact case-insensitive match on supplier name
       const statsResult = await pool.query(
         `SELECT
            COUNT(*) as total_shipments,
@@ -402,11 +390,8 @@ export class SupplierController {
            SUM(CASE WHEN pallet_qty IS NOT NULL THEN pallet_qty ELSE 0 END) as total_pallets,
            SUM(CASE WHEN quantity IS NOT NULL THEN quantity ELSE 0 END) as total_quantity
          FROM shipments
-         WHERE (
-           LOWER(supplier) LIKE LOWER('%' || $1 || '%')
-           OR LOWER(supplier) = LOWER($2)
-         )`,
-        [supplierName, supplierName]
+         WHERE LOWER(supplier) = LOWER($1)`,
+        [supplierName]
       );
 
       // Get document upload statistics
@@ -420,17 +405,14 @@ export class SupplierController {
         [supplierId]
       );
 
-      // Get shipments by status (with flexible supplier name matching)
+      // Exact case-insensitive match on supplier name
       const statusResult = await pool.query(
         `SELECT latest_status as "latestStatus", COUNT(*) as count
          FROM shipments
-         WHERE (
-           LOWER(supplier) LIKE LOWER('%' || $1 || '%')
-           OR LOWER(supplier) = LOWER($2)
-         )
+         WHERE LOWER(supplier) = LOWER($1)
          GROUP BY latest_status
          ORDER BY count DESC`,
-        [supplierName, supplierName]
+        [supplierName]
       );
 
       res.json({
