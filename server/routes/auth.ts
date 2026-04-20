@@ -229,9 +229,23 @@ export const authenticateTokenLenient = (req: Request, res: Response, next: Next
   });
 };
 
-// POST /api/auth/setup - Initial admin setup (only works when no users exist)
+// POST /api/auth/setup - Initial admin setup (only works when no users exist
+// AND a deployment-time SETUP_TOKEN is presented via X-Setup-Token header).
+// Without SETUP_TOKEN set in env the endpoint is disabled entirely, so a
+// DB reset cannot be hijacked by whoever races to /setup first.
 router.post('/setup', async (req: Request, res: Response) => {
   try {
+    const configuredToken = process.env.SETUP_TOKEN;
+    if (!configuredToken) {
+      return res.status(404).json({ error: 'Setup endpoint is disabled' });
+    }
+
+    const providedToken = req.headers['x-setup-token'];
+    const providedTokenStr = Array.isArray(providedToken) ? providedToken[0] : providedToken;
+    if (!providedTokenStr || providedTokenStr !== configuredToken) {
+      return res.status(403).json({ error: 'Invalid or missing setup token' });
+    }
+
     const { username, email, password, fullName } = req.body;
 
     if (!username || !password) {
