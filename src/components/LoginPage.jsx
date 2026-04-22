@@ -172,147 +172,143 @@ function LoginPage({ onLogin, onForgotPassword, onPrivacy }) {
               style={{ width: '100%', maxWidth: '620px', height: 'auto', display: 'block' }}
               aria-hidden="true"
             >
-              {/* Sky band */}
+              {/* Refined palette: muted sage + slate + warm terracotta */}
               <defs>
                 <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#DCEEF6" />
-                  <stop offset="100%" stopColor="#F0F9FC" />
+                  <stop offset="0%" stopColor="#EDF2EE" />
+                  <stop offset="100%" stopColor="#F7FAF7" />
                 </linearGradient>
                 <linearGradient id="seaGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#4A90A4" />
-                  <stop offset="100%" stopColor="#2F6A7D" />
+                  <stop offset="0%" stopColor="#6B8F9C" />
+                  <stop offset="100%" stopColor="#4D6F7C" />
+                </linearGradient>
+                <linearGradient id="hullGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#2E3B4A" />
+                  <stop offset="100%" stopColor="#1E2A38" />
                 </linearGradient>
               </defs>
               <rect x="0" y="0" width="400" height="185" fill="url(#skyGrad)" />
 
-              {/* Soft clouds */}
-              <g fill="white" opacity="0.85">
-                <ellipse cx="70" cy="35" rx="28" ry="8" />
-                <ellipse cx="88" cy="30" rx="18" ry="6" />
-                <ellipse cx="255" cy="22" rx="32" ry="7" />
-                <ellipse cx="340" cy="45" rx="22" ry="6" />
+              {/* Soft low clouds */}
+              <g fill="#FFFFFF" opacity="0.75">
+                <ellipse cx="70" cy="35" rx="28" ry="7" />
+                <ellipse cx="88" cy="30" rx="18" ry="5" />
+                <ellipse cx="255" cy="22" rx="32" ry="6" />
+                <ellipse cx="340" cy="45" rx="22" ry="5" />
               </g>
 
               {/* Distant warehouse silhouette (left shore) */}
               <g>
-                <rect x="0" y="140" width="55" height="45" fill="#CFE3EB" />
-                <polygon points="0,140 27,128 55,140" fill="#B3D0DA" />
-                <rect x="10" y="155" width="8" height="10" fill="#8FB5C2" />
-                <rect x="24" y="155" width="8" height="10" fill="#8FB5C2" />
-                <rect x="38" y="155" width="8" height="10" fill="#8FB5C2" />
+                <rect x="0" y="140" width="55" height="45" fill="#D5DEDD" />
+                <polygon points="0,140 27,128 55,140" fill="#BFCBCA" />
+                <rect x="10" y="155" width="8" height="10" fill="#93A5A2" />
+                <rect x="24" y="155" width="8" height="10" fill="#93A5A2" />
+                <rect x="38" y="155" width="8" height="10" fill="#93A5A2" />
               </g>
 
-              {/* Port crane (right side) */}
+              {/* Port crane — muted burnt sienna */}
               <g>
-                {/* Main vertical mast */}
-                <rect x="318" y="75" width="8" height="130" fill="#E74C3C" />
-                {/* Horizontal boom */}
-                <rect x="240" y="74" width="140" height="6" fill="#E74C3C" />
-                {/* Diagonal brace */}
-                <polygon points="322,82 240,82 280,76 320,76" fill="#C0392B" opacity="0.6" />
-                {/* Cable */}
-                <line x1="275" y1="80" x2="275" y2="130" stroke="#1E293B" strokeWidth="1" />
-                {/* Hook/container being lifted */}
-                <rect x="266" y="130" width="18" height="12" fill="#FBBF24" />
-                <line x1="266" y1="134" x2="284" y2="134" stroke="#B45309" strokeWidth="0.5" />
-                {/* Base support */}
-                <rect x="314" y="200" width="16" height="8" fill="#C0392B" />
-                {/* Wheels under crane base */}
-                <circle cx="316" cy="210" r="4" fill="#1E293B" />
-                <circle cx="328" cy="210" r="4" fill="#1E293B" />
+                <rect x="318" y="75" width="8" height="130" fill="#B5715B" />
+                <rect x="240" y="74" width="140" height="6" fill="#B5715B" />
+                <polygon points="322,82 240,82 280,76 320,76" fill="#8E5844" opacity="0.55" />
+                <line x1="275" y1="80" x2="275" y2="130" stroke="#2E3B4A" strokeWidth="1" />
+                <rect x="266" y="130" width="18" height="12" fill="#C9A17A" />
+                <line x1="266" y1="134" x2="284" y2="134" stroke="#6B4E33" strokeWidth="0.5" />
+                <rect x="314" y="200" width="16" height="8" fill="#8E5844" />
+                <circle cx="316" cy="210" r="4" fill="#2E3B4A" />
+                <circle cx="328" cy="210" r="4" fill="#2E3B4A" />
               </g>
 
-              {/* Dock / pier */}
-              <rect x="230" y="205" width="170" height="10" fill="#A0826D" />
-              <rect x="230" y="205" width="170" height="3" fill="#6D5A42" />
+              {/* Dock / pier — soft taupe */}
+              <rect x="230" y="205" width="170" height="10" fill="#9B8D7B" />
+              <rect x="230" y="205" width="170" height="3" fill="#6F6454" />
 
-              {/* Orange barrels on dock */}
+              {/* Muted barrels on dock */}
               <g>
-                <ellipse cx="258" cy="205" rx="11" ry="3" fill="#F39C12" />
-                <rect x="247" y="185" width="22" height="20" fill="#E67E22" />
-                <ellipse cx="258" cy="185" rx="11" ry="3" fill="#F39C12" />
-                <line x1="247" y1="192" x2="269" y2="192" stroke="#B35E10" strokeWidth="0.5" />
-                <line x1="247" y1="198" x2="269" y2="198" stroke="#B35E10" strokeWidth="0.5" />
+                <ellipse cx="258" cy="205" rx="11" ry="3" fill="#C48A5E" />
+                <rect x="247" y="185" width="22" height="20" fill="#A36A44" />
+                <ellipse cx="258" cy="185" rx="11" ry="3" fill="#C48A5E" />
+                <line x1="247" y1="192" x2="269" y2="192" stroke="#6F4325" strokeWidth="0.5" />
+                <line x1="247" y1="198" x2="269" y2="198" stroke="#6F4325" strokeWidth="0.5" />
 
-                <ellipse cx="280" cy="205" rx="10" ry="3" fill="#F39C12" />
-                <rect x="270" y="188" width="20" height="17" fill="#E67E22" />
-                <ellipse cx="280" cy="188" rx="10" ry="3" fill="#F39C12" />
-                <line x1="270" y1="194" x2="290" y2="194" stroke="#B35E10" strokeWidth="0.5" />
+                <ellipse cx="280" cy="205" rx="10" ry="3" fill="#C48A5E" />
+                <rect x="270" y="188" width="20" height="17" fill="#A36A44" />
+                <ellipse cx="280" cy="188" rx="10" ry="3" fill="#C48A5E" />
+                <line x1="270" y1="194" x2="290" y2="194" stroke="#6F4325" strokeWidth="0.5" />
               </g>
 
               {/* Sea */}
               <rect x="0" y="185" width="400" height="75" fill="url(#seaGrad)" />
-              <path d="M 0 198 Q 50 194 100 198 T 200 198 T 300 198 T 400 198" fill="none" stroke="white" strokeWidth="1" opacity="0.45" />
-              <path d="M 0 215 Q 60 211 120 215 T 240 215 T 360 215" fill="none" stroke="white" strokeWidth="1" opacity="0.3" />
-              <path d="M 0 232 Q 80 228 160 232 T 320 232" fill="none" stroke="white" strokeWidth="1" opacity="0.25" />
+              <path d="M 0 198 Q 50 194 100 198 T 200 198 T 300 198 T 400 198" fill="none" stroke="#FFFFFF" strokeWidth="1" opacity="0.30" />
+              <path d="M 0 215 Q 60 211 120 215 T 240 215 T 360 215" fill="none" stroke="#FFFFFF" strokeWidth="1" opacity="0.22" />
+              <path d="M 0 232 Q 80 228 160 232 T 320 232" fill="none" stroke="#FFFFFF" strokeWidth="1" opacity="0.18" />
 
-              {/* Container ship hull */}
-              <path d="M 20 195 L 230 195 L 215 225 L 42 225 Z" fill="#1E293B" />
-              <rect x="20" y="190" width="210" height="6" fill="#334155" />
-              {/* Hull stripe */}
-              <rect x="30" y="207" width="190" height="3" fill="#EF4444" />
+              {/* Container ship hull — gradient */}
+              <path d="M 20 195 L 230 195 L 215 225 L 42 225 Z" fill="url(#hullGrad)" />
+              <rect x="20" y="190" width="210" height="6" fill="#3A4A5C" />
+              {/* Hull stripe — muted brand green */}
+              <rect x="30" y="207" width="190" height="3" fill="#5A9B5A" />
 
-              {/* Ship bridge (forward cabin) */}
-              <rect x="25" y="158" width="22" height="37" fill="white" />
-              <rect x="28" y="164" width="5" height="5" fill="#3B82F6" opacity="0.7" />
-              <rect x="36" y="164" width="5" height="5" fill="#3B82F6" opacity="0.7" />
-              <rect x="28" y="173" width="5" height="5" fill="#3B82F6" opacity="0.7" />
-              <rect x="36" y="173" width="5" height="5" fill="#3B82F6" opacity="0.7" />
-              {/* Bridge roof / antenna */}
-              <rect x="30" y="153" width="12" height="5" fill="#64748B" />
-              <line x1="36" y1="153" x2="36" y2="140" stroke="#334155" strokeWidth="1" />
-              <circle cx="36" cy="140" r="1.5" fill="#FBBF24" />
+              {/* Ship bridge */}
+              <rect x="25" y="158" width="22" height="37" fill="#F4F1EA" />
+              <rect x="28" y="164" width="5" height="5" fill="#6B8F9C" opacity="0.7" />
+              <rect x="36" y="164" width="5" height="5" fill="#6B8F9C" opacity="0.7" />
+              <rect x="28" y="173" width="5" height="5" fill="#6B8F9C" opacity="0.7" />
+              <rect x="36" y="173" width="5" height="5" fill="#6B8F9C" opacity="0.7" />
+              <rect x="30" y="153" width="12" height="5" fill="#667585" />
+              <line x1="36" y1="153" x2="36" y2="140" stroke="#3A4A5C" strokeWidth="1" />
+              <circle cx="36" cy="140" r="1.5" fill="#C48A5E" />
 
-              {/* Ship deck - first row of containers */}
+              {/* Containers — restricted palette: sage green, slate navy, terracotta, off-white */}
+              {/* First row */}
               <g>
-                <rect x="50" y="175" width="22" height="20" fill="#4FB84F" />
-                <rect x="74" y="175" width="22" height="20" fill="#EF4444" />
-                <rect x="98" y="175" width="22" height="20" fill="#FBBF24" />
-                <rect x="122" y="175" width="22" height="20" fill="#3B82F6" />
-                <rect x="146" y="175" width="22" height="20" fill="#4FB84F" />
-                <rect x="170" y="175" width="22" height="20" fill="#EF4444" />
-                <rect x="194" y="175" width="22" height="20" fill="#FBBF24" />
-                {/* container door lines */}
-                <line x1="61" y1="175" x2="61" y2="195" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
-                <line x1="85" y1="175" x2="85" y2="195" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
-                <line x1="109" y1="175" x2="109" y2="195" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
-                <line x1="133" y1="175" x2="133" y2="195" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
-                <line x1="157" y1="175" x2="157" y2="195" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
-                <line x1="181" y1="175" x2="181" y2="195" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
-                <line x1="205" y1="175" x2="205" y2="195" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
+                <rect x="50" y="175" width="22" height="20" fill="#5A9B5A" />
+                <rect x="74" y="175" width="22" height="20" fill="#B5715B" />
+                <rect x="98" y="175" width="22" height="20" fill="#EDE7DA" />
+                <rect x="122" y="175" width="22" height="20" fill="#3E5569" />
+                <rect x="146" y="175" width="22" height="20" fill="#5A9B5A" />
+                <rect x="170" y="175" width="22" height="20" fill="#B5715B" />
+                <rect x="194" y="175" width="22" height="20" fill="#3E5569" />
+                <line x1="61" y1="175" x2="61" y2="195" stroke="#1E293B" strokeWidth="0.4" opacity="0.4" />
+                <line x1="85" y1="175" x2="85" y2="195" stroke="#1E293B" strokeWidth="0.4" opacity="0.4" />
+                <line x1="109" y1="175" x2="109" y2="195" stroke="#1E293B" strokeWidth="0.4" opacity="0.4" />
+                <line x1="133" y1="175" x2="133" y2="195" stroke="#1E293B" strokeWidth="0.4" opacity="0.4" />
+                <line x1="157" y1="175" x2="157" y2="195" stroke="#1E293B" strokeWidth="0.4" opacity="0.4" />
+                <line x1="181" y1="175" x2="181" y2="195" stroke="#1E293B" strokeWidth="0.4" opacity="0.4" />
+                <line x1="205" y1="175" x2="205" y2="195" stroke="#1E293B" strokeWidth="0.4" opacity="0.4" />
               </g>
 
               {/* Second row */}
               <g>
-                <rect x="62" y="155" width="22" height="20" fill="#EF4444" />
-                <rect x="86" y="155" width="22" height="20" fill="#FBBF24" />
-                <rect x="110" y="155" width="22" height="20" fill="#4FB84F" />
-                <rect x="134" y="155" width="22" height="20" fill="#3B82F6" />
-                <rect x="158" y="155" width="22" height="20" fill="#EF4444" />
-                <rect x="182" y="155" width="22" height="20" fill="#F1F5F9" stroke="#CBD5E1" strokeWidth="0.5" />
-                <line x1="73" y1="155" x2="73" y2="175" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
-                <line x1="97" y1="155" x2="97" y2="175" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
-                <line x1="121" y1="155" x2="121" y2="175" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
-                <line x1="145" y1="155" x2="145" y2="175" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
-                <line x1="169" y1="155" x2="169" y2="175" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
-                <line x1="193" y1="155" x2="193" y2="175" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
+                <rect x="62" y="155" width="22" height="20" fill="#B5715B" />
+                <rect x="86" y="155" width="22" height="20" fill="#3E5569" />
+                <rect x="110" y="155" width="22" height="20" fill="#5A9B5A" />
+                <rect x="134" y="155" width="22" height="20" fill="#EDE7DA" />
+                <rect x="158" y="155" width="22" height="20" fill="#B5715B" />
+                <rect x="182" y="155" width="22" height="20" fill="#5A9B5A" />
+                <line x1="73" y1="155" x2="73" y2="175" stroke="#1E293B" strokeWidth="0.4" opacity="0.4" />
+                <line x1="97" y1="155" x2="97" y2="175" stroke="#1E293B" strokeWidth="0.4" opacity="0.4" />
+                <line x1="121" y1="155" x2="121" y2="175" stroke="#1E293B" strokeWidth="0.4" opacity="0.4" />
+                <line x1="145" y1="155" x2="145" y2="175" stroke="#1E293B" strokeWidth="0.4" opacity="0.4" />
+                <line x1="169" y1="155" x2="169" y2="175" stroke="#1E293B" strokeWidth="0.4" opacity="0.4" />
+                <line x1="193" y1="155" x2="193" y2="175" stroke="#1E293B" strokeWidth="0.4" opacity="0.4" />
               </g>
 
-              {/* Third row (smaller stack) */}
+              {/* Third row */}
               <g>
-                <rect x="86" y="135" width="22" height="20" fill="#4FB84F" />
-                <rect x="110" y="135" width="22" height="20" fill="#3B82F6" />
-                <rect x="134" y="135" width="22" height="20" fill="#EF4444" />
-                <rect x="158" y="135" width="22" height="20" fill="#FBBF24" />
-                <line x1="97" y1="135" x2="97" y2="155" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
-                <line x1="121" y1="135" x2="121" y2="155" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
-                <line x1="145" y1="135" x2="145" y2="155" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
-                <line x1="169" y1="135" x2="169" y2="155" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
+                <rect x="86" y="135" width="22" height="20" fill="#3E5569" />
+                <rect x="110" y="135" width="22" height="20" fill="#5A9B5A" />
+                <rect x="134" y="135" width="22" height="20" fill="#B5715B" />
+                <rect x="158" y="135" width="22" height="20" fill="#EDE7DA" />
+                <line x1="97" y1="135" x2="97" y2="155" stroke="#1E293B" strokeWidth="0.4" opacity="0.4" />
+                <line x1="121" y1="135" x2="121" y2="155" stroke="#1E293B" strokeWidth="0.4" opacity="0.4" />
+                <line x1="145" y1="135" x2="145" y2="155" stroke="#1E293B" strokeWidth="0.4" opacity="0.4" />
+                <line x1="169" y1="135" x2="169" y2="155" stroke="#1E293B" strokeWidth="0.4" opacity="0.4" />
               </g>
 
-              {/* Foam/wake at bow */}
-              <ellipse cx="22" cy="225" rx="14" ry="3" fill="white" opacity="0.6" />
-              <ellipse cx="230" cy="225" rx="10" ry="2" fill="white" opacity="0.5" />
+              {/* Foam */}
+              <ellipse cx="22" cy="225" rx="14" ry="3" fill="#FFFFFF" opacity="0.45" />
+              <ellipse cx="230" cy="225" rx="10" ry="2" fill="#FFFFFF" opacity="0.35" />
             </svg>
           </div>
 
