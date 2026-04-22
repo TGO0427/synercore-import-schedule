@@ -13,8 +13,6 @@ function LoginPage({ onLogin, onForgotPassword, onPrivacy }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [stars, setStars] = useState([]);
-  const [networkLines, setNetworkLines] = useState([]);
 
   useEffect(() => {
     const remembered = localStorage.getItem(REMEMBERED_USERNAME_KEY);
@@ -22,30 +20,6 @@ function LoginPage({ onLogin, onForgotPassword, onPrivacy }) {
       setCredentials((prev) => ({ ...prev, username: remembered }));
       setRememberMe(true);
     }
-
-    const generatedStars = [];
-    for (let i = 0; i < 100; i++) {
-      generatedStars.push({
-        id: i,
-        left: Math.random() * 100,
-        top: Math.random() * 100,
-        delay: Math.random() * 4,
-      });
-    }
-    setStars(generatedStars);
-
-    const generatedLines = [];
-    for (let i = 0; i < 20; i++) {
-      generatedLines.push({
-        id: i,
-        left: Math.random() * 100,
-        top: Math.random() * 100,
-        width: Math.random() * 200 + 50,
-        rotation: Math.random() * 360,
-        delay: Math.random() * 3,
-      });
-    }
-    setNetworkLines(generatedLines);
   }, []);
 
   const handleInputChange = (e) => {
@@ -131,76 +105,37 @@ function LoginPage({ onLogin, onForgotPassword, onPrivacy }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0a2540 0%, #1a3a5c 50%, #0f2a48 100%)',
+        background: 'linear-gradient(135deg, #F4FAF5 0%, #EDF7EE 40%, #F9FBF4 100%)',
         padding: '20px',
         position: 'relative',
         overflow: 'hidden',
       }}
     >
-      {/* Stars */}
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-        {stars.map((star) => (
-          <div
-            key={star.id}
-            style={{
-              position: 'absolute',
-              width: '2px',
-              height: '2px',
-              background: 'white',
-              borderRadius: '50%',
-              left: `${star.left}%`,
-              top: `${star.top}%`,
-              animation: 'twinkle 4s ease-in-out infinite',
-              animationDelay: `${star.delay}s`,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Network lines */}
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-        {networkLines.map((line) => (
-          <div
-            key={line.id}
-            style={{
-              position: 'absolute',
-              background: 'linear-gradient(90deg, transparent, rgba(79, 184, 79, 0.4), transparent)',
-              height: '2px',
-              left: `${line.left}%`,
-              top: `${line.top}%`,
-              width: `${line.width}px`,
-              transform: `rotate(${line.rotation}deg)`,
-              animation: 'pulse 3s ease-in-out infinite',
-              animationDelay: `${line.delay}s`,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Rotating globe background */}
+      {/* Soft decorative blobs */}
       <div
         style={{
           position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '600px',
-          height: '600px',
-          opacity: 0.25,
+          top: '-120px',
+          left: '-120px',
+          width: '420px',
+          height: '420px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(79,184,79,0.10) 0%, transparent 70%)',
           pointerEvents: 'none',
         }}
-      >
-        <div
-          style={{
-            width: '100%',
-            height: '100%',
-            borderRadius: '50%',
-            background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.1), transparent),
-                        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>')`,
-            animation: 'rotate 60s linear infinite',
-          }}
-        />
-      </div>
+      />
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '-150px',
+          right: '-150px',
+          width: '500px',
+          height: '500px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(79,184,79,0.08) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }}
+      />
 
       {/* Split card — illustration left, form right */}
       <div
@@ -673,9 +608,6 @@ function LoginPage({ onLogin, onForgotPassword, onPrivacy }) {
 
       <style>{`
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes twinkle { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 1; transform: scale(1.5); } }
-        @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
 
         /* Neutralise Chrome/Edge autofill's yellow/mauve tint so inputs
            keep the card's own light-grey background. */
