@@ -163,7 +163,7 @@ function LoginPage({ onLogin, onForgotPassword, onPrivacy }) {
           }}
         >
           <div>
-            <SynercoreLogo size={40} />
+            <SynercoreLogo size={64} />
           </div>
 
           <div style={{ width: '100%' }}>
@@ -179,6 +179,23 @@ function LoginPage({ onLogin, onForgotPassword, onPrivacy }) {
               }}
               draggable={false}
             />
+          </div>
+
+          <div>
+            <h2
+              style={{
+                margin: '0 0 6px',
+                fontSize: '22px',
+                fontWeight: 700,
+                color: '#166534',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              Import Supply Management
+            </h2>
+            <div style={{ fontSize: '13px', color: '#4b5563', lineHeight: 1.55, maxWidth: '540px' }}>
+              Track shipments, schedule transport, and manage every delivery from arrival to storage.
+            </div>
           </div>
         </div>
 
