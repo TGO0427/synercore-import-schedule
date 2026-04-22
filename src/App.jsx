@@ -50,6 +50,12 @@ import { authUtils } from './utils/auth';
 import { POST_ARRIVAL_STATUSES } from './types/shipment';
 import { initWebVitals, logWebVitalsToConsole } from './utils/webVitals';
 import { initializeAnalytics } from './config/analytics';
+import {
+  LayoutDashboard, Building2, Ship, Truck, Repeat, ClipboardList, Factory, Store,
+  Package, Wallet, BarChart3, TrendingUp, Target, Inbox, ScrollText, FileText,
+  Users, LogOut, Moon, Sun, BookOpen, Bell, Globe, Newspaper, MapPin, Settings as SettingsIcon,
+  Waves,
+} from 'lucide-react';
 import './theme.css';
 
 // Initialize monitoring
@@ -454,25 +460,25 @@ function App() {
           const workflowCount = shipments.filter(s => POST_ARRIVAL_STATUSES.includes(s.latestStatus)).length;
 
           const navItems = {
-            dashboard: { label: 'Dashboard', icon: '\u{1F4CA}', view: 'dashboard' },
-            suppliers: { label: 'Suppliers', icon: '\u{1F3E2}', view: 'suppliers' },
-            shipping: { label: 'International Import', icon: '\u{1F6A2}', view: 'shipping', badge: delayedCount, badgeType: 'danger' },
-            localReceiving: { label: 'Local Receiving', icon: '\u{1F69B}', view: 'local-receiving' },
-            iwtIncoming: { label: 'IWT Incoming', icon: '\u{1F501}', view: 'iwt-incoming' },
-            workflow: { label: 'Post-Arrival Workflow', icon: '\u{1F4CB}', view: 'workflow', badge: workflowCount, badgeType: 'info' },
-            capacity: { label: 'Warehouse Capacity', icon: '\u{1F3ED}', view: 'capacity' },
-            stored: { label: 'Stored Stock', icon: '\u{1F3EA}', view: 'stored' },
-            archives: { label: 'Shipment Archives', icon: '\u{1F4E6}', view: 'archives' },
-            rates: { label: 'Rates & Quotes', icon: '\u{1F4B0}', view: 'rates' },
-            costing: { label: 'Import Costing', icon: '\u{1F4CA}', view: 'costing' },
-            costingRequests: { label: 'Cost Requests', icon: '\u{1F4CB}', view: 'costing-requests', adminOnly: true, badge: costingRequestCount },
-            reports: { label: 'Reports', icon: '\u{1F4CA}', view: 'reports' },
-            advancedReports: { label: 'Advanced Reports', icon: '\u{1F4C8}', view: 'advanced-reports' },
-            supplierPerformance: { label: 'Supplier Performance', icon: '\u{1F3AF}', view: 'supplier-performance' },
-            receiving: { label: 'Goods Receiving', icon: '\u{1F4E5}', view: 'receiving' },
-            dockManagement: { label: 'Dock Management', icon: '\u{1F69B}', view: 'dock-management' },
-            bolAudit: { label: 'BOL Audit', icon: '\u{1F4DC}', view: 'bol-audit' },
-            audit: { label: 'Activity Log', icon: '\u{1F4DD}', view: 'audit', adminOnly: true },
+            dashboard: { label: 'Dashboard', icon: LayoutDashboard, view: 'dashboard' },
+            suppliers: { label: 'Suppliers', icon: Building2, view: 'suppliers' },
+            shipping: { label: 'International Import', icon: Ship, view: 'shipping', badge: delayedCount, badgeType: 'danger' },
+            localReceiving: { label: 'Local Receiving', icon: Truck, view: 'local-receiving' },
+            iwtIncoming: { label: 'IWT Incoming', icon: Repeat, view: 'iwt-incoming' },
+            workflow: { label: 'Post-Arrival Workflow', icon: ClipboardList, view: 'workflow', badge: workflowCount, badgeType: 'info' },
+            capacity: { label: 'Warehouse Capacity', icon: Factory, view: 'capacity' },
+            stored: { label: 'Stored Stock', icon: Store, view: 'stored' },
+            archives: { label: 'Shipment Archives', icon: Package, view: 'archives' },
+            rates: { label: 'Rates & Quotes', icon: Wallet, view: 'rates' },
+            costing: { label: 'Import Costing', icon: BarChart3, view: 'costing' },
+            costingRequests: { label: 'Cost Requests', icon: ClipboardList, view: 'costing-requests', adminOnly: true, badge: costingRequestCount },
+            reports: { label: 'Reports', icon: BarChart3, view: 'reports' },
+            advancedReports: { label: 'Advanced Reports', icon: TrendingUp, view: 'advanced-reports' },
+            supplierPerformance: { label: 'Supplier Performance', icon: Target, view: 'supplier-performance' },
+            receiving: { label: 'Goods Receiving', icon: Inbox, view: 'receiving' },
+            dockManagement: { label: 'Dock Management', icon: Truck, view: 'dock-management' },
+            bolAudit: { label: 'BOL Audit', icon: ScrollText, view: 'bol-audit' },
+            audit: { label: 'Activity Log', icon: FileText, view: 'audit', adminOnly: true },
           };
 
           const match = (label) => !q || label.toLowerCase().includes(q);
@@ -482,6 +488,7 @@ function App() {
             if (!item) return null;
             if (item.adminOnly && !isAdmin) return null;
             if (!match(item.label)) return null;
+            const IconComp = item.icon;
             return (
               <button
                 key={key}
@@ -504,7 +511,9 @@ function App() {
                 }}
                 title={sidebarCollapsed ? item.label : undefined}
               >
-                <span className="nav-icon">{item.icon}</span>
+                <span className="nav-icon">
+                  {typeof IconComp === 'function' ? <IconComp size={16} strokeWidth={2} /> : IconComp}
+                </span>
                 <span className="nav-label">{item.label}</span>
                 {item.badge > 0 && (
                   <span className={`nav-badge ${item.badgeType === 'danger' ? 'nav-badge-danger' : item.badgeType === 'info' ? 'nav-badge-info' : ''}`}>
@@ -539,13 +548,13 @@ function App() {
           };
 
           const externalLinks = [
-            { label: 'Transnet Portal', url: 'https://www.transnet.net/SubsiteRender.aspx?id=8137383', icon: '\u{1F6A2}' },
-            { label: 'Marine Traffic', url: 'https://www.marinetraffic.com/en/ais/home/shipid:157944/zoom:10', icon: '\u{1F30A}' },
-            { label: 'FreightNews', url: 'https://www.freightnews.co.za/customs/3610/3823-19', icon: '\u{1F4F0}' },
-            { label: 'Track-Trace', url: 'https://www.track-trace.com/', icon: '\u{1F4CD}' },
-            { label: 'MyDHLi Portal', url: 'https://keycloak.mydhli.com/auth/realms/DCI/protocol/openid-connect/auth?redirect_uri=https%3A%2F%2Fapp.mydhli.com%2Flogin&scope=openid+web-origins&response_type=code&client_id=myDHLi&ui_locales=en', icon: '\u{1F4E6}' },
-            { label: 'DSV Solutions', url: 'https://mydsv.com/new/frontpage/', icon: '\u{1F69B}' },
-            { label: 'Afrigistics', url: 'https://www.afrigistics.com/contact/', icon: '\u{1F30D}' },
+            { label: 'Transnet Portal', url: 'https://www.transnet.net/SubsiteRender.aspx?id=8137383', icon: Ship },
+            { label: 'Marine Traffic', url: 'https://www.marinetraffic.com/en/ais/home/shipid:157944/zoom:10', icon: Waves },
+            { label: 'FreightNews', url: 'https://www.freightnews.co.za/customs/3610/3823-19', icon: Newspaper },
+            { label: 'Track-Trace', url: 'https://www.track-trace.com/', icon: MapPin },
+            { label: 'MyDHLi Portal', url: 'https://keycloak.mydhli.com/auth/realms/DCI/protocol/openid-connect/auth?redirect_uri=https%3A%2F%2Fapp.mydhli.com%2Flogin&scope=openid+web-origins&response_type=code&client_id=myDHLi&ui_locales=en', icon: Package },
+            { label: 'DSV Solutions', url: 'https://mydsv.com/new/frontpage/', icon: Truck },
+            { label: 'Afrigistics', url: 'https://www.afrigistics.com/contact/', icon: Globe },
           ];
           const resourcesVisible = !q ? externalLinks : externalLinks.filter(l => l.label.toLowerCase().includes(q));
           const resourcesOpen = q ? resourcesVisible.length > 0 : sidebarSections.resources;
@@ -566,17 +575,22 @@ function App() {
                     <span className={`chevron ${resourcesOpen ? 'open' : ''}`}>{'\u25B8'}</span>
                   </div>
                   <div className={`nav-section-items ${resourcesOpen ? 'expanded' : 'collapsed'}`}>
-                    {resourcesVisible.map(link => (
+                    {resourcesVisible.map(link => {
+                      const LinkIcon = link.icon;
+                      return (
                       <button
                         key={link.label}
                         className="nav-item"
                         onClick={() => window.open(link.url, '_blank')}
                       >
-                        <span className="nav-icon">{link.icon}</span>
+                        <span className="nav-icon">
+                          {typeof LinkIcon === 'function' ? <LinkIcon size={16} strokeWidth={2} /> : LinkIcon}
+                        </span>
                         <span className="nav-label">{link.label}</span>
                         <span className="nav-external">{'\u2197'}</span>
                       </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -605,27 +619,27 @@ function App() {
         {/* Footer */}
         <div className="sidebar-footer">
           <button className="nav-item" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} title={sidebarCollapsed ? (theme === 'dark' ? 'Light Mode' : 'Dark Mode') : undefined}>
-            <span className="nav-icon">{theme === 'dark' ? '\u2600\uFE0F' : '\u{1F319}'}</span> <span className="nav-label">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+            <span className="nav-icon">{theme === 'dark' ? <Sun size={16} strokeWidth={2} /> : <Moon size={16} strokeWidth={2} />}</span> <span className="nav-label">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
           </button>
           <button className="nav-item" onClick={() => setHelpOpen(true)} title={sidebarCollapsed ? 'Help & Guide' : undefined}>
-            <span className="nav-icon">{'\u{1F4DA}'}</span> <span className="nav-label">Help & Guide</span>
+            <span className="nav-icon"><BookOpen size={16} strokeWidth={2} /></span> <span className="nav-label">Help & Guide</span>
           </button>
           <button className="nav-item" onClick={() => setSettingsOpen(true)} title={sidebarCollapsed ? 'Settings' : undefined}>
-            <span className="nav-icon">{'\u2699\uFE0F'}</span> <span className="nav-label">Settings</span>
+            <span className="nav-icon"><SettingsIcon size={16} strokeWidth={2} /></span> <span className="nav-label">Settings</span>
           </button>
           <button className="nav-item" onClick={() => setNotificationPrefsOpen(true)} title={sidebarCollapsed ? 'Notifications' : undefined}>
-            <span className="nav-icon">{'\u{1F514}'}</span> <span className="nav-label">Notifications</span>
+            <span className="nav-icon"><Bell size={16} strokeWidth={2} /></span> <span className="nav-label">Notifications</span>
           </button>
           <button className="nav-item" onClick={() => setShowSupplierPortal(true)} title={sidebarCollapsed ? 'Supplier Portal' : undefined}>
-            <span className="nav-icon">{'\u{1F3E2}'}</span> <span className="nav-label">Supplier Portal</span>
+            <span className="nav-icon"><Building2 size={16} strokeWidth={2} /></span> <span className="nav-label">Supplier Portal</span>
           </button>
           {isAdmin && (
             <button className={`nav-item ${activeView === 'users' ? 'active' : ''}`} onClick={() => startTransition(() => navigate('/users'))} title={sidebarCollapsed ? 'User Management' : undefined}>
-              <span className="nav-icon">{'\u{1F465}'}</span> <span className="nav-label">User Management</span>
+              <span className="nav-icon"><Users size={16} strokeWidth={2} /></span> <span className="nav-label">User Management</span>
             </button>
           )}
           <button className="nav-item logout" onClick={handleLogout} title={sidebarCollapsed ? 'Logout' : undefined}>
-            <span className="nav-icon">{'\u{1F6AA}'}</span> <span className="nav-label">Logout</span>
+            <span className="nav-icon"><LogOut size={16} strokeWidth={2} /></span> <span className="nav-label">Logout</span>
           </button>
         </div>
       </div>
