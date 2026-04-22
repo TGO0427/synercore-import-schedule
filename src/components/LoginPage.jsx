@@ -235,11 +235,11 @@ function LoginPage({ onLogin, onForgotPassword, onPrivacy }) {
             <SynercoreLogo size={40} />
           </div>
 
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px 0' }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 0' }}>
             <svg
               viewBox="0 0 400 260"
               preserveAspectRatio="xMidYMid meet"
-              style={{ width: '100%', maxWidth: '380px', height: 'auto', display: 'block' }}
+              style={{ width: '100%', maxWidth: '480px', height: 'auto', display: 'block' }}
               aria-hidden="true"
             >
               {/* Sky band */}
@@ -676,6 +676,18 @@ function LoginPage({ onLogin, onForgotPassword, onPrivacy }) {
         @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes twinkle { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 1; transform: scale(1.5); } }
         @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+        /* Neutralise Chrome/Edge autofill's yellow/mauve tint so inputs
+           keep the card's own light-grey background. */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 30px #f8fafc inset !important;
+          -webkit-text-fill-color: #0f172a !important;
+          caret-color: #0f172a;
+          transition: background-color 9999s ease-out 0s;
+        }
       `}</style>
     </div>
   );
