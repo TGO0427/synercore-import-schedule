@@ -137,37 +137,32 @@ function LoginPage({ onLogin, onForgotPassword, onPrivacy }) {
         }}
       />
 
-      {/* Split card — illustration left, form right */}
+      {/* Layout: illustration on page bg (left) + form card (right) */}
       <div
         style={{
-          backgroundColor: 'white',
-          borderRadius: '16px',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
           width: '100%',
-          maxWidth: '920px',
+          maxWidth: '1100px',
           position: 'relative',
           zIndex: 1,
-          overflow: 'hidden',
           display: 'flex',
           flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: '40px',
         }}
       >
-        {/* LEFT: illustration panel */}
+        {/* LEFT: illustration area — on page background, no card */}
         <div
-          className="login-illustration-panel"
           style={{
-            flex: '1 1 420px',
-            background: 'linear-gradient(135deg, #F4FAF5 0%, #E8F5E9 100%)',
-            padding: '32px 36px',
+            flex: '1 1 440px',
+            padding: '8px 16px',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'space-between',
+            justifyContent: 'center',
             minWidth: 0,
-            minHeight: '540px',
           }}
         >
-          <div>
-            <SynercoreLogo size={40} />
+          <div style={{ marginBottom: '8px' }}>
+            <SynercoreLogo size={44} />
           </div>
 
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 0' }}>
@@ -339,14 +334,18 @@ function LoginPage({ onLogin, onForgotPassword, onPrivacy }) {
           </div>
         </div>
 
-        {/* RIGHT: form panel */}
+        {/* RIGHT: form card */}
         <div
           style={{
-            flex: '1 1 380px',
-            padding: '40px 40px',
+            flex: '0 1 400px',
+            padding: '36px 36px',
             display: 'flex',
             flexDirection: 'column',
             minWidth: 0,
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            boxShadow: '0 20px 50px rgba(15, 23, 42, 0.08), 0 4px 10px rgba(15, 23, 42, 0.04)',
+            border: '1px solid rgba(226, 232, 240, 0.6)',
           }}
         >
           <div style={{ marginBottom: '22px' }}>
