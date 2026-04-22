@@ -202,121 +202,149 @@ function LoginPage({ onLogin, onForgotPassword, onPrivacy }) {
         />
       </div>
 
-      {/* Card */}
+      {/* Split card — illustration left, form right */}
       <div
         style={{
           backgroundColor: 'white',
-          borderRadius: '14px',
-          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.35)',
+          borderRadius: '16px',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
           width: '100%',
-          maxWidth: '440px',
+          maxWidth: '920px',
           position: 'relative',
           zIndex: 1,
           overflow: 'hidden',
+          display: 'flex',
+          flexWrap: 'wrap',
         }}
       >
-        {/* Illustration band — container ship at port */}
+        {/* LEFT: illustration panel */}
         <div
+          className="login-illustration-panel"
           style={{
-            background: 'linear-gradient(135deg, #0a2540 0%, #1a3a5c 100%)',
-            padding: '20px 24px 0',
-            position: 'relative',
+            flex: '1 1 420px',
+            background: 'linear-gradient(135deg, #F4FAF5 0%, #E8F5E9 100%)',
+            padding: '32px 36px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            minWidth: 0,
+            minHeight: '540px',
           }}
         >
-          <div style={{ textAlign: 'center', marginBottom: '4px' }}>
-            <div
+          <div>
+            <SynercoreLogo size={40} />
+          </div>
+
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 0' }}>
+            <svg
+              viewBox="0 0 400 280"
+              preserveAspectRatio="xMidYMid meet"
+              style={{ width: '100%', maxWidth: '360px', height: 'auto', display: 'block' }}
+              aria-hidden="true"
+            >
+              {/* Soft decorative circles */}
+              <circle cx="70" cy="60" r="50" fill="#D1F2D3" opacity="0.55" />
+              <circle cx="340" cy="45" r="32" fill="#FEF3C7" opacity="0.65" />
+              <circle cx="360" cy="200" r="40" fill="#D1F2D3" opacity="0.35" />
+
+              {/* Road */}
+              <line x1="20" y1="235" x2="380" y2="235" stroke="#94A3B8" strokeWidth="2" strokeDasharray="6 5" />
+
+              {/* Stacked boxes (left of truck) */}
+              <g>
+                <rect x="40" y="195" width="42" height="42" rx="2" fill="#F59E0B" />
+                <line x1="40" y1="216" x2="82" y2="216" stroke="#B45309" strokeWidth="1.2" />
+                <line x1="61" y1="195" x2="61" y2="237" stroke="#B45309" strokeWidth="1.2" />
+
+                <rect x="52" y="160" width="32" height="35" rx="2" fill="#EF4444" />
+                <line x1="52" y1="177" x2="84" y2="177" stroke="#B91C1C" strokeWidth="1.2" />
+                <line x1="68" y1="160" x2="68" y2="195" stroke="#B91C1C" strokeWidth="1.2" />
+              </g>
+
+              {/* Truck cargo box */}
+              <rect x="100" y="135" width="155" height="100" rx="5" fill="white" stroke="#CBD5E1" strokeWidth="2" />
+              {/* Synercore-style mark on cargo side */}
+              <circle cx="178" cy="180" r="22" fill="#4FB84F" opacity="0.15" />
+              <circle cx="178" cy="180" r="13" fill="none" stroke="#4FB84F" strokeWidth="2.5" />
+              <circle cx="178" cy="180" r="3" fill="#4FB84F" />
+
+              {/* Truck cab (brand green) */}
+              <path d="M 255 235 L 255 165 L 278 145 L 320 145 L 320 235 Z" fill="#4FB84F" />
+              <path d="M 278 150 L 316 150 L 316 175 L 278 175 Z" fill="#B5E8B8" opacity="0.75" />
+              <rect x="282" y="198" width="12" height="18" rx="2" fill="#3E9B3E" />
+
+              {/* Bumper */}
+              <rect x="320" y="220" width="6" height="14" rx="1" fill="#334155" />
+
+              {/* Wheels */}
+              <g>
+                <circle cx="135" cy="238" r="14" fill="#1E293B" />
+                <circle cx="135" cy="238" r="5" fill="#64748B" />
+                <circle cx="220" cy="238" r="14" fill="#1E293B" />
+                <circle cx="220" cy="238" r="5" fill="#64748B" />
+                <circle cx="298" cy="238" r="14" fill="#1E293B" />
+                <circle cx="298" cy="238" r="5" fill="#64748B" />
+              </g>
+
+              {/* Pin marker */}
+              <g transform="translate(345, 120)">
+                <path d="M 0 0 Q 0 -18, -13 -18 Q -26 -18, -26 0 Q -26 14, -13 26 Q 0 14, 0 0 Z" fill="#4FB84F" />
+                <circle cx="-13" cy="-2" r="5" fill="white" />
+              </g>
+
+              {/* Small package floating bottom-right */}
+              <g>
+                <rect x="320" y="248" width="18" height="14" rx="1.5" fill="#3B82F6" />
+                <line x1="329" y1="248" x2="329" y2="262" stroke="#1E40AF" strokeWidth="1" />
+                <line x1="320" y1="254" x2="338" y2="254" stroke="#1E40AF" strokeWidth="1" />
+              </g>
+            </svg>
+          </div>
+
+          <div>
+            <h2
               style={{
-                display: 'inline-block',
-                background: 'white',
-                padding: '8px 14px',
-                borderRadius: '8px',
+                margin: '0 0 6px',
+                fontSize: '20px',
+                fontWeight: 700,
+                color: '#166534',
+                letterSpacing: '-0.01em',
               }}
             >
-              <SynercoreLogo size={36} />
+              Import Supply Management
+            </h2>
+            <div style={{ fontSize: '13px', color: '#4b5563', lineHeight: 1.55 }}>
+              Track shipments, schedule transport, and manage every delivery from arrival to storage.
             </div>
           </div>
-          <svg
-            viewBox="0 0 440 160"
-            preserveAspectRatio="xMidYMax meet"
-            style={{ width: '100%', height: '130px', display: 'block' }}
-            aria-hidden="true"
-          >
-            {/* Distant stars */}
-            <g fill="white" opacity="0.35">
-              <circle cx="40" cy="18" r="1" />
-              <circle cx="95" cy="32" r="1" />
-              <circle cx="165" cy="14" r="1" />
-              <circle cx="240" cy="28" r="1" />
-              <circle cx="315" cy="18" r="1" />
-              <circle cx="385" cy="30" r="1" />
-            </g>
-            {/* Port crane (background) */}
-            <g opacity="0.55" stroke="#5A7A9A" fill="#5A7A9A">
-              <rect x="55" y="56" width="3" height="70" />
-              <rect x="36" y="56" width="60" height="3" />
-              <line x1="72" y1="59" x2="72" y2="86" strokeWidth="1" />
-              <rect x="69" y="86" width="6" height="5" />
-              <rect x="52" y="126" width="9" height="4" />
-            </g>
-            {/* Port crane 2 */}
-            <g opacity="0.45" stroke="#5A7A9A" fill="#5A7A9A">
-              <rect x="380" y="64" width="3" height="62" />
-              <rect x="362" y="64" width="55" height="3" />
-              <line x1="395" y1="67" x2="395" y2="90" strokeWidth="1" />
-              <rect x="392" y="90" width="6" height="5" />
-            </g>
-            {/* Sea line subtle */}
-            <line x1="0" y1="126" x2="440" y2="126" stroke="#3E5A7A" strokeWidth="0.5" opacity="0.6" />
-            {/* Ship hull */}
-            <path d="M 135 130 L 335 130 L 322 148 L 148 148 Z" fill="#1E293B" />
-            <rect x="135" y="126" width="200" height="5" fill="#334155" />
-            {/* Bridge / cabin */}
-            <rect x="300" y="98" width="26" height="28" fill="#334155" />
-            <rect x="305" y="104" width="4" height="5" fill="#F8FAFC" opacity="0.75" />
-            <rect x="313" y="104" width="4" height="5" fill="#F8FAFC" opacity="0.75" />
-            <rect x="321" y="104" width="4" height="5" fill="#F8FAFC" opacity="0.75" />
-            {/* Container stacks (bottom row) */}
-            <rect x="150" y="108" width="24" height="18" fill="#4FB84F" />
-            <rect x="176" y="108" width="24" height="18" fill="#EF4444" />
-            <rect x="202" y="108" width="24" height="18" fill="#F59E0B" />
-            <rect x="228" y="108" width="24" height="18" fill="#3B82F6" />
-            <rect x="254" y="108" width="24" height="18" fill="#4FB84F" />
-            <rect x="280" y="108" width="18" height="18" fill="#E5E7EB" />
-            {/* Container stacks (top row) */}
-            <rect x="164" y="90" width="24" height="18" fill="#E5E7EB" />
-            <rect x="190" y="90" width="24" height="18" fill="#4FB84F" />
-            <rect x="216" y="90" width="24" height="18" fill="#3B82F6" />
-            <rect x="242" y="90" width="24" height="18" fill="#EF4444" />
-            <rect x="268" y="90" width="24" height="18" fill="#F59E0B" />
-            {/* Mast */}
-            <line x1="313" y1="98" x2="313" y2="82" stroke="#64748B" strokeWidth="1" />
-            <circle cx="313" cy="82" r="1.4" fill="#FBBF24" />
-            {/* Water ripples */}
-            <path d="M 120 138 Q 135 135, 150 138 T 180 138" fill="none" stroke="#3E5A7A" strokeWidth="1" opacity="0.6" />
-            <path d="M 270 142 Q 285 139, 300 142 T 330 142" fill="none" stroke="#3E5A7A" strokeWidth="1" opacity="0.6" />
-            <path d="M 60 152 Q 80 149, 100 152 T 140 152" fill="none" stroke="#3E5A7A" strokeWidth="1" opacity="0.5" />
-          </svg>
         </div>
 
-        {/* Heading */}
-        <div style={{ textAlign: 'center', padding: '22px 40px 0' }}>
-          <h1
-            style={{
-              margin: '0 0 4px',
-              fontSize: '20px',
-              fontWeight: 700,
-              color: '#0f172a',
-              letterSpacing: '-0.01em',
-            }}
-          >
-            Login Form
-          </h1>
-          <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '22px' }}>
-            Import Supply Management System
+        {/* RIGHT: form panel */}
+        <div
+          style={{
+            flex: '1 1 380px',
+            padding: '40px 40px',
+            display: 'flex',
+            flexDirection: 'column',
+            minWidth: 0,
+          }}
+        >
+          <div style={{ marginBottom: '22px' }}>
+            <h1
+              style={{
+                margin: '0 0 4px',
+                fontSize: '22px',
+                fontWeight: 700,
+                color: '#0f172a',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              Welcome back
+            </h1>
+            <div style={{ fontSize: '13px', color: '#64748b' }}>
+              Sign in to your account to continue
+            </div>
           </div>
-        </div>
-
-        <div style={{ padding: '0 40px 36px' }}>
 
         {/* Form */}
         <form onSubmit={handleSubmit} noValidate>
