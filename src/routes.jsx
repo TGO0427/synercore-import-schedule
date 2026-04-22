@@ -19,6 +19,7 @@ export const VIEW_ROUTES = {
   receiving:             '/receiving',
   'dock-management':     '/dock-management',
   'local-receiving':     '/local-receiving',
+  'iwt-incoming':        '/iwt-incoming',
 };
 
 // Reverse map: path -> view name

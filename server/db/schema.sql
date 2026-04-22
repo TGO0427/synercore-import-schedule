@@ -35,7 +35,12 @@ CREATE TABLE IF NOT EXISTS shipments (
   -- Rejection/Return workflow fields
   rejection_date TIMESTAMP,
   rejection_reason TEXT,
-  rejected_by VARCHAR(255)
+  rejected_by VARCHAR(255),
+  -- Inter-Warehouse Transfer (IWT) fields
+  source_warehouse VARCHAR(255),
+  source_pallet_ref VARCHAR(255),
+  batch_lot VARCHAR(255),
+  release_number VARCHAR(255)
 );
 
 -- Suppliers table

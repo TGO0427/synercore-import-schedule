@@ -128,6 +128,10 @@ export function useShipments() {
         reminderDate: s.reminder_date || s.reminderDate || null,
         reminderNote: s.reminder_note || s.reminderNote || '',
         shipmentType: s.shipment_type || s.shipmentType || 'international',
+        sourceWarehouse: s.source_warehouse || s.sourceWarehouse || '',
+        sourcePalletRef: s.source_pallet_ref || s.sourcePalletRef || '',
+        batchLot: s.batch_lot || s.batchLot || '',
+        releaseNumber: s.release_number || s.releaseNumber || '',
       }));
 
       setShipments(normalized);

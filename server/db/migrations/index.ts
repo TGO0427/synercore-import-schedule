@@ -1263,6 +1263,37 @@ export const migrations: Migration[] = [
     },
   },
 
+  // Phase 15b: Inter-Warehouse Transfer (IWT) columns
+  {
+    name: 'add-iwt-columns',
+    version: '024',
+    description: 'Add inter-warehouse transfer columns (source warehouse, pallet ref, batch, release) to shipments table',
+    depends_on: ['schema.sql'],
+    execute: async () => {
+      const iwtColumns = [
+        'source_warehouse VARCHAR(255)',
+        'source_pallet_ref VARCHAR(255)',
+        'batch_lot VARCHAR(255)',
+        'release_number VARCHAR(255)',
+      ];
+
+      for (const colDef of iwtColumns) {
+        const colName = colDef.split(' ')[0];
+        const checkResult = await pool.query(
+          `SELECT column_name FROM information_schema.columns
+           WHERE table_name='shipments' AND column_name=$1`,
+          [colName]
+        );
+        if (checkResult.rows.length === 0) {
+          await pool.query(`ALTER TABLE shipments ADD COLUMN ${colDef}`);
+          logInfo(`Added column ${colName} to shipments`);
+        }
+      }
+
+      return true;
+    },
+  },
+
   // Phase 15: Additional destination charge columns for clearing agent fees
   {
     name: 'add-destination-charge-columns',

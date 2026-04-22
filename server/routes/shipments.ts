@@ -39,7 +39,12 @@ const validateCreateShipment = [
   body('incoterm').optional().trim(),
   body('selectedWeekDate').optional({ nullable: true }),
   body('createdAt').optional(),
-  body('updatedAt').optional()
+  body('updatedAt').optional(),
+  body('shipmentType').optional().isIn(['international', 'local', 'iwt']).withMessage('Invalid shipment type'),
+  body('sourceWarehouse').optional().trim(),
+  body('sourcePalletRef').optional().trim(),
+  body('batchLot').optional().trim(),
+  body('releaseNumber').optional().trim()
 ];
 
 /**
@@ -102,7 +107,11 @@ const validateUpdateShipment = [
   body('selectedWeekDate').optional(),
   body('updatedAt').optional(),
   body('reminderDate').optional({ nullable: true, checkFalsy: true }).isISO8601().withMessage('Invalid reminder date'),
-  body('reminderNote').optional({ nullable: true }).trim()
+  body('reminderNote').optional({ nullable: true }).trim(),
+  body('sourceWarehouse').optional().trim(),
+  body('sourcePalletRef').optional().trim(),
+  body('batchLot').optional().trim(),
+  body('releaseNumber').optional().trim()
 ];
 
 /**
@@ -175,7 +184,11 @@ router.post(
       vesselName,
       incoterm,
       selectedWeekDate,
-      shipmentType
+      shipmentType,
+      sourceWarehouse,
+      sourcePalletRef,
+      batchLot,
+      releaseNumber
     } = req.body;
 
     const shipment = await ShipmentController.createShipment({
@@ -195,6 +208,10 @@ router.post(
       incoterm,
       selectedWeekDate,
       shipmentType,
+      sourceWarehouse,
+      sourcePalletRef,
+      batchLot,
+      releaseNumber,
     });
 
     const user = (req as any).user;

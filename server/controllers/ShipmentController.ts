@@ -28,7 +28,11 @@ export interface CreateShipmentRequest {
   vesselName?: string;
   incoterm?: string;
   selectedWeekDate?: string;
-  shipmentType?: 'international' | 'local';
+  shipmentType?: 'international' | 'local' | 'iwt';
+  sourceWarehouse?: string;
+  sourcePalletRef?: string;
+  batchLot?: string;
+  releaseNumber?: string;
 }
 
 /**
@@ -53,6 +57,10 @@ export interface UpdateShipmentRequest {
   updatedAt?: string;
   reminderDate?: string | null;
   reminderNote?: string | null;
+  sourceWarehouse?: string;
+  sourcePalletRef?: string;
+  batchLot?: string;
+  releaseNumber?: string;
 }
 
 /**
@@ -200,13 +208,19 @@ export class ShipmentController {
       throw AppError.conflict(`Shipment with order reference ${data.orderRef} already exists`);
     }
 
+    // Default status per shipment type
+    const defaultStatus =
+      data.shipmentType === 'iwt' ? 'in_transit_roadway'
+      : data.shipmentType === 'local' ? 'in_transit_roadway'
+      : 'planned_airfreight';
+
     // Create shipment with all fields
     const shipment = await shipmentRepository.create({
       id: `ship_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       order_ref: data.orderRef,
       supplier: data.supplier,
       quantity: data.quantity || null,
-      latest_status: (data.latestStatus || (data.shipmentType === 'local' ? 'in_transit_roadway' : 'planned_airfreight')) as ShipmentStatus,
+      latest_status: (data.latestStatus || defaultStatus) as ShipmentStatus,
       shipment_type: data.shipmentType || 'international',
       week_number: data.weekNumber || null,
       notes: data.notes || null,
@@ -219,6 +233,10 @@ export class ShipmentController {
       vessel_name: data.vesselName || null,
       incoterm: data.incoterm || null,
       selected_week_date: data.selectedWeekDate ? new Date(data.selectedWeekDate) : null,
+      source_warehouse: data.sourceWarehouse || null,
+      source_pallet_ref: data.sourcePalletRef || null,
+      batch_lot: data.batchLot || null,
+      release_number: data.releaseNumber || null,
       created_at: new Date(),
       updated_at: new Date()
     } as Partial<Shipment>);
@@ -291,6 +309,18 @@ export class ShipmentController {
     }
     if (data.reminderNote !== undefined) {
       dbData.reminder_note = data.reminderNote || null;
+    }
+    if (data.sourceWarehouse !== undefined) {
+      dbData.source_warehouse = data.sourceWarehouse || null;
+    }
+    if (data.sourcePalletRef !== undefined) {
+      dbData.source_pallet_ref = data.sourcePalletRef || null;
+    }
+    if (data.batchLot !== undefined) {
+      dbData.batch_lot = data.batchLot || null;
+    }
+    if (data.releaseNumber !== undefined) {
+      dbData.release_number = data.releaseNumber || null;
     }
 
     // Update shipment
