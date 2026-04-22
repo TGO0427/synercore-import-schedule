@@ -208,6 +208,13 @@ export const calculateAllTotals = (data) => {
   const originChargeUsd = parseFloat(data.origin_charge_usd) || 0;
   const originChargeEur = parseFloat(data.origin_charge_eur) || 0;
 
+  // Under FOB / FCA / EXW, "Origin Charges" represents the FOB value of goods at origin
+  // (the customs basis) — NOT a shipping fee. The same value is already captured as
+  // Customs Value per product, so it must be excluded from shipping cost totals to
+  // avoid double-counting in Total Landed / Cost per kg.
+  const incoTermsUpper = (data.inco_terms || '').toUpperCase();
+  const originChargesAreFobValue = ['FOB', 'FCA', 'EXW'].includes(incoTermsUpper);
+
   // Calculate total weight from products or use legacy field
   const productsWeight = (data.products || []).reduce((sum, p) => sum + (parseFloat(p.weight_kg) || 0), 0);
   const totalGrossWeightKg = productsWeight > 0 ? productsWeight : (parseFloat(data.total_gross_weight_kg) || 0);
@@ -289,8 +296,13 @@ export const calculateAllTotals = (data) => {
     + airfreightOriginZar + airLocalChargesSubtotalZar + airfreightInsuranceZar;
 
   // === Unified shipping cost (sea or air) ===
-  // Sea freight total
-  const totalShippingCostSeaZar = totalOceanFreightZar + totalOriginChargesZar + localChargesSubtotalZar + destinationChargesSubtotalZar;
+  // Sea freight total. Origin Charges is omitted under FOB/FCA/EXW (it's goods value,
+  // not a shipping fee); included under other terms where it represents real origin
+  // port handling fees.
+  const totalShippingCostSeaZar = totalOceanFreightZar
+    + (originChargesAreFobValue ? 0 : totalOriginChargesZar)
+    + localChargesSubtotalZar
+    + destinationChargesSubtotalZar;
 
   // Use the right total based on transport mode
   const totalShippingCostZar = isAirfreight ? totalAirfreightCostZar : totalShippingCostSeaZar;
