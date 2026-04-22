@@ -371,6 +371,19 @@ async function start() {
       logWarn('Reminder columns migration warning', { error: error.message });
     }
 
+    // Add Inter-Warehouse Transfer (IWT) columns to shipments
+    try {
+      await getPool().query(`
+        ALTER TABLE shipments ADD COLUMN IF NOT EXISTS source_warehouse VARCHAR(255);
+        ALTER TABLE shipments ADD COLUMN IF NOT EXISTS source_pallet_ref VARCHAR(255);
+        ALTER TABLE shipments ADD COLUMN IF NOT EXISTS batch_lot VARCHAR(255);
+        ALTER TABLE shipments ADD COLUMN IF NOT EXISTS release_number VARCHAR(255);
+      `);
+      logger.info('IWT columns ready');
+    } catch (error) {
+      logWarn('IWT columns migration warning', { error: error.message });
+    }
+
     // Create announcements table if it doesn't exist
     try {
       const { getPool } = await import('./db/connection.js');
