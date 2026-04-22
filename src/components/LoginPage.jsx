@@ -153,23 +153,23 @@ function LoginPage({ onLogin, onForgotPassword, onPrivacy }) {
         {/* LEFT: illustration area — on page background, no card */}
         <div
           style={{
-            flex: '1 1 440px',
-            padding: '8px 16px',
+            flex: '1 1 500px',
+            padding: '0',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'center',
+            gap: '14px',
             minWidth: 0,
           }}
         >
-          <div style={{ marginBottom: '8px' }}>
-            <SynercoreLogo size={44} />
+          <div>
+            <SynercoreLogo size={40} />
           </div>
 
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 0' }}>
+          <div style={{ width: '100%' }}>
             <svg
               viewBox="0 0 400 260"
               preserveAspectRatio="xMidYMid meet"
-              style={{ width: '100%', maxWidth: '480px', height: 'auto', display: 'block' }}
+              style={{ width: '100%', maxWidth: '620px', height: 'auto', display: 'block' }}
               aria-hidden="true"
             >
               {/* Sky band */}
