@@ -101,8 +101,6 @@ function IWTIncoming({ shipments, onCreateShipment, onUpdateShipment, onDeleteSh
     } catch { return null; }
   };
 
-  const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
-
   const stats = useMemo(() => {
     const arrivedStatuses = ['arrived_pta', 'arrived_klm', 'arrived_offsite'];
     const postArrivalStatuses = ['unloading', 'inspection_pending', 'inspecting', 'inspection_passed', 'inspection_failed', 'receiving'];
