@@ -11,10 +11,10 @@
   --navy-700: #1e293b;
   --navy-600: #334155;
 
-  /* Accent (Synercore green) */
-  --accent: #059669;         /* primary actions */
-  --accent-600: #047857;
-  --accent-100: #ecfdf5;
+  /* Accent (Synercore brand green — sampled from logo leaf mark) */
+  --accent: #4FB84F;         /* primary actions */
+  --accent-600: #3E9B3E;     /* hover / active */
+  --accent-100: #E8F5E9;     /* subtle tint backgrounds */
 
   /* States */
   --success: #10b981;
@@ -47,9 +47,9 @@
   --navy-700: #e2e8f0;
   --navy-600: #cbd5e1;
 
-  --accent: #10b981;
-  --accent-600: #059669;
-  --accent-100: rgba(16, 185, 129, 0.15);
+  --accent: #66BB6A;
+  --accent-600: #4FB84F;
+  --accent-100: rgba(102, 187, 106, 0.15);
 
   --text-900: #f1f5f9;
   --text-700: #cbd5e1;
