@@ -423,6 +423,57 @@ function PostArrivalWorkflow() {
     }
   };
 
+  const handleShipAllToStored = async () => {
+    const eligible = postArrivalShipments.filter(s => s.latest_status !== 'stored');
+    if (eligible.length === 0) {
+      showWarning('No shipments available to ship to stored.');
+      return;
+    }
+
+    const confirmed = await confirmAction({
+      title: 'Ship All to Stored',
+      message: `Skip all remaining workflow steps for ${eligible.length} shipment(s)?\n\nThis will mark unloading, inspection (passed), and receiving as complete, then set status to Stored for every shipment in the Post-Arrival Workflow.`,
+      confirmText: 'Ship All',
+      cancelText: 'Cancel',
+      type: 'warning',
+    });
+    if (!confirmed) return;
+
+    try {
+      setActionLoading(true);
+      const results = await Promise.allSettled(
+        eligible.map(s =>
+          authFetch(getApiUrl(`/api/shipments/${s.id}/admin-complete`), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+          }).then(async res => {
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              throw new Error(err.error || `Failed for ${s.orderRef}`);
+            }
+            return s.orderRef;
+          })
+        )
+      );
+
+      const succeeded = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected');
+
+      if (failed.length === 0) {
+        showSuccess(`✅ All ${succeeded} shipment(s) marked as stored.`);
+      } else {
+        showError(`Stored ${succeeded} of ${eligible.length}. ${failed.length} failed: ${failed.map(f => f.reason?.message).join('; ')}`);
+      }
+      await fetchPostArrivalShipments();
+    } catch (error) {
+      console.error('Error shipping all to stored:', error);
+      showError('Error shipping all to stored. Please try again.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const getWorkflowProgress = (shipment) => {
     const states = [
       'arrived_pta', 'arrived_klm', 'unloading', 'inspection_in_progress',
@@ -453,13 +504,40 @@ function PostArrivalWorkflow() {
       <div style={{
         marginBottom: '0.75rem', paddingBottom: '0.75rem',
         borderBottom: '1px solid var(--border)',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem',
       }}>
-        <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-900)' }}>
-          Post-Arrival Workflow
-        </h2>
-        <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--text-500)' }}>
-          Manage shipments through unloading, inspection, receiving, and storage
-        </p>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-900)' }}>
+            Post-Arrival Workflow
+          </h2>
+          <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--text-500)' }}>
+            Manage shipments through unloading, inspection, receiving, and storage
+          </p>
+        </div>
+        {isAdmin && postArrivalShipments.some(s => s.latest_status !== 'stored') && (
+          <button
+            onClick={handleShipAllToStored}
+            disabled={actionLoading}
+            style={{
+              padding: '0.6rem 1rem',
+              backgroundColor: actionLoading ? '#ccc' : 'var(--danger)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: actionLoading ? 'not-allowed' : 'pointer',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              whiteSpace: 'nowrap',
+            }}
+            title="Admin only: Skip workflow for all shipments and mark them as stored"
+          >
+            <span>⚡</span>
+            Ship all to stored
+          </button>
+        )}
       </div>
 
       {searchTerm && (
