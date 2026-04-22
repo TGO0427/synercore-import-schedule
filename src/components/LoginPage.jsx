@@ -235,69 +235,154 @@ function LoginPage({ onLogin, onForgotPassword, onPrivacy }) {
             <SynercoreLogo size={40} />
           </div>
 
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 0' }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px 0' }}>
             <svg
-              viewBox="0 0 400 280"
+              viewBox="0 0 400 260"
               preserveAspectRatio="xMidYMid meet"
-              style={{ width: '100%', maxWidth: '360px', height: 'auto', display: 'block' }}
+              style={{ width: '100%', maxWidth: '380px', height: 'auto', display: 'block' }}
               aria-hidden="true"
             >
-              {/* Soft decorative circles */}
-              <circle cx="70" cy="60" r="50" fill="#D1F2D3" opacity="0.55" />
-              <circle cx="340" cy="45" r="32" fill="#FEF3C7" opacity="0.65" />
-              <circle cx="360" cy="200" r="40" fill="#D1F2D3" opacity="0.35" />
+              {/* Sky band */}
+              <defs>
+                <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#DCEEF6" />
+                  <stop offset="100%" stopColor="#F0F9FC" />
+                </linearGradient>
+                <linearGradient id="seaGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#4A90A4" />
+                  <stop offset="100%" stopColor="#2F6A7D" />
+                </linearGradient>
+              </defs>
+              <rect x="0" y="0" width="400" height="185" fill="url(#skyGrad)" />
 
-              {/* Road */}
-              <line x1="20" y1="235" x2="380" y2="235" stroke="#94A3B8" strokeWidth="2" strokeDasharray="6 5" />
+              {/* Soft clouds */}
+              <g fill="white" opacity="0.85">
+                <ellipse cx="70" cy="35" rx="28" ry="8" />
+                <ellipse cx="88" cy="30" rx="18" ry="6" />
+                <ellipse cx="255" cy="22" rx="32" ry="7" />
+                <ellipse cx="340" cy="45" rx="22" ry="6" />
+              </g>
 
-              {/* Stacked boxes (left of truck) */}
+              {/* Distant warehouse silhouette (left shore) */}
               <g>
-                <rect x="40" y="195" width="42" height="42" rx="2" fill="#F59E0B" />
-                <line x1="40" y1="216" x2="82" y2="216" stroke="#B45309" strokeWidth="1.2" />
-                <line x1="61" y1="195" x2="61" y2="237" stroke="#B45309" strokeWidth="1.2" />
-
-                <rect x="52" y="160" width="32" height="35" rx="2" fill="#EF4444" />
-                <line x1="52" y1="177" x2="84" y2="177" stroke="#B91C1C" strokeWidth="1.2" />
-                <line x1="68" y1="160" x2="68" y2="195" stroke="#B91C1C" strokeWidth="1.2" />
+                <rect x="0" y="140" width="55" height="45" fill="#CFE3EB" />
+                <polygon points="0,140 27,128 55,140" fill="#B3D0DA" />
+                <rect x="10" y="155" width="8" height="10" fill="#8FB5C2" />
+                <rect x="24" y="155" width="8" height="10" fill="#8FB5C2" />
+                <rect x="38" y="155" width="8" height="10" fill="#8FB5C2" />
               </g>
 
-              {/* Truck cargo box */}
-              <rect x="100" y="135" width="155" height="100" rx="5" fill="white" stroke="#CBD5E1" strokeWidth="2" />
-              {/* Synercore-style mark on cargo side */}
-              <circle cx="178" cy="180" r="22" fill="#4FB84F" opacity="0.15" />
-              <circle cx="178" cy="180" r="13" fill="none" stroke="#4FB84F" strokeWidth="2.5" />
-              <circle cx="178" cy="180" r="3" fill="#4FB84F" />
-
-              {/* Truck cab (brand green) */}
-              <path d="M 255 235 L 255 165 L 278 145 L 320 145 L 320 235 Z" fill="#4FB84F" />
-              <path d="M 278 150 L 316 150 L 316 175 L 278 175 Z" fill="#B5E8B8" opacity="0.75" />
-              <rect x="282" y="198" width="12" height="18" rx="2" fill="#3E9B3E" />
-
-              {/* Bumper */}
-              <rect x="320" y="220" width="6" height="14" rx="1" fill="#334155" />
-
-              {/* Wheels */}
+              {/* Port crane (right side) */}
               <g>
-                <circle cx="135" cy="238" r="14" fill="#1E293B" />
-                <circle cx="135" cy="238" r="5" fill="#64748B" />
-                <circle cx="220" cy="238" r="14" fill="#1E293B" />
-                <circle cx="220" cy="238" r="5" fill="#64748B" />
-                <circle cx="298" cy="238" r="14" fill="#1E293B" />
-                <circle cx="298" cy="238" r="5" fill="#64748B" />
+                {/* Main vertical mast */}
+                <rect x="318" y="75" width="8" height="130" fill="#E74C3C" />
+                {/* Horizontal boom */}
+                <rect x="240" y="74" width="140" height="6" fill="#E74C3C" />
+                {/* Diagonal brace */}
+                <polygon points="322,82 240,82 280,76 320,76" fill="#C0392B" opacity="0.6" />
+                {/* Cable */}
+                <line x1="275" y1="80" x2="275" y2="130" stroke="#1E293B" strokeWidth="1" />
+                {/* Hook/container being lifted */}
+                <rect x="266" y="130" width="18" height="12" fill="#FBBF24" />
+                <line x1="266" y1="134" x2="284" y2="134" stroke="#B45309" strokeWidth="0.5" />
+                {/* Base support */}
+                <rect x="314" y="200" width="16" height="8" fill="#C0392B" />
+                {/* Wheels under crane base */}
+                <circle cx="316" cy="210" r="4" fill="#1E293B" />
+                <circle cx="328" cy="210" r="4" fill="#1E293B" />
               </g>
 
-              {/* Pin marker */}
-              <g transform="translate(345, 120)">
-                <path d="M 0 0 Q 0 -18, -13 -18 Q -26 -18, -26 0 Q -26 14, -13 26 Q 0 14, 0 0 Z" fill="#4FB84F" />
-                <circle cx="-13" cy="-2" r="5" fill="white" />
-              </g>
+              {/* Dock / pier */}
+              <rect x="230" y="205" width="170" height="10" fill="#A0826D" />
+              <rect x="230" y="205" width="170" height="3" fill="#6D5A42" />
 
-              {/* Small package floating bottom-right */}
+              {/* Orange barrels on dock */}
               <g>
-                <rect x="320" y="248" width="18" height="14" rx="1.5" fill="#3B82F6" />
-                <line x1="329" y1="248" x2="329" y2="262" stroke="#1E40AF" strokeWidth="1" />
-                <line x1="320" y1="254" x2="338" y2="254" stroke="#1E40AF" strokeWidth="1" />
+                <ellipse cx="258" cy="205" rx="11" ry="3" fill="#F39C12" />
+                <rect x="247" y="185" width="22" height="20" fill="#E67E22" />
+                <ellipse cx="258" cy="185" rx="11" ry="3" fill="#F39C12" />
+                <line x1="247" y1="192" x2="269" y2="192" stroke="#B35E10" strokeWidth="0.5" />
+                <line x1="247" y1="198" x2="269" y2="198" stroke="#B35E10" strokeWidth="0.5" />
+
+                <ellipse cx="280" cy="205" rx="10" ry="3" fill="#F39C12" />
+                <rect x="270" y="188" width="20" height="17" fill="#E67E22" />
+                <ellipse cx="280" cy="188" rx="10" ry="3" fill="#F39C12" />
+                <line x1="270" y1="194" x2="290" y2="194" stroke="#B35E10" strokeWidth="0.5" />
               </g>
+
+              {/* Sea */}
+              <rect x="0" y="185" width="400" height="75" fill="url(#seaGrad)" />
+              <path d="M 0 198 Q 50 194 100 198 T 200 198 T 300 198 T 400 198" fill="none" stroke="white" strokeWidth="1" opacity="0.45" />
+              <path d="M 0 215 Q 60 211 120 215 T 240 215 T 360 215" fill="none" stroke="white" strokeWidth="1" opacity="0.3" />
+              <path d="M 0 232 Q 80 228 160 232 T 320 232" fill="none" stroke="white" strokeWidth="1" opacity="0.25" />
+
+              {/* Container ship hull */}
+              <path d="M 20 195 L 230 195 L 215 225 L 42 225 Z" fill="#1E293B" />
+              <rect x="20" y="190" width="210" height="6" fill="#334155" />
+              {/* Hull stripe */}
+              <rect x="30" y="207" width="190" height="3" fill="#EF4444" />
+
+              {/* Ship bridge (forward cabin) */}
+              <rect x="25" y="158" width="22" height="37" fill="white" />
+              <rect x="28" y="164" width="5" height="5" fill="#3B82F6" opacity="0.7" />
+              <rect x="36" y="164" width="5" height="5" fill="#3B82F6" opacity="0.7" />
+              <rect x="28" y="173" width="5" height="5" fill="#3B82F6" opacity="0.7" />
+              <rect x="36" y="173" width="5" height="5" fill="#3B82F6" opacity="0.7" />
+              {/* Bridge roof / antenna */}
+              <rect x="30" y="153" width="12" height="5" fill="#64748B" />
+              <line x1="36" y1="153" x2="36" y2="140" stroke="#334155" strokeWidth="1" />
+              <circle cx="36" cy="140" r="1.5" fill="#FBBF24" />
+
+              {/* Ship deck - first row of containers */}
+              <g>
+                <rect x="50" y="175" width="22" height="20" fill="#4FB84F" />
+                <rect x="74" y="175" width="22" height="20" fill="#EF4444" />
+                <rect x="98" y="175" width="22" height="20" fill="#FBBF24" />
+                <rect x="122" y="175" width="22" height="20" fill="#3B82F6" />
+                <rect x="146" y="175" width="22" height="20" fill="#4FB84F" />
+                <rect x="170" y="175" width="22" height="20" fill="#EF4444" />
+                <rect x="194" y="175" width="22" height="20" fill="#FBBF24" />
+                {/* container door lines */}
+                <line x1="61" y1="175" x2="61" y2="195" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
+                <line x1="85" y1="175" x2="85" y2="195" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
+                <line x1="109" y1="175" x2="109" y2="195" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
+                <line x1="133" y1="175" x2="133" y2="195" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
+                <line x1="157" y1="175" x2="157" y2="195" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
+                <line x1="181" y1="175" x2="181" y2="195" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
+                <line x1="205" y1="175" x2="205" y2="195" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
+              </g>
+
+              {/* Second row */}
+              <g>
+                <rect x="62" y="155" width="22" height="20" fill="#EF4444" />
+                <rect x="86" y="155" width="22" height="20" fill="#FBBF24" />
+                <rect x="110" y="155" width="22" height="20" fill="#4FB84F" />
+                <rect x="134" y="155" width="22" height="20" fill="#3B82F6" />
+                <rect x="158" y="155" width="22" height="20" fill="#EF4444" />
+                <rect x="182" y="155" width="22" height="20" fill="#F1F5F9" stroke="#CBD5E1" strokeWidth="0.5" />
+                <line x1="73" y1="155" x2="73" y2="175" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
+                <line x1="97" y1="155" x2="97" y2="175" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
+                <line x1="121" y1="155" x2="121" y2="175" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
+                <line x1="145" y1="155" x2="145" y2="175" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
+                <line x1="169" y1="155" x2="169" y2="175" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
+                <line x1="193" y1="155" x2="193" y2="175" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
+              </g>
+
+              {/* Third row (smaller stack) */}
+              <g>
+                <rect x="86" y="135" width="22" height="20" fill="#4FB84F" />
+                <rect x="110" y="135" width="22" height="20" fill="#3B82F6" />
+                <rect x="134" y="135" width="22" height="20" fill="#EF4444" />
+                <rect x="158" y="135" width="22" height="20" fill="#FBBF24" />
+                <line x1="97" y1="135" x2="97" y2="155" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
+                <line x1="121" y1="135" x2="121" y2="155" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
+                <line x1="145" y1="135" x2="145" y2="155" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
+                <line x1="169" y1="135" x2="169" y2="155" stroke="#1E293B" strokeWidth="0.4" opacity="0.5" />
+              </g>
+
+              {/* Foam/wake at bow */}
+              <ellipse cx="22" cy="225" rx="14" ry="3" fill="white" opacity="0.6" />
+              <ellipse cx="230" cy="225" rx="10" ry="2" fill="white" opacity="0.5" />
             </svg>
           </div>
 
