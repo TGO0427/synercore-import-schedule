@@ -177,6 +177,36 @@ function ImportCosting() {
     setCalculatedTotals(totals);
   }, [formData]);
 
+  // Auto-sync Origin Charges with Products in Container totals under FOB/FCA/EXW.
+  // Under these Incoterms, origin value is the FOB goods value (buyer's customs basis),
+  // not a separate forwarder fee — so it tracks the Products totals directly.
+  useEffect(() => {
+    if (!showForm) return;
+    const incoTerms = (formData.inco_terms || '').toUpperCase();
+    if (!['FOB', 'FCA', 'EXW'].includes(incoTerms)) return;
+
+    const products = formData.products || [];
+    const invoiceTotalUsd = products.reduce(
+      (sum, p) => sum + ((!p.currency || p.currency === 'USD') ? (parseFloat(p.invoice_value) || 0) : 0),
+      0
+    );
+    const invoiceTotalEur = products.reduce(
+      (sum, p) => sum + ((p.currency === 'EUR') ? (parseFloat(p.invoice_value) || 0) : 0),
+      0
+    );
+
+    const currentUsd = parseFloat(formData.origin_charge_usd) || 0;
+    const currentEur = parseFloat(formData.origin_charge_eur) || 0;
+
+    if (Math.abs(currentUsd - invoiceTotalUsd) > 0.01 || Math.abs(currentEur - invoiceTotalEur) > 0.01) {
+      setFormData(prev => ({
+        ...prev,
+        origin_charge_usd: invoiceTotalUsd,
+        origin_charge_eur: invoiceTotalEur,
+      }));
+    }
+  }, [formData.products, formData.inco_terms, showForm]);
+
   const fetchEstimates = async () => {
     try {
       setLoading(true);
@@ -488,20 +518,9 @@ function ImportCosting() {
   };
 
   const handleEdit = (estimate) => {
-    const fixed = { ...estimate };
-    // Fix historical bug: origin charges were auto-populated with invoice totals
-    const products = fixed.products || [];
-    const invoiceTotalUsd = products.reduce((sum, p) => sum + ((!p.currency || p.currency === 'USD') ? (parseFloat(p.invoice_value) || 0) : 0), 0);
-    const invoiceTotalEur = products.reduce((sum, p) => sum + ((p.currency === 'EUR') ? (parseFloat(p.invoice_value) || 0) : 0), 0);
-    if (invoiceTotalUsd > 0 && Math.abs((parseFloat(fixed.origin_charge_usd) || 0) - invoiceTotalUsd) < 0.01) {
-      fixed.origin_charge_usd = 0;
-    }
-    if (invoiceTotalEur > 0 && Math.abs((parseFloat(fixed.origin_charge_eur) || 0) - invoiceTotalEur) < 0.01) {
-      fixed.origin_charge_eur = 0;
-    }
     setFormData({
       ...INITIAL_FORM_STATE,
-      ...fixed,
+      ...estimate,
     });
     setEditingId(estimate.id);
     setShowForm(true);

@@ -484,7 +484,7 @@ function CostingFormSections({
 
       {/* Section: Origin Charges */}
       <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f0fdf4', borderRadius: '8px' }}>
-        <h4 style={{ margin: '0 0 1rem', color: '#166534', fontSize: '1rem' }}>Origin Charges <InfoTip text="Charges at the port of loading (packing, handling, documentation) before the goods ship." /></h4>
+        <h4 style={{ margin: '0 0 1rem', color: '#166534', fontSize: '1rem' }}>Origin Charges <InfoTip text="FOB value of goods at origin. Auto-syncs from Products in Container totals under FOB / FCA / EXW. Leave 0 for CIF / CFR / CIP (value is already bundled into the invoice / freight)." /></h4>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
           {currencyInput('Origin Charge', 'origin_charge_usd', 'USD')}
           <div style={{ marginBottom: '12px' }}>
