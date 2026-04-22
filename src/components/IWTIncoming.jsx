@@ -4,6 +4,7 @@ import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
 import { useNotification } from '../contexts/NotificationContext';
 import { STATUS_COLORS } from '../types/shipment';
+import { Repeat, Truck, Package, Search, Store } from 'lucide-react';
 
 const WAREHOUSES = ['PRETORIA', 'KLAPMUTS', 'OFFSITE'];
 
@@ -23,11 +24,11 @@ const IWT_STATUSES = [
 ];
 
 const STAT_CARDS = [
-  { key: 'total', status: null, label: 'Total IWT', icon: '\u{1F501}', ring: 'ring-accent', tint: 'rgba(5,150,105,0.1)' },
-  { key: 'in_transit_roadway', status: 'in_transit_roadway', label: 'In Transit', icon: '\u{1F69B}', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
-  { key: 'arrived', status: 'arrived', label: 'Arrived', icon: '\u{1F4E6}', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
-  { key: 'post_arrival', status: 'post_arrival', label: 'Post-Arrival', icon: '\u{1F50D}', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
-  { key: 'stored', status: 'stored', label: 'Stored', icon: '\u{1F3EA}', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
+  { key: 'total', status: null, label: 'Total IWT', icon: Repeat, ring: 'ring-accent', tint: 'rgba(5,150,105,0.1)' },
+  { key: 'in_transit_roadway', status: 'in_transit_roadway', label: 'In Transit', icon: Truck, ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
+  { key: 'arrived', status: 'arrived', label: 'Arrived', icon: Package, ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
+  { key: 'post_arrival', status: 'post_arrival', label: 'Post-Arrival', icon: Search, ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
+  { key: 'stored', status: 'stored', label: 'Stored', icon: Store, ring: 'ring-success', tint: 'rgba(16,185,129,0.1)' },
 ];
 
 const DEFAULT_SOURCE = 'OFFSITE';
@@ -472,7 +473,7 @@ function IWTIncoming({ shipments, onCreateShipment, onUpdateShipment, onDeleteSh
               whiteSpace: 'nowrap',
             }}
           >
-            <span style={{ fontSize: 12 }}>{card.icon}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center' }}>{(() => { const I = card.icon; return typeof I === 'function' ? <I size={14} strokeWidth={2} /> : I; })()}</span>
             <span style={{ fontWeight: 700, fontSize: '0.8rem' }}>{card.value}</span>
             <span style={{ fontSize: '0.7rem', color: 'var(--text-500)', fontWeight: 500 }}>{card.label}</span>
           </button>

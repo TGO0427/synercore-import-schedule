@@ -6,6 +6,9 @@ import { ShipmentStatus, InspectionStatus, ReceivingStatus, STATUS_LABELS } from
 import { getApiUrl } from '../config/api';
 import PostArrivalWizard from './PostArrivalWizard';
 import { useNotification } from '../contexts/NotificationContext';
+import {
+  Truck, PackageOpen, Clock, Search, XCircle, CheckCircle, ClipboardList, Check, Store, File,
+} from 'lucide-react';
 
 function PostArrivalWorkflow() {
   const { showSuccess, showError, showWarning, confirm: confirmAction } = useNotification();
@@ -108,20 +111,21 @@ function PostArrivalWorkflow() {
   };
 
   const getStatusIcon = (status) => {
-    const icons = {
-      'arrived_pta': '🚚',
-      'arrived_klm': '🚚',
-      'arrived_offsite': '🚚',
-      'unloading': '📦',
-      'inspection_pending': '⏳',
-      'inspecting': '🔍',
-      'inspection_failed': '❌',
-      'inspection_passed': '✅',
-      'receiving': '📋',
-      'received': '✔️',
-      'stored': '🏪'
+    const map = {
+      arrived_pta: Truck,
+      arrived_klm: Truck,
+      arrived_offsite: Truck,
+      unloading: PackageOpen,
+      inspection_pending: Clock,
+      inspecting: Search,
+      inspection_failed: XCircle,
+      inspection_passed: CheckCircle,
+      receiving: ClipboardList,
+      received: Check,
+      stored: Store,
     };
-    return icons[status] || '📄';
+    const Icon = map[status] || File;
+    return <Icon size={14} strokeWidth={2} />;
   };
 
   const getStatusLabel = (status) => STATUS_LABELS[status] || status;
