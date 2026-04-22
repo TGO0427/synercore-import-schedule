@@ -512,7 +512,7 @@ function App() {
                 title={sidebarCollapsed ? item.label : undefined}
               >
                 <span className="nav-icon">
-                  {typeof IconComp === 'function' ? <IconComp size={16} strokeWidth={2} /> : IconComp}
+                  <IconComp size={16} strokeWidth={2} />
                 </span>
                 <span className="nav-label">{item.label}</span>
                 {item.badge > 0 && (
@@ -584,7 +584,7 @@ function App() {
                         onClick={() => window.open(link.url, '_blank')}
                       >
                         <span className="nav-icon">
-                          {typeof LinkIcon === 'function' ? <LinkIcon size={16} strokeWidth={2} /> : LinkIcon}
+                          <LinkIcon size={16} strokeWidth={2} />
                         </span>
                         <span className="nav-label">{link.label}</span>
                         <span className="nav-external">{'\u2197'}</span>

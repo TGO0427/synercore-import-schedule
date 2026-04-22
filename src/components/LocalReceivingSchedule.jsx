@@ -453,7 +453,7 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
               whiteSpace: 'nowrap',
             }}
           >
-            <span style={{ display: 'inline-flex', alignItems: 'center' }}>{(() => { const I = card.icon; return typeof I === 'function' ? <I size={14} strokeWidth={2} /> : I; })()}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center' }}>{(() => { const I = card.icon; return <I size={14} strokeWidth={2} />; })()}</span>
             <span style={{ fontWeight: 700, fontSize: '0.8rem' }}>{card.value}</span>
             <span style={{ fontSize: '0.7rem', color: 'var(--text-500)', fontWeight: 500 }}>{card.label}</span>
           </button>
