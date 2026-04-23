@@ -335,7 +335,10 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
 
     // Use only international shipments for dashboard stats
     internationalShipments.forEach(shipment => {
-      const orderRef = shipment.orderRef;
+      // Normalise orderRef before it goes into any Set — trim whitespace +
+      // uppercase so stray " APO0017533 " / "apo0017533" / "APO0017533"
+      // variants don't each count as a separate APO.
+      const orderRef = (shipment.orderRef || '').trim().toUpperCase();
       if (!orderRef) return;
 
       const wk = shipment.weekNumber;

@@ -89,15 +89,21 @@ function ShippingView({ shipments, onFileUpload, onUpdateShipment, onDeleteShipm
   }
 
   // Count unique ORDER/REF - duplicates count as 1 shipment
+  // Normalise orderRef (trim + upper) so whitespace/casing typos don't
+  // inflate the per-status counts.
   const stats = useMemo(() => {
-    const uniqueOrderRefs = new Set(shippingShipments.map(s => s.orderRef).filter(Boolean));
+    const norm = (r) => (r || '').trim().toUpperCase();
+    const uniqueOrderRefs = new Set(
+      shippingShipments.map(s => norm(s.orderRef)).filter(Boolean)
+    );
     const statusOrderRefs = {};
     shippingShipments.forEach(s => {
-      if (s.latestStatus && s.orderRef) {
+      const ref = norm(s.orderRef);
+      if (s.latestStatus && ref) {
         if (!statusOrderRefs[s.latestStatus]) {
           statusOrderRefs[s.latestStatus] = new Set();
         }
-        statusOrderRefs[s.latestStatus].add(s.orderRef);
+        statusOrderRefs[s.latestStatus].add(ref);
       }
     });
 
