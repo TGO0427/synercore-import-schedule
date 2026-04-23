@@ -296,7 +296,17 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       prev: { total: new Set(), planned: new Set(), inTransit: new Set(), stored: new Set(), delayed: new Set() },
     };
 
-    const statusOrderRefs = { planned: new Set(), inTransit: new Set(), stored: new Set(), delayed: new Set(), cancelled: new Set() };
+    const statusOrderRefs = {
+      planned: new Set(),
+      inTransit: new Set(),
+      stored: new Set(),
+      delayed: new Set(),
+      cancelled: new Set(),
+      // Event-specific sub-buckets (also counted inside inTransit so the
+      // aggregate In Transit KPI stays accurate)
+      berthWorking: new Set(),
+      airCustomsClearance: new Set(),
+    };
 
     // Status category arrays for pctDeltas computation
     const plannedStatuses = [ShipmentStatus.PLANNED_AIRFREIGHT, ShipmentStatus.PLANNED_SEAFREIGHT];
@@ -369,6 +379,11 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
             statusOrderRefs.delayed.add(orderRef); statusKey = 'delayed';
           } else {
             statusOrderRefs.inTransit.add(orderRef); statusKey = 'inTransit';
+            if (shipment.latestStatus === ShipmentStatus.BERTH_WORKING) {
+              statusOrderRefs.berthWorking.add(orderRef);
+            } else if (shipment.latestStatus === ShipmentStatus.AIR_CUSTOMS_CLEARANCE) {
+              statusOrderRefs.airCustomsClearance.add(orderRef);
+            }
           }
           break;
         case ShipmentStatus.ARRIVED_PTA:
@@ -449,6 +464,8 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       stored: statusOrderRefs.stored.size,
       delayed: statusOrderRefs.delayed.size,
       cancelled: statusOrderRefs.cancelled.size,
+      berthWorking: statusOrderRefs.berthWorking.size,
+      airCustomsClearance: statusOrderRefs.airCustomsClearance.size,
       byWarehouse: {},
       bySupplier: {},
       byWeek: {},
@@ -645,6 +662,8 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
     { key: 'stored', value: stats.stored, label: 'Stored', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)', filter: 'stored', view: 'stored', delta: stats.deltas.stored, pctDelta: pctDeltas.stored, info: stats.stored > 0 ? { label: 'In Stock', pill: 'pill-ok' } : null },
     { key: 'delayed', value: stats.delayed, label: 'Delayed', icon: '⚠️', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)', filter: 'delayed', delta: stats.deltas.delayed, pctDelta: pctDeltas.delayed, info: stats.delayed > 0 ? { label: 'Needs Attention', pill: 'pill-bad' } : null },
     { key: 'planned', value: stats.planned, label: 'Planned', icon: '📅', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)', filter: 'planned', delta: stats.deltas.planned, pctDelta: pctDeltas.planned },
+    { key: 'berthWorking', value: stats.berthWorking, label: 'Berth Working', icon: '🏗️', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)', filter: 'berth_working', delta: null, pctDelta: null, info: stats.berthWorking > 0 ? { label: 'At Port', pill: 'pill-info' } : null },
+    { key: 'airCustoms', value: stats.airCustomsClearance, label: 'Air Customs Clearance', icon: '🛂', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)', filter: 'air_customs_clearance', delta: null, pctDelta: null, info: stats.airCustomsClearance > 0 ? { label: 'In Clearance', pill: 'pill-info' } : null },
     { key: 'offsite', value: `${avgDaysOffsite}d`, label: 'Avg Days in OFFSITE', icon: '🏭', ring: 'ring-accent', tint: 'rgba(139,92,246,0.1)', filter: 'stored', view: 'stored', delta: null, pctDelta: null },
     { key: 'storageCost', value: formattedStorageCost, label: 'Storage Cost', icon: '💰', ring: 'ring-warning', tint: 'rgba(245,158,11,0.08)', filter: 'stored', view: 'stored', delta: null, pctDelta: null },
   ];
