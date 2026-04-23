@@ -819,6 +819,54 @@ router.post(
 );
 
 /**
+ * POST /api/shipments/:id/split
+ * Split a stored shipment across warehouses (partial or full move).
+ * Body: { destination: string, moveQty: number, movePallets: number }
+ */
+router.post(
+  '/:id/split',
+  body('destination').trim().notEmpty().withMessage('Destination warehouse is required'),
+  body('moveQty').isFloat({ gt: 0 }).withMessage('moveQty must be a positive number'),
+  body('movePallets').isFloat({ gt: 0 }).withMessage('movePallets must be a positive number'),
+  asyncHandler(async (req: Request, res: Response) => {
+    if (!handleValidationErrors(req, res)) return;
+
+    const { destination, moveQty, movePallets } = req.body as {
+      destination: string;
+      moveQty: number;
+      movePallets: number;
+    };
+
+    const result = await ShipmentController.splitShipment(
+      req.params.id!,
+      destination,
+      Number(moveQty),
+      Number(movePallets)
+    );
+
+    const user = (req as any).user;
+    if (user) {
+      AuditRepository.logAudit(
+        user.id,
+        user.username || user.email,
+        'split',
+        'shipment',
+        req.params.id!,
+        (result.source as any).order_ref || req.params.id!,
+        { destination, moveQty, movePallets, splitId: result.split ? (result.split as any).id : null }
+      );
+    }
+
+    res.status(200).json({
+      data: result,
+      message: result.split
+        ? `Split ${moveQty} qty / ${movePallets} pallets to ${destination}`
+        : `Moved all stock to ${destination}`,
+    });
+  })
+);
+
+/**
  * POST /api/shipments/:id/admin-complete
  * Admin: complete entire workflow in one step
  */

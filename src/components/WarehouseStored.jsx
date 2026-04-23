@@ -190,38 +190,23 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onCrea
     const isFullMove = moveQty >= totalQty && movePallets >= totalPallets;
 
     try {
+      // Atomic backend split — reduces source and creates destination record
+      // in one transaction. Replaces the old two-step update-then-create flow
+      // that left stock "lost" when the create failed on duplicate order_ref.
+      const response = await authFetch(getApiUrl(`/api/shipments/${shipment.id}/split`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ destination, moveQty, movePallets }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to move stock');
+      }
+
       if (isFullMove) {
-        // Full move — just update warehouse
-        await onUpdateShipment(shipment.id, { receivingWarehouse: destination });
         showSuccess(`Moved all stock to ${destination}`);
       } else {
-        // Partial move — reduce original, create new split
-        const remainQty = totalQty - moveQty;
-        const remainPallets = totalPallets - movePallets;
-
-        // Update original with reduced qty/pallets
-        await onUpdateShipment(shipment.id, {
-          quantity: remainQty,
-          palletQty: remainPallets > 0 ? remainPallets : 1,
-        });
-
-        // Create new shipment at destination with moved qty/pallets
-        await onCreateShipment({
-          orderRef: shipment.orderRef,
-          supplier: shipment.supplier,
-          productName: shipment.productName,
-          quantity: moveQty,
-          palletQty: movePallets,
-          receivingWarehouse: destination,
-          latestStatus: 'stored',
-          finalPod: shipment.finalPod || '',
-          weekNumber: shipment.weekNumber || '',
-          cbm: shipment.cbm || '',
-          freightType: shipment.freightType || '',
-          forwardingAgent: shipment.forwardingAgent || '',
-          notes: `Partial move from ${shipment.receivingWarehouse || 'OFFSITE'}`,
-        });
-
         showSuccess(`Moved ${moveQty} qty / ${movePallets} pallets to ${destination}`);
       }
     } catch (err) {

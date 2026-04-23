@@ -735,6 +735,132 @@ export class ShipmentController {
     return updated;
   }
 
+  /**
+   * Split a shipment across warehouses.
+   *
+   * Used by the Stored Stock "Move" action when only a portion of a shipment
+   * is physically moving to another warehouse. Runs inside a transaction so
+   * the source reduction and the destination insert either both succeed or
+   * both roll back — no more half-moved stock.
+   *
+   * If moveQty + movePallets cover the whole source, this collapses into a
+   * simple warehouse update on the source row (no split row created).
+   *
+   * Deliberately skips the order_ref uniqueness check that createShipment
+   * enforces — by design the split row shares its source's order_ref, since
+   * they represent the same physical shipment.
+   */
+  static async splitShipment(
+    id: string,
+    destination: string,
+    moveQty: number,
+    movePallets: number
+  ): Promise<{ source: Shipment; split: Shipment | null }> {
+    if (!destination || typeof destination !== 'string') {
+      throw AppError.unprocessable('Destination warehouse is required');
+    }
+    if (!(moveQty > 0) || !(movePallets > 0)) {
+      throw AppError.unprocessable('moveQty and movePallets must be positive numbers');
+    }
+
+    const source = await this.getShipment(id);
+    const totalQty = Number(source.quantity) || 0;
+    const totalPallets = Math.round(Number(source.pallet_qty) || 0) || 1;
+
+    if (moveQty > totalQty) {
+      throw AppError.unprocessable(`moveQty ${moveQty} exceeds source quantity ${totalQty}`);
+    }
+    if (movePallets > totalPallets) {
+      throw AppError.unprocessable(`movePallets ${movePallets} exceeds source pallet count ${totalPallets}`);
+    }
+
+    const isFullMove = moveQty >= totalQty && movePallets >= totalPallets;
+
+    return transaction(async (client) => {
+      const now = new Date();
+
+      if (isFullMove) {
+        // Whole shipment moves — just update the receiving_warehouse on the source.
+        const updated = await client.query(
+          `UPDATE shipments
+           SET receiving_warehouse = $1, updated_at = $2
+           WHERE id = $3
+           RETURNING *`,
+          [destination, now, id]
+        );
+        return { source: updated.rows[0] as Shipment, split: null };
+      }
+
+      // Partial move — reduce source, insert a split row at the destination.
+      const remainQty = totalQty - moveQty;
+      const remainPallets = Math.max(totalPallets - movePallets, 1);
+
+      const updatedSource = await client.query(
+        `UPDATE shipments
+         SET quantity = $1, pallet_qty = $2, updated_at = $3
+         WHERE id = $4
+         RETURNING *`,
+        [remainQty, remainPallets, now, id]
+      );
+
+      const splitId = `ship_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const splitNote = `Partial move from ${source.receiving_warehouse || 'unknown'}`;
+
+      const insertedSplit = await client.query(
+        `INSERT INTO shipments (
+          id, supplier, order_ref, final_pod, latest_status, week_number,
+          product_name, quantity, cbm, pallet_qty, receiving_warehouse, notes,
+          forwarding_agent, incoterm, vessel_name, selected_week_date,
+          shipment_type, created_at, updated_at,
+          inspection_date, inspection_status, inspection_notes, inspected_by,
+          receiving_date, receiving_status, receiving_notes, received_by, received_quantity
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6,
+          $7, $8, $9, $10, $11, $12,
+          $13, $14, $15, $16,
+          $17, $18, $19,
+          $20, $21, $22, $23,
+          $24, $25, $26, $27, $28
+        ) RETURNING *`,
+        [
+          splitId,
+          source.supplier,
+          source.order_ref,
+          source.final_pod,
+          'stored',
+          source.week_number,
+          source.product_name,
+          moveQty,
+          source.cbm,
+          movePallets,
+          destination,
+          splitNote,
+          source.forwarding_agent,
+          source.incoterm,
+          source.vessel_name,
+          source.selected_week_date,
+          (source as any).shipment_type || 'international',
+          now,
+          now,
+          source.inspection_date,
+          source.inspection_status,
+          source.inspection_notes,
+          source.inspected_by,
+          source.receiving_date,
+          source.receiving_status,
+          source.receiving_notes,
+          source.received_by,
+          moveQty,
+        ]
+      );
+
+      return {
+        source: updatedSource.rows[0] as Shipment,
+        split: insertedSplit.rows[0] as Shipment,
+      };
+    });
+  }
+
   // ─── File-based archive operations (migrated from shipmentsController.js) ───
 
   /**
