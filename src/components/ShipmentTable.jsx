@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { ShipmentStatus, isDelayedStatus } from '../types/shipment';
+import { ShipmentStatus, isDelayedStatus, SHIPPING_EXCLUDED_STATUSES } from '../types/shipment';
 import { getCurrentWeekNumber } from '../utils/dateUtils';
 import { isAirfreight, getShippingProgress, getForwardingAgents } from '../utils/shipmentConstants';
 import { generatePDF as generateShipmentPDF, generateExcel as generateShipmentExcel } from '../utils/shipmentExport';
@@ -130,8 +130,49 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
     setSortConfig({ key, direction });
   };
 
-  const handleStatusUpdate = (shipmentId, newStatus) => {
-    onUpdateShipment(shipmentId, { latestStatus: newStatus });
+  const handleStatusUpdate = async (shipmentId, newStatus) => {
+    // Always update the clicked row first
+    await onUpdateShipment(shipmentId, { latestStatus: newStatus });
+
+    const target = shipments.find(s => s.id === shipmentId);
+    const orderRef = (target?.orderRef || '').trim();
+    if (!orderRef) return;
+
+    // Sibling filter:
+    //   - same order/ref APO
+    //   - not the row we just updated
+    //   - currently on a different status
+    //   - still in a "shipping" status (exclude arrived / stored / archived /
+    //     post-arrival — those have already progressed physically and should
+    //     NOT be pulled back to a transit status by a sibling change)
+    const siblings = shipments.filter(s =>
+      s.id !== shipmentId &&
+      (s.orderRef || '').trim() === orderRef &&
+      s.latestStatus !== newStatus &&
+      !SHIPPING_EXCLUDED_STATUSES.includes(s.latestStatus)
+    );
+    if (siblings.length === 0) return;
+
+    // Render the status value in a human-readable way for the prompt
+    const statusLabel = newStatus
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
+
+    const confirmed = await confirmAction({
+      title: `Apply status to all shipping lines on ${orderRef}?`,
+      message: `This order has ${siblings.length} other line${siblings.length > 1 ? 's' : ''} still in the Shipping Schedule on a different status. Would you like to set ${siblings.length > 1 ? 'them all' : 'it'} to "${statusLabel}" as well?\n\n(Lines that have already arrived, been received, or stored are not affected.)`,
+      confirmText: `Apply to all ${siblings.length + 1} lines`,
+      cancelText: 'Just this line',
+      type: 'warning',
+    });
+    if (!confirmed) return;
+
+    try {
+      await Promise.all(siblings.map(s => onUpdateShipment(s.id, { latestStatus: newStatus })));
+      showSuccess(`Status "${statusLabel}" applied to ${siblings.length + 1} lines on ${orderRef}`);
+    } catch (err) {
+      showError(`Updated this line, but failed to update some siblings: ${err.message || 'unknown error'}`);
+    }
   };
 
   const handleWeekUpdate = async (shipmentId, newWeekNumber, selectedDate) => {
