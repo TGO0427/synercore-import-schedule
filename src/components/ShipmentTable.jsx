@@ -230,39 +230,65 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
       return copy;
     });
 
-    // If vessel/AWB was part of the save, offer to propagate it to sibling
-    // lines on the same order/ref APO (same UX as the week-number prompt).
-    if (changes.vesselName !== undefined) {
-      const newVessel = (changes.vesselName || '').trim();
-      const target = shipments.find(s => s.id === shipmentId);
-      const orderRef = (target?.orderRef || '').trim();
-      if (!orderRef) return;
+    // APO-level fields that make sense to propagate across all lines on the
+    // same order/ref. Per-line fields (quantity, cbm, palletQty, productName)
+    // are deliberately NOT in this list.
+    const target = shipments.find(s => s.id === shipmentId);
+    const orderRef = (target?.orderRef || '').trim();
+    if (!orderRef) return;
 
-      const siblings = shipments.filter(s =>
-        s.id !== shipmentId &&
-        (s.orderRef || '').trim() === orderRef &&
-        ((s.vesselName || '').trim() !== newVessel)
-      );
-      if (siblings.length === 0) return;
+    const vesselLabel = isAirfreight(target?.latestStatus) ? 'AWB' : 'Vessel';
+    const apoFieldDefs = [
+      { key: 'vesselName', label: vesselLabel, normalize: (v) => (v || '').trim() },
+      { key: 'incoterm', label: 'Incoterm', normalize: (v) => (v || '').trim() },
+      { key: 'forwardingAgent', label: 'Agent', normalize: (v) => (v || '').trim() },
+    ];
 
-      const label = isAirfreight(target?.latestStatus) ? 'AWB' : 'Vessel';
-      const valueDisplay = newVessel || '(cleared)';
+    const changedApoFields = apoFieldDefs.filter(def => changes[def.key] !== undefined);
+    if (changedApoFields.length === 0) return;
 
-      const confirmed = await confirmAction({
-        title: `Apply ${label} to all lines on ${orderRef}?`,
-        message: `This order has ${siblings.length} other line${siblings.length > 1 ? 's' : ''} with a different ${label}. Would you like to set ${siblings.length > 1 ? 'them all' : 'it'} to "${valueDisplay}" as well?`,
-        confirmText: `Apply to all ${siblings.length + 1} lines`,
-        cancelText: 'Just this line',
-        type: 'info',
-      });
-      if (!confirmed) return;
+    // Normalized new values, keyed by field name
+    const newValues = Object.fromEntries(
+      changedApoFields.map(def => [def.key, def.normalize(changes[def.key])])
+    );
 
-      try {
-        await Promise.all(siblings.map(s => onUpdateShipment(s.id, { vesselName: newVessel })));
-        showSuccess(`${label} "${valueDisplay}" applied to ${siblings.length + 1} lines on ${orderRef}`);
-      } catch (err) {
-        showError(`Updated this line, but failed to update some siblings: ${err.message || 'unknown error'}`);
-      }
+    // A sibling is eligible if it shares the orderRef AND differs on at least
+    // one of the APO fields we just saved.
+    const siblings = shipments.filter(s => {
+      if (s.id === shipmentId) return false;
+      if ((s.orderRef || '').trim() !== orderRef) return false;
+      return changedApoFields.some(def => def.normalize(s[def.key]) !== newValues[def.key]);
+    });
+    if (siblings.length === 0) return;
+
+    // Human-readable summary of what will change — "Vessel: 'MSC Example', Incoterm: 'FOB'"
+    const summary = changedApoFields
+      .map(def => `${def.label}: "${newValues[def.key] || '(cleared)'}"`)
+      .join(', ');
+
+    const fieldsLabel = changedApoFields.length === 1
+      ? changedApoFields[0].label
+      : 'these changes';
+
+    const confirmed = await confirmAction({
+      title: `Apply ${fieldsLabel} to all lines on ${orderRef}?`,
+      message: `This order has ${siblings.length} other line${siblings.length > 1 ? 's' : ''}. Would you like to apply ${summary} to ${siblings.length > 1 ? 'all of them' : 'it'} too?`,
+      confirmText: `Apply to all ${siblings.length + 1} lines`,
+      cancelText: 'Just this line',
+      type: 'info',
+    });
+    if (!confirmed) return;
+
+    // Build a single update payload containing only the APO-level changes.
+    const apoUpdates = Object.fromEntries(
+      changedApoFields.map(def => [def.key, newValues[def.key]])
+    );
+
+    try {
+      await Promise.all(siblings.map(s => onUpdateShipment(s.id, apoUpdates)));
+      showSuccess(`${fieldsLabel} applied to ${siblings.length + 1} lines on ${orderRef}`);
+    } catch (err) {
+      showError(`Updated this line, but failed to update some siblings: ${err.message || 'unknown error'}`);
     }
   }, [edits, onUpdateShipment, shipments, confirmAction, showSuccess, showError]);
 
