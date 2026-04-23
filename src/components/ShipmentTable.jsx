@@ -16,7 +16,7 @@ import { copyToClipboard } from '../utils/clipboard';
 import { useNotification } from '../contexts/NotificationContext';
 
 function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreateShipment, loading, globalSearchTerm, onClearGlobalSearch }) {
-  const { showSuccess, showError } = useNotification();
+  const { showSuccess, showError, confirm: confirmAction } = useNotification();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState(['all']);
   const [sortConfig, setSortConfig] = useState({ key: 'weekNumber', direction: 'asc' });
@@ -134,12 +134,43 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
     onUpdateShipment(shipmentId, { latestStatus: newStatus });
   };
 
-  const handleWeekUpdate = (shipmentId, newWeekNumber, selectedDate) => {
+  const handleWeekUpdate = async (shipmentId, newWeekNumber, selectedDate) => {
     const updates = { weekNumber: newWeekNumber.toString() };
     if (selectedDate) {
       updates.selectedWeekDate = selectedDate.toISOString();
     }
-    onUpdateShipment(shipmentId, updates);
+
+    // Always update the row the user clicked
+    await onUpdateShipment(shipmentId, updates);
+
+    // Look for other line items on the same order/ref APO that haven't already
+    // been moved to this week. If any exist, offer to apply the same week to them.
+    const target = shipments.find(s => s.id === shipmentId);
+    const orderRef = (target?.orderRef || '').trim();
+    if (!orderRef) return;
+
+    const siblings = shipments.filter(s =>
+      s.id !== shipmentId &&
+      (s.orderRef || '').trim() === orderRef &&
+      (s.weekNumber ?? '').toString() !== newWeekNumber.toString()
+    );
+    if (siblings.length === 0) return;
+
+    const confirmed = await confirmAction({
+      title: `Apply Week ${newWeekNumber} to all lines on ${orderRef}?`,
+      message: `This order has ${siblings.length} other line${siblings.length > 1 ? 's' : ''} on different week${siblings.length > 1 ? 's' : ''}. Would you like to update ${siblings.length > 1 ? 'them all' : 'it'} to Week ${newWeekNumber} as well?`,
+      confirmText: `Apply to all ${siblings.length + 1} lines`,
+      cancelText: 'Just this line',
+      type: 'info',
+    });
+    if (!confirmed) return;
+
+    try {
+      await Promise.all(siblings.map(s => onUpdateShipment(s.id, updates)));
+      showSuccess(`Week ${newWeekNumber} applied to ${siblings.length + 1} lines on ${orderRef}`);
+    } catch (err) {
+      showError(`Updated this line, but failed to update some siblings: ${err.message || 'unknown error'}`);
+    }
   };
 
   // Track field changes without auto-saving
