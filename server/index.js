@@ -384,6 +384,58 @@ async function start() {
       logWarn('IWT columns migration warning', { error: error.message });
     }
 
+    // Add full-text search_vector column + GIN index + trigger to shipments.
+    // ShipmentController.searchShipments queries this column; without it every
+    // /api/shipments/search request returns 500 with "column does not exist".
+    try {
+      await getPool().query(`ALTER TABLE shipments ADD COLUMN IF NOT EXISTS search_vector tsvector`);
+      await getPool().query(`CREATE INDEX IF NOT EXISTS idx_shipments_search_vector ON shipments USING gin(search_vector)`);
+      // Backfill any rows that have no vector yet
+      await getPool().query(`
+        UPDATE shipments SET search_vector =
+          to_tsvector('english',
+            COALESCE(order_ref, '') || ' ' ||
+            COALESCE(supplier, '') || ' ' ||
+            COALESCE(product_name, '') || ' ' ||
+            COALESCE(final_pod, '') || ' ' ||
+            COALESCE(vessel_name, '') || ' ' ||
+            COALESCE(forwarding_agent, '') || ' ' ||
+            COALESCE(notes, '') || ' ' ||
+            COALESCE(receiving_warehouse, '')
+          )
+        WHERE search_vector IS NULL
+      `);
+      // Keep the vector in sync on insert / update
+      await getPool().query(`
+        CREATE OR REPLACE FUNCTION shipments_search_vector_update() RETURNS trigger AS $$
+        BEGIN
+          NEW.search_vector :=
+            to_tsvector('english',
+              COALESCE(NEW.order_ref, '') || ' ' ||
+              COALESCE(NEW.supplier, '') || ' ' ||
+              COALESCE(NEW.product_name, '') || ' ' ||
+              COALESCE(NEW.final_pod, '') || ' ' ||
+              COALESCE(NEW.vessel_name, '') || ' ' ||
+              COALESCE(NEW.forwarding_agent, '') || ' ' ||
+              COALESCE(NEW.notes, '') || ' ' ||
+              COALESCE(NEW.receiving_warehouse, '')
+            );
+          RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+      `);
+      await getPool().query(`DROP TRIGGER IF EXISTS trg_shipments_search_vector ON shipments`);
+      await getPool().query(`
+        CREATE TRIGGER trg_shipments_search_vector
+          BEFORE INSERT OR UPDATE ON shipments
+          FOR EACH ROW
+          EXECUTE FUNCTION shipments_search_vector_update()
+      `);
+      logger.info('Shipments full-text search_vector ready');
+    } catch (error) {
+      logWarn('search_vector migration warning', { error: error.message });
+    }
+
     // Create announcements table if it doesn't exist
     try {
       const { getPool } = await import('./db/connection.js');
