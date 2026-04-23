@@ -3,7 +3,9 @@ import { authFetch } from '../utils/authFetch';
 import { getApiUrl } from '../config/api';
 import { ShipmentStatus, POST_ARRIVAL_STATUSES, STATUS_LABELS, STATUS_COLORS } from '../types/shipment';
 
-// Include stored + archived for historical report data
+// Include stored + archived for historical report data. This report is a
+// management view across the entire post-arrival → stored lifecycle, not a
+// live "work in progress" queue — hence stored/archived are counted too.
 const REPORT_STATUSES = [...POST_ARRIVAL_STATUSES, ShipmentStatus.STORED, ShipmentStatus.ARCHIVED];
 
 function PostArrivalWorkflowReport({ shipments }) {
@@ -43,7 +45,7 @@ function PostArrivalWorkflowReport({ shipments }) {
 
           // Filter for post-arrival statuses (including archived for historical data)
           const postArrival = normalized.filter(shipment =>
-            POST_ARRIVAL_STATUSES.includes(shipment.latest_status)
+            REPORT_STATUSES.includes(shipment.latest_status)
           );
 
           setPostArrivalShipments(postArrival);
@@ -69,12 +71,12 @@ function PostArrivalWorkflowReport({ shipments }) {
 
     // Filter shipments that are in post-arrival workflow
     const filteredPostArrivalShipments = uniqueShipments.filter(shipment =>
-      POST_ARRIVAL_STATUSES.includes(shipment.latest_status)
+      REPORT_STATUSES.includes(shipment.latest_status)
     );
 
     // Count by status
     const statusCounts = {};
-    POST_ARRIVAL_STATUSES.forEach(status => {
+    REPORT_STATUSES.forEach(status => {
       statusCounts[status] = 0;
     });
 
@@ -148,7 +150,7 @@ function PostArrivalWorkflowReport({ shipments }) {
       const warehouse = shipment.receivingWarehouse || shipment.finalPod || 'Unknown';
       if (!warehouseBreakdown[warehouse]) {
         warehouseBreakdown[warehouse] = {};
-        POST_ARRIVAL_STATUSES.forEach(s => {
+        REPORT_STATUSES.forEach(s => {
           warehouseBreakdown[warehouse][s] = 0;
         });
       }
@@ -214,7 +216,7 @@ function PostArrivalWorkflowReport({ shipments }) {
       <div className="workflow-status-chart">
         <h4>📋 Workflow Status Distribution</h4>
         <div className="status-grid">
-          {POST_ARRIVAL_STATUSES.map(status => {
+          {REPORT_STATUSES.map(status => {
             const count = data[status] || 0;
             const percentage = ((count / total) * 100).toFixed(1);
 
@@ -307,7 +309,7 @@ function PostArrivalWorkflowReport({ shipments }) {
     const getSupplierExample = (supplierName) => {
       const supplierShipments = shipments.filter(s =>
         (s.supplier || 'Unknown') === supplierName &&
-        POST_ARRIVAL_STATUSES.includes(s.latest_status)
+        REPORT_STATUSES.includes(s.latest_status)
       );
 
       if (supplierShipments.length > 0) {
