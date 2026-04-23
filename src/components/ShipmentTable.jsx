@@ -208,11 +208,11 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
   }, []);
 
   // Save all changes for a specific shipment
-  const saveShipment = useCallback((shipmentId) => {
+  const saveShipment = useCallback(async (shipmentId) => {
     const changes = edits[shipmentId];
     if (!changes || Object.keys(changes).length === 0) return;
 
-    onUpdateShipment(shipmentId, changes);
+    await onUpdateShipment(shipmentId, changes);
 
     // Clear edits and local text values for this shipment
     setEdits(prev => {
@@ -229,7 +229,42 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
       });
       return copy;
     });
-  }, [edits, onUpdateShipment]);
+
+    // If vessel/AWB was part of the save, offer to propagate it to sibling
+    // lines on the same order/ref APO (same UX as the week-number prompt).
+    if (changes.vesselName !== undefined) {
+      const newVessel = (changes.vesselName || '').trim();
+      const target = shipments.find(s => s.id === shipmentId);
+      const orderRef = (target?.orderRef || '').trim();
+      if (!orderRef) return;
+
+      const siblings = shipments.filter(s =>
+        s.id !== shipmentId &&
+        (s.orderRef || '').trim() === orderRef &&
+        ((s.vesselName || '').trim() !== newVessel)
+      );
+      if (siblings.length === 0) return;
+
+      const label = isAirfreight(target?.latestStatus) ? 'AWB' : 'Vessel';
+      const valueDisplay = newVessel || '(cleared)';
+
+      const confirmed = await confirmAction({
+        title: `Apply ${label} to all lines on ${orderRef}?`,
+        message: `This order has ${siblings.length} other line${siblings.length > 1 ? 's' : ''} with a different ${label}. Would you like to set ${siblings.length > 1 ? 'them all' : 'it'} to "${valueDisplay}" as well?`,
+        confirmText: `Apply to all ${siblings.length + 1} lines`,
+        cancelText: 'Just this line',
+        type: 'info',
+      });
+      if (!confirmed) return;
+
+      try {
+        await Promise.all(siblings.map(s => onUpdateShipment(s.id, { vesselName: newVessel })));
+        showSuccess(`${label} "${valueDisplay}" applied to ${siblings.length + 1} lines on ${orderRef}`);
+      } catch (err) {
+        showError(`Updated this line, but failed to update some siblings: ${err.message || 'unknown error'}`);
+      }
+    }
+  }, [edits, onUpdateShipment, shipments, confirmAction, showSuccess, showError]);
 
   // Save all pending changes
   const saveAllChanges = useCallback(() => {
