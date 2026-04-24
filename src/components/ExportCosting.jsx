@@ -69,14 +69,14 @@ const INITIAL_FORM_STATE = {
   // Export Charges (replaces Destination Charges in export mode).
   // Defaults seeded from the AQ-1122 40FT PTA → Durban quote.
   export_landside_charges_zar: 0,
-  export_declaration_zar: 0,
+  export_declaration_zar: 630,     // SAD500 per declaration (AQ-1122)
   vgm_zar: 1100,
-  cto_navis_fee_zar: 150,        // CTO
+  cto_navis_fee_zar: 150,          // CTO
   navis_gp_zar: 250,
   export_cargo_dues_zar: 891.25,
-  disbursement_fee_zar: 306,
+  disbursement_fee_zar: 431.55,    // AQ-1122: @ 1.4% actual (above R325 min)
   disbursement_fee_percentage: 1.4,
-  disbursement_fee_min: 306,
+  disbursement_fee_min: 325,
   // AQ-1122 itemised lines
   terminal_handling_zar: 4172,
   carbon_emission_zar: 0,
@@ -99,8 +99,8 @@ const INITIAL_FORM_STATE = {
   roe_customs: '',
   customs_declaration_zar: 0,
   agency_fee_percentage: 3.5,
-  agency_fee_min: 1187,
-  agency_fee_zar: 1187,
+  agency_fee_min: 1270,            // AQ-1122: @ 3.5% min R1270
+  agency_fee_zar: 1270,
   // Airfreight fields
   airline_name: '',
   flight_number: '',

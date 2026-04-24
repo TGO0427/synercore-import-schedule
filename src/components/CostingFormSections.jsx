@@ -605,7 +605,7 @@ function CostingFormSections({
             {currencyInput('Certificate of Origin', 'certificate_of_origin_zar')}
             {/* Landside / declaration / cargo dues */}
             {currencyInput('Landside Charges', 'export_landside_charges_zar')}
-            {currencyInput('Export Declaration', 'export_declaration_zar')}
+            {currencyInput('Export Declaration (SAD500)', 'export_declaration_zar', 'ZAR', 'Per declaration.')}
             {currencyInput('Cargo Dues', 'export_cargo_dues_zar')}
             {/* USD-quoted — input + auto ZAR via roe_origin */}
             {currencyInput('Electronic Bill of Lading', 'ebol_fee_usd', 'USD')}
@@ -628,8 +628,8 @@ function CostingFormSections({
               </div>
             </div>
             {/* Agency + Disbursement */}
-            {currencyInput('Agency Fee', 'agency_fee_zar', 'ZAR', 'Per shipment @ 3.5% min R1187 — defaults to the R1187 minimum.')}
-            {currencyInput('Disbursement Fee', 'disbursement_fee_zar', 'ZAR', 'Per shipment @ 1.4% min R306.')}
+            {currencyInput('Agency Fee', 'agency_fee_zar', 'ZAR', 'Per shipment @ 3.5% min R1270 (AQ-1122).')}
+            {currencyInput('Disbursement Fee', 'disbursement_fee_zar', 'ZAR', 'Per shipment @ 1.4% min R325 (AQ-1122).')}
             <div style={{ marginBottom: '12px' }}>
               <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>
                 Export Charges Sub-Total - Auto
