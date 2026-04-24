@@ -5,7 +5,7 @@ import loginIllustration from '../assets/login-illustration.webp';
 
 const REMEMBERED_USERNAME_KEY = 'synercore_remembered_username';
 
-function LoginPage({ onLogin, onForgotPassword, onPrivacy }) {
+function LoginPage({ onLogin, onPrivacy }) {
   const [credentials, setCredentials] = useState({
     username: '',
     password: '',
@@ -395,22 +395,8 @@ function LoginPage({ onLogin, onForgotPassword, onPrivacy }) {
         </form>
 
         {/* Bottom links */}
-        <div style={{ marginTop: '18px', textAlign: 'center', fontSize: '13px' }}>
-          <button
-            type="button"
-            onClick={onForgotPassword}
-            disabled={loading}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#3E9B3E',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              fontWeight: 500,
-              padding: 0,
-            }}
-          >
-            Forgot password?
-          </button>
+        <div style={{ marginTop: '18px', textAlign: 'center', fontSize: '13px', color: '#475569' }}>
+          <span>Forgot password? Contact your administrator</span>
           {onPrivacy && (
             <>
               <span style={{ color: '#cbd5e1', margin: '0 10px' }}>·</span>
