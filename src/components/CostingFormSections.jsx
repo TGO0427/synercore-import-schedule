@@ -120,6 +120,8 @@ function CostingFormSections({
   partyField = 'supplier_name',      // 'supplier_name' or 'customer_name'
   originPortOptions,                 // optional override for Port of Loading list
   dischargePortOptions,              // optional override for Port of Discharge list
+  departureAirportOptions,           // optional override for Airport of Departure list
+  arrivalAirportOptions,             // optional override for Airport of Arrival list
 }) {
   // Export mode reverses the inland leg directions (warehouse → port instead of port → warehouse)
   const isExport = partyLabel === 'Customer';
@@ -210,8 +212,8 @@ function CostingFormSections({
           {input('Country of Origin', 'country_of_origin')}
           {formData.transport_mode === 'air' ? (
             <>
-              {select('Airport of Departure', 'airport_of_departure', AIRPORTS_OF_DEPARTURE)}
-              {select('Airport of Arrival', 'airport_of_arrival', AIRPORTS_OF_ARRIVAL)}
+              {select('Airport of Departure', 'airport_of_departure', departureAirportOptions || AIRPORTS_OF_DEPARTURE)}
+              {select('Airport of Arrival', 'airport_of_arrival', arrivalAirportOptions || AIRPORTS_OF_ARRIVAL)}
               {select('Airline', 'airline_name', AIRLINES)}
               {input('Flight Number', 'flight_number')}
             </>

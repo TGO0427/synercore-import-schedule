@@ -851,6 +851,118 @@ export const AIRPORTS_OF_ARRIVAL = [
   { value: 'BFN', label: 'Bloemfontein (BFN)' },
 ];
 
+/**
+ * South African airports — used as the export Airport of Departure list.
+ */
+export const SA_AIRPORTS = AIRPORTS_OF_ARRIVAL;
+
+/**
+ * Worldwide cargo airports — used as the export Airport of Arrival list.
+ * Combines the existing import-origin airports with additional major hubs
+ * across North/South America, Oceania, Europe, and Asia.
+ */
+export const WORLD_AIRPORTS = [
+  // South Africa
+  ...SA_AIRPORTS,
+  // Asia — East
+  { value: 'HKG', label: 'Hong Kong (HKG)' },
+  { value: 'PVG', label: 'Shanghai Pudong (PVG)' },
+  { value: 'CAN', label: 'Guangzhou (CAN)' },
+  { value: 'SZX', label: 'Shenzhen (SZX)' },
+  { value: 'PEK', label: 'Beijing Capital (PEK)' },
+  { value: 'PKX', label: 'Beijing Daxing (PKX)' },
+  { value: 'TPE', label: 'Taipei Taoyuan (TPE)' },
+  { value: 'NRT', label: 'Tokyo Narita (NRT)' },
+  { value: 'HND', label: 'Tokyo Haneda (HND)' },
+  { value: 'KIX', label: 'Osaka Kansai (KIX)' },
+  { value: 'ICN', label: 'Seoul Incheon (ICN)' },
+  // Asia — Southeast / South
+  { value: 'SIN', label: 'Singapore (SIN)' },
+  { value: 'KUL', label: 'Kuala Lumpur (KUL)' },
+  { value: 'BKK', label: 'Bangkok Suvarnabhumi (BKK)' },
+  { value: 'CGK', label: 'Jakarta (CGK)' },
+  { value: 'MNL', label: 'Manila (MNL)' },
+  { value: 'HAN', label: 'Hanoi (HAN)' },
+  { value: 'SGN', label: 'Ho Chi Minh (SGN)' },
+  { value: 'DEL', label: 'Delhi (DEL)' },
+  { value: 'BOM', label: 'Mumbai (BOM)' },
+  { value: 'MAA', label: 'Chennai (MAA)' },
+  { value: 'BLR', label: 'Bangalore (BLR)' },
+  { value: 'CMB', label: 'Colombo (CMB)' },
+  // Middle East
+  { value: 'DXB', label: 'Dubai (DXB)' },
+  { value: 'AUH', label: 'Abu Dhabi (AUH)' },
+  { value: 'DOH', label: 'Doha (DOH)' },
+  { value: 'RUH', label: 'Riyadh (RUH)' },
+  { value: 'JED', label: 'Jeddah (JED)' },
+  { value: 'IST', label: 'Istanbul (IST)' },
+  { value: 'TLV', label: 'Tel Aviv (TLV)' },
+  // Europe
+  { value: 'FRA', label: 'Frankfurt (FRA)' },
+  { value: 'MUC', label: 'Munich (MUC)' },
+  { value: 'AMS', label: 'Amsterdam (AMS)' },
+  { value: 'LHR', label: 'London Heathrow (LHR)' },
+  { value: 'LGW', label: 'London Gatwick (LGW)' },
+  { value: 'STN', label: 'London Stansted (STN)' },
+  { value: 'CDG', label: 'Paris CDG (CDG)' },
+  { value: 'ORY', label: 'Paris Orly (ORY)' },
+  { value: 'BRU', label: 'Brussels (BRU)' },
+  { value: 'LUX', label: 'Luxembourg (LUX)' },
+  { value: 'MAD', label: 'Madrid (MAD)' },
+  { value: 'BCN', label: 'Barcelona (BCN)' },
+  { value: 'LIS', label: 'Lisbon (LIS)' },
+  { value: 'FCO', label: 'Rome Fiumicino (FCO)' },
+  { value: 'MXP', label: 'Milan Malpensa (MXP)' },
+  { value: 'ZRH', label: 'Zurich (ZRH)' },
+  { value: 'VIE', label: 'Vienna (VIE)' },
+  { value: 'CPH', label: 'Copenhagen (CPH)' },
+  { value: 'ARN', label: 'Stockholm Arlanda (ARN)' },
+  { value: 'OSL', label: 'Oslo (OSL)' },
+  { value: 'HEL', label: 'Helsinki (HEL)' },
+  { value: 'WAW', label: 'Warsaw (WAW)' },
+  { value: 'PRG', label: 'Prague (PRG)' },
+  // Africa (beyond SA)
+  { value: 'NBO', label: 'Nairobi (NBO)' },
+  { value: 'ADD', label: 'Addis Ababa (ADD)' },
+  { value: 'LOS', label: 'Lagos (LOS)' },
+  { value: 'ABV', label: 'Abuja (ABV)' },
+  { value: 'CAI', label: 'Cairo (CAI)' },
+  { value: 'CMN', label: 'Casablanca (CMN)' },
+  { value: 'DKR', label: 'Dakar (DKR)' },
+  { value: 'ACC', label: 'Accra (ACC)' },
+  { value: 'HRE', label: 'Harare (HRE)' },
+  { value: 'LUN', label: 'Lusaka (LUN)' },
+  { value: 'WDH', label: 'Windhoek (WDH)' },
+  { value: 'TNR', label: 'Antananarivo (TNR)' },
+  { value: 'MRU', label: 'Mauritius (MRU)' },
+  // North America
+  { value: 'JFK', label: 'New York JFK (JFK)' },
+  { value: 'EWR', label: 'Newark (EWR)' },
+  { value: 'ORD', label: 'Chicago O\'Hare (ORD)' },
+  { value: 'ATL', label: 'Atlanta (ATL)' },
+  { value: 'MIA', label: 'Miami (MIA)' },
+  { value: 'LAX', label: 'Los Angeles (LAX)' },
+  { value: 'SFO', label: 'San Francisco (SFO)' },
+  { value: 'SEA', label: 'Seattle (SEA)' },
+  { value: 'DFW', label: 'Dallas/Fort Worth (DFW)' },
+  { value: 'IAH', label: 'Houston (IAH)' },
+  { value: 'YYZ', label: 'Toronto (YYZ)' },
+  { value: 'YVR', label: 'Vancouver (YVR)' },
+  { value: 'MEX', label: 'Mexico City (MEX)' },
+  // South America
+  { value: 'GRU', label: 'São Paulo Guarulhos (GRU)' },
+  { value: 'EZE', label: 'Buenos Aires Ezeiza (EZE)' },
+  { value: 'SCL', label: 'Santiago (SCL)' },
+  { value: 'LIM', label: 'Lima (LIM)' },
+  { value: 'BOG', label: 'Bogotá (BOG)' },
+  // Oceania
+  { value: 'SYD', label: 'Sydney (SYD)' },
+  { value: 'MEL', label: 'Melbourne (MEL)' },
+  { value: 'BNE', label: 'Brisbane (BNE)' },
+  { value: 'PER', label: 'Perth (PER)' },
+  { value: 'AKL', label: 'Auckland (AKL) - NZ' },
+];
+
 export const AIRLINES = [
   { value: 'Ethiopian Airlines', label: 'Ethiopian Airlines' },
   { value: 'Emirates SkyCargo', label: 'Emirates SkyCargo' },
