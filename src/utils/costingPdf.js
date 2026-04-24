@@ -384,7 +384,6 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
           formatCurrency(bd.schedule1Duty),
           formatCurrency(productCostPerKg),
           formatCurrency(bd.allocatedShipping),
-          formatCurrency(bd.transportCostPerKg),
           formatCurrency(toPresentation(bd.totalLanded), presCur),
           formatCurrency(toPresentation(bd.costPerKg), presCur),
         ];
@@ -392,7 +391,6 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
 
       const sumCostPerKg = sumWeight > 0 ? sumTotalLanded / sumWeight : 0;
       const sumProductCostPerKg = sumWeight > 0 ? (sumCustomsValue + sumImportDuty + sumSchedule1Duty) / sumWeight : 0;
-      const sumTransportCostPerKg = sumWeight > 0 ? sumAllocatedShipping / sumWeight : 0;
       allocationRows.push([
         'TOTAL',
         formatNumber(sumWeight, 0),
@@ -403,7 +401,6 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
         formatCurrency(sumSchedule1Duty),
         formatCurrency(sumProductCostPerKg),
         formatCurrency(sumAllocatedShipping),
-        formatCurrency(sumTransportCostPerKg),
         formatCurrency(toPresentation(sumTotalLanded), presCur),
         formatCurrency(toPresentation(sumCostPerKg), presCur),
       ]);
@@ -413,7 +410,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
 
       const landedHeader = isExport ? `Total\nLanded\n(${presCur})` : 'Total\nLanded';
       const costPerKgHeader = isExport ? `Cost/kg\n(${presCur})` : 'Cost/kg';
-      const allocHead = [['Product', 'Weight\n(kg)', 'Wt %', 'Invoice Value', 'Customs Val\n(ZAR)', 'Import\nDuty', 'Sch1\nDuty', 'Cost/kg\n(ZAR)', shippingLabel, 'Transport\n/kg', landedHeader, costPerKgHeader]];
+      const allocHead = [['Product', 'Weight\n(kg)', 'Wt %', 'Invoice Value', 'Customs Val\n(ZAR)', 'Import\nDuty', 'Sch1\nDuty', 'Cost/kg\n(ZAR)', shippingLabel, landedHeader, costPerKgHeader]];
       const pageWidth = doc.internal.pageSize.getWidth();
       const allocColumnStyles = computeColumnWidths(doc, allocHead, allocationRows, {
         fontSize: 6,
@@ -432,7 +429,6 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
           8: { halign: 'right' },
           9: { halign: 'right', fontStyle: 'bold' },
           10: { halign: 'right', fontStyle: 'bold' },
-          11: { halign: 'right', fontStyle: 'bold' },
         },
       });
 
@@ -771,11 +767,15 @@ export function generateEstimatePDF(estimate) {
   }
 
   // === SUMMARY SECTION (prominent dark box) ===
-  // Total Shipping Cost stays in ZAR (internal cost basis).
-  // For export estimates, Total Landed Cost + Landed Cost/KG are converted
-  // into the chosen presentation currency (USD or EUR).
+  // For export estimates, all three summary figures are shown in the
+  // chosen presentation currency (USD or EUR).
   const summaryData = [
-    ['Total Shipping Cost', formatCurrency(totals.total_shipping_cost_zar)],
+    [
+      isExport ? `Total Shipping Cost (${presCur})` : 'Total Shipping Cost',
+      isExport
+        ? formatCurrency(toPresentation(totals.total_shipping_cost_zar), presCur)
+        : formatCurrency(totals.total_shipping_cost_zar),
+    ],
     [
       isExport ? `Total Landed Cost (${presCur})` : 'Total Landed Cost',
       isExport
