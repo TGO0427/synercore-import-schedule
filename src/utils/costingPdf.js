@@ -35,6 +35,97 @@ const addWatermark = (doc) => {
   }
 };
 
+/**
+ * Compute autoTable columnStyles with cellWidth sized to actual content.
+ * Measures the widest rendered string per column (header + body) at the
+ * given font size and adds horizontal padding. Prevents currency/numeric
+ * values from line-wrapping when amounts grow beyond eyeballed constants.
+ *
+ * @param {jsPDF} doc
+ * @param {Array<Array<string>>} head  e.g. [['Product', 'Weight\n(kg)', ...]]
+ * @param {Array<Array<string>>} body  rendered row strings
+ * @param {object} options
+ *   fontSize        - body font size (must match autoTable styles.fontSize)
+ *   headFontSize    - header font size (must match headStyles.fontSize)
+ *   paddingX        - horizontal cell padding total in mm (left + right)
+ *   minWidth        - default min column width in mm
+ *   maxTotalWidth   - if set, table is scaled down proportionally to fit
+ *   overrides       - per-column: { halign, fontStyle, overflow, minWidth,
+ *                     maxWidth, cellWidth (forces exact width) }
+ * @returns {object} columnStyles keyed by column index
+ */
+const computeColumnWidths = (doc, head, body, options = {}) => {
+  const {
+    fontSize = 6,
+    headFontSize = 6,
+    paddingX = 2,
+    minWidth = 8,
+    maxTotalWidth = null,
+    overrides = {},
+  } = options;
+
+  const headerRow = head[0] || [];
+  const columnCount = Math.max(headerRow.length, ...body.map(r => r.length));
+  const prevFontSize = doc.getFontSize();
+
+  const widestLine = (text) => {
+    const lines = String(text ?? '').split('\n');
+    return lines.reduce((max, line) => Math.max(max, doc.getTextWidth(line)), 0);
+  };
+
+  doc.setFontSize(headFontSize);
+  const headerWidths = Array.from({ length: columnCount }, (_, i) =>
+    widestLine(headerRow[i])
+  );
+
+  doc.setFontSize(fontSize);
+  const bodyWidths = new Array(columnCount).fill(0);
+  body.forEach(row => {
+    row.forEach((cell, i) => {
+      if (i >= columnCount) return;
+      const w = widestLine(cell);
+      if (w > bodyWidths[i]) bodyWidths[i] = w;
+    });
+  });
+
+  doc.setFontSize(prevFontSize);
+
+  const widths = [];
+  for (let i = 0; i < columnCount; i++) {
+    const ov = overrides[i] || {};
+    if (typeof ov.cellWidth === 'number') {
+      widths.push(ov.cellWidth);
+      continue;
+    }
+    const content = Math.max(headerWidths[i], bodyWidths[i]);
+    let w = content + paddingX;
+    const colMin = ov.minWidth ?? minWidth;
+    const colMax = ov.maxWidth ?? Infinity;
+    if (w < colMin) w = colMin;
+    if (w > colMax) w = colMax;
+    widths.push(w);
+  }
+
+  if (maxTotalWidth) {
+    const total = widths.reduce((s, w) => s + w, 0);
+    if (total > maxTotalWidth) {
+      const scale = maxTotalWidth / total;
+      for (let i = 0; i < widths.length; i++) widths[i] = widths[i] * scale;
+    }
+  }
+
+  const columnStyles = {};
+  for (let i = 0; i < columnCount; i++) {
+    const ov = overrides[i] || {};
+    columnStyles[i] = { cellWidth: widths[i] };
+    if (ov.halign) columnStyles[i].halign = ov.halign;
+    if (ov.fontStyle) columnStyles[i].fontStyle = ov.fontStyle;
+    if (ov.overflow) columnStyles[i].overflow = ov.overflow;
+  }
+
+  return columnStyles;
+};
+
 // Shared helper: filter rows where the last column is zero or empty/dash
 const filterZeroRows = (rows) => rows.filter(row => {
   const value = row[row.length - 1];
@@ -307,9 +398,32 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
       let allocY = doc.lastAutoTable.finalY + 4;
       allocY = drawSectionDivider(doc, allocY, 'Product Cost Allocation', [22, 101, 52]);
 
+      const allocHead = [['Product', 'Weight\n(kg)', 'Wt %', 'Invoice Value', 'Customs Val\n(ZAR)', 'Import\nDuty', 'Sch1\nDuty', 'Cost/kg\n(ZAR)', shippingLabel, 'Transport\n/kg', 'Total\nLanded', 'Cost/kg']];
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const allocColumnStyles = computeColumnWidths(doc, allocHead, allocationRows, {
+        fontSize: 6,
+        headFontSize: 6,
+        paddingX: 2,
+        maxTotalWidth: pageWidth - 16,
+        overrides: {
+          0: { halign: 'left', overflow: 'linebreak', minWidth: 20 },
+          1: { halign: 'right' },
+          2: { halign: 'right' },
+          3: { halign: 'right' },
+          4: { halign: 'right' },
+          5: { halign: 'right' },
+          6: { halign: 'right' },
+          7: { halign: 'right', fontStyle: 'bold' },
+          8: { halign: 'right' },
+          9: { halign: 'right', fontStyle: 'bold' },
+          10: { halign: 'right', fontStyle: 'bold' },
+          11: { halign: 'right', fontStyle: 'bold' },
+        },
+      });
+
       autoTable(doc, {
         startY: allocY + 1,
-        head: [['Product', 'Weight\n(kg)', 'Wt %', 'Invoice Value', 'Customs Val\n(ZAR)', 'Import\nDuty', 'Sch1\nDuty', 'Cost/kg\n(ZAR)', shippingLabel, 'Transport\n/kg', 'Total\nLanded', 'Cost/kg']],
+        head: allocHead,
         body: allocationRows,
         theme: 'striped',
         tableWidth: 'wrap',
@@ -328,20 +442,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
           cellPadding: { top: 1.5, right: 1, bottom: 1.5, left: 1 },
           overflow: 'linebreak',
         },
-        columnStyles: {
-          0: { cellWidth: 22, overflow: 'linebreak' },
-          1: { halign: 'right', cellWidth: 12 },
-          2: { halign: 'right', cellWidth: 10 },
-          3: { halign: 'right', cellWidth: 19 },
-          4: { halign: 'right', cellWidth: 20 },
-          5: { halign: 'right', cellWidth: 16 },
-          6: { halign: 'right', cellWidth: 14 },
-          7: { halign: 'right', cellWidth: 13, fontStyle: 'bold' },
-          8: { halign: 'right', cellWidth: 18 },
-          9: { halign: 'right', cellWidth: 13, fontStyle: 'bold' },
-          10: { halign: 'right', cellWidth: 19, fontStyle: 'bold' },
-          11: { halign: 'right', cellWidth: 12, fontStyle: 'bold' },
-        },
+        columnStyles: allocColumnStyles,
         didParseCell: (data) => {
           if (data.section === 'body' && data.row.index === allocationRows.length - 1) {
             data.cell.styles.fontStyle = 'bold';
