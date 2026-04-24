@@ -250,6 +250,22 @@ export default async function addCostingColumns() {
   await query(`CREATE INDEX IF NOT EXISTS idx_cost_estimates_direction ON import_cost_estimates(direction)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_cost_estimates_customer ON import_cost_estimates(customer_id)`);
 
+  // Export Charges (replace Destination Charges section in export mode)
+  const exportChargeColumns = [
+    'export_landside_charges_zar NUMERIC(12,2) DEFAULT 0',
+    'export_declaration_zar NUMERIC(12,2) DEFAULT 0',
+    'vgm_zar NUMERIC(12,2) DEFAULT 0',
+    'cto_navis_fee_zar NUMERIC(12,2) DEFAULT 0',
+    'export_cargo_dues_zar NUMERIC(12,2) DEFAULT 0',
+    'disbursement_fee_zar NUMERIC(12,2) DEFAULT 0',
+    'disbursement_fee_percentage NUMERIC(5,2) DEFAULT 1.4',
+    'disbursement_fee_min NUMERIC(12,2) DEFAULT 306',
+    'export_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0',
+  ];
+  for (const col of exportChargeColumns) {
+    if (await addColumn(col)) added++;
+  }
+
   if (added > 0) {
     console.log(`✓ Added ${added} new costing columns`);
   } else {

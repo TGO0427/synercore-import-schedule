@@ -91,6 +91,23 @@ export const calculateAgencyFee = (dutiesAndVat, percentage = COSTING_DEFAULTS.A
 };
 
 /**
+ * Calculate Export Charges subtotal — replaces destination charges in export mode.
+ * Sums the seven invoice line items (Landside, Export Declaration, VGM,
+ * CTO & Navis, Cargo Dues, Agency Fee, Disbursement Fee).
+ */
+export const calculateExportChargesSubtotal = (data) => {
+  return (
+    (parseFloat(data.export_landside_charges_zar) || 0) +
+    (parseFloat(data.export_declaration_zar) || 0) +
+    (parseFloat(data.vgm_zar) || 0) +
+    (parseFloat(data.cto_navis_fee_zar) || 0) +
+    (parseFloat(data.export_cargo_dues_zar) || 0) +
+    (parseFloat(data.agency_fee_zar) || 0) +
+    (parseFloat(data.disbursement_fee_zar) || 0)
+  );
+};
+
+/**
  * Calculate customs totals from products
  */
 export const calculateCustomsItemsTotals = (data) => {
@@ -235,28 +252,47 @@ export const calculateAllTotals = (data) => {
   const originChargeEurZar = calculateEurChargeZAR(originChargeEur, roeEur);
   const totalOriginChargesZar = originChargeUsdZar + originChargeEurZar;
 
+  const isExport = data.direction === 'export';
+
   // Local charges subtotal (transport/cartage)
   const localChargesSubtotalZar = calculateLocalChargesSubtotal(data);
 
   // Destination charges subtotal (port/shipping)
-  const destinationChargesSubtotalZar = calculateDestinationSubtotal(data);
-
-  // Import VAT (15% of customs value + duties)
+  // For export, this is replaced by Export Charges (Landside, Declaration, VGM,
+  // CTO/Navis, Cargo Dues, Agency Fee, Disbursement Fee).
   const importVatZar = customsItemsTotals.totalVat;
-
-  // Total duties and Import VAT (base for agency fee calculation)
   const totalDutiesAndVat = customsItemsTotals.totalDuties + customsItemsTotals.totalSchedule1Duty + importVatZar;
 
-  // Agency fee: 3.5% of (duties + Import VAT), min R1187
   const agencyFeePercent = parseFloat(data.agency_fee_percentage) || COSTING_DEFAULTS.AGENCY_FEE_PERCENT;
   const agencyFeeMin = parseFloat(data.agency_fee_min) || COSTING_DEFAULTS.AGENCY_FEE_MINIMUM_ZAR;
-  const agencyFeeZar = calculateAgencyFee(totalDutiesAndVat, agencyFeePercent, agencyFeeMin);
+  // For export, agency fee falls back to its minimum (no duties to base % on).
+  const agencyFeeZar = isExport
+    ? (parseFloat(data.agency_fee_zar) || agencyFeeMin)
+    : calculateAgencyFee(totalDutiesAndVat, agencyFeePercent, agencyFeeMin);
 
-  // Customs subtotal from items + declaration + agency (EXCLUDING Import VAT - not charged to clients)
-  const customsSubtotalZar = customsItemsTotals.totalCustomsValue > 0
-    ? (customsItemsTotals.totalDuties + customsItemsTotals.totalSchedule1Duty +
-       (parseFloat(data.customs_declaration_zar) || 0) + agencyFeeZar)
-    : calculateCustomsSubtotal(data, agencyFeeZar);
+  const exportChargesSubtotalZar = isExport
+    ? (
+        (parseFloat(data.export_landside_charges_zar) || 0) +
+        (parseFloat(data.export_declaration_zar) || 0) +
+        (parseFloat(data.vgm_zar) || 0) +
+        (parseFloat(data.cto_navis_fee_zar) || 0) +
+        (parseFloat(data.export_cargo_dues_zar) || 0) +
+        agencyFeeZar +
+        (parseFloat(data.disbursement_fee_zar) || 0)
+      )
+    : 0;
+
+  const destinationChargesSubtotalZar = isExport
+    ? exportChargesSubtotalZar
+    : calculateDestinationSubtotal(data);
+
+  // Customs subtotal: zero for export (no SA customs/duties on outbound).
+  const customsSubtotalZar = isExport
+    ? 0
+    : (customsItemsTotals.totalCustomsValue > 0
+        ? (customsItemsTotals.totalDuties + customsItemsTotals.totalSchedule1Duty +
+           (parseFloat(data.customs_declaration_zar) || 0) + agencyFeeZar)
+        : calculateCustomsSubtotal(data, agencyFeeZar));
 
   const isAirfreight = (data.transport_mode || 'sea') === 'air';
 
@@ -350,6 +386,7 @@ export const calculateAllTotals = (data) => {
     total_origin_charges_zar: r(totalOriginChargesZar),
     local_charges_subtotal_zar: r(localChargesSubtotalZar),
     destination_charges_subtotal_zar: r(destinationChargesSubtotalZar),
+    export_charges_subtotal_zar: r(exportChargesSubtotalZar),
     import_vat_zar: r(importVatZar),
     total_duties_zar: r(customsItemsTotals.totalDuties + customsItemsTotals.totalSchedule1Duty),
     agency_fee_zar: r(agencyFeeZar),

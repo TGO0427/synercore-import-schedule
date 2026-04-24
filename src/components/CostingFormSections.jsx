@@ -573,41 +573,64 @@ function CostingFormSections({
         </div>
       </div>
 
-      {/* Section: Destination Charges (Port/Shipping) */}
-      <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#eff6ff', borderRadius: '8px' }}>
-        <h4 style={{ margin: '0 0 1rem', color: '#1e40af', fontSize: '1rem' }}>Destination Charges - ZAR <InfoTip text="Port-side fees at discharge: cargo dues, inspections, CTO, and turn-in costs." /></h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-          {currencyInput('Shipping Line Charges (At Cost)', 'shipping_line_charges_zar')}
-          {currencyInput('Cargo Dues (20FT)', 'cargo_dues_20ft_zar')}
-          {currencyInput('Cargo Dues (40FT)', 'cargo_dues_40ft_zar')}
-          {currencyInput('CTO Fee', 'cto_fee_zar')}
-          {currencyInput('Port Health Inspection', 'port_health_inspection_zar')}
-          {currencyInput('DAFF Inspection', 'daff_inspection_zar')}
-          {currencyInput('State Vet Cancellation Fee', 'state_vet_cancellation_fee_zar')}
-          {currencyInput('JNB Turn In (At Cost)', 'jnb_turn_in_zar')}
-          {currencyInput('Bill of Lading Fee', 'bill_of_lading_fee_zar')}
-          {currencyInput('RCG Manifest Filing', 'manifest_filing_zar')}
-          {currencyInput('Currency Adjustment Factor (CAF)', 'currency_adjustment_factor_zar')}
-          {currencyInput('Degrouping', 'degrouping_zar')}
-          {currencyInput('EDI Fee', 'edi_fee_zar')}
-          {currencyInput('Communication', 'communication_dest_zar')}
-          {currencyInput('Documentation Fee', 'documentation_fee_dest_zar')}
-          {currencyInput('CFS LCL Handling Out', 'cfs_lcl_handling_out_zar')}
-          {currencyInput('Delivery Release Order (DRO)', 'delivery_release_order_zar')}
-          {currencyInput('Cartage', 'cartage_dest_zar')}
-          {currencyInput('Fuel Surcharge', 'fuel_surcharge_dest_zar')}
-          {currencyInput('Agency Fee', 'agency_fee_dest_zar')}
-          {currencyInput('Facility Fee', 'facility_fee_zar')}
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>
-              Destination Sub-Total - Auto
-            </label>
-            <div style={{ padding: '8px 12px', backgroundColor: '#dbeafe', borderRadius: '6px', fontWeight: '600', color: '#1e40af' }}>
-              {formatCurrency(calculatedTotals.destination_charges_subtotal_zar)}
+      {/* Section: Destination Charges (import) OR Export Charges (export) */}
+      {isExport ? (
+        <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#eff6ff', borderRadius: '8px' }}>
+          <h4 style={{ margin: '0 0 1rem', color: '#1e40af', fontSize: '1rem' }}>Export Charges - ZAR <InfoTip text="Outbound port and clearance fees: landside, declaration, VGM, CTO/Navis, cargo dues, agency, and disbursement." /></h4>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+            {currencyInput('Landside Charges', 'export_landside_charges_zar')}
+            {currencyInput('Export Declaration', 'export_declaration_zar')}
+            {currencyInput('VGM (Verified Gross Mass)', 'vgm_zar')}
+            {currencyInput('CTO & Navis Fee', 'cto_navis_fee_zar')}
+            {currencyInput('Cargo Dues', 'export_cargo_dues_zar')}
+            {currencyInput('Agency Fee', 'agency_fee_zar', 'ZAR', 'Per shipment @ 3.5% min R1187 — defaults to the R1187 minimum.')}
+            {currencyInput('Disbursement Fee', 'disbursement_fee_zar', 'ZAR', 'Per shipment @ 1.4% min R306.')}
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>
+                Export Charges Sub-Total - Auto
+              </label>
+              <div style={{ padding: '8px 12px', backgroundColor: '#dbeafe', borderRadius: '6px', fontWeight: '600', color: '#1e40af' }}>
+                {formatCurrency(calculatedTotals.export_charges_subtotal_zar || calculatedTotals.destination_charges_subtotal_zar)}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#eff6ff', borderRadius: '8px' }}>
+          <h4 style={{ margin: '0 0 1rem', color: '#1e40af', fontSize: '1rem' }}>Destination Charges - ZAR <InfoTip text="Port-side fees at discharge: cargo dues, inspections, CTO, and turn-in costs." /></h4>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+            {currencyInput('Shipping Line Charges (At Cost)', 'shipping_line_charges_zar')}
+            {currencyInput('Cargo Dues (20FT)', 'cargo_dues_20ft_zar')}
+            {currencyInput('Cargo Dues (40FT)', 'cargo_dues_40ft_zar')}
+            {currencyInput('CTO Fee', 'cto_fee_zar')}
+            {currencyInput('Port Health Inspection', 'port_health_inspection_zar')}
+            {currencyInput('DAFF Inspection', 'daff_inspection_zar')}
+            {currencyInput('State Vet Cancellation Fee', 'state_vet_cancellation_fee_zar')}
+            {currencyInput('JNB Turn In (At Cost)', 'jnb_turn_in_zar')}
+            {currencyInput('Bill of Lading Fee', 'bill_of_lading_fee_zar')}
+            {currencyInput('RCG Manifest Filing', 'manifest_filing_zar')}
+            {currencyInput('Currency Adjustment Factor (CAF)', 'currency_adjustment_factor_zar')}
+            {currencyInput('Degrouping', 'degrouping_zar')}
+            {currencyInput('EDI Fee', 'edi_fee_zar')}
+            {currencyInput('Communication', 'communication_dest_zar')}
+            {currencyInput('Documentation Fee', 'documentation_fee_dest_zar')}
+            {currencyInput('CFS LCL Handling Out', 'cfs_lcl_handling_out_zar')}
+            {currencyInput('Delivery Release Order (DRO)', 'delivery_release_order_zar')}
+            {currencyInput('Cartage', 'cartage_dest_zar')}
+            {currencyInput('Fuel Surcharge', 'fuel_surcharge_dest_zar')}
+            {currencyInput('Agency Fee', 'agency_fee_dest_zar')}
+            {currencyInput('Facility Fee', 'facility_fee_zar')}
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>
+                Destination Sub-Total - Auto
+              </label>
+              <div style={{ padding: '8px 12px', backgroundColor: '#dbeafe', borderRadius: '6px', fontWeight: '600', color: '#1e40af' }}>
+                {formatCurrency(calculatedTotals.destination_charges_subtotal_zar)}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       </>
       )}
@@ -831,8 +854,8 @@ function CostingFormSections({
                   <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600' }}>Duties</th>
                   <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600' }}>Shipping Alloc.</th>
                   <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600' }}>Transport Cost/kg</th>
-                  <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', backgroundColor: '#059669' }}>Total Landed</th>
-                  <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', backgroundColor: '#059669' }}>Cost/kg</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', backgroundColor: '#059669' }}>Total Landed{isExport ? ' (USD)' : ''}</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', backgroundColor: '#059669' }}>Cost/kg{isExport ? ' (USD)' : ''}</th>
                 </tr>
               </thead>
               <tbody>
@@ -840,6 +863,9 @@ function CostingFormSections({
                   const allocation = calculateProductAllocation(product);
                   const customs = calculateProductCustomsValues(product);
                   const productWeight = parseFloat(product.weight_kg) || 0;
+                  const fxRate = parseFloat(formData.roe_origin) || 0;
+                  const toForeign = (zar) => (isExport && fxRate > 0 ? zar / fxRate : zar);
+                  const landedCurrency = isExport ? 'USD' : 'ZAR';
                   return (
                     <tr key={product._id || index} style={{ backgroundColor: index % 2 === 0 ? '#ecfdf5' : '#d1fae5' }}>
                       <td style={{ padding: '8px', fontWeight: '500', color: '#065f46' }}>
@@ -864,15 +890,20 @@ function CostingFormSections({
                         {formatCurrency(allocation.transportCostPerKg)}
                       </td>
                       <td style={{ padding: '8px', textAlign: 'right', fontWeight: '700', color: '#065f46', backgroundColor: '#a7f3d0' }}>
-                        {formatCurrency(allocation.totalProductCost)}
+                        {formatCurrency(toForeign(allocation.totalProductCost), landedCurrency)}
                       </td>
                       <td style={{ padding: '8px', textAlign: 'right', fontWeight: '700', color: '#065f46', backgroundColor: '#a7f3d0' }}>
-                        {formatCurrency(allocation.costPerKg)}
+                        {formatCurrency(toForeign(allocation.costPerKg), landedCurrency)}
                       </td>
                     </tr>
                   );
                 })}
                 {/* Totals Row */}
+                {(() => {
+                  const fxRate = parseFloat(formData.roe_origin) || 0;
+                  const toForeign = (zar) => (isExport && fxRate > 0 ? zar / fxRate : zar);
+                  const landedCurrency = isExport ? 'USD' : 'ZAR';
+                  return (
                 <tr style={{ backgroundColor: '#059669', color: 'white', fontWeight: '700' }}>
                   <td style={{ padding: '10px 8px' }}>TOTALS</td>
                   <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatNumber(getTotalWeight())} kg</td>
@@ -892,9 +923,11 @@ function CostingFormSections({
                         ) / getTotalWeight()
                       : 0
                   )}</td>
-                  <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(calculatedTotals.total_landed_cost_zar)}</td>
-                  <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(calculatedTotals.all_in_warehouse_cost_per_kg_zar)}</td>
+                  <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(toForeign(calculatedTotals.total_landed_cost_zar), landedCurrency)}</td>
+                  <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(toForeign(calculatedTotals.all_in_warehouse_cost_per_kg_zar), landedCurrency)}</td>
                 </tr>
+                  );
+                })()}
               </tbody>
             </table>
           </div>
@@ -909,14 +942,23 @@ function CostingFormSections({
             <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px' }}>Total Shipping Cost</div>
             <div style={{ fontSize: '1.25rem', fontWeight: '700' }}>{formatCurrency(calculatedTotals.total_shipping_cost_zar)}</div>
           </div>
-          <div>
-            <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px' }}>Total Landed Cost</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#10b981' }}>{formatCurrency(calculatedTotals.total_landed_cost_zar)}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px' }}>Landed Cost/KG</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#f59e0b' }}>{formatCurrency(calculatedTotals.all_in_warehouse_cost_per_kg_zar)}</div>
-          </div>
+          {(() => {
+            const fxRate = parseFloat(formData.roe_origin) || 0;
+            const toForeign = (zar) => (isExport && fxRate > 0 ? zar / fxRate : zar);
+            const cur = isExport ? 'USD' : 'ZAR';
+            return (
+              <>
+                <div>
+                  <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px' }}>Total Landed Cost{isExport ? ' (USD)' : ''}</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#10b981' }}>{formatCurrency(toForeign(calculatedTotals.total_landed_cost_zar), cur)}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px' }}>Landed Cost/KG{isExport ? ' (USD)' : ''}</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#f59e0b' }}>{formatCurrency(toForeign(calculatedTotals.all_in_warehouse_cost_per_kg_zar), cur)}</div>
+                </div>
+              </>
+            );
+          })()}
           <div>
             <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px' }}>Status</div>
             <select
