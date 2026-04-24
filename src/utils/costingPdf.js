@@ -242,6 +242,7 @@ const checkPageBreak = (doc, y, neededHeight) => {
 const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
   const products = estimate.products || [];
   const isAir = (estimate.transport_mode || 'sea') === 'air';
+  const isExport = estimate.direction === 'export';
   const pageWidth = doc.internal.pageSize.width;
 
   // === FULL-WIDTH COLOR BAR ===
@@ -258,7 +259,8 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
   // Estimate type right side
   doc.setFontSize(11);
   doc.setFont(undefined, 'normal');
-  const titleText = isAir ? 'Air Freight Cost Estimate' : 'Import Cost Estimate';
+  const direction = isExport ? 'Export' : 'Import';
+  const titleText = isAir ? `Air Freight ${direction} Cost Estimate` : `${direction} Cost Estimate`;
   const titleWidth = doc.getTextWidth(titleText);
   doc.text(titleText, pageWidth - titleWidth - 10, 11);
 
@@ -268,7 +270,9 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
   doc.setFontSize(8);
   doc.setTextColor(71, 85, 105);
   doc.setFont(undefined, 'normal');
-  const infoText = `Reference: ${estimate.reference_number || 'N/A'}     Date: ${formatDate(estimate.costing_date)}     Supplier: ${estimate.supplier_name || 'N/A'}`;
+  const infoText = isExport
+    ? `Reference: ${estimate.reference_number || 'N/A'}     Date: ${formatDate(estimate.costing_date)}     Exporter: ${estimate.supplier_name || 'N/A'}     Customer: ${estimate.customer_name || 'N/A'}`
+    : `Reference: ${estimate.reference_number || 'N/A'}     Date: ${formatDate(estimate.costing_date)}     Supplier: ${estimate.supplier_name || 'N/A'}`;
   doc.text(infoText, 10, 22);
 
   // === ROE INFO BOX (right-aligned, below info strip) ===

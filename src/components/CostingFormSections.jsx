@@ -240,6 +240,29 @@ function CostingFormSections({
               <div style={{ fontSize: '0.75rem', color: '#92400e' }}>Total Weight</div>
               <div style={{ fontSize: '1.1rem', fontWeight: '700', color: '#78350f' }}>{formatNumber(getTotalWeight())} kg</div>
             </div>
+            {isExport && (() => {
+              const totalZar = (formData.products || []).reduce(
+                (sum, p) => sum + (p.currency === 'ZAR' ? (parseFloat(p.invoice_value) || 0) : 0), 0
+              );
+              const roe = parseFloat(formData.roe_origin) || 0;
+              const roeEur = parseFloat(formData.roe_eur) || 0;
+              return (
+                <>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#92400e' }}>Total ZAR</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: '700', color: '#78350f' }}>{formatCurrency(totalZar, 'ZAR')}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#92400e' }}>≈ USD</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: '700', color: '#78350f' }}>{formatCurrency(roe > 0 ? totalZar / roe : 0, 'USD')}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#92400e' }}>≈ EUR</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: '700', color: '#78350f' }}>{formatCurrency(roeEur > 0 ? totalZar / roeEur : 0, 'EUR')}</div>
+                  </div>
+                </>
+              );
+            })()}
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '0.75rem', color: '#92400e' }}>Total USD</div>
               <div style={{ fontSize: '1.1rem', fontWeight: '700', color: '#78350f' }}>{formatCurrency((formData.products || []).reduce((sum, p) => sum + (p.currency === 'USD' ? (parseFloat(p.invoice_value) || 0) : 0), 0), 'USD')}</div>

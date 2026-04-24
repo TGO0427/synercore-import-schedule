@@ -90,7 +90,7 @@ const INITIAL_FORM_STATE = {
   facility_fee_zar: 0,
   // Products being exported
   products: [
-    { _id: Date.now(), name: '', hs_code: '', pack_size: '', pack_type: '', weight_kg: 0, rate_per_kg: 0, duty_percent: 0, duty_schedule1_percent: 0, currency: 'USD', invoice_value: 0 }
+    { _id: Date.now(), name: '', hs_code: '', pack_size: '', pack_type: '', weight_kg: 0, rate_per_kg: 0, duty_percent: 0, duty_schedule1_percent: 0, currency: 'ZAR', invoice_value: 0 }
   ],
   // Customs & Duties (export side — typically minimal but structure preserved)
   roe_customs: '',
@@ -288,7 +288,7 @@ function ExportCosting() {
       ...prev,
       products: [
         ...prev.products,
-        { _id: Date.now() + Math.random(), name: '', hs_code: '', pack_size: '', pack_type: '', weight_kg: 0, rate_per_kg: 0, duty_percent: 0, duty_schedule1_percent: 0, currency: 'USD', invoice_value: 0 }
+        { _id: Date.now() + Math.random(), name: '', hs_code: '', pack_size: '', pack_type: '', weight_kg: 0, rate_per_kg: 0, duty_percent: 0, duty_schedule1_percent: 0, currency: 'ZAR', invoice_value: 0 }
       ]
     }));
   };
