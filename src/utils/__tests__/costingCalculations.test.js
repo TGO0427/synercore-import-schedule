@@ -5,7 +5,6 @@ import {
   calculateDestinationSubtotal,
   calculateAgencyFee,
   calculateCustomsItemsTotals,
-  calculateCustomsSubtotal,
   calculateEurChargeZAR,
   calculateCustomsValue,
   calculateAllTotals,
@@ -354,7 +353,7 @@ describe('calculateAllTotals', () => {
 
   it('rounds all values to 2 decimal places', () => {
     const result = calculateAllTotals(sampleData);
-    for (const [key, val] of Object.entries(result)) {
+    for (const [_key, val] of Object.entries(result)) {
       if (typeof val === 'number') {
         const decimalPlaces = (val.toString().split('.')[1] || '').length;
         expect(decimalPlaces).toBeLessThanOrEqual(2);

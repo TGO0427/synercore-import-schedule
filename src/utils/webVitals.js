@@ -174,6 +174,7 @@ export function getMetricRating(metricName, value) {
 /**
  * Log metrics to console in development
  */
+/* eslint-disable no-console */
 export function logWebVitalsToConsole() {
   if (process.env.NODE_ENV !== 'development') return;
 
@@ -201,6 +202,7 @@ export function logWebVitalsToConsole() {
     console.warn('Failed to log Web Vitals:', error);
   }
 }
+/* eslint-enable no-console */
 
 export default {
   initWebVitals,

@@ -37,7 +37,7 @@ export class Supplier {
 
   update(data) {
     Object.keys(data).forEach(key => {
-      if (this.hasOwnProperty(key) && key !== 'id' && key !== 'createdAt') {
+      if (Object.prototype.hasOwnProperty.call(this, key) && key !== 'id' && key !== 'createdAt') {
         this[key] = data[key];
       }
     });

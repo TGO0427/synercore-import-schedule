@@ -13,7 +13,7 @@ export const REGEX_PATTERNS = {
   NUMERIC: /^[0-9]+$/,
   DECIMAL: /^[0-9]*\.?[0-9]+$/,
   URL: /^https?:\/\/.+/,
-  PHONE: /^[\d\s\-\+\(\)]+$/
+  PHONE: /^[\d\s\-+()]+$/
 };
 
 // ============ VALIDATION MESSAGES ============

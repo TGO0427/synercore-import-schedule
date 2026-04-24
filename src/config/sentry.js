@@ -25,6 +25,7 @@ const MODE = import.meta.env.MODE || 'development';
  * - Set appropriate sample rates to minimize data collection
  */
 export function initializeSentry() {
+  // eslint-disable-next-line no-console
   console.log(
     'Sentry frontend initialized (production)',
     MODE,
@@ -125,7 +126,7 @@ export function initializeSentry() {
         return event;
       },
 
-      beforeBreadcrumb(breadcrumb, hint) {
+      beforeBreadcrumb(breadcrumb, _hint) {
         // Security: Filter sensitive breadcrumbs
 
         // Don't track navigation to sensitive pages

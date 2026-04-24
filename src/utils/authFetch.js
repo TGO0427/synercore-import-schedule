@@ -43,7 +43,7 @@ function isRetryable(error, response) {
 export async function authFetch(url, options = {}) {
   const MAX_RETRIES = 3;
   const BASE_DELAY = 2000;
-  let lastError = null;
+  let _lastError = null;
   let response = null;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -65,7 +65,7 @@ export async function authFetch(url, options = {}) {
 
       // Server error — retryable
       if (isRetryable(null, response)) {
-        lastError = new Error(`Server error ${response.status}`);
+        _lastError = new Error(`Server error ${response.status}`);
         if (attempt < MAX_RETRIES) {
           await new Promise(r => setTimeout(r, BASE_DELAY * Math.pow(2, attempt - 1)));
           continue;
@@ -75,7 +75,7 @@ export async function authFetch(url, options = {}) {
         break;
       }
     } catch (error) {
-      lastError = error;
+      _lastError = error;
       if (isRetryable(error, null) && attempt < MAX_RETRIES) {
         await new Promise(r => setTimeout(r, BASE_DELAY * Math.pow(2, attempt - 1)));
         continue;

@@ -144,8 +144,6 @@ export function computeShipmentAlerts(shipments) {
         isOverdue = scheduledDate < currentDate && (currentDate - scheduledDate) > (7 * 24 * 60 * 60 * 1000);
       } else {
         // Fallback to week number comparison only for current year
-        const currentYear = new Date().getFullYear();
-        // Only compare weeks if we're in the same year context
         isOverdue = shipmentWeek < currentWeek;
       }
 

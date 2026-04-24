@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { authUtils } from '../utils/auth';
 import SynercoreLogo from './SynercoreLogo';
-import loginIllustration from '../assets/login-illustration.png';
+import loginIllustration from '../assets/login-illustration.webp';
 
 const REMEMBERED_USERNAME_KEY = 'synercore_remembered_username';
 

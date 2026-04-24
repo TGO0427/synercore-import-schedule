@@ -134,7 +134,7 @@ export class CapacityForecast {
    * Generate smart recommendations based on forecast
    * Checks all warehouses for alerts and provides recommendations
    */
-  static generateRecommendation(warehouseData, weekOffset) {
+  static generateRecommendation(warehouseData, _weekOffset) {
     const pretoriaData = warehouseData['PRETORIA'];
     const klapmutsData = warehouseData['KLAPMUTS'];
     const offsiteData = warehouseData['OFFSITE'];

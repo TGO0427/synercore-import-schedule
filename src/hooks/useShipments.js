@@ -244,7 +244,7 @@ export function useShipments() {
             notes = '';
           } else {
             // Match date patterns: YYYY/MM/DD, YYYY-MM-DD, DD/MM/YYYY
-            const dateMatch = trimmed.match(/^\d{4}[\/-]\d{2}[\/-]\d{2}$/) || trimmed.match(/^\d{2}[\/-]\d{2}[\/-]\d{4}$/);
+            const dateMatch = trimmed.match(/^\d{4}[/-]\d{2}[/-]\d{2}$/) || trimmed.match(/^\d{2}[/-]\d{2}[/-]\d{4}$/);
             if (dateMatch) {
               vesselName = trimmed;
               notes = '';

@@ -20,6 +20,7 @@ const getSocketURL = () => {
 // Helper to log connection diagnostics
 const logDiagnostics = (message, data = {}) => {
   const timestamp = new Date().toISOString();
+  // eslint-disable-next-line no-console
   console.log(`[${timestamp}] [SocketClient] ${message}`, data);
 };
 

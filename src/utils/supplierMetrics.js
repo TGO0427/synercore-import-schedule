@@ -70,6 +70,7 @@ export class SupplierMetrics {
       ? Math.round((deliveredShipments.length / totalWarehouseShipments) * 100)
       : 0;
 
+    // eslint-disable-next-line no-console
     console.log(`[SupplierMetrics] On-time (Warehouse): ${supplierName}`, {
       totalShipments: supplierShipments.length,
       inWarehouse: totalWarehouseShipments,
@@ -115,6 +116,7 @@ export class SupplierMetrics {
 
     const percentage = Math.round((passedShipments.length / warehouseInspected.length) * 100);
 
+    // eslint-disable-next-line no-console
     console.log(`[SupplierMetrics] Inspection (Warehouse): ${supplierName}`, {
       totalShipments: supplierShipments.length,
       warehouseShipments: warehouseInspected.length,
@@ -167,6 +169,7 @@ export class SupplierMetrics {
       leadTimes.reduce((a, b) => a + b, 0) / leadTimes.length
     );
 
+    // eslint-disable-next-line no-console
     console.log(`[SupplierMetrics] Lead Time (Warehouse): ${supplierName}`, {
       totalShipments: supplierShipments.length,
       warehouseShipments: warehouseWithDates.length,
@@ -318,7 +321,6 @@ export class SupplierMetrics {
   static getWeekKey(date) {
     const d = new Date(date);
     const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
     const week = this.getWeekNumber(d);
     return `${year}-W${String(week).padStart(2, '0')}`;
   }

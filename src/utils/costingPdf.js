@@ -214,12 +214,6 @@ const getProductCostBreakdown = (product, estimate, totals, productTotals) => {
   return { weight, weightRatio, invoiceValue, currency, customsValue, importDuty, schedule1Duty, totalDuties, allocatedShipping, transportCostPerKg, totalLanded, costPerKg };
 };
 
-// Backward-compatible wrapper
-const getProductCostPerKg = (product, estimate, totals, productTotals) => {
-  const bd = getProductCostBreakdown(product, estimate, totals, productTotals);
-  return { costPerKg: bd.costPerKg, totalLanded: bd.totalLanded, allocatedShipping: bd.allocatedShipping };
-};
-
 // Draw a section divider with accent bar and label
 const drawSectionDivider = (doc, y, label, color) => {
   // Accent bar (3px wide, 12px tall)

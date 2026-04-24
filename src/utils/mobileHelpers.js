@@ -247,7 +247,6 @@ export const addSafeAreaPadding = (element, side = 'all') => {
   if (!element) return;
 
   const insets = getSafeAreaInsets();
-  const padding = element.style.padding || '';
 
   if (side === 'top') {
     element.style.paddingTop = `${insets.top}px`;
@@ -371,9 +370,8 @@ export const logMetric = (label, value) => {
   if (typeof window !== 'undefined' && window.performance) {
     try {
       window.performance.mark(`${label}-${Date.now()}`);
-      if (console && console.log) {
-        console.log(`[Metric] ${label}: ${value}ms`);
-      }
+      // eslint-disable-next-line no-console
+      console.log(`[Metric] ${label}: ${value}ms`);
     } catch (err) {
       console.error('Error logging metric:', err);
     }

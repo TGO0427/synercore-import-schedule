@@ -1,5 +1,5 @@
 // src/hooks/useWebSocket.js
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import socketClient from '../utils/socketClient';
 
 /**
@@ -17,7 +17,6 @@ import socketClient from '../utils/socketClient';
 export function useWebSocket() {
   const [isConnected, setIsConnected] = useState(false);
   const [activeShipments, setActiveShipments] = useState(new Set());
-  const listenerRefsRef = useRef({});
 
   // Initialize WebSocket on mount
   useEffect(() => {
