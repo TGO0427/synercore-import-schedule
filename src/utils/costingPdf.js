@@ -337,7 +337,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
           5: { halign: 'right', cellWidth: 16 },
           6: { halign: 'right', cellWidth: 14 },
           7: { halign: 'right', cellWidth: 13, fontStyle: 'bold' },
-          8: { halign: 'right', cellWidth: 15 },
+          8: { halign: 'right', cellWidth: 18 },
           9: { halign: 'right', cellWidth: 13, fontStyle: 'bold' },
           10: { halign: 'right', cellWidth: 19, fontStyle: 'bold' },
           11: { halign: 'right', cellWidth: 12, fontStyle: 'bold' },
