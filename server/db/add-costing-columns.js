@@ -261,6 +261,7 @@ export default async function addCostingColumns() {
     'disbursement_fee_percentage NUMERIC(5,2) DEFAULT 1.4',
     'disbursement_fee_min NUMERIC(12,2) DEFAULT 306',
     'export_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0',
+    "presentation_currency VARCHAR(10) DEFAULT 'USD'",
   ];
   for (const col of exportChargeColumns) {
     if (await addColumn(col)) added++;

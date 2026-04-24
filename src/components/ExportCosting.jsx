@@ -112,6 +112,7 @@ const INITIAL_FORM_STATE = {
   airfreight_insurance_percent: 0,
   notes: '',
   status: 'draft',
+  presentation_currency: 'USD', // 'USD' or 'EUR' — drives the foreign-currency conversion of landed totals
 };
 
 function ExportCosting() {
@@ -600,6 +601,33 @@ function ExportCosting() {
                   >
                     Air Freight
                   </button>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '8px' }}>
+                  <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>Show landed in:</span>
+                  <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '2px solid #e5e7eb' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange('presentation_currency', 'USD')}
+                      style={{
+                        padding: '6px 14px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '0.85rem',
+                        backgroundColor: formData.presentation_currency === 'USD' ? '#059669' : '#f3f4f6',
+                        color: formData.presentation_currency === 'USD' ? 'white' : '#6b7280',
+                      }}
+                    >
+                      USD
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange('presentation_currency', 'EUR')}
+                      style={{
+                        padding: '6px 14px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '0.85rem',
+                        backgroundColor: formData.presentation_currency === 'EUR' ? '#059669' : '#f3f4f6',
+                        color: formData.presentation_currency === 'EUR' ? 'white' : '#6b7280',
+                      }}
+                    >
+                      EUR
+                    </button>
+                  </div>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

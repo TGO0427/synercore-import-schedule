@@ -204,7 +204,7 @@ const COST_ESTIMATE_COLUMNS = [
   'export_landside_charges_zar', 'export_declaration_zar', 'vgm_zar',
   'cto_navis_fee_zar', 'export_cargo_dues_zar', 'disbursement_fee_zar',
   'disbursement_fee_percentage', 'disbursement_fee_min',
-  'export_charges_subtotal_zar',
+  'export_charges_subtotal_zar', 'presentation_currency',
 ];
 
 // Column set for INSERT/UPDATE filtering

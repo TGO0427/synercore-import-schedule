@@ -122,6 +122,13 @@ function CostingFormSections({
 }) {
   // Export mode reverses the inland leg directions (warehouse → port instead of port → warehouse)
   const isExport = partyLabel === 'Customer';
+  // In export mode, landed cost is shown in the user-selected presentation currency.
+  // Defaults to USD; EUR if explicitly toggled. Rate uses roe_origin for USD, roe_eur for EUR.
+  const presentationCurrency = isExport ? (formData.presentation_currency === 'EUR' ? 'EUR' : 'USD') : 'ZAR';
+  const presentationRate = parseFloat(
+    presentationCurrency === 'EUR' ? formData.roe_eur : formData.roe_origin
+  ) || 0;
+  const toPresentation = (zar) => (isExport && presentationRate > 0 ? zar / presentationRate : zar);
   // Shorthand wrappers that bind formData and onInputChange
   const input = (label, field, type = 'text', options = {}, tooltip) =>
     renderInput(formData, onInputChange, label, field, type, options, tooltip);
@@ -854,8 +861,8 @@ function CostingFormSections({
                   <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600' }}>Duties</th>
                   <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600' }}>Shipping Alloc.</th>
                   <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600' }}>Transport Cost/kg</th>
-                  <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', backgroundColor: '#059669' }}>Total Landed{isExport ? ' (USD)' : ''}</th>
-                  <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', backgroundColor: '#059669' }}>Cost/kg{isExport ? ' (USD)' : ''}</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', backgroundColor: '#059669' }}>Total Landed{isExport ? ` (${presentationCurrency})` : ''}</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: '600', backgroundColor: '#059669' }}>Cost/kg{isExport ? ` (${presentationCurrency})` : ''}</th>
                 </tr>
               </thead>
               <tbody>
@@ -863,9 +870,6 @@ function CostingFormSections({
                   const allocation = calculateProductAllocation(product);
                   const customs = calculateProductCustomsValues(product);
                   const productWeight = parseFloat(product.weight_kg) || 0;
-                  const fxRate = parseFloat(formData.roe_origin) || 0;
-                  const toForeign = (zar) => (isExport && fxRate > 0 ? zar / fxRate : zar);
-                  const landedCurrency = isExport ? 'USD' : 'ZAR';
                   return (
                     <tr key={product._id || index} style={{ backgroundColor: index % 2 === 0 ? '#ecfdf5' : '#d1fae5' }}>
                       <td style={{ padding: '8px', fontWeight: '500', color: '#065f46' }}>
@@ -890,20 +894,15 @@ function CostingFormSections({
                         {formatCurrency(allocation.transportCostPerKg)}
                       </td>
                       <td style={{ padding: '8px', textAlign: 'right', fontWeight: '700', color: '#065f46', backgroundColor: '#a7f3d0' }}>
-                        {formatCurrency(toForeign(allocation.totalProductCost), landedCurrency)}
+                        {formatCurrency(toPresentation(allocation.totalProductCost), presentationCurrency)}
                       </td>
                       <td style={{ padding: '8px', textAlign: 'right', fontWeight: '700', color: '#065f46', backgroundColor: '#a7f3d0' }}>
-                        {formatCurrency(toForeign(allocation.costPerKg), landedCurrency)}
+                        {formatCurrency(toPresentation(allocation.costPerKg), presentationCurrency)}
                       </td>
                     </tr>
                   );
                 })}
                 {/* Totals Row */}
-                {(() => {
-                  const fxRate = parseFloat(formData.roe_origin) || 0;
-                  const toForeign = (zar) => (isExport && fxRate > 0 ? zar / fxRate : zar);
-                  const landedCurrency = isExport ? 'USD' : 'ZAR';
-                  return (
                 <tr style={{ backgroundColor: '#059669', color: 'white', fontWeight: '700' }}>
                   <td style={{ padding: '10px 8px' }}>TOTALS</td>
                   <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatNumber(getTotalWeight())} kg</td>
@@ -923,11 +922,9 @@ function CostingFormSections({
                         ) / getTotalWeight()
                       : 0
                   )}</td>
-                  <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(toForeign(calculatedTotals.total_landed_cost_zar), landedCurrency)}</td>
-                  <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(toForeign(calculatedTotals.all_in_warehouse_cost_per_kg_zar), landedCurrency)}</td>
+                  <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(toPresentation(calculatedTotals.total_landed_cost_zar), presentationCurrency)}</td>
+                  <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(toPresentation(calculatedTotals.all_in_warehouse_cost_per_kg_zar), presentationCurrency)}</td>
                 </tr>
-                  );
-                })()}
               </tbody>
             </table>
           </div>
@@ -942,23 +939,14 @@ function CostingFormSections({
             <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px' }}>Total Shipping Cost</div>
             <div style={{ fontSize: '1.25rem', fontWeight: '700' }}>{formatCurrency(calculatedTotals.total_shipping_cost_zar)}</div>
           </div>
-          {(() => {
-            const fxRate = parseFloat(formData.roe_origin) || 0;
-            const toForeign = (zar) => (isExport && fxRate > 0 ? zar / fxRate : zar);
-            const cur = isExport ? 'USD' : 'ZAR';
-            return (
-              <>
-                <div>
-                  <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px' }}>Total Landed Cost{isExport ? ' (USD)' : ''}</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#10b981' }}>{formatCurrency(toForeign(calculatedTotals.total_landed_cost_zar), cur)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px' }}>Landed Cost/KG{isExport ? ' (USD)' : ''}</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#f59e0b' }}>{formatCurrency(toForeign(calculatedTotals.all_in_warehouse_cost_per_kg_zar), cur)}</div>
-                </div>
-              </>
-            );
-          })()}
+          <div>
+            <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px' }}>Total Landed Cost{isExport ? ` (${presentationCurrency})` : ''}</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#10b981' }}>{formatCurrency(toPresentation(calculatedTotals.total_landed_cost_zar), presentationCurrency)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px' }}>Landed Cost/KG{isExport ? ` (${presentationCurrency})` : ''}</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#f59e0b' }}>{formatCurrency(toPresentation(calculatedTotals.all_in_warehouse_cost_per_kg_zar), presentationCurrency)}</div>
+          </div>
           <div>
             <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px' }}>Status</div>
             <select
