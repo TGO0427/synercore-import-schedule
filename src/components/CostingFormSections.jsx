@@ -543,9 +543,9 @@ function CostingFormSections({
         </div>
         <div style={{ marginTop: '1rem', padding: '12px', backgroundColor: '#dcfce7', borderRadius: '6px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontWeight: '500', color: '#166534' }}>Total Origin Charges (ZAR)</span>
+            <span style={{ fontWeight: '500', color: '#166534' }}>Total Origin Charges ({presentationCurrency})</span>
             <span style={{ fontSize: '1.25rem', fontWeight: '700', color: '#166534' }}>
-              {formatCurrency(calculatedTotals.total_origin_charges_zar)}
+              {formatCurrency(toPresentation(calculatedTotals.total_origin_charges_zar), presentationCurrency)}
             </span>
           </div>
         </div>

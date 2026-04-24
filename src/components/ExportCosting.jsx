@@ -163,14 +163,24 @@ function ExportCosting() {
     if (!['FOB', 'FCA', 'EXW'].includes(incoTerms)) return;
 
     const products = formData.products || [];
-    const invoiceTotalUsd = products.reduce(
-      (sum, p) => sum + ((!p.currency || p.currency === 'USD') ? (parseFloat(p.invoice_value) || 0) : 0),
+    const sumByCurrency = (cur) => products.reduce(
+      (sum, p) => sum + ((p.currency === cur) ? (parseFloat(p.invoice_value) || 0) : 0),
       0
     );
-    const invoiceTotalEur = products.reduce(
-      (sum, p) => sum + ((p.currency === 'EUR') ? (parseFloat(p.invoice_value) || 0) : 0),
-      0
-    );
+    const sumUsd = sumByCurrency('USD');
+    const sumEur = sumByCurrency('EUR');
+    const sumZar = sumByCurrency('ZAR');
+
+    const roeUsd = parseFloat(formData.roe_origin) || 0;
+    const roeEur = parseFloat(formData.roe_eur) || 0;
+    const presentation = formData.presentation_currency === 'EUR' ? 'EUR' : 'USD';
+
+    // ZAR-priced products fold into the presentation currency's origin charge,
+    // converted via that currency's ROE.
+    let invoiceTotalUsd = sumUsd;
+    let invoiceTotalEur = sumEur;
+    if (presentation === 'USD' && roeUsd > 0) invoiceTotalUsd += sumZar / roeUsd;
+    if (presentation === 'EUR' && roeEur > 0) invoiceTotalEur += sumZar / roeEur;
 
     const currentUsd = parseFloat(formData.origin_charge_usd) || 0;
     const currentEur = parseFloat(formData.origin_charge_eur) || 0;
@@ -178,11 +188,11 @@ function ExportCosting() {
     if (Math.abs(currentUsd - invoiceTotalUsd) > 0.01 || Math.abs(currentEur - invoiceTotalEur) > 0.01) {
       setFormData(prev => ({
         ...prev,
-        origin_charge_usd: invoiceTotalUsd,
-        origin_charge_eur: invoiceTotalEur,
+        origin_charge_usd: Math.round(invoiceTotalUsd * 100) / 100,
+        origin_charge_eur: Math.round(invoiceTotalEur * 100) / 100,
       }));
     }
-  }, [formData.products, formData.inco_terms, showForm]);
+  }, [formData.products, formData.inco_terms, formData.presentation_currency, formData.roe_origin, formData.roe_eur, showForm]);
 
   const fetchEstimates = async () => {
     try {
