@@ -26,6 +26,7 @@ const HelpGuide = lazy(() => import('./components/HelpGuide'));
 const UserManagement = lazy(() => import('./components/UserManagement'));
 const NotificationPreferences = lazy(() => import('./components/NotificationPreferences'));
 const ImportCosting = lazy(() => import('./components/ImportCosting'));
+const ExportCosting = lazy(() => import('./components/ExportCosting'));
 const CostingRequests = lazy(() => import('./components/CostingRequests'));
 const GlobalSearch = lazy(() => import('./components/GlobalSearch'));
 const LiveBoard = lazy(() => import('./components/LiveBoard'));
@@ -342,6 +343,7 @@ function App() {
     if (path === '/archives') return 'archives';
     if (path === '/rates') return 'rates';
     if (path === '/costing') return 'costing';
+    if (path === '/export-costing') return 'export-costing';
     if (path === '/costing-requests') return 'costing-requests';
     if (path === '/reports') return 'reports';
     if (path === '/advanced-reports') return 'advanced-reports';
@@ -471,6 +473,7 @@ function App() {
             archives: { label: 'Shipment Archives', icon: Package, view: 'archives' },
             rates: { label: 'Rates & Quotes', icon: Wallet, view: 'rates' },
             costing: { label: 'Import Costing', icon: BarChart3, view: 'costing' },
+            exportCosting: { label: 'Export Costing', icon: BarChart3, view: 'export-costing' },
             costingRequests: { label: 'Cost Requests', icon: ClipboardList, view: 'costing-requests', adminOnly: true, badge: costingRequestCount },
             reports: { label: 'Reports', icon: BarChart3, view: 'reports' },
             advancedReports: { label: 'Advanced Reports', icon: TrendingUp, view: 'advanced-reports' },
@@ -565,7 +568,7 @@ function App() {
               {renderSection('Master Data', 'masterData', ['suppliers'])}
               {renderSection('Operations', 'operations', ['shipping', 'localReceiving', 'iwtIncoming', 'workflow', 'bolAudit'])}
               {renderSection('Warehouse', 'warehouse', ['receiving', 'dockManagement', 'capacity', 'stored'])}
-              {renderSection('Finance', 'finance', ['rates', 'costing', 'costingRequests'])}
+              {renderSection('Finance', 'finance', ['rates', 'costing', 'exportCosting', 'costingRequests'])}
               {renderSection('Reports', 'reports', ['reports', 'advancedReports', 'supplierPerformance', 'audit'])}
 
               {!sidebarCollapsed && (!q || resourcesVisible.length > 0) && (
@@ -775,6 +778,9 @@ function App() {
             } />
             <Route path="/costing" element={
               <Suspense fallback={<PageLoader />}><ErrorBoundary><ImportCosting /></ErrorBoundary></Suspense>
+            } />
+            <Route path="/export-costing" element={
+              <Suspense fallback={<PageLoader />}><ErrorBoundary><ExportCosting /></ErrorBoundary></Suspense>
             } />
             <Route path="/costing-requests" element={
               <Suspense fallback={<PageLoader />}><ErrorBoundary>{isAdmin ? <CostingRequests /> : <AccessDenied />}</ErrorBoundary></Suspense>

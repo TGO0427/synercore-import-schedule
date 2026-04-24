@@ -39,6 +39,7 @@ import { swaggerSpec } from './config/swagger.js';
 
 import shipmentsRouter from './routes/shipments.ts';
 import suppliersRouter from './routes/suppliers.ts';
+import customersRouter from './routes/customers.ts';
 import quotesRouter from './routes/quotes.ts';
 import reportsRouter from './routes/reports.ts';
 import emailImportRouter from './routes/emailImport.ts';
@@ -170,6 +171,7 @@ app.use('/api/warehouse-capacity', warehouseCapacityRouter); // Has mixed auth r
 // Protected routes (auth required)
 app.use('/api/shipments', authenticateToken, shipmentsRouter);
 app.use('/api/suppliers', authenticateToken, suppliersRouter);
+app.use('/api/customers', authenticateToken, customersRouter);
 app.use('/api/quotes', authenticateToken, quotesRouter);
 app.use('/api/reports', authenticateToken, reportsRouter);
 app.use('/api/email-import', authenticateToken, emailImportRouter);
@@ -343,6 +345,13 @@ async function start() {
       await addCostingColumns.default();
     } catch (error) {
       logWarn('Costing migration warning', { error: error.message });
+    }
+
+    try {
+      const addCustomersTable = await import('./db/add-customers-table.js');
+      await addCustomersTable.default();
+    } catch (error) {
+      logWarn('Customers migration warning', { error: error.message });
     }
 
     try {

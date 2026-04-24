@@ -115,6 +115,10 @@ function CostingFormSections({
   getCustomsTotals,
   calculateProductCustomsValues,
   calculateProductAllocation,
+  // Export-mode overrides (optional)
+  partyLabel = 'Supplier',           // 'Supplier' or 'Customer'
+  partyField = 'supplier_name',      // 'supplier_name' or 'customer_name'
+  originPortOptions,                 // optional override for Port of Loading list
 }) {
   // Shorthand wrappers that bind formData and onInputChange
   const input = (label, field, type = 'text', options = {}, tooltip) =>
@@ -138,7 +142,7 @@ function CostingFormSections({
           {input('Reference Number', 'reference_number')}
           <div style={{ marginBottom: '12px' }}>
             <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>
-              Supplier
+              {partyLabel}
             </label>
             {showAddSupplier ? (
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -146,7 +150,7 @@ function CostingFormSections({
                   type="text"
                   value={newSupplierName}
                   onChange={(e) => onNewSupplierNameChange(e.target.value)}
-                  placeholder="Enter supplier name..."
+                  placeholder={`Enter ${partyLabel.toLowerCase()} name...`}
                   className="input"
                   style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid #059669' }}
                   autoFocus
@@ -173,12 +177,12 @@ function CostingFormSections({
             ) : (
               <div style={{ display: 'flex', gap: '8px' }}>
                 <select
-                  value={formData.supplier_name || ''}
-                  onChange={(e) => onInputChange('supplier_name', e.target.value)}
+                  value={formData[partyField] || ''}
+                  onChange={(e) => onInputChange(partyField, e.target.value)}
                   className="select"
                   style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}
                 >
-                  <option value="">Select Supplier...</option>
+                  <option value="">Select {partyLabel}...</option>
                   {suppliers.map(s => (
                     <option key={s.id} value={s.name}>{s.name}</option>
                   ))}
@@ -203,7 +207,7 @@ function CostingFormSections({
             </>
           ) : (
             <>
-              {select('Port of Loading', 'port_of_loading', PORTS_OF_LOADING)}
+              {select('Port of Loading', 'port_of_loading', originPortOptions || PORTS_OF_LOADING)}
               {select('Port of Discharge', 'port_of_discharge', AFRICAN_PORTS)}
               {select('Load Type', 'load_type', LOAD_TYPES, 'FCL = Full Container Load (exclusive use). LCL = Less than Container Load (shared).')}
               {select('Container Type', 'container_type', CONTAINER_TYPES)}

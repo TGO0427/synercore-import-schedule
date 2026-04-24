@@ -197,7 +197,9 @@ const COST_ESTIMATE_COLUMNS = [
   'airline_name', 'flight_number', 'airport_of_departure', 'airport_of_arrival',
   'dimensions_length_cm', 'dimensions_width_cm', 'dimensions_height_cm', 'number_of_pieces',
   // Metadata
-  'status', 'notes', 'created_by', 'created_at', 'updated_at'
+  'status', 'notes', 'created_by', 'created_at', 'updated_at',
+  // Export costing
+  'direction', 'customer_name', 'customer_id',
 ];
 
 // Column set for INSERT/UPDATE filtering
@@ -211,6 +213,7 @@ export class CostingRepository {
     status?: string;
     supplierId?: string;
     shipmentId?: string;
+    direction?: string;
     page?: number;
     limit?: number;
   }): Promise<{ data: ImportCostEstimate[]; total: number }> {
@@ -231,6 +234,11 @@ export class CostingRepository {
     if (options?.shipmentId) {
       conditions.push(`shipment_id = $${paramIndex++}`);
       params.push(options.shipmentId);
+    }
+
+    if (options?.direction) {
+      conditions.push(`COALESCE(direction, 'import') = $${paramIndex++}`);
+      params.push(options.direction);
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';

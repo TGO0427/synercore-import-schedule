@@ -9,6 +9,7 @@ export const VIEW_ROUTES = {
   archives:          '/archives',
   rates:             '/rates',
   costing:           '/costing',
+  'export-costing':  '/export-costing',
   'costing-requests': '/costing-requests',
   reports:           '/reports',
   'advanced-reports': '/advanced-reports',

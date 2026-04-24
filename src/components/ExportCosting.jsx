@@ -7,46 +7,51 @@ import {
   calculateAllTotals,
   formatNumber,
   lookupOceanFreightRate,
+  EXPORT_PORTS_OF_LOADING,
 } from '../utils/costingCalculations';
 import { generateEstimatePDF, generateEstimatePDFBase64 } from '../utils/costingPdf';
 import { useNotification } from '../contexts/NotificationContext';
 import CostingReportsPanel from './CostingReportsPanel';
 import CostingEstimatesTable from './CostingEstimatesTable';
 import CostingFormSections from './CostingFormSections';
-import { EmailEstimateModal, RequestCostingModal } from './CostingModals';
-import CostingRequests from './CostingRequests';
+import { EmailEstimateModal } from './CostingModals';
+
+const EXPORTER_NAME = 'African Food Industries';
 
 const INITIAL_FORM_STATE = {
-  transport_mode: 'sea', // 'sea' or 'air'
+  transport_mode: 'sea',
   reference_number: '',
-  // Origin details
-  country_of_origin: '',
-  port_of_loading: '',
-  // Destination details
-  country_of_destination: 'South Africa',
-  port_of_discharge: 'CPT',
+  direction: 'export',
+  // Origin: South Africa
+  country_of_origin: 'South Africa',
+  port_of_loading: 'Cape Town',
+  // Destination: customer's country (free text for now)
+  country_of_destination: '',
+  port_of_discharge: '',
   load_type: 'FCL',
   shipping_line: '',
   routing: '',
   frequency: '',
   transit_time_days: 30,
-  inco_terms: 'CIF',
-  inco_term_place: 'CPT',
+  inco_terms: 'FOB',
+  inco_term_place: 'Cape Town',
   container_type: "20' Dry Container",
   quantity: 1,
-  supplier_name: '',
+  // Supplier/customer
+  supplier_name: EXPORTER_NAME, // We are the exporter (fixed)
+  customer_name: '',
   validity_date: '',
   costing_date: new Date().toISOString().split('T')[0],
   payment_terms: '',
-  roe_origin: '',  // USD/ZAR
-  roe_eur: '',     // EUR/ZAR
+  roe_origin: '',
+  roe_eur: '',
   // Ocean Freight
   ocean_freight_usd: 0,
   ocean_freight_eur: 0,
   // Origin Charges
   origin_charge_usd: 0,
   origin_charge_eur: 0,
-  // Local Charges (Transport/Cartage) - Default rates from AFI rate sheet
+  // Local Charges (SA origin cartage / pre-carriage)
   local_cartage_cpt_klapmuts_20ton_zar: 6970,
   local_cartage_cpt_klapmuts_28ton_zar: 7500,
   transport_dbn_to_pretoria_20ft_zar: 16640,
@@ -61,7 +66,7 @@ const INITIAL_FORM_STATE = {
   local_cartage_dbn_whs_pretoria_6m_zar: 10370,
   local_cartage_dbn_whs_pretoria_12m_zar: 14330,
   transport_pe_coega_to_pretoria_zar: 0,
-  // Destination Charges (Port/Shipping) - Default rates from AFI rate sheet
+  // Destination Charges (port of discharge — abroad)
   shipping_line_charges_zar: 0,
   cargo_dues_20ft_zar: 1879.72,
   cargo_dues_40ft_zar: 3759.42,
@@ -83,12 +88,12 @@ const INITIAL_FORM_STATE = {
   fuel_surcharge_dest_zar: 0,
   agency_fee_dest_zar: 0,
   facility_fee_zar: 0,
-  // Products - each product in the container
+  // Products being exported
   products: [
     { _id: Date.now(), name: '', hs_code: '', pack_size: '', pack_type: '', weight_kg: 0, rate_per_kg: 0, duty_percent: 0, duty_schedule1_percent: 0, currency: 'USD', invoice_value: 0 }
   ],
-  // Customs & Duties
-  roe_customs: '',  // ROE for customs calculation
+  // Customs & Duties (export side — typically minimal but structure preserved)
+  roe_customs: '',
   customs_declaration_zar: 590,
   agency_fee_percentage: 3.5,
   agency_fee_min: 1187,
@@ -117,12 +122,11 @@ const INITIAL_FORM_STATE = {
   airport_transfer_fee_zar: 0,
   cartage_airport_to_whs_zar: 0,
   airfreight_insurance_percent: 0,
-  // Metadata
   notes: '',
   status: 'draft',
 };
 
-function ImportCosting() {
+function ExportCosting() {
   const { showSuccess, showError, confirm: confirmAction } = useNotification();
   const currentUser = authUtils.getUser();
   const isAdmin = currentUser?.role === 'admin';
@@ -133,28 +137,19 @@ function ImportCosting() {
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
   const [editingId, setEditingId] = useState(null);
   const { clearDraft: clearCostingDraft, confirmClose: confirmCloseCosting } = useFormDraft(
-    `costing_${editingId || 'new'}`, formData, setFormData, { enabled: showForm }
+    `export_costing_${editingId || 'new'}`, formData, setFormData, { enabled: showForm }
   );
   const [calculatedTotals, setCalculatedTotals] = useState({});
   const [exchangeRate, setExchangeRate] = useState(null);
-  const [_rateLoading, setRateLoading] = useState(false);
-  const [suppliers, setSuppliers] = useState([]);
+  const [, setRateLoading] = useState(false);
+  const [customers, setCustomers] = useState([]);
   const [error, setError] = useState(null);
-  const [showAddSupplier, setShowAddSupplier] = useState(false);
-  const [newSupplierName, setNewSupplierName] = useState('');
+  const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState('');
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailEstimate, setEmailEstimate] = useState(null);
   const [showReports, setShowReports] = useState(false);
 
-  // Costing request state (for non-admin users)
-  const [showRequestModal, setShowRequestModal] = useState(false);
-  const [myRequests, setMyRequests] = useState([]);
-
-  // Admin request queue state
-  const [pendingRequestCount, setPendingRequestCount] = useState(0);
-  const [showRequests, setShowRequests] = useState(false);
-
-  // Warn before leaving with unsaved form data
   useEffect(() => {
     if (!showForm) return;
     const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
@@ -162,24 +157,17 @@ function ImportCosting() {
     return () => window.removeEventListener('beforeunload', handler);
   }, [showForm]);
 
-  // Fetch estimates on mount
   useEffect(() => {
     fetchEstimates();
     fetchExchangeRate();
-    fetchSuppliers();
-    if (!isAdmin) fetchMyRequests();
-    if (isAdmin) fetchPendingRequestCount();
+    fetchCustomers();
   }, []);
 
-  // Recalculate totals when form data changes
   useEffect(() => {
     const totals = calculateAllTotals(formData);
     setCalculatedTotals(totals);
   }, [formData]);
 
-  // Auto-sync Origin Charges with Products in Container totals under FOB/FCA/EXW.
-  // Under these Incoterms, origin value is the FOB goods value (buyer's customs basis),
-  // not a separate forwarder fee — so it tracks the Products totals directly.
   useEffect(() => {
     if (!showForm) return;
     const incoTerms = (formData.inco_terms || '').toUpperCase();
@@ -210,59 +198,16 @@ function ImportCosting() {
   const fetchEstimates = async () => {
     try {
       setLoading(true);
-      const response = await authFetch(getApiUrl('/api/costing?direction=import'));
+      const response = await authFetch(getApiUrl('/api/costing?direction=export'));
       if (response.ok) {
         const result = await response.json();
         setEstimates(result.data || []);
       }
     } catch (err) {
-      console.error('Failed to fetch estimates:', err);
-      setError('Failed to load cost estimates');
+      console.error('Failed to fetch export estimates:', err);
+      setError('Failed to load export cost estimates');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchMyRequests = async () => {
-    try {
-      const response = await authFetch(getApiUrl('/api/costing-requests'));
-      if (response.ok) {
-        const result = await response.json();
-        setMyRequests(result.data || []);
-      }
-    } catch (err) {
-      console.error('Failed to fetch costing requests:', err);
-    }
-  };
-
-  const fetchPendingRequestCount = async () => {
-    try {
-      const response = await authFetch(getApiUrl('/api/costing-requests?status=pending'));
-      if (response.ok) {
-        const result = await response.json();
-        setPendingRequestCount((result.data || []).length);
-      }
-    } catch (err) {
-      console.error('Failed to fetch pending request count:', err);
-    }
-  };
-
-  const handleSubmitRequest = async (formData) => {
-    try {
-      const response = await authFetch(getApiUrl('/api/costing-requests'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-      if (response.ok) {
-        setShowRequestModal(false);
-        fetchMyRequests();
-      } else {
-        setError('Failed to submit costing request');
-      }
-    } catch (err) {
-      console.error('Failed to submit costing request:', err);
-      setError('Failed to submit costing request');
     }
   };
 
@@ -284,50 +229,46 @@ function ImportCosting() {
     }
   };
 
-  const fetchSuppliers = async () => {
+  const fetchCustomers = async () => {
     try {
-      const response = await authFetch(getApiUrl('/api/suppliers'));
+      const response = await authFetch(getApiUrl('/api/customers'));
       if (response.ok) {
         const result = await response.json();
-        setSuppliers(result.data || result || []);
+        setCustomers(result.data || result || []);
       }
     } catch (err) {
-      console.error('Failed to fetch suppliers:', err);
+      console.error('Failed to fetch customers:', err);
     }
   };
 
-  const createSupplier = async () => {
-    if (!newSupplierName.trim()) return;
+  const createCustomer = async () => {
+    if (!newCustomerName.trim()) return;
     try {
-      const response = await authFetch(getApiUrl('/api/suppliers'), {
+      const response = await authFetch(getApiUrl('/api/customers'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newSupplierName.trim() }),
+        body: JSON.stringify({ name: newCustomerName.trim() }),
       });
       if (response.ok) {
         const result = await response.json();
-        const newSupplier = result.data || result;
-        // Add to suppliers list and select it
-        setSuppliers(prev => [...prev, newSupplier]);
-        setFormData(prev => ({ ...prev, supplier_name: newSupplier.name }));
-        setShowAddSupplier(false);
-        setNewSupplierName('');
+        const newCustomer = result.data || result;
+        setCustomers(prev => [...prev, newCustomer]);
+        setFormData(prev => ({ ...prev, customer_name: newCustomer.name }));
+        setShowAddCustomer(false);
+        setNewCustomerName('');
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to create supplier');
+        setError(errorData.error || 'Failed to create customer');
       }
     } catch (err) {
-      console.error('Failed to create supplier:', err);
-      setError('Failed to create supplier');
+      console.error('Failed to create customer:', err);
+      setError('Failed to create customer');
     }
   };
-
-
 
   const handleInputChange = (field, value) => {
     setFormData(prev => {
       const updated = { ...prev, [field]: value };
-      // Auto-fill ocean freight when port, shipping line, or container type changes
       if (field === 'port_of_loading' || field === 'shipping_line' || field === 'container_type') {
         const rate = lookupOceanFreightRate(
           field === 'port_of_loading' ? value : updated.port_of_loading,
@@ -342,7 +283,6 @@ function ImportCosting() {
     });
   };
 
-  // Product helpers
   const addProduct = () => {
     setFormData(prev => ({
       ...prev,
@@ -354,45 +294,31 @@ function ImportCosting() {
   };
 
   const removeProduct = (index) => {
-    setFormData(prev => {
-      const newProducts = prev.products.filter((_, i) => i !== index);
-      return {
-        ...prev,
-        products: newProducts,
-      };
-    });
+    setFormData(prev => ({
+      ...prev,
+      products: prev.products.filter((_, i) => i !== index),
+    }));
   };
 
   const updateProduct = (index, field, value) => {
     setFormData(prev => {
       const newProducts = prev.products.map((item, i) => {
         if (i !== index) return item;
-
         const updatedItem = { ...item, [field]: value };
-
-        // Auto-calculate invoice_value when weight or rate_per_kg changes
         if (field === 'weight_kg' || field === 'rate_per_kg') {
           const weight = field === 'weight_kg' ? (parseFloat(value) || 0) : (parseFloat(item.weight_kg) || 0);
           const rate = field === 'rate_per_kg' ? (parseFloat(value) || 0) : (parseFloat(item.rate_per_kg) || 0);
           updatedItem.invoice_value = Math.round(weight * rate * 100) / 100;
         }
-
         return updatedItem;
       });
-
-      return {
-        ...prev,
-        products: newProducts,
-      };
+      return { ...prev, products: newProducts };
     });
   };
 
-  // Calculate total weight from all products
-  const getTotalWeight = () => {
-    return (formData.products || []).reduce((sum, p) => sum + (parseFloat(p.weight_kg) || 0), 0);
-  };
+  const getTotalWeight = () =>
+    (formData.products || []).reduce((sum, p) => sum + (parseFloat(p.weight_kg) || 0), 0);
 
-  // Calculate product customs values
   const calculateProductCustomsValues = (product) => {
     const roeCustoms = parseFloat(formData.roe_customs) || parseFloat(formData.roe_origin) || 0;
     const roeEur = parseFloat(formData.roe_eur) || roeCustoms;
@@ -401,7 +327,6 @@ function ImportCosting() {
     const dutySchedule1Percent = parseFloat(product.duty_schedule1_percent) || 0;
     const currency = product.currency || 'USD';
 
-    // Convert to ZAR based on currency
     let roe = roeCustoms;
     if (currency === 'EUR') roe = roeEur;
     if (currency === 'ZAR') roe = 1;
@@ -414,14 +339,11 @@ function ImportCosting() {
     return { customsValue, totalDuties, schedule1Duty, totalVat, roe };
   };
 
-  // Calculate product cost allocation (shipping costs allocated by weight)
   const calculateProductAllocation = (product) => {
     const totalWeight = getTotalWeight();
     const productWeight = parseFloat(product.weight_kg) || 0;
     const weightRatio = totalWeight > 0 ? productWeight / totalWeight : 0;
 
-    // For CIF/CIP/CFR terms, ocean freight and origin charges are already in
-    // the product price — only allocate local + destination charges
     const incoTerms = (formData.inco_terms || '').toUpperCase();
     const freightIncluded = ['CIF', 'CIP', 'CFR'].includes(incoTerms);
     let shippingToAllocate;
@@ -433,28 +355,20 @@ function ImportCosting() {
     }
     const allocatedShippingCost = shippingToAllocate * weightRatio;
 
-    // Get customs values for this product
     const customs = calculateProductCustomsValues(product);
-    // VAT excluded - not charged to clients
     const productCustomsCost = customs.totalDuties + customs.schedule1Duty;
-
-    // Transport cost per kg = allocated shipping / weight
     const transportCostPerKg = productWeight > 0 ? allocatedShippingCost / productWeight : 0;
-
-    // Total landed cost = product value (customs value) + duties + allocated shipping
     const totalProductCost = customs.customsValue + productCustomsCost + allocatedShippingCost;
     const costPerKg = productWeight > 0 ? totalProductCost / productWeight : 0;
 
     return { weightRatio, allocatedShippingCost, transportCostPerKg, productCustomsCost, totalProductCost, costPerKg };
   };
 
-  // Calculate customs totals from all products
   const getCustomsTotals = () => {
     let totalCustomsValue = 0;
     let totalDuties = 0;
     let totalSchedule1Duty = 0;
     let totalVat = 0;
-
     (formData.products || []).forEach(product => {
       const values = calculateProductCustomsValues(product);
       totalCustomsValue += values.customsValue;
@@ -462,28 +376,21 @@ function ImportCosting() {
       totalSchedule1Duty += values.schedule1Duty;
       totalVat += values.totalVat;
     });
-
     return { totalCustomsValue, totalDuties, totalSchedule1Duty, totalVat };
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Clean data - convert empty strings to null for numeric fields
-      const cleanedData = { ...formData };
+      const cleanedData = { ...formData, direction: 'export', supplier_name: EXPORTER_NAME };
       Object.keys(cleanedData).forEach(key => {
-        if (cleanedData[key] === '') {
-          cleanedData[key] = null;
-        }
+        if (cleanedData[key] === '') cleanedData[key] = null;
       });
-      // Filter out display-only fields (prefixed with underscore)
       const dbTotals = {};
       Object.keys(calculatedTotals).forEach(key => {
-        if (!key.startsWith('_')) {
-          dbTotals[key] = calculatedTotals[key];
-        }
+        if (!key.startsWith('_')) dbTotals[key] = calculatedTotals[key];
       });
-      const dataToSend = { ...cleanedData, ...dbTotals };
+      const dataToSend = { ...cleanedData, ...dbTotals, direction: 'export' };
       const url = editingId
         ? getApiUrl(`/api/costing/${editingId}`)
         : getApiUrl('/api/costing');
@@ -509,11 +416,11 @@ function ImportCosting() {
         } else if (typeof errorData.details === 'string') {
           detailMsg = errorData.details;
         }
-        setError(detailMsg || errorData.error || errorData.message || 'Failed to save cost estimate');
+        setError(detailMsg || errorData.error || errorData.message || 'Failed to save export cost estimate');
       }
     } catch (err) {
       console.error('Failed to save estimate:', err);
-      setError('Failed to save cost estimate');
+      setError('Failed to save export cost estimate');
     }
   };
 
@@ -527,15 +434,15 @@ function ImportCosting() {
   };
 
   const handleDelete = async (id) => {
-    if (!(await confirmAction({ title: 'Delete Cost Estimate', message: 'Are you sure you want to delete this cost estimate?', type: 'danger', confirmText: 'Delete' }))) return;
-
+    if (!(await confirmAction({
+      title: 'Delete Export Cost Estimate',
+      message: 'Are you sure you want to delete this export cost estimate?',
+      type: 'danger',
+      confirmText: 'Delete',
+    }))) return;
     try {
-      const response = await authFetch(getApiUrl(`/api/costing/${id}`), {
-        method: 'DELETE',
-      });
-      if (response.ok) {
-        fetchEstimates();
-      }
+      const response = await authFetch(getApiUrl(`/api/costing/${id}`), { method: 'DELETE' });
+      if (response.ok) fetchEstimates();
     } catch (err) {
       console.error('Failed to delete estimate:', err);
     }
@@ -543,39 +450,25 @@ function ImportCosting() {
 
   const handleDuplicate = async (id) => {
     try {
-      const response = await authFetch(getApiUrl(`/api/costing/${id}/duplicate`), {
-        method: 'POST',
-      });
-      if (response.ok) {
-        fetchEstimates();
-      }
+      const response = await authFetch(getApiUrl(`/api/costing/${id}/duplicate`), { method: 'POST' });
+      if (response.ok) fetchEstimates();
     } catch (err) {
       console.error('Failed to duplicate estimate:', err);
     }
   };
 
   const generatePDF = (estimate) => generateEstimatePDF(estimate);
-
   const generatePDFBase64 = (estimate) => generateEstimatePDFBase64(estimate);
 
-  // Send email with PDF attachment
   const sendEstimateEmail = async (emailTo, estimate) => {
     if (!emailTo || !estimate) return;
-
     try {
       const pdfBase64 = generatePDFBase64(estimate);
-
       const response = await authFetch(getApiUrl(`/api/costing/${estimate.id}/send-email`), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          toEmail: emailTo,
-          pdfBase64: pdfBase64,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toEmail: emailTo, pdfBase64 }),
       });
-
       if (response.ok) {
         showSuccess('Email sent successfully!');
         setShowEmailModal(false);
@@ -602,7 +495,7 @@ function ImportCosting() {
   if (loading) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <p>Loading cost estimates...</p>
+        <p>Loading export cost estimates...</p>
       </div>
     );
   }
@@ -610,23 +503,27 @@ function ImportCosting() {
   return (
     <div style={{ padding: '1rem' }}>
       <div className="brand-strip" />
-      {/* Header */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         marginBottom: '0.75rem', paddingBottom: '0.75rem',
         borderBottom: '1px solid var(--border)', flexWrap: 'wrap', gap: '0.5rem',
       }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-900)' }}>Import Costing</h2>
+          <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-900)' }}>Export Costing</h2>
           <p style={{ margin: '2px 0 0', color: 'var(--text-500)', fontSize: '0.8rem' }}>
-            Sea & Air Freight Import Cost Comparison
+            {EXPORTER_NAME} — Sea & Air Freight Export Cost Breakdown
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           {exchangeRate && (
             <div style={{ padding: '8px 12px', backgroundColor: '#f0f9ff', borderRadius: '6px', fontSize: '0.85rem' }}>
-              <span style={{ color: 'var(--text-500)' }}>Market Rate: </span>
+              <span style={{ color: 'var(--text-500)' }}>ZAR / USD: </span>
               <strong>{formatNumber(exchangeRate.rate, 4)}</strong>
+              {exchangeRate.rate > 0 && (
+                <span style={{ color: 'var(--text-500)', marginLeft: '6px' }}>
+                  (1 ZAR ≈ {formatNumber(1 / exchangeRate.rate, 5)} USD)
+                </span>
+              )}
               <span style={{ color: '#888', marginLeft: '4px', fontSize: '0.75rem' }}>(ref only - use Finex SA)</span>
             </div>
           )}
@@ -634,55 +531,20 @@ function ImportCosting() {
             onClick={() => setShowReports(!showReports)}
             style={{
               padding: '10px 20px', backgroundColor: showReports ? '#7c3aed' : '#8b5cf6', color: 'white',
-              border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500'
+              border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500',
             }}
           >
             {showReports ? '✕ Close Reports' : '📊 Reports'}
           </button>
-          {isAdmin ? (
-            <>
-              <button
-                onClick={() => setShowRequests(true)}
-                style={{
-                  position: 'relative',
-                  padding: '10px 20px', backgroundColor: '#1e40af', color: 'white',
-                  border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500'
-                }}
-              >
-                Requests
-                {pendingRequestCount > 0 && (
-                  <span style={{
-                    position: 'absolute', top: '-8px', right: '-8px',
-                    backgroundColor: '#dc2626', color: 'white',
-                    borderRadius: '50%', minWidth: '20px', height: '20px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '0.7rem', fontWeight: '700',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                    padding: '0 4px',
-                  }}>
-                    {pendingRequestCount}
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={() => { resetForm(); setShowForm(true); }}
-                style={{
-                  padding: '10px 20px', backgroundColor: '#059669', color: 'white',
-                  border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500'
-                }}
-              >
-                + New Estimate
-              </button>
-            </>
-          ) : (
+          {isAdmin && (
             <button
-              onClick={() => setShowRequestModal(true)}
+              onClick={() => { resetForm(); setShowForm(true); }}
               style={{
-                padding: '10px 20px', backgroundColor: '#f59e0b', color: 'white',
-                border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500'
+                padding: '10px 20px', backgroundColor: '#059669', color: 'white',
+                border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500',
               }}
             >
-              Request Costing
+              + New Estimate
             </button>
           )}
         </div>
@@ -695,25 +557,16 @@ function ImportCosting() {
         </div>
       )}
 
-      {/* Pending Requests Banner (non-admin) */}
-      {!isAdmin && myRequests.filter(r => r.status === 'pending').length > 0 && (
-        <div style={{ padding: '12px', backgroundColor: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.85rem', color: '#92400e' }}>
-          You have <strong>{myRequests.filter(r => r.status === 'pending').length}</strong> pending costing request(s). An admin will prepare them for you.
-        </div>
-      )}
-
-      {/* Reports Section */}
       {showReports && (
         <CostingReportsPanel estimates={estimates} onClose={() => setShowReports(false)} />
       )}
 
-      {/* Form Modal */}
       {showForm && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center',
           alignItems: formExpanded ? 'stretch' : 'flex-start',
-          padding: formExpanded ? 0 : '1rem', zIndex: 1000, overflowY: 'auto'
+          padding: formExpanded ? 0 : '1rem', zIndex: 1000, overflowY: 'auto',
         }}>
           <div style={{
             backgroundColor: 'white', borderRadius: formExpanded ? 0 : '12px',
@@ -727,15 +580,14 @@ function ImportCosting() {
             resize: formExpanded ? 'none' : 'both',
             transition: 'all 0.2s ease',
           }}>
-            {/* Form Header */}
             <div style={{
               padding: '1rem 1.5rem', borderBottom: '1px solid #e5e7eb',
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              position: 'sticky', top: 0, backgroundColor: 'white', zIndex: 10
+              position: 'sticky', top: 0, backgroundColor: 'white', zIndex: 10,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <h3 style={{ margin: 0, color: '#0f172a' }}>
-                  {editingId ? 'Edit Cost Estimate' : 'New Cost Estimate'}
+                  {editingId ? 'Edit Export Cost Estimate' : 'New Export Cost Estimate'}
                 </h3>
                 <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '2px solid #e5e7eb' }}>
                   <button
@@ -783,7 +635,7 @@ function ImportCosting() {
               formData={formData}
               calculatedTotals={calculatedTotals}
               editingId={editingId}
-              suppliers={suppliers}
+              suppliers={customers}
               exchangeRate={exchangeRate}
               onInputChange={handleInputChange}
               onAddProduct={addProduct}
@@ -791,21 +643,23 @@ function ImportCosting() {
               onUpdateProduct={updateProduct}
               onSubmit={handleSubmit}
               onCancel={() => confirmCloseCosting(() => { setShowForm(false); setEditingId(null); })}
-              showAddSupplier={showAddSupplier}
-              onToggleAddSupplier={setShowAddSupplier}
-              newSupplierName={newSupplierName}
-              onNewSupplierNameChange={setNewSupplierName}
-              onCreateSupplier={createSupplier}
+              showAddSupplier={showAddCustomer}
+              onToggleAddSupplier={setShowAddCustomer}
+              newSupplierName={newCustomerName}
+              onNewSupplierNameChange={setNewCustomerName}
+              onCreateSupplier={createCustomer}
               getTotalWeight={getTotalWeight}
               getCustomsTotals={getCustomsTotals}
               calculateProductCustomsValues={calculateProductCustomsValues}
               calculateProductAllocation={calculateProductAllocation}
+              partyLabel="Customer"
+              partyField="customer_name"
+              originPortOptions={EXPORT_PORTS_OF_LOADING}
             />
           </div>
         </div>
       )}
 
-      {/* Estimates Table */}
       <CostingEstimatesTable
         estimates={estimates}
         isAdmin={isAdmin}
@@ -816,27 +670,14 @@ function ImportCosting() {
         onEmailEstimate={(est) => { setEmailEstimate(est); setShowEmailModal(true); }}
       />
 
-      {/* Email Modal */}
       <EmailEstimateModal
         isOpen={showEmailModal}
         estimate={emailEstimate}
         onClose={() => { setShowEmailModal(false); setEmailEstimate(null); }}
         onSend={sendEstimateEmail}
       />
-
-      {/* Request Costing Modal (non-admin) */}
-      <RequestCostingModal
-        isOpen={showRequestModal}
-        onClose={() => setShowRequestModal(false)}
-        onSubmit={handleSubmitRequest}
-      />
-
-      {/* Admin Costing Requests Queue */}
-      {showRequests && (
-        <CostingRequests onClose={() => { setShowRequests(false); fetchPendingRequestCount(); }} />
-      )}
     </div>
   );
 }
 
-export default ImportCosting;
+export default ExportCosting;

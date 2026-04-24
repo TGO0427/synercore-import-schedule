@@ -10,6 +10,7 @@ export interface CostingFilterParams {
   status?: string;
   supplierId?: string;
   shipmentId?: string;
+  direction?: string;
   page?: number;
   limit?: number;
 }
@@ -37,6 +38,7 @@ export class CostingController {
       status: params.status,
       supplierId: params.supplierId,
       shipmentId: params.shipmentId,
+      direction: params.direction,
       page: params.page,
       limit: params.limit,
     });

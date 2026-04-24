@@ -30,6 +30,9 @@ const validate = (req: Request, res: Response, next: NextFunction) => {
 
 const createCostEstimateValidation = [
   body('supplier_name').optional({ nullable: true }).trim(),
+  body('customer_name').optional({ nullable: true }).trim(),
+  body('customer_id').optional({ nullable: true }).trim(),
+  body('direction').optional({ nullable: true }).isIn(['import', 'export']).withMessage('direction must be import or export'),
   body('port_of_discharge').optional({ nullable: true }).trim(),
   body('container_type').optional({ nullable: true }).trim(),
   body('reference_number').optional({ nullable: true }).trim(),
@@ -63,6 +66,7 @@ router.get(
     query('status').optional().isIn(['draft', 'final', 'archived']),
     query('supplierId').optional().isString(),
     query('shipmentId').optional().isString(),
+    query('direction').optional().isIn(['import', 'export']),
     query('page').optional().isInt({ min: 1 }),
     query('limit').optional().isInt({ min: 1, max: 100 }),
   ],
@@ -72,6 +76,7 @@ router.get(
       status: req.query.status as string,
       supplierId: req.query.supplierId as string,
       shipmentId: req.query.shipmentId as string,
+      direction: req.query.direction as string,
       page: req.query.page ? parseInt(req.query.page as string) : 1,
       limit: req.query.limit ? parseInt(req.query.limit as string) : 20,
     });

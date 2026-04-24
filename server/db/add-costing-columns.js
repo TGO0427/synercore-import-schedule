@@ -238,6 +238,18 @@ export default async function addCostingColumns() {
     if (await addColumn(col)) added++;
   }
 
+  // Export costing support: direction + customer
+  const exportColumns = [
+    "direction VARCHAR(20) DEFAULT 'import'",
+    'customer_name VARCHAR(255)',
+    'customer_id VARCHAR(255)',
+  ];
+  for (const col of exportColumns) {
+    if (await addColumn(col)) added++;
+  }
+  await query(`CREATE INDEX IF NOT EXISTS idx_cost_estimates_direction ON import_cost_estimates(direction)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_cost_estimates_customer ON import_cost_estimates(customer_id)`);
+
   if (added > 0) {
     console.log(`✓ Added ${added} new costing columns`);
   } else {

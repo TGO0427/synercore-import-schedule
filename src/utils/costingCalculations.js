@@ -434,6 +434,14 @@ export const PORTS_OF_LOADING = [
 ];
 
 /**
+ * Export Ports of Loading (South African origin ports)
+ */
+export const EXPORT_PORTS_OF_LOADING = [
+  { value: 'Cape Town', label: 'Cape Town Port' },
+  { value: 'Durban', label: 'Durban Port' },
+];
+
+/**
  * Shipping line options
  */
 export const SHIPPING_LINES = [
