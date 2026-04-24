@@ -8,6 +8,7 @@ import {
   formatNumber,
   lookupOceanFreightRate,
   EXPORT_PORTS_OF_LOADING,
+  WORLD_PORTS,
 } from '../utils/costingCalculations';
 import { generateEstimatePDF, generateEstimatePDFBase64 } from '../utils/costingPdf';
 import { useNotification } from '../contexts/NotificationContext';
@@ -697,6 +698,7 @@ function ExportCosting() {
               partyLabel="Customer"
               partyField="customer_name"
               originPortOptions={EXPORT_PORTS_OF_LOADING}
+              dischargePortOptions={WORLD_PORTS}
             />
           </div>
         </div>

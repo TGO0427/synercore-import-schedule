@@ -119,6 +119,7 @@ function CostingFormSections({
   partyLabel = 'Supplier',           // 'Supplier' or 'Customer'
   partyField = 'supplier_name',      // 'supplier_name' or 'customer_name'
   originPortOptions,                 // optional override for Port of Loading list
+  dischargePortOptions,              // optional override for Port of Discharge list
 }) {
   // Export mode reverses the inland leg directions (warehouse → port instead of port → warehouse)
   const isExport = partyLabel === 'Customer';
@@ -217,7 +218,7 @@ function CostingFormSections({
           ) : (
             <>
               {select('Port of Loading', 'port_of_loading', originPortOptions || PORTS_OF_LOADING)}
-              {select('Port of Discharge', 'port_of_discharge', AFRICAN_PORTS)}
+              {select('Port of Discharge', 'port_of_discharge', dischargePortOptions || AFRICAN_PORTS)}
               {select('Load Type', 'load_type', LOAD_TYPES, 'FCL = Full Container Load (exclusive use). LCL = Less than Container Load (shared).')}
               {select('Container Type', 'container_type', CONTAINER_TYPES)}
             </>
