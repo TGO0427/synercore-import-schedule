@@ -482,7 +482,8 @@ function CostingFormSections({
       {/* === SEA FREIGHT SECTIONS === */}
       {formData.transport_mode !== 'air' && (
       <>
-      {/* Section: Ocean Freight */}
+      {/* Section: Ocean Freight (hidden under export-FOB — buyer pays freight) */}
+      {!(isExport && (formData.inco_terms || '').toUpperCase() === 'FOB') && (
       <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#eff6ff', borderRadius: '8px', border: '2px solid #3b82f6' }}>
         <h4 style={{ margin: '0 0 1rem', color: '#1d4ed8', fontSize: '1rem' }}>Ocean Freight <InfoTip text="Sea freight charges from the shipping line. Enter in original currency — ZAR conversion is automatic." /></h4>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
@@ -517,6 +518,7 @@ function CostingFormSections({
           </div>
         </div>
       </div>
+      )}
 
       {/* Section: Origin Charges */}
       <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f0fdf4', borderRadius: '8px' }}>

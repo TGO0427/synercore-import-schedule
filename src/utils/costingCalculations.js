@@ -335,7 +335,12 @@ export const calculateAllTotals = (data) => {
   // Sea freight total. Origin Charges is omitted under FOB/FCA/EXW (it's goods value,
   // not a shipping fee); included under other terms where it represents real origin
   // port handling fees.
-  const totalShippingCostSeaZar = totalOceanFreightZar
+  // Under export-FOB the buyer pays ocean freight, so the seller's cost
+  // breakdown must not include it (the value may still be entered in the form
+  // for reference but is excluded from the totals).
+  const oceanFreightIsBuyerCost = isExport && incoTermsUpper === 'FOB';
+
+  const totalShippingCostSeaZar = (oceanFreightIsBuyerCost ? 0 : totalOceanFreightZar)
     + (originChargesAreFobValue ? 0 : totalOriginChargesZar)
     + localChargesSubtotalZar
     + destinationChargesSubtotalZar;
