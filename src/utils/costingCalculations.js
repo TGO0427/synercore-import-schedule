@@ -91,23 +91,6 @@ export const calculateAgencyFee = (dutiesAndVat, percentage = COSTING_DEFAULTS.A
 };
 
 /**
- * Calculate Export Charges subtotal — replaces destination charges in export mode.
- * Sums the seven invoice line items (Landside, Export Declaration, VGM,
- * CTO & Navis, Cargo Dues, Agency Fee, Disbursement Fee).
- */
-export const calculateExportChargesSubtotal = (data) => {
-  return (
-    (parseFloat(data.export_landside_charges_zar) || 0) +
-    (parseFloat(data.export_declaration_zar) || 0) +
-    (parseFloat(data.vgm_zar) || 0) +
-    (parseFloat(data.cto_navis_fee_zar) || 0) +
-    (parseFloat(data.export_cargo_dues_zar) || 0) +
-    (parseFloat(data.agency_fee_zar) || 0) +
-    (parseFloat(data.disbursement_fee_zar) || 0)
-  );
-};
-
-/**
  * Calculate customs totals from products
  */
 export const calculateCustomsItemsTotals = (data) => {
