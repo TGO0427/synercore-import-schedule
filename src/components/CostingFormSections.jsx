@@ -120,6 +120,8 @@ function CostingFormSections({
   partyField = 'supplier_name',      // 'supplier_name' or 'customer_name'
   originPortOptions,                 // optional override for Port of Loading list
 }) {
+  // Export mode reverses the inland leg directions (warehouse → port instead of port → warehouse)
+  const isExport = partyLabel === 'Customer';
   // Shorthand wrappers that bind formData and onInputChange
   const input = (label, field, type = 'text', options = {}, tooltip) =>
     renderInput(formData, onInputChange, label, field, type, options, tooltip);
@@ -521,22 +523,22 @@ function CostingFormSections({
 
       {/* Section: Local Charges (Transport/Cartage) */}
       <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f0fdf4', borderRadius: '8px' }}>
-        <h4 style={{ margin: '0 0 1rem', color: '#166534', fontSize: '1rem' }}>Local Charges (Transport/Cartage) - ZAR <InfoTip text="Inland transport and handling costs within South Africa after port discharge." /></h4>
+        <h4 style={{ margin: '0 0 1rem', color: '#166534', fontSize: '1rem' }}>Local Charges (Transport/Cartage) - ZAR <InfoTip text={isExport ? 'Inland transport and handling costs within South Africa for delivery to port of loading.' : 'Inland transport and handling costs within South Africa after port discharge.'} /></h4>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-          {currencyInput('Local Cartage: CPT to Klapmuts (<20 Ton)', 'local_cartage_cpt_klapmuts_20ton_zar')}
-          {currencyInput('Local Cartage: CPT to Klapmuts (21-28 Ton)', 'local_cartage_cpt_klapmuts_28ton_zar')}
-          {currencyInput('Transport: DBN Port to Pretoria (20FT)', 'transport_dbn_to_pretoria_20ft_zar')}
-          {currencyInput('Transport: DBN Port to Pretoria (40FT)', 'transport_dbn_to_pretoria_40ft_zar')}
-          {currencyInput('Transport: DBN Port to WHS', 'transport_dbn_to_whs_zar')}
+          {currencyInput(isExport ? 'Local Cartage: Klapmuts to CPT (<20 Ton)' : 'Local Cartage: CPT to Klapmuts (<20 Ton)', 'local_cartage_cpt_klapmuts_20ton_zar')}
+          {currencyInput(isExport ? 'Local Cartage: Klapmuts to CPT (21-28 Ton)' : 'Local Cartage: CPT to Klapmuts (21-28 Ton)', 'local_cartage_cpt_klapmuts_28ton_zar')}
+          {currencyInput(isExport ? 'Transport: Pretoria to DBN Port (20FT)' : 'Transport: DBN Port to Pretoria (20FT)', 'transport_dbn_to_pretoria_20ft_zar')}
+          {currencyInput(isExport ? 'Transport: Pretoria to DBN Port (40FT)' : 'Transport: DBN Port to Pretoria (40FT)', 'transport_dbn_to_pretoria_40ft_zar')}
+          {currencyInput(isExport ? 'Transport: WHS to DBN Port' : 'Transport: DBN Port to WHS', 'transport_dbn_to_whs_zar')}
           {currencyInput('Unpack / Reload', 'unpack_reload_zar')}
           {currencyInput('Storage (Per Pallet Per Day)', 'storage_zar')}
           {input('Storage Days (3 Days Free)', 'storage_days', 'number')}
           {currencyInput('Outlying Container Depot Surcharge', 'outlying_depot_surcharge_zar')}
-          {currencyInput('Local Cartage: DBN WHS to PTA (Tautliner A)', 'local_cartage_dbn_whs_pretoria_opt_a_zar')}
-          {currencyInput('Local Cartage: DBN WHS to PTA (Tautliner B)', 'local_cartage_dbn_whs_pretoria_opt_b_zar')}
-          {currencyInput('Local Cartage: DBN WHS to PTA (6M Deck)', 'local_cartage_dbn_whs_pretoria_6m_zar')}
-          {currencyInput('Local Cartage: DBN WHS to PTA (12M Deck)', 'local_cartage_dbn_whs_pretoria_12m_zar')}
-          {currencyInput('Transport: PE/Coega Port to Pretoria', 'transport_pe_coega_to_pretoria_zar')}
+          {currencyInput(isExport ? 'Local Cartage: PTA to DBN WHS (Tautliner A)' : 'Local Cartage: DBN WHS to PTA (Tautliner A)', 'local_cartage_dbn_whs_pretoria_opt_a_zar')}
+          {currencyInput(isExport ? 'Local Cartage: PTA to DBN WHS (Tautliner B)' : 'Local Cartage: DBN WHS to PTA (Tautliner B)', 'local_cartage_dbn_whs_pretoria_opt_b_zar')}
+          {currencyInput(isExport ? 'Local Cartage: PTA to DBN WHS (6M Deck)' : 'Local Cartage: DBN WHS to PTA (6M Deck)', 'local_cartage_dbn_whs_pretoria_6m_zar')}
+          {currencyInput(isExport ? 'Local Cartage: PTA to DBN WHS (12M Deck)' : 'Local Cartage: DBN WHS to PTA (12M Deck)', 'local_cartage_dbn_whs_pretoria_12m_zar')}
+          {currencyInput(isExport ? 'Transport: Pretoria to PE/Coega Port' : 'Transport: PE/Coega Port to Pretoria', 'transport_pe_coega_to_pretoria_zar')}
           <div style={{ marginBottom: '12px' }}>
             <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>
               Local Charges Sub-Total - Auto
@@ -695,7 +697,7 @@ function CostingFormSections({
           {currencyInput('AWB Fee', 'awb_fee_zar', 'ZAR', 'Air Waybill documentation fee.')}
           {currencyInput('Airline Handling Fee', 'airline_handling_fee_zar', 'ZAR')}
           {currencyInput('Airport Transfer Fee', 'airport_transfer_fee_zar', 'ZAR')}
-          {currencyInput('Cartage: Airport to Warehouse', 'cartage_airport_to_whs_zar', 'ZAR')}
+          {currencyInput(isExport ? 'Cartage: Warehouse to Airport' : 'Cartage: Airport to Warehouse', 'cartage_airport_to_whs_zar', 'ZAR')}
           {currencyInput('Insurance %', 'airfreight_insurance_percent', '%')}
           <div style={{ marginBottom: '12px' }}>
             <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#166534' }}>
