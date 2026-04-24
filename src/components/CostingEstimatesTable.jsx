@@ -5,9 +5,12 @@ import {
   formatNumber,
 } from '../utils/costingCalculations';
 
-function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplicate, onGeneratePDF, onEmailEstimate }) {
+function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplicate, onGeneratePDF, onEmailEstimate, isExport = false }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [transportModeFilter, setTransportModeFilter] = useState('all'); // 'all', 'sea', 'air'
+
+  const partyLabel = isExport ? 'Customer' : 'Supplier';
+  const partyFor = (est) => (isExport ? est.customer_name : est.supplier_name) || '-';
 
   // Filter and sort estimates (exclude archived - those show under Suppliers)
   const filteredEstimates = useMemo(() => {
@@ -20,16 +23,16 @@ function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplica
         if (!searchTerm) return true;
         const search = searchTerm.toLowerCase();
         const ref = (est.reference_number || '').toLowerCase();
-        const supplier = (est.supplier_name || '').toLowerCase();
+        const party = ((isExport ? est.customer_name : est.supplier_name) || '').toLowerCase();
         const products = (est.products || []).map(p => (p.name || '').toLowerCase()).join(' ');
-        return ref.includes(search) || supplier.includes(search) || products.includes(search);
+        return ref.includes(search) || party.includes(search) || products.includes(search);
       })
       .sort((a, b) => {
         const dateA = new Date(a.costing_date || a.created_at || 0);
         const dateB = new Date(b.costing_date || b.created_at || 0);
         return dateB - dateA; // newest first
       });
-  }, [estimates, searchTerm, transportModeFilter]);
+  }, [estimates, searchTerm, transportModeFilter, isExport]);
 
   return (
     <div className="dash-panel" style={{ overflow: 'hidden' }}>
@@ -65,7 +68,7 @@ function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplica
         <div style={{ flex: '1', minWidth: '200px', maxWidth: '300px' }}>
           <input
             type="text"
-            placeholder="Search by reference, supplier, or product..."
+            placeholder={`Search by reference, ${partyLabel.toLowerCase()}, or product...`}
             aria-label="Search import costings"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -88,7 +91,7 @@ function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplica
             <tr style={{ backgroundColor: '#f8fafc' }}>
               <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Reference</th>
               <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Date</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Supplier</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>{partyLabel}</th>
               <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Port</th>
               <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Container</th>
               <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb', minWidth: '280px' }}>Products</th>
@@ -126,7 +129,7 @@ function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplica
                           ? new Date(est.created_at).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })
                           : '-'}
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#374151' }}>{est.supplier_name || '-'}</td>
+                    <td style={{ padding: '12px 16px', color: '#374151' }}>{partyFor(est)}</td>
                     <td style={{ padding: '12px 16px', color: '#374151' }}>
                       {est.transport_mode === 'air'
                         ? (est.airport_of_arrival || '-')
@@ -166,12 +169,38 @@ function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplica
                         </div>
                       )}
                     </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '600', color: '#059669' }}>
-                      {formatCurrency(totals.total_landed_cost_zar)}
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '500', color: '#d97706' }}>
-                      {formatCurrency(totals.all_in_warehouse_cost_per_kg_zar)}
-                    </td>
+                    {(() => {
+                      const rowIsExport = isExport || est.direction === 'export';
+                      const presCur = rowIsExport
+                        ? (est.presentation_currency === 'EUR' ? 'EUR' : 'USD')
+                        : null;
+                      const rate = rowIsExport
+                        ? (parseFloat(presCur === 'EUR' ? est.roe_eur : est.roe_origin) || 0)
+                        : 0;
+                      const toPres = (zar) => (rowIsExport && rate > 0 ? zar / rate : null);
+                      const landedForeign = toPres(totals.total_landed_cost_zar);
+                      const kgForeign = toPres(totals.all_in_warehouse_cost_per_kg_zar);
+                      return (
+                        <>
+                          <td style={{ padding: '12px 16px', textAlign: 'right', color: '#059669' }}>
+                            <div style={{ fontWeight: '600' }}>{formatCurrency(totals.total_landed_cost_zar)}</div>
+                            {landedForeign !== null && (
+                              <div style={{ fontSize: '0.75rem', color: '#047857', marginTop: '2px' }}>
+                                {formatCurrency(landedForeign, presCur)}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'right', color: '#d97706' }}>
+                            <div style={{ fontWeight: '500' }}>{formatCurrency(totals.all_in_warehouse_cost_per_kg_zar)}</div>
+                            {kgForeign !== null && (
+                              <div style={{ fontSize: '0.75rem', color: '#b45309', marginTop: '2px' }}>
+                                {formatCurrency(kgForeign, presCur)}
+                              </div>
+                            )}
+                          </td>
+                        </>
+                      );
+                    })()}
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                       <span style={{
                         padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '500',

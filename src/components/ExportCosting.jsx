@@ -712,6 +712,7 @@ function ExportCosting() {
         onDuplicate={handleDuplicate}
         onGeneratePDF={generatePDF}
         onEmailEstimate={(est) => { setEmailEstimate(est); setShowEmailModal(true); }}
+        isExport
       />
 
       <EmailEstimateModal
