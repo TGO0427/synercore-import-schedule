@@ -585,13 +585,49 @@ function CostingFormSections({
       {/* Section: Destination Charges (import) OR Export Charges (export) */}
       {isExport ? (
         <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#eff6ff', borderRadius: '8px' }}>
-          <h4 style={{ margin: '0 0 1rem', color: '#1e40af', fontSize: '1rem' }}>Export Charges - ZAR <InfoTip text="Outbound port and clearance fees: landside, declaration, VGM, CTO/Navis, cargo dues, agency, and disbursement." /></h4>
+          <h4 style={{ margin: '0 0 1rem', color: '#1e40af', fontSize: '1rem' }}>Export Charges - ZAR <InfoTip text="Forwarder origin-side charges (AQ-1122 template). USD-quoted lines auto-convert via roe_origin." /></h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+            {/* Terminal + container handling */}
+            {currencyInput('Terminal Handling Cost', 'terminal_handling_zar')}
+            {currencyInput('Carbon Emission Reduction', 'carbon_emission_zar', 'ZAR', 'If applicable — leave at 0 when not charged.')}
+            {currencyInput('Container Seal', 'container_seal_zar')}
+            {/* Release + haulage */}
+            {currencyInput('Electronic Release Fee', 'electronic_release_fee_zar')}
+            {currencyInput('Merchant Haulage', 'merchant_haulage_zar')}
+            {currencyInput('Navis Release Fee', 'navis_release_fee_zar')}
+            {/* CTO / Navis GP / VGM */}
+            {currencyInput('CTO', 'cto_navis_fee_zar')}
+            {currencyInput('Navis GP', 'navis_gp_zar')}
+            {currencyInput('VGM (Verified Gross Mass)', 'vgm_zar')}
+            {/* Documents */}
+            {currencyInput('Document Courier', 'document_courier_zar')}
+            {currencyInput('Courier: Fuel Surcharge', 'courier_fuel_surcharge_zar')}
+            {currencyInput('Certificate of Origin', 'certificate_of_origin_zar')}
+            {/* Landside / declaration / cargo dues */}
             {currencyInput('Landside Charges', 'export_landside_charges_zar')}
             {currencyInput('Export Declaration', 'export_declaration_zar')}
-            {currencyInput('VGM (Verified Gross Mass)', 'vgm_zar')}
-            {currencyInput('CTO & Navis Fee', 'cto_navis_fee_zar')}
             {currencyInput('Cargo Dues', 'export_cargo_dues_zar')}
+            {/* USD-quoted — input + auto ZAR via roe_origin */}
+            {currencyInput('Electronic Bill of Lading', 'ebol_fee_usd', 'USD')}
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#166534' }}>
+                E-BOL: USD to ZAR - Auto
+              </label>
+              <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', borderRadius: '6px', fontWeight: '600', color: '#166534' }}>
+                {formatCurrency((parseFloat(formData.ebol_fee_usd) || 0) * (parseFloat(formData.roe_origin) || 0))}
+              </div>
+            </div>
+            {currencyInput('ISPS', 'isps_fee_usd', 'USD')}
+            {currencyInput('Telex Release', 'telex_release_usd', 'USD', 'Leave at 0 if not used (e.g. original B/L).')}
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#166534' }}>
+                ISPS + Telex: USD to ZAR - Auto
+              </label>
+              <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', borderRadius: '6px', fontWeight: '600', color: '#166534' }}>
+                {formatCurrency(((parseFloat(formData.isps_fee_usd) || 0) + (parseFloat(formData.telex_release_usd) || 0)) * (parseFloat(formData.roe_origin) || 0))}
+              </div>
+            </div>
+            {/* Agency + Disbursement */}
             {currencyInput('Agency Fee', 'agency_fee_zar', 'ZAR', 'Per shipment @ 3.5% min R1187 — defaults to the R1187 minimum.')}
             {currencyInput('Disbursement Fee', 'disbursement_fee_zar', 'ZAR', 'Per shipment @ 1.4% min R306.')}
             <div style={{ marginBottom: '12px' }}>

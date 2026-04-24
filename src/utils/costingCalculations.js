@@ -272,13 +272,29 @@ export const calculateAllTotals = (data) => {
 
   const exportChargesSubtotalZar = isExport
     ? (
+        // User-entered ZAR items
         (parseFloat(data.export_landside_charges_zar) || 0) +
         (parseFloat(data.export_declaration_zar) || 0) +
         (parseFloat(data.vgm_zar) || 0) +
-        (parseFloat(data.cto_navis_fee_zar) || 0) +
+        (parseFloat(data.cto_navis_fee_zar) || 0) +           // CTO
+        (parseFloat(data.navis_gp_zar) || 0) +
         (parseFloat(data.export_cargo_dues_zar) || 0) +
         agencyFeeZar +
-        (parseFloat(data.disbursement_fee_zar) || 0)
+        (parseFloat(data.disbursement_fee_zar) || 0) +
+        // AQ-1122 additions
+        (parseFloat(data.terminal_handling_zar) || 0) +
+        (parseFloat(data.carbon_emission_zar) || 0) +
+        (parseFloat(data.container_seal_zar) || 0) +
+        (parseFloat(data.electronic_release_fee_zar) || 0) +
+        (parseFloat(data.merchant_haulage_zar) || 0) +
+        (parseFloat(data.navis_release_fee_zar) || 0) +
+        (parseFloat(data.document_courier_zar) || 0) +
+        (parseFloat(data.courier_fuel_surcharge_zar) || 0) +
+        (parseFloat(data.certificate_of_origin_zar) || 0) +
+        // USD-quoted items converted via roe_origin
+        ((parseFloat(data.ebol_fee_usd) || 0) * roeOrigin) +
+        ((parseFloat(data.isps_fee_usd) || 0) * roeOrigin) +
+        ((parseFloat(data.telex_release_usd) || 0) * roeOrigin)
       )
     : 0;
 

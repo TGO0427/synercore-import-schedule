@@ -66,15 +66,31 @@ const INITIAL_FORM_STATE = {
   local_cartage_dbn_whs_pretoria_6m_zar: 10370,
   local_cartage_dbn_whs_pretoria_12m_zar: 14330,
   transport_pe_coega_to_pretoria_zar: 0,
-  // Export Charges (replaces Destination Charges in export mode)
+  // Export Charges (replaces Destination Charges in export mode).
+  // Defaults seeded from the AQ-1122 40FT PTA → Durban quote.
   export_landside_charges_zar: 0,
   export_declaration_zar: 0,
-  vgm_zar: 0,
-  cto_navis_fee_zar: 0,
-  export_cargo_dues_zar: 0,
-  disbursement_fee_zar: 0,
+  vgm_zar: 1100,
+  cto_navis_fee_zar: 150,        // CTO
+  navis_gp_zar: 250,
+  export_cargo_dues_zar: 891.25,
+  disbursement_fee_zar: 306,
   disbursement_fee_percentage: 1.4,
   disbursement_fee_min: 306,
+  // AQ-1122 itemised lines
+  terminal_handling_zar: 4172,
+  carbon_emission_zar: 0,
+  container_seal_zar: 60,
+  electronic_release_fee_zar: 160,
+  merchant_haulage_zar: 1519,
+  navis_release_fee_zar: 350,
+  document_courier_zar: 560,
+  courier_fuel_surcharge_zar: 218.40,
+  certificate_of_origin_zar: 235,
+  // USD-quoted lines (auto-convert via roe_origin)
+  ebol_fee_usd: 75,
+  isps_fee_usd: 14,
+  telex_release_usd: 0,
   // Products being exported
   products: [
     { _id: Date.now(), name: '', hs_code: '', pack_size: '', pack_type: '', weight_kg: 0, rate_per_kg: 0, duty_percent: 0, duty_schedule1_percent: 0, currency: 'ZAR', invoice_value: 0 }

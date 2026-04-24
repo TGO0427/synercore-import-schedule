@@ -262,6 +262,20 @@ export default async function addCostingColumns() {
     'disbursement_fee_min NUMERIC(12,2) DEFAULT 306',
     'export_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0',
     "presentation_currency VARCHAR(10) DEFAULT 'USD'",
+    // AQ-1122 itemised origin charges (40FT defaults seeded in UI)
+    'terminal_handling_zar NUMERIC(12,2) DEFAULT 0',
+    'carbon_emission_zar NUMERIC(12,2) DEFAULT 0',
+    'container_seal_zar NUMERIC(12,2) DEFAULT 0',
+    'electronic_release_fee_zar NUMERIC(12,2) DEFAULT 0',
+    'merchant_haulage_zar NUMERIC(12,2) DEFAULT 0',
+    'navis_release_fee_zar NUMERIC(12,2) DEFAULT 0',
+    'navis_gp_zar NUMERIC(12,2) DEFAULT 0',
+    'document_courier_zar NUMERIC(12,2) DEFAULT 0',
+    'courier_fuel_surcharge_zar NUMERIC(12,2) DEFAULT 0',
+    'certificate_of_origin_zar NUMERIC(12,2) DEFAULT 0',
+    'ebol_fee_usd NUMERIC(12,2) DEFAULT 0',
+    'isps_fee_usd NUMERIC(12,2) DEFAULT 0',
+    'telex_release_usd NUMERIC(12,2) DEFAULT 0',
   ];
   for (const col of exportChargeColumns) {
     if (await addColumn(col)) added++;

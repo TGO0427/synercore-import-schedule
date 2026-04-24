@@ -205,6 +205,13 @@ const COST_ESTIMATE_COLUMNS = [
   'cto_navis_fee_zar', 'export_cargo_dues_zar', 'disbursement_fee_zar',
   'disbursement_fee_percentage', 'disbursement_fee_min',
   'export_charges_subtotal_zar', 'presentation_currency',
+  // AQ-1122 itemised origin-side export charges
+  'terminal_handling_zar', 'carbon_emission_zar', 'container_seal_zar',
+  'electronic_release_fee_zar', 'merchant_haulage_zar',
+  'navis_release_fee_zar', 'navis_gp_zar',
+  'document_courier_zar', 'courier_fuel_surcharge_zar',
+  'certificate_of_origin_zar',
+  'ebol_fee_usd', 'isps_fee_usd', 'telex_release_usd',
 ];
 
 // Column set for INSERT/UPDATE filtering
