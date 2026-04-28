@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, lazy } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { authFetch } from '../utils/authFetch';
+import { authUtils } from '../utils/auth';
 import { getApiUrl } from '../config/api';
 import { useNotification } from '../contexts/NotificationContext';
 import { STATUS_COLORS } from '../types/shipment';
@@ -42,6 +43,7 @@ const STAT_CARDS = [
 
 function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment, onDeleteShipment, onFileUpload, loading }) {
   const { showSuccess, showError, confirm: confirmAction } = useNotification();
+  const isAdmin = authUtils.getUser()?.role === 'admin';
   const [searchParams, setSearchParams] = useSearchParams();
   const statusFilter = searchParams.get('status') || null;
   const [searchTerm, setSearchTerm] = useState('');
@@ -298,6 +300,40 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
     }
   };
 
+  const handleClearAll = async () => {
+    if (!isAdmin) return;
+    const count = localShipments.length;
+    if (count === 0) {
+      showError('No local shipments to clear');
+      return;
+    }
+    const confirmed = await confirmAction({
+      title: 'Clear All Local Shipments',
+      message: `Permanently delete all ${count} local shipment${count === 1 ? '' : 's'}? This cannot be undone.`,
+      confirmText: 'Clear All',
+      cancelText: 'Cancel',
+      type: 'warning',
+    });
+    if (!confirmed) return;
+    setActionLoading(true);
+    let deleted = 0;
+    let failed = 0;
+    for (const s of localShipments) {
+      try {
+        await onDeleteShipment(s.id);
+        deleted++;
+      } catch {
+        failed++;
+      }
+    }
+    setActionLoading(false);
+    if (failed === 0) {
+      showSuccess(`Cleared ${deleted} local shipment${deleted === 1 ? '' : 's'}`);
+    } else {
+      showError(`Cleared ${deleted}, failed ${failed}`);
+    }
+  };
+
   const handleStatusChange = async (id, newStatus) => {
     try {
       await onUpdateShipment(id, { latestStatus: newStatus });
@@ -426,9 +462,22 @@ function LocalReceivingSchedule({ shipments, onCreateShipment, onUpdateShipment,
             Track local deliveries, road shipments, and inter-warehouse transfers
           </p>
         </div>
-        <button className="btn btn-primary" style={{ fontSize: '0.82rem', padding: '7px 14px' }} onClick={() => { resetForm(); setShowCreateModal(true); }}>
-          + New Local Shipment
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {isAdmin && (
+            <button
+              className="btn btn-danger"
+              style={{ fontSize: '0.82rem', padding: '7px 14px' }}
+              onClick={handleClearAll}
+              disabled={actionLoading || localShipments.length === 0}
+              title="Delete all local shipments (admin only)"
+            >
+              Clear All
+            </button>
+          )}
+          <button className="btn btn-primary" style={{ fontSize: '0.82rem', padding: '7px 14px' }} onClick={() => { resetForm(); setShowCreateModal(true); }}>
+            + New Local Shipment
+          </button>
+        </div>
       </div>
 
       {/* Compact toolbar: stat chips + search + import — one unified zone */}
