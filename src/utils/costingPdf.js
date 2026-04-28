@@ -416,7 +416,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
         fontSize: 6,
         headFontSize: 6,
         paddingX: 2,
-        maxTotalWidth: pageWidth - 16,
+        maxTotalWidth: pageWidth - 28,
         overrides: {
           0: { halign: 'left', overflow: 'linebreak', minWidth: 20 },
           1: { halign: 'right' },
@@ -438,7 +438,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
         body: allocationRows,
         theme: 'striped',
         tableWidth: 'wrap',
-        margin: { left: 8, right: 8 },
+        margin: { left: 14, right: 14 },
         headStyles: {
           fillColor: [22, 101, 52],
           fontSize: 6,
