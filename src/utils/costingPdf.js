@@ -786,106 +786,187 @@ export function generateEstimatePDF(estimate) {
   ].filter(r => r.zar && parseFloat(r.zar) !== 0);
 
   if (summaryRows.length > 0) {
-    let sumY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 60);
+    let sumY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 75);
     sumY = drawSectionDivider(doc, sumY, 'Summary', themeColor);
 
     const pageW = doc.internal.pageSize.getWidth();
     const boxX = 14;
     const boxW = pageW - 28;
-    const padX = 6;
-    const padTop = 4;
-    const padBottom = 4;
+    const boxY = sumY + 1;
 
-    // Row heights (mm). Hero row (Total) is taller; sub rows are tighter.
-    const rowHeightFor = (kind) => {
-      if (kind === 'hero') return isExport ? 15 : 11;
-      return isExport ? 12 : 9;
-    };
+    if (isExport) {
+      // === Editorial export summary card ===
+      // Layout: tracked header → hero block (label / huge ZAR / muted
+      // foreign) → thin divider → support metrics in N columns.
+      const heroRow = summaryRows.find(r => r.kind === 'hero');
+      const supportRows = summaryRows.filter(r => r.kind !== 'hero');
 
-    const totalH = padTop + padBottom +
-      summaryRows.reduce((acc, r) => acc + rowHeightFor(r.kind), 0);
+      const padX = 12;
+      const padTop = 7;
+      const padBottom = 8;
 
-    // Card background — rounded dark panel
-    doc.setFillColor(themeColor[0], themeColor[1], themeColor[2]);
-    doc.roundedRect(boxX, sumY + 1, boxW, totalH, 2.5, 2.5, 'F');
+      // Line-advance factor (mm per point of font size). 0.4 ~= 1.13 line-height ratio.
+      const LH = 0.4;
 
-    let cursorY = sumY + 1 + padTop;
+      // Pre-compute card height
+      let bodyH = 9 * LH; // "COST SUMMARY" header
+      if (heroRow) {
+        bodyH += 6;            // gap header → hero
+        bodyH += 11 * LH + 1;  // hero label
+        bodyH += 24 * LH + 1;  // hero ZAR
+        bodyH += 13 * LH;      // hero foreign
+      }
+      if (supportRows.length > 0) {
+        bodyH += 7;            // gap before divider
+        bodyH += 4;            // divider + gap after
+        bodyH += 10 * LH + 1;  // support label
+        bodyH += 13 * LH + 1;  // support ZAR
+        bodyH += 10 * LH;      // support foreign
+      }
+      const totalH = padTop + bodyH + padBottom;
 
-    summaryRows.forEach((row, idx) => {
-      const h = rowHeightFor(row.kind);
-      const rowTop = cursorY;
-      const rowBottom = cursorY + h;
+      // Card — rounded panel, softer dark navy (#0E2544) for cleaner print
+      doc.setFillColor(14, 37, 68);
+      doc.roundedRect(boxX, boxY, boxW, totalH, 3, 3, 'F');
 
-      // Type sizes per row kind
-      const labelSize = row.kind === 'hero' ? 12 : (row.kind === 'mid' ? 10 : 9);
-      const primarySize = row.kind === 'hero' ? 16 : (row.kind === 'mid' ? 12 : 10);
-      const secondarySize = row.kind === 'hero' ? 10 : 8;
+      const xLeft = boxX + padX;
+      const xRight = boxX + boxW - padX;
+      let cy = boxY + padTop;
 
-      const innerPadY = 2;
+      // Tracked header
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(184, 198, 217);
+      try { doc.setCharSpace(0.5); } catch { /* older jsPDF builds */ }
+      doc.text('COST SUMMARY', xLeft, cy, { baseline: 'top' });
+      try { doc.setCharSpace(0); } catch { /* */ }
+      cy += 9 * LH;
 
-      // Label — left aligned, top of row
-      doc.setTextColor(255, 255, 255);
-      doc.setFont(undefined, row.kind === 'sub' ? 'normal' : 'bold');
-      doc.setFontSize(labelSize);
-      if (isExport) {
-        doc.text(row.label, boxX + padX, rowTop + innerPadY, { baseline: 'top' });
-      } else {
-        // Single-line layout — vertically center
-        doc.text(row.label, boxX + padX, rowTop + h / 2, { baseline: 'middle' });
+      // Hero block — left-aligned, dominant
+      if (heroRow) {
+        cy += 6;
+
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(255, 255, 255);
+        doc.text(heroRow.label, xLeft, cy, { baseline: 'top' });
+        cy += 11 * LH + 1;
+
+        doc.setFontSize(24);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(255, 255, 255);
+        doc.text(formatCurrency(heroRow.zar), xLeft, cy, { baseline: 'top' });
+        cy += 24 * LH + 1;
+
+        doc.setFontSize(13);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(190, 210, 235);
+        doc.text(
+          formatCurrency(toPresentation(heroRow.zar), presCur),
+          xLeft,
+          cy,
+          { baseline: 'top' },
+        );
+        cy += 13 * LH;
       }
 
-      // Primary value (ZAR) — right aligned, top of row, large bold
-      doc.setFont(undefined, 'bold');
-      doc.setFontSize(primarySize);
-      doc.setTextColor(255, 255, 255);
-      if (isExport) {
-        doc.text(
-          formatCurrency(row.zar),
-          boxX + boxW - padX,
-          rowTop + innerPadY,
-          { align: 'right', baseline: 'top' },
-        );
+      // Support metrics — N columns, divider above
+      if (supportRows.length > 0) {
+        cy += 7;
+        doc.setDrawColor(50, 75, 105);
+        doc.setLineWidth(0.15);
+        doc.line(xLeft, cy, xRight, cy);
+        cy += 4;
 
-        // Secondary value (foreign currency) — smaller, muted, below primary
-        doc.setFont(undefined, 'normal');
-        doc.setFontSize(secondarySize);
-        doc.setTextColor(170, 195, 225); // soft blue-grey
-        doc.text(
-          formatCurrency(toPresentation(row.zar), presCur),
-          boxX + boxW - padX,
-          rowBottom - innerPadY,
-          { align: 'right', baseline: 'bottom' },
-        );
-      } else {
+        const innerW = boxW - padX * 2;
+        const colW = innerW / supportRows.length;
+
+        supportRows.forEach((row, i) => {
+          const colX = xLeft + colW * i;
+          let scy = cy;
+
+          // Label — tracked-out, muted heading colour
+          doc.setFontSize(10);
+          doc.setFont(undefined, 'bold');
+          doc.setTextColor(184, 198, 217);
+          try { doc.setCharSpace(0.3); } catch { /* */ }
+          doc.text(row.label, colX, scy, { baseline: 'top' });
+          try { doc.setCharSpace(0); } catch { /* */ }
+          scy += 10 * LH + 1;
+
+          // ZAR
+          doc.setFontSize(13);
+          doc.setFont(undefined, 'bold');
+          doc.setTextColor(255, 255, 255);
+          doc.text(formatCurrency(row.zar), colX, scy, { baseline: 'top' });
+          scy += 13 * LH + 1;
+
+          // Foreign
+          doc.setFontSize(10);
+          doc.setFont(undefined, 'normal');
+          doc.setTextColor(190, 210, 235);
+          doc.text(
+            formatCurrency(toPresentation(row.zar), presCur),
+            colX,
+            scy,
+            { baseline: 'top' },
+          );
+        });
+      }
+
+      // Reset graphics state and bump the autoTable cursor for anything below
+      doc.setDrawColor(0, 0, 0);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont(undefined, 'normal');
+      if (doc.lastAutoTable) {
+        doc.lastAutoTable.finalY = boxY + totalH;
+      }
+    } else {
+      // === Import summary (single-column, ZAR only) ===
+      const padX = 8;
+      const rowH = 11;
+      const totalH = 4 + summaryRows.length * rowH + 4;
+
+      doc.setFillColor(themeColor[0], themeColor[1], themeColor[2]);
+      doc.roundedRect(boxX, boxY, boxW, totalH, 2.5, 2.5, 'F');
+
+      let cy = boxY + 4;
+      summaryRows.forEach((row, idx) => {
+        const isTotal = row.kind === 'hero';
+        const labelSize = isTotal ? 12 : 10;
+        const valSize = isTotal ? 14 : 11;
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(labelSize);
+        doc.text(row.label, boxX + padX, cy + rowH / 2, { baseline: 'middle' });
+
+        doc.setFontSize(valSize);
         doc.text(
           formatCurrency(row.zar),
           boxX + boxW - padX,
-          rowTop + h / 2,
+          cy + rowH / 2,
           { align: 'right', baseline: 'middle' },
         );
+
+        if (idx < summaryRows.length - 1) {
+          doc.setDrawColor(
+            Math.min(255, themeColor[0] + 40),
+            Math.min(255, themeColor[1] + 40),
+            Math.min(255, themeColor[2] + 40),
+          );
+          doc.setLineWidth(0.1);
+          doc.line(boxX + padX, cy + rowH, boxX + boxW - padX, cy + rowH);
+        }
+        cy += rowH;
+      });
+
+      doc.setDrawColor(0, 0, 0);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont(undefined, 'normal');
+      if (doc.lastAutoTable) {
+        doc.lastAutoTable.finalY = boxY + totalH;
       }
-
-      // Thin divider between rows (skip after the last row)
-      if (idx < summaryRows.length - 1) {
-        doc.setDrawColor(
-          Math.min(255, themeColor[0] + 40),
-          Math.min(255, themeColor[1] + 40),
-          Math.min(255, themeColor[2] + 40),
-        );
-        doc.setLineWidth(0.1);
-        doc.line(boxX + padX, rowBottom, boxX + boxW - padX, rowBottom);
-      }
-
-      cursorY = rowBottom;
-    });
-
-    // Reset draw colors and update lastAutoTable.finalY so any
-    // subsequent autoTable-aware code has a sensible cursor.
-    doc.setDrawColor(0, 0, 0);
-    doc.setTextColor(0, 0, 0);
-    doc.setFont(undefined, 'normal');
-    if (doc.lastAutoTable) {
-      doc.lastAutoTable.finalY = sumY + 1 + totalH;
     }
   }
 
