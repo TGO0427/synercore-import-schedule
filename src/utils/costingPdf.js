@@ -6,6 +6,45 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { calculateAllTotals, formatCurrency, formatNumber } from './costingCalculations';
 
+// === Design tokens (shared across the PDF) ==============================
+// Single palette so every section feels of-a-piece. Section identity is
+// preserved through hue, but all values share the same depth/saturation.
+const THEME = {
+  // Brand panels
+  panelDark:    [14, 37, 68],     // #0E2544 — primary navy used in cover bar + Summary card
+  panelDarkAir: [55, 28, 130],    // #371C82 — air freight variant
+
+  // Section accents (used for divider bars + autoTable head fills)
+  navy:    [14, 37, 68],
+  ocean:   [29, 78, 137],
+  green:   [22, 101, 52],
+  amber:   [161, 98, 7],
+  purple:  [91, 33, 182],
+
+  // Text
+  headingMuted: [184, 198, 217],  // #B8C6D9 — tracked labels on dark, also support-row labels
+  bodyDark:     [31, 41, 55],     // #1F2937 — table body text
+  bodyMuted:    [107, 114, 128],  // #6B7280 — secondary text on light surfaces
+
+  // Surfaces
+  rowAlt:      [248, 250, 252],   // #F8FAFC — single alternate-row tone everywhere
+  surfaceSoft: [241, 245, 249],   // #F1F5F9 — header info strip
+};
+
+// Standard config block for charge tables — ensures the same head fill
+// treatment, body type size, and zebra-stripe tone across every section.
+const chargeTableStyles = (color) => ({
+  theme: 'striped',
+  headStyles: {
+    fillColor: color,
+    textColor: [255, 255, 255],
+    fontStyle: 'bold',
+    fontSize: 9,
+  },
+  styles: { fontSize: 9, textColor: THEME.bodyDark },
+  alternateRowStyles: { fillColor: THEME.rowAlt },
+});
+
 /**
  * Compute autoTable columnStyles with cellWidth sized to actual content.
  * Measures the widest rendered string per column (header + body) at the
@@ -185,16 +224,23 @@ const getProductCostBreakdown = (product, estimate, totals, productTotals) => {
   return { weight, weightRatio, invoiceValue, currency, customsValue, importDuty, schedule1Duty, totalDuties, allocatedShipping, transportCostPerKg, totalLanded, costPerKg };
 };
 
-// Draw a section divider with accent bar and label
+// Draw a section divider with accent bar and tracked label.
+// Editorial feel: bar in the section's accent color, label in the same
+// hue with light letter-spacing so it reads as a "title" rather than just
+// a heading.
 const drawSectionDivider = (doc, y, label, color) => {
-  // Accent bar (3px wide, 12px tall)
+  // Accent bar — slightly wider/taller for confidence
   doc.setFillColor(color[0], color[1], color[2]);
-  doc.rect(14, y - 3, 1.2, 5, 'F');
-  // Section title
+  doc.rect(14, y - 3.2, 1.4, 5.6, 'F');
+  // Section title with slight tracking for the editorial feel used in the
+  // Summary card. Wrapped in try/catch since older jsPDF builds may lack
+  // setCharSpace.
   doc.setFontSize(11);
   doc.setFont(undefined, 'bold');
   doc.setTextColor(color[0], color[1], color[2]);
-  doc.text(label, 17, y + 1);
+  try { doc.setCharSpace(0.25); } catch { /* */ }
+  doc.text(label, 17.5, y + 1);
+  try { doc.setCharSpace(0); } catch { /* */ }
   doc.setFont(undefined, 'normal');
   return y + 5;
 };
@@ -232,7 +278,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
   const { currency: presCur, toPresentation } = getPresentation(estimate);
 
   // === FULL-WIDTH COLOR BAR ===
-  const barColor = isAir ? [91, 33, 182] : [11, 31, 58];
+  const barColor = isAir ? THEME.panelDarkAir : THEME.panelDark;
   doc.setFillColor(barColor[0], barColor[1], barColor[2]);
   doc.rect(0, 0, pageWidth, 16, 'F');
 
@@ -251,10 +297,10 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
   doc.text(titleText, pageWidth - titleWidth - 10, 11);
 
   // === LIGHT GRAY INFO STRIP ===
-  doc.setFillColor(241, 245, 249);
+  doc.setFillColor(THEME.surfaceSoft[0], THEME.surfaceSoft[1], THEME.surfaceSoft[2]);
   doc.rect(0, 16, pageWidth, 9, 'F');
   doc.setFontSize(8);
-  doc.setTextColor(71, 85, 105);
+  doc.setTextColor(THEME.bodyMuted[0], THEME.bodyMuted[1], THEME.bodyMuted[2]);
   doc.setFont(undefined, 'normal');
   const infoText = isExport
     ? `Reference: ${estimate.reference_number || 'N/A'}     Date: ${formatDate(estimate.costing_date)}     Exporter: ${estimate.supplier_name || 'N/A'}     Customer: ${estimate.customer_name || 'N/A'}`
@@ -317,8 +363,8 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
     body: shipmentRows,
     showHead: false,
     theme: 'striped',
-    alternateRowStyles: { fillColor: [248, 250, 252] },
-    styles: { fontSize: 8.5 },
+    alternateRowStyles: { fillColor: THEME.rowAlt },
+    styles: { fontSize: 8.5, textColor: THEME.bodyDark },
     columnStyles: {
       0: { fontStyle: 'bold', cellWidth: 55 },
     },
@@ -377,7 +423,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
       ]);
 
       let allocY = doc.lastAutoTable.finalY + 4;
-      allocY = drawSectionDivider(doc, allocY, 'Product Cost Allocation', [22, 101, 52]);
+      allocY = drawSectionDivider(doc, allocY, 'Product Cost Allocation', THEME.green);
 
       const landedHeader = isExport ? `Total\nLanded\n(${presCur})` : 'Total\nLanded';
       const costPerKgHeader = isExport ? `Cost/kg\n(${presCur})` : 'Cost/kg';
@@ -411,7 +457,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
         tableWidth: 'wrap',
         margin: { left: 14, right: 14 },
         headStyles: {
-          fillColor: [22, 101, 52],
+          fillColor: THEME.green,
           fontSize: 6,
           textColor: [255, 255, 255],
           halign: 'center',
@@ -447,7 +493,7 @@ export function generateEstimatePDF(estimate) {
   buildEstimateHeader(doc, estimate, productTotals, totals);
 
   const isAir = (estimate.transport_mode || 'sea') === 'air';
-  const themeColor = isAir ? [91, 33, 182] : [11, 31, 58];
+  const themeColor = isAir ? THEME.panelDarkAir : THEME.panelDark;
   const pageWidth = doc.internal.pageSize.width;
   const { isExport, currency: presCur, toPresentation } = getPresentation(estimate);
   const agencyFeeMinLabel = isExport
@@ -478,14 +524,14 @@ export function generateEstimatePDF(estimate) {
     }
     if (airRows.length > 0) {
       let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
-      secY = drawSectionDivider(doc, secY, 'Airfreight Charges', [124, 58, 237]);
+      secY = drawSectionDivider(doc, secY, 'Airfreight Charges', THEME.purple);
       autoTable(doc, {
         startY: secY + 1,
         head: [['Airfreight', 'Amount', 'ZAR']],
         body: airRows,
         theme: 'striped',
-        headStyles: { fillColor: [124, 58, 237], textColor: [255, 255, 255] },
-        alternateRowStyles: { fillColor: [250, 250, 250] },
+        headStyles: { fillColor: THEME.purple, textColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: THEME.rowAlt },
         didParseCell: chargeTableSubTotalHook(airRows),
       });
     }
@@ -502,14 +548,14 @@ export function generateEstimatePDF(estimate) {
     }
     if (surchargeRows.length > 0) {
       let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
-      secY = drawSectionDivider(doc, secY, 'Surcharges', [109, 40, 217]);
+      secY = drawSectionDivider(doc, secY, 'Surcharges', THEME.purple);
       autoTable(doc, {
         startY: secY + 1,
         head: [['Surcharges', 'Amount', 'ZAR']],
         body: surchargeRows,
         theme: 'striped',
-        headStyles: { fillColor: [109, 40, 217], textColor: [255, 255, 255] },
-        alternateRowStyles: { fillColor: [250, 250, 250] },
+        headStyles: { fillColor: THEME.purple, textColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: THEME.rowAlt },
         didParseCell: chargeTableSubTotalHook(surchargeRows),
       });
     }
@@ -530,14 +576,14 @@ export function generateEstimatePDF(estimate) {
     }
     if (airLocalRows.length > 0) {
       let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
-      secY = drawSectionDivider(doc, secY, 'Origin & Local Charges', [22, 101, 52]);
+      secY = drawSectionDivider(doc, secY, 'Origin & Local Charges', THEME.green);
       autoTable(doc, {
         startY: secY + 1,
         head: [['Origin & Local Charges', 'Amount']],
         body: airLocalRows,
         theme: 'striped',
-        headStyles: { fillColor: [22, 101, 52], textColor: [255, 255, 255] },
-        alternateRowStyles: { fillColor: [250, 250, 250] },
+        headStyles: { fillColor: THEME.green, textColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: THEME.rowAlt },
         didParseCell: chargeTableSubTotalHook(airLocalRows),
       });
     }
@@ -555,14 +601,14 @@ export function generateEstimatePDF(estimate) {
     }
     if (oceanFreightRows.length > 0) {
       let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
-      secY = drawSectionDivider(doc, secY, 'Ocean Freight', [59, 130, 246]);
+      secY = drawSectionDivider(doc, secY, 'Ocean Freight', THEME.ocean);
       autoTable(doc, {
         startY: secY + 1,
         head: [['Ocean Freight', 'Amount', 'ZAR']],
         body: oceanFreightRows,
         theme: 'striped',
-        headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255] },
-        alternateRowStyles: { fillColor: [250, 250, 250] },
+        headStyles: { fillColor: THEME.ocean, textColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: THEME.rowAlt },
         didParseCell: chargeTableSubTotalHook(oceanFreightRows),
       });
     }
@@ -581,14 +627,14 @@ export function generateEstimatePDF(estimate) {
     }
     if (originRows.length > 0) {
       let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
-      secY = drawSectionDivider(doc, secY, 'Origin Charges', [46, 139, 87]);
+      secY = drawSectionDivider(doc, secY, 'Origin Charges', THEME.green);
       autoTable(doc, {
         startY: secY + 1,
         head: [['Origin Charges', 'Amount', 'ZAR']],
         body: originRows,
         theme: 'striped',
-        headStyles: { fillColor: [46, 139, 87], textColor: [255, 255, 255] },
-        alternateRowStyles: { fillColor: [250, 250, 250] },
+        headStyles: { fillColor: THEME.green, textColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: THEME.rowAlt },
         didParseCell: chargeTableSubTotalHook(originRows),
       });
     }
@@ -614,14 +660,14 @@ export function generateEstimatePDF(estimate) {
     }
     if (localChargeRows.length > 0) {
       let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
-      secY = drawSectionDivider(doc, secY, 'Local Charges', [22, 101, 52]);
+      secY = drawSectionDivider(doc, secY, 'Local Charges', THEME.green);
       autoTable(doc, {
         startY: secY + 1,
         head: [['Local Charges (Transport/Cartage)', 'ZAR']],
         body: localChargeRows,
         theme: 'striped',
-        headStyles: { fillColor: [22, 101, 52], textColor: [255, 255, 255] },
-        alternateRowStyles: { fillColor: [250, 250, 250] },
+        headStyles: { fillColor: THEME.green, textColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: THEME.rowAlt },
         didParseCell: chargeTableSubTotalHook(localChargeRows),
       });
     }
@@ -659,14 +705,14 @@ export function generateEstimatePDF(estimate) {
       }
       if (exportChargeRows.length > 0) {
         let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
-        secY = drawSectionDivider(doc, secY, 'Export Charges', [0, 123, 167]);
+        secY = drawSectionDivider(doc, secY, 'Export Charges', THEME.ocean);
         autoTable(doc, {
           startY: secY + 1,
           head: [['Export Charges', 'ZAR']],
           body: exportChargeRows,
           theme: 'striped',
-          headStyles: { fillColor: [0, 123, 167], textColor: [255, 255, 255] },
-          alternateRowStyles: { fillColor: [250, 250, 250] },
+          headStyles: { fillColor: THEME.ocean, textColor: [255, 255, 255] },
+          alternateRowStyles: { fillColor: THEME.rowAlt },
           didParseCell: chargeTableSubTotalHook(exportChargeRows),
         });
       }
@@ -699,14 +745,14 @@ export function generateEstimatePDF(estimate) {
       }
       if (destChargeRows.length > 0) {
         let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
-        secY = drawSectionDivider(doc, secY, 'Destination Charges', [0, 123, 167]);
+        secY = drawSectionDivider(doc, secY, 'Destination Charges', THEME.ocean);
         autoTable(doc, {
           startY: secY + 1,
           head: [['Destination Charges', 'ZAR']],
           body: destChargeRows,
           theme: 'striped',
-          headStyles: { fillColor: [0, 123, 167], textColor: [255, 255, 255] },
-          alternateRowStyles: { fillColor: [250, 250, 250] },
+          headStyles: { fillColor: THEME.ocean, textColor: [255, 255, 255] },
+          alternateRowStyles: { fillColor: THEME.rowAlt },
           didParseCell: chargeTableSubTotalHook(destChargeRows),
         });
       }
@@ -725,14 +771,14 @@ export function generateEstimatePDF(estimate) {
   }
   if (customsRows.length > 0) {
     let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
-    secY = drawSectionDivider(doc, secY, 'Customs & Duties', [146, 64, 14]);
+    secY = drawSectionDivider(doc, secY, 'Customs & Duties', THEME.amber);
     autoTable(doc, {
       startY: secY + 1,
       head: [['Customs & Duties', 'ZAR']],
       body: customsRows,
       theme: 'striped',
-      headStyles: { fillColor: [146, 64, 14], textColor: [255, 255, 255] },
-      alternateRowStyles: { fillColor: [250, 250, 250] },
+      headStyles: { fillColor: THEME.amber, textColor: [255, 255, 255] },
+      alternateRowStyles: { fillColor: THEME.rowAlt },
       didParseCell: chargeTableSubTotalHook(customsRows),
     });
   }
@@ -998,7 +1044,7 @@ export function generateEstimatePDFBase64(estimate) {
         head: [['Airfreight', 'Amount', 'ZAR']],
         body: airRows,
         theme: 'grid',
-        headStyles: { fillColor: [124, 58, 237] },
+        headStyles: { fillColor: THEME.purple },
       });
     }
 
@@ -1018,7 +1064,7 @@ export function generateEstimatePDFBase64(estimate) {
         head: [['Surcharges', 'Amount', 'ZAR']],
         body: surchargeRows,
         theme: 'grid',
-        headStyles: { fillColor: [109, 40, 217] },
+        headStyles: { fillColor: THEME.purple },
       });
     }
 
@@ -1042,7 +1088,7 @@ export function generateEstimatePDFBase64(estimate) {
         head: [['Origin & Local Charges', 'Amount']],
         body: airLocalRows,
         theme: 'grid',
-        headStyles: { fillColor: [22, 101, 52] },
+        headStyles: { fillColor: THEME.green },
       });
     }
   } else {
@@ -1059,7 +1105,7 @@ export function generateEstimatePDFBase64(estimate) {
         head: [['Shipping Charges', 'ZAR']],
         body: seaSummaryRows,
         theme: 'grid',
-        headStyles: { fillColor: [59, 130, 246] },
+        headStyles: { fillColor: THEME.ocean },
       });
     }
   }
@@ -1076,7 +1122,7 @@ export function generateEstimatePDFBase64(estimate) {
       head: [['Customs & Duties', 'ZAR']],
       body: customsRows,
       theme: 'grid',
-      headStyles: { fillColor: [146, 64, 14] },
+      headStyles: { fillColor: THEME.amber },
     });
   }
 
@@ -1109,7 +1155,7 @@ export function generateEstimatePDFBase64(estimate) {
       head: [['Summary', 'Amount']],
       body: summaryRows,
       theme: 'grid',
-      headStyles: { fillColor: [11, 31, 58] },
+      headStyles: { fillColor: THEME.panelDark },
       bodyStyles: { fontStyle: 'bold' },
     });
   }
@@ -1182,7 +1228,7 @@ export async function generateReportPDF({ chartData, selectedProduct, selectedSu
       ['Average Cost/KG', formatCurrency(avgCostPerKg)],
     ],
     theme: 'grid',
-    headStyles: { fillColor: [91, 33, 182] },
+    headStyles: { fillColor: THEME.panelDarkAir },
     columnStyles: {
       0: { fontStyle: 'bold' },
       1: { halign: 'right' },
@@ -1204,7 +1250,7 @@ export async function generateReportPDF({ chartData, selectedProduct, selectedSu
       formatCurrency(s.costPerKg),
     ]),
     theme: 'striped',
-    headStyles: { fillColor: [91, 33, 182] },
+    headStyles: { fillColor: THEME.panelDarkAir },
     columnStyles: {
       1: { halign: 'center' },
       2: { halign: 'right' },
