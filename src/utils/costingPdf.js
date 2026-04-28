@@ -767,11 +767,10 @@ export function generateEstimatePDF(estimate) {
   }
 
   // === SUMMARY SECTION (prominent dark box) ===
-  // For export estimates: match the list view by showing ZAR primary
-  // with the presentation currency (USD/EUR) on a second line. Labels
-  // for the Total and Cost/KG rows reflect the customer's incoterm
-  // (e.g. "Total FOB", "FOB Cost/KG") since destination charges may not
-  // apply to the buyer under FOB/CIF/CFR/etc.
+  // Custom-drawn summary card to give the figures proper typographic
+  // hierarchy: large bold ZAR primary, smaller muted foreign-currency
+  // secondary on the line below — matching the list view's two-tier
+  // styling rather than two equal-weight stacked numbers.
   const incoTerm = isExport && estimate.inco_terms ? estimate.inco_terms : '';
   const totalLandedLabel = isExport
     ? (incoTerm ? `Total ${incoTerm}` : 'Total Landed Cost')
@@ -780,60 +779,114 @@ export function generateEstimatePDF(estimate) {
     ? (incoTerm ? `${incoTerm} Cost/KG` : 'Landed Cost/KG')
     : 'Landed Cost/KG';
 
-  const dualValue = (zarValue) =>
-    `${formatCurrency(zarValue)}\n${formatCurrency(toPresentation(zarValue), presCur)}`;
+  const summaryRows = [
+    { label: 'Total Shipping Cost', zar: totals.total_shipping_cost_zar, kind: 'sub' },
+    { label: totalLandedLabel,      zar: totals.total_landed_cost_zar,   kind: 'hero' },
+    { label: costPerKgLabel,        zar: totals.all_in_warehouse_cost_per_kg_zar, kind: 'mid' },
+  ].filter(r => r.zar && parseFloat(r.zar) !== 0);
 
-  const summaryData = [
-    [
-      'Total Shipping Cost',
-      isExport
-        ? dualValue(totals.total_shipping_cost_zar)
-        : formatCurrency(totals.total_shipping_cost_zar),
-    ],
-    [
-      totalLandedLabel,
-      isExport
-        ? dualValue(totals.total_landed_cost_zar)
-        : formatCurrency(totals.total_landed_cost_zar),
-    ],
-    [
-      costPerKgLabel,
-      isExport
-        ? dualValue(totals.all_in_warehouse_cost_per_kg_zar)
-        : formatCurrency(totals.all_in_warehouse_cost_per_kg_zar),
-    ],
-  ].filter(r => {
-    const v = parseFloat((r[1] || '').replace(/[^0-9.-]/g, ''));
-    return !isNaN(v) && v !== 0;
-  });
-
-  if (summaryData.length > 0) {
-    let sumY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 50);
+  if (summaryRows.length > 0) {
+    let sumY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 60);
     sumY = drawSectionDivider(doc, sumY, 'Summary', themeColor);
 
-    autoTable(doc, {
-      startY: sumY + 1,
-      head: [['Summary', 'Amount']],
-      body: summaryData,
-      theme: 'plain',
-      headStyles: { fillColor: themeColor, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 10 },
-      styles: { fontSize: 10 },
-      didParseCell: (data) => {
-        if (data.section === 'body') {
-          data.cell.styles.fillColor = themeColor;
-          data.cell.styles.textColor = [255, 255, 255];
-          data.cell.styles.fontStyle = 'bold';
-          // Make "Total Landed Cost" row larger
-          if (data.row.index === 1) {
-            data.cell.styles.fontSize = 13;
-          }
-          // Right-align amount column
-          if (data.column.index === 1) {
-            data.cell.styles.halign = 'right';
-          }
-        }
-      },
+    const pageW = doc.internal.pageSize.getWidth();
+    const boxX = 14;
+    const boxW = pageW - 28;
+    const padX = 6;
+    const padTop = 4;
+    const padBottom = 4;
+
+    // Row heights (mm). Hero row (Total) is taller; sub rows are tighter.
+    const rowHeightFor = (kind) => {
+      if (kind === 'hero') return isExport ? 15 : 11;
+      return isExport ? 12 : 9;
+    };
+
+    const totalH = padTop + padBottom +
+      summaryRows.reduce((acc, r) => acc + rowHeightFor(r.kind), 0);
+
+    // Card background — rounded dark panel
+    doc.setFillColor(themeColor[0], themeColor[1], themeColor[2]);
+    doc.roundedRect(boxX, sumY + 1, boxW, totalH, 2.5, 2.5, 'F');
+
+    let cursorY = sumY + 1 + padTop;
+
+    summaryRows.forEach((row, idx) => {
+      const h = rowHeightFor(row.kind);
+      const rowTop = cursorY;
+      const rowBottom = cursorY + h;
+
+      // Type sizes per row kind
+      const labelSize = row.kind === 'hero' ? 12 : (row.kind === 'mid' ? 10 : 9);
+      const primarySize = row.kind === 'hero' ? 16 : (row.kind === 'mid' ? 12 : 10);
+      const secondarySize = row.kind === 'hero' ? 10 : 8;
+
+      const innerPadY = 2;
+
+      // Label — left aligned, top of row
+      doc.setTextColor(255, 255, 255);
+      doc.setFont(undefined, row.kind === 'sub' ? 'normal' : 'bold');
+      doc.setFontSize(labelSize);
+      if (isExport) {
+        doc.text(row.label, boxX + padX, rowTop + innerPadY, { baseline: 'top' });
+      } else {
+        // Single-line layout — vertically center
+        doc.text(row.label, boxX + padX, rowTop + h / 2, { baseline: 'middle' });
+      }
+
+      // Primary value (ZAR) — right aligned, top of row, large bold
+      doc.setFont(undefined, 'bold');
+      doc.setFontSize(primarySize);
+      doc.setTextColor(255, 255, 255);
+      if (isExport) {
+        doc.text(
+          formatCurrency(row.zar),
+          boxX + boxW - padX,
+          rowTop + innerPadY,
+          { align: 'right', baseline: 'top' },
+        );
+
+        // Secondary value (foreign currency) — smaller, muted, below primary
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(secondarySize);
+        doc.setTextColor(170, 195, 225); // soft blue-grey
+        doc.text(
+          formatCurrency(toPresentation(row.zar), presCur),
+          boxX + boxW - padX,
+          rowBottom - innerPadY,
+          { align: 'right', baseline: 'bottom' },
+        );
+      } else {
+        doc.text(
+          formatCurrency(row.zar),
+          boxX + boxW - padX,
+          rowTop + h / 2,
+          { align: 'right', baseline: 'middle' },
+        );
+      }
+
+      // Thin divider between rows (skip after the last row)
+      if (idx < summaryRows.length - 1) {
+        doc.setDrawColor(
+          Math.min(255, themeColor[0] + 40),
+          Math.min(255, themeColor[1] + 40),
+          Math.min(255, themeColor[2] + 40),
+        );
+        doc.setLineWidth(0.1);
+        doc.line(boxX + padX, rowBottom, boxX + boxW - padX, rowBottom);
+      }
+
+      cursorY = rowBottom;
     });
+
+    // Reset draw colors and update lastAutoTable.finalY so any
+    // subsequent autoTable-aware code has a sensible cursor.
+    doc.setDrawColor(0, 0, 0);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(undefined, 'normal');
+    if (doc.lastAutoTable) {
+      doc.lastAutoTable.finalY = sumY + 1 + totalH;
+    }
   }
 
   // === FOOTER (all pages) ===
