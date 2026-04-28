@@ -31,20 +31,6 @@ const THEME = {
   surfaceSoft: [241, 245, 249],   // #F1F5F9 — header info strip
 };
 
-// Standard config block for charge tables — ensures the same head fill
-// treatment, body type size, and zebra-stripe tone across every section.
-const chargeTableStyles = (color) => ({
-  theme: 'striped',
-  headStyles: {
-    fillColor: color,
-    textColor: [255, 255, 255],
-    fontStyle: 'bold',
-    fontSize: 9,
-  },
-  styles: { fontSize: 9, textColor: THEME.bodyDark },
-  alternateRowStyles: { fillColor: THEME.rowAlt },
-});
-
 /**
  * Compute autoTable columnStyles with cellWidth sized to actual content.
  * Measures the widest rendered string per column (header + body) at the
