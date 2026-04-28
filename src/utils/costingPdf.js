@@ -767,27 +767,39 @@ export function generateEstimatePDF(estimate) {
   }
 
   // === SUMMARY SECTION (prominent dark box) ===
-  // For export estimates, all three summary figures are shown in the
-  // chosen presentation currency (USD or EUR).
+  // For export estimates: match the list view by showing ZAR primary
+  // with the presentation currency (USD/EUR) on a second line. Labels
+  // for the Total and Cost/KG rows reflect the customer's incoterm
+  // (e.g. "Total FOB", "FOB Cost/KG") since destination charges may not
+  // apply to the buyer under FOB/CIF/CFR/etc.
+  const incoTerm = isExport && estimate.inco_terms ? estimate.inco_terms : '';
+  const totalLandedLabel = isExport
+    ? (incoTerm ? `Total ${incoTerm}` : 'Total Landed Cost')
+    : 'Total Landed Cost';
+  const costPerKgLabel = isExport
+    ? (incoTerm ? `${incoTerm} Cost/KG` : 'Landed Cost/KG')
+    : 'Landed Cost/KG';
+
+  const dualValue = (zarValue) =>
+    `${formatCurrency(zarValue)}\n${formatCurrency(toPresentation(zarValue), presCur)}`;
+
   const summaryData = [
     [
-      isExport ? `Total Shipping Cost (${presCur})` : 'Total Shipping Cost',
+      'Total Shipping Cost',
       isExport
-        ? formatCurrency(toPresentation(totals.total_shipping_cost_zar), presCur)
+        ? dualValue(totals.total_shipping_cost_zar)
         : formatCurrency(totals.total_shipping_cost_zar),
     ],
     [
-      isExport ? `Total Landed Cost (${presCur})` : 'Total Landed Cost',
+      totalLandedLabel,
       isExport
-        ? formatCurrency(toPresentation(totals.total_landed_cost_zar), presCur)
+        ? dualValue(totals.total_landed_cost_zar)
         : formatCurrency(totals.total_landed_cost_zar),
     ],
     [
+      costPerKgLabel,
       isExport
-        ? `${estimate.inco_terms ? estimate.inco_terms : 'Landed'} Cost/KG (${presCur})`
-        : 'Landed Cost/KG',
-      isExport
-        ? formatCurrency(toPresentation(totals.all_in_warehouse_cost_per_kg_zar), presCur)
+        ? dualValue(totals.all_in_warehouse_cost_per_kg_zar)
         : formatCurrency(totals.all_in_warehouse_cost_per_kg_zar),
     ],
   ].filter(r => {
@@ -966,13 +978,26 @@ export function generateEstimatePDFBase64(estimate) {
 
   // Summary
   const isExportEst = estimate.direction === 'export';
-  const costPerKgLabel = isExportEst && estimate.inco_terms
-    ? `${estimate.inco_terms} Cost/KG`
+  const presCurEst = isExportEst
+    ? (estimate.presentation_currency === 'EUR' ? 'EUR' : 'USD')
+    : 'ZAR';
+  const presRateEst = isExportEst
+    ? (parseFloat(presCurEst === 'EUR' ? estimate.roe_eur : estimate.roe_origin) || 0)
+    : 0;
+  const toPresEst = (zar) => (isExportEst && presRateEst > 0 ? zar / presRateEst : zar);
+  const dualValueEst = (zar) =>
+    `${formatCurrency(zar)}\n${formatCurrency(toPresEst(zar), presCurEst)}`;
+  const incoTermEst = isExportEst && estimate.inco_terms ? estimate.inco_terms : '';
+  const totalLandedLabelEst = isExportEst
+    ? (incoTermEst ? `Total ${incoTermEst}` : 'Total Landed Cost')
+    : 'Total Landed Cost';
+  const costPerKgLabel = isExportEst
+    ? (incoTermEst ? `${incoTermEst} Cost/KG` : 'Landed Cost/KG')
     : 'Landed Cost/KG';
   const summaryRows = filterZeroRows([
-    ['Total Shipping Cost', formatCurrency(totals.total_shipping_cost_zar)],
-    ['Total Landed Cost', formatCurrency(totals.total_landed_cost_zar)],
-    [costPerKgLabel, formatCurrency(totals.all_in_warehouse_cost_per_kg_zar)],
+    ['Total Shipping Cost', isExportEst ? dualValueEst(totals.total_shipping_cost_zar) : formatCurrency(totals.total_shipping_cost_zar)],
+    [totalLandedLabelEst, isExportEst ? dualValueEst(totals.total_landed_cost_zar) : formatCurrency(totals.total_landed_cost_zar)],
+    [costPerKgLabel, isExportEst ? dualValueEst(totals.all_in_warehouse_cost_per_kg_zar) : formatCurrency(totals.all_in_warehouse_cost_per_kg_zar)],
   ]);
   if (summaryRows.length > 0) {
     autoTable(doc, {
