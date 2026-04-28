@@ -288,9 +288,10 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
   doc.setFontSize(8);
   doc.setTextColor(THEME.bodyMuted[0], THEME.bodyMuted[1], THEME.bodyMuted[2]);
   doc.setFont(undefined, 'normal');
+  const incoSegment = estimate.inco_terms ? `     Incoterm: ${estimate.inco_terms}` : '';
   const infoText = isExport
-    ? `Reference: ${estimate.reference_number || 'N/A'}     Date: ${formatDate(estimate.costing_date)}     Exporter: ${estimate.supplier_name || 'N/A'}     Customer: ${estimate.customer_name || 'N/A'}`
-    : `Reference: ${estimate.reference_number || 'N/A'}     Date: ${formatDate(estimate.costing_date)}     Supplier: ${estimate.supplier_name || 'N/A'}`;
+    ? `Reference: ${estimate.reference_number || 'N/A'}     Date: ${formatDate(estimate.costing_date)}     Exporter: ${estimate.supplier_name || 'N/A'}     Customer: ${estimate.customer_name || 'N/A'}${incoSegment}`
+    : `Reference: ${estimate.reference_number || 'N/A'}     Date: ${formatDate(estimate.costing_date)}     Supplier: ${estimate.supplier_name || 'N/A'}${incoSegment}`;
   doc.text(infoText, 10, 22);
 
   // === ROE INFO BOX (right-aligned, below info strip) ===
