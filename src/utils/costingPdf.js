@@ -790,7 +790,7 @@ export function generateEstimatePDF(estimate) {
   ].filter(r => r.zar && parseFloat(r.zar) !== 0);
 
   if (summaryRows.length > 0) {
-    let sumY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 75);
+    let sumY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 100);
     sumY = drawSectionDivider(doc, sumY, 'Summary', themeColor);
 
     const pageW = doc.internal.pageSize.getWidth();
@@ -807,90 +807,108 @@ export function generateEstimatePDF(estimate) {
     const heroRow = summaryRows.find(r => r.kind === 'hero');
     const supportRows = summaryRows.filter(r => r.kind !== 'hero');
 
-    const padX = 12;
-    const padTop = 7;
-    const padBottom = 8;
+    const padX = 14;
+    const padTop = 11;
+    const padBottom = 12;
 
     // Line-advance factor (mm per point of font size). 0.4 ~= 1.13 line height.
     const LH = 0.4;
 
+    // Helper: run a draw block at a given alpha (uses GState — falls back
+    // to plain draw if GState isn't available on the running jsPDF build).
+    const withOpacity = (alpha, fn) => {
+      try {
+        const gs = new doc.GState({ opacity: alpha });
+        doc.saveGraphicsState();
+        doc.setGState(gs);
+        fn();
+        doc.restoreGraphicsState();
+      } catch {
+        fn();
+      }
+    };
+
     // Pre-compute card height
-    let bodyH = 9 * LH; // "COST SUMMARY" header
+    let bodyH = 11 * LH; // "COST SUMMARY" header (now 11pt to match spec)
     if (heroRow) {
-      bodyH += 6;             // gap header → hero
-      bodyH += 11 * LH + 1;   // hero label
-      bodyH += 24 * LH;       // hero ZAR
-      if (isExport) bodyH += 1 + 13 * LH; // foreign line
+      bodyH += 9;             // generous gap header → hero
+      bodyH += 13 * LH + 2;   // hero label
+      bodyH += 28 * LH;       // hero ZAR (bumped for dominance)
+      if (isExport) bodyH += 2 + 14 * LH; // foreign line
     }
     if (supportRows.length > 0) {
-      bodyH += 7;             // gap before divider
-      bodyH += 4;             // divider + gap after
-      bodyH += 10 * LH + 1;   // support label
-      bodyH += 13 * LH;       // support ZAR
-      if (isExport) bodyH += 1 + 10 * LH; // foreign line
+      bodyH += 9;             // gap before divider
+      bodyH += 5;             // divider + gap after
+      bodyH += 11 * LH + 1;   // support label
+      bodyH += 15 * LH;       // support ZAR
+      if (isExport) bodyH += 1 + 11 * LH; // foreign line
     }
     const totalH = padTop + bodyH + padBottom;
 
     // Card — rounded panel in unified brand navy (matches cover bar)
     doc.setFillColor(themeColor[0], themeColor[1], themeColor[2]);
-    doc.roundedRect(boxX, boxY, boxW, totalH, 3, 3, 'F');
+    doc.roundedRect(boxX, boxY, boxW, totalH, 5, 5, 'F');
 
     const xLeft = boxX + padX;
     const xRight = boxX + boxW - padX;
     let cy = boxY + padTop;
 
-    // Tracked "COST SUMMARY" header
-    doc.setFontSize(9);
+    // Tracked "COST SUMMARY" header — quieter via opacity + extra tracking
+    doc.setFontSize(11);
     doc.setFont(undefined, 'bold');
-    doc.setTextColor(THEME.headingMuted[0], THEME.headingMuted[1], THEME.headingMuted[2]);
-    try { doc.setCharSpace(0.5); } catch { /* older jsPDF builds */ }
-    doc.text('COST SUMMARY', xLeft, cy, { baseline: 'top' });
+    doc.setTextColor(255, 255, 255);
+    try { doc.setCharSpace(0.7); } catch { /* */ }
+    withOpacity(0.75, () => {
+      doc.text('COST SUMMARY', xLeft, cy, { baseline: 'top' });
+    });
     try { doc.setCharSpace(0); } catch { /* */ }
-    cy += 9 * LH;
+    cy += 11 * LH;
 
     // Hero block — left-aligned, dominant
     if (heroRow) {
-      cy += 6;
+      cy += 9;
 
-      doc.setFontSize(11);
+      doc.setFontSize(13);
       doc.setFont(undefined, 'bold');
       doc.setTextColor(255, 255, 255);
       doc.text(heroRow.label, xLeft, cy, { baseline: 'top' });
-      cy += 11 * LH + 1;
+      cy += 13 * LH + 2;
 
-      doc.setFontSize(24);
+      doc.setFontSize(28);
       doc.setFont(undefined, 'bold');
       doc.setTextColor(255, 255, 255);
       doc.text(formatCurrency(heroRow.zar), xLeft, cy, { baseline: 'top' });
-      cy += 24 * LH;
+      cy += 28 * LH;
 
       if (isExport) {
-        cy += 1;
-        doc.setFontSize(13);
+        cy += 2;
+        doc.setFontSize(14);
         doc.setFont(undefined, 'normal');
-        doc.setTextColor(190, 210, 235);
-        doc.text(
-          formatCurrency(toPresentation(heroRow.zar), presCur),
-          xLeft,
-          cy,
-          { baseline: 'top' },
-        );
-        cy += 13 * LH;
+        doc.setTextColor(255, 255, 255);
+        const heroForeignY = cy;
+        withOpacity(0.75, () => {
+          doc.text(
+            formatCurrency(toPresentation(heroRow.zar), presCur),
+            xLeft,
+            heroForeignY,
+            { baseline: 'top' },
+          );
+        });
+        cy += 14 * LH;
       }
     }
 
     // Support metrics — N columns, divider above
     if (supportRows.length > 0) {
-      cy += 7;
-      // Slightly lighter divider tone vs. panel background
-      doc.setDrawColor(
-        Math.min(255, themeColor[0] + 35),
-        Math.min(255, themeColor[1] + 35),
-        Math.min(255, themeColor[2] + 35),
-      );
-      doc.setLineWidth(0.15);
-      doc.line(xLeft, cy, xRight, cy);
-      cy += 4;
+      cy += 9;
+      // True-white divider at low opacity for the refined editorial feel
+      doc.setDrawColor(255, 255, 255);
+      doc.setLineWidth(0.2);
+      const dividerY = cy;
+      withOpacity(0.12, () => {
+        doc.line(xLeft, dividerY, xRight, dividerY);
+      });
+      cy += 5;
 
       const innerW = boxW - padX * 2;
       const colW = innerW / supportRows.length;
@@ -899,32 +917,38 @@ export function generateEstimatePDF(estimate) {
         const colX = xLeft + colW * i;
         let scy = cy;
 
-        // Label — tracked-out, muted heading colour
-        doc.setFontSize(10);
+        // Label — tracked-out, slightly muted via opacity
+        doc.setFontSize(11);
         doc.setFont(undefined, 'bold');
-        doc.setTextColor(THEME.headingMuted[0], THEME.headingMuted[1], THEME.headingMuted[2]);
-        try { doc.setCharSpace(0.3); } catch { /* */ }
-        doc.text(row.label, colX, scy, { baseline: 'top' });
+        doc.setTextColor(255, 255, 255);
+        try { doc.setCharSpace(0.4); } catch { /* */ }
+        const labelY = scy;
+        withOpacity(0.85, () => {
+          doc.text(row.label, colX, labelY, { baseline: 'top' });
+        });
         try { doc.setCharSpace(0); } catch { /* */ }
-        scy += 10 * LH + 1;
+        scy += 11 * LH + 1;
 
-        // ZAR
-        doc.setFontSize(13);
+        // ZAR — primary, full white
+        doc.setFontSize(15);
         doc.setFont(undefined, 'bold');
         doc.setTextColor(255, 255, 255);
         doc.text(formatCurrency(row.zar), colX, scy, { baseline: 'top' });
 
         if (isExport) {
-          scy += 13 * LH + 1;
-          doc.setFontSize(10);
+          scy += 15 * LH + 1;
+          doc.setFontSize(11);
           doc.setFont(undefined, 'normal');
-          doc.setTextColor(190, 210, 235);
-          doc.text(
-            formatCurrency(toPresentation(row.zar), presCur),
-            colX,
-            scy,
-            { baseline: 'top' },
-          );
+          doc.setTextColor(255, 255, 255);
+          const supForeignY = scy;
+          withOpacity(0.75, () => {
+            doc.text(
+              formatCurrency(toPresentation(row.zar), presCur),
+              colX,
+              supForeignY,
+              { baseline: 'top' },
+            );
+          });
         }
       });
     }
