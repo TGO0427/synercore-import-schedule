@@ -96,7 +96,7 @@ function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplica
               <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Container</th>
               <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb', minWidth: '280px' }}>Products</th>
               <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Total Landed</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Landed Cost/KG</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>{isExport ? 'Cost/KG' : 'Landed Cost/KG'}</th>
               <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Status</th>
               <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Actions</th>
             </tr>
@@ -191,6 +191,11 @@ function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplica
                             )}
                           </td>
                           <td style={{ padding: '12px 16px', textAlign: 'right', color: '#d97706' }}>
+                            {rowIsExport && est.inco_terms && (
+                              <div style={{ fontSize: '0.7rem', color: '#92400e', fontWeight: '600', marginBottom: '2px', letterSpacing: '0.03em' }}>
+                                {est.inco_terms}
+                              </div>
+                            )}
                             <div style={{ fontWeight: '500' }}>{formatCurrency(totals.all_in_warehouse_cost_per_kg_zar)}</div>
                             {kgForeign !== null && (
                               <div style={{ fontSize: '0.75rem', color: '#b45309', marginTop: '2px' }}>

@@ -985,7 +985,7 @@ function CostingFormSections({
             <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#10b981' }}>{formatCurrency(toPresentation(calculatedTotals.total_landed_cost_zar), presentationCurrency)}</div>
           </div>
           <div>
-            <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px' }}>Landed Cost/KG{isExport ? ` (${presentationCurrency})` : ''}</div>
+            <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px' }}>{isExport && formData.inco_terms ? `${formData.inco_terms} Cost/KG` : 'Landed Cost/KG'}{isExport ? ` (${presentationCurrency})` : ''}</div>
             <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#f59e0b' }}>{formatCurrency(toPresentation(calculatedTotals.all_in_warehouse_cost_per_kg_zar), presentationCurrency)}</div>
           </div>
           <div>
