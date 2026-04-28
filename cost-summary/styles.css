@@ -1,0 +1,101 @@
+/* ---------- RESET ---------- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #ffffff;
+  font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+  color: #0e2544;
+}
+
+/* ---------- A4 PAGE ---------- */
+.page {
+  width: 210mm;
+  height: 297mm;
+  padding: 25mm 20mm;
+}
+
+/* ---------- PAGE TITLE ---------- */
+.page-title {
+  font-size: 18pt;
+  font-weight: 600;
+  margin-bottom: 12mm;
+}
+
+/* ---------- COST SUMMARY PANEL ---------- */
+.cost-summary {
+  width: 170mm;
+  background-color: #0e2544;
+  border-radius: 12mm;
+  padding: 18mm 20mm 16mm;
+  color: #ffffff;
+}
+
+/* ---------- PANEL HEADER ---------- */
+.panel-header {
+  font-size: 11pt;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  opacity: 0.75;
+  margin-bottom: 10mm;
+}
+
+/* ---------- HERO SECTION ---------- */
+.hero {
+  margin-bottom: 12mm;
+}
+
+.label {
+  font-size: 13pt;
+  font-weight: 500;
+  margin-bottom: 3mm;
+}
+
+.amount-zar {
+  font-size: 30pt;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.amount-usd {
+  font-size: 15pt;
+  opacity: 0.75;
+  margin-top: 2mm;
+}
+
+/* ---------- DIVIDER ---------- */
+.divider {
+  height: 0.5pt;
+  background-color: rgba(255, 255, 255, 0.12);
+  margin-bottom: 10mm;
+}
+
+/* ---------- METRICS GRID ---------- */
+.metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 14mm;
+}
+
+/* ---------- METRIC BLOCK ---------- */
+.metric-label {
+  font-size: 11pt;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+  margin-bottom: 3mm;
+}
+
+.metric-zar {
+  font-size: 15pt;
+  font-weight: 600;
+}
+
+.metric-usd {
+  font-size: 11pt;
+  opacity: 0.75;
+  margin-top: 1.5mm;
+}
