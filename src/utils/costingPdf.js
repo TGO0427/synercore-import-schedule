@@ -797,70 +797,74 @@ export function generateEstimatePDF(estimate) {
     const boxW = pageW - 28;
     const boxY = sumY + 1;
 
-    if (isExport) {
-      // === Editorial export summary card ===
-      // Layout: tracked header → hero block (label / huge ZAR / muted
-      // foreign) → thin divider → support metrics in N columns.
-      const heroRow = summaryRows.find(r => r.kind === 'hero');
-      const supportRows = summaryRows.filter(r => r.kind !== 'hero');
+    // === Editorial summary card (shared by import + export) ============
+    // Layout: tracked "COST SUMMARY" header → hero block (label / huge
+    // ZAR / optional muted foreign) → thin divider → support metrics in
+    // N columns. For imports the foreign-currency lines are skipped, so
+    // the hero is a single-line big ZAR figure and support cells just
+    // show label + ZAR.
+    const heroRow = summaryRows.find(r => r.kind === 'hero');
+    const supportRows = summaryRows.filter(r => r.kind !== 'hero');
 
-      const padX = 12;
-      const padTop = 7;
-      const padBottom = 8;
+    const padX = 12;
+    const padTop = 7;
+    const padBottom = 8;
 
-      // Line-advance factor (mm per point of font size). 0.4 ~= 1.13 line-height ratio.
-      const LH = 0.4;
+    // Line-advance factor (mm per point of font size). 0.4 ~= 1.13 line height.
+    const LH = 0.4;
 
-      // Pre-compute card height
-      let bodyH = 9 * LH; // "COST SUMMARY" header
-      if (heroRow) {
-        bodyH += 6;            // gap header → hero
-        bodyH += 11 * LH + 1;  // hero label
-        bodyH += 24 * LH + 1;  // hero ZAR
-        bodyH += 13 * LH;      // hero foreign
-      }
-      if (supportRows.length > 0) {
-        bodyH += 7;            // gap before divider
-        bodyH += 4;            // divider + gap after
-        bodyH += 10 * LH + 1;  // support label
-        bodyH += 13 * LH + 1;  // support ZAR
-        bodyH += 10 * LH;      // support foreign
-      }
-      const totalH = padTop + bodyH + padBottom;
+    // Pre-compute card height
+    let bodyH = 9 * LH; // "COST SUMMARY" header
+    if (heroRow) {
+      bodyH += 6;             // gap header → hero
+      bodyH += 11 * LH + 1;   // hero label
+      bodyH += 24 * LH;       // hero ZAR
+      if (isExport) bodyH += 1 + 13 * LH; // foreign line
+    }
+    if (supportRows.length > 0) {
+      bodyH += 7;             // gap before divider
+      bodyH += 4;             // divider + gap after
+      bodyH += 10 * LH + 1;   // support label
+      bodyH += 13 * LH;       // support ZAR
+      if (isExport) bodyH += 1 + 10 * LH; // foreign line
+    }
+    const totalH = padTop + bodyH + padBottom;
 
-      // Card — rounded panel, softer dark navy (#0E2544) for cleaner print
-      doc.setFillColor(14, 37, 68);
-      doc.roundedRect(boxX, boxY, boxW, totalH, 3, 3, 'F');
+    // Card — rounded panel in unified brand navy (matches cover bar)
+    doc.setFillColor(themeColor[0], themeColor[1], themeColor[2]);
+    doc.roundedRect(boxX, boxY, boxW, totalH, 3, 3, 'F');
 
-      const xLeft = boxX + padX;
-      const xRight = boxX + boxW - padX;
-      let cy = boxY + padTop;
+    const xLeft = boxX + padX;
+    const xRight = boxX + boxW - padX;
+    let cy = boxY + padTop;
 
-      // Tracked header
-      doc.setFontSize(9);
+    // Tracked "COST SUMMARY" header
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(THEME.headingMuted[0], THEME.headingMuted[1], THEME.headingMuted[2]);
+    try { doc.setCharSpace(0.5); } catch { /* older jsPDF builds */ }
+    doc.text('COST SUMMARY', xLeft, cy, { baseline: 'top' });
+    try { doc.setCharSpace(0); } catch { /* */ }
+    cy += 9 * LH;
+
+    // Hero block — left-aligned, dominant
+    if (heroRow) {
+      cy += 6;
+
+      doc.setFontSize(11);
       doc.setFont(undefined, 'bold');
-      doc.setTextColor(184, 198, 217);
-      try { doc.setCharSpace(0.5); } catch { /* older jsPDF builds */ }
-      doc.text('COST SUMMARY', xLeft, cy, { baseline: 'top' });
-      try { doc.setCharSpace(0); } catch { /* */ }
-      cy += 9 * LH;
+      doc.setTextColor(255, 255, 255);
+      doc.text(heroRow.label, xLeft, cy, { baseline: 'top' });
+      cy += 11 * LH + 1;
 
-      // Hero block — left-aligned, dominant
-      if (heroRow) {
-        cy += 6;
+      doc.setFontSize(24);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text(formatCurrency(heroRow.zar), xLeft, cy, { baseline: 'top' });
+      cy += 24 * LH;
 
-        doc.setFontSize(11);
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(255, 255, 255);
-        doc.text(heroRow.label, xLeft, cy, { baseline: 'top' });
-        cy += 11 * LH + 1;
-
-        doc.setFontSize(24);
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(255, 255, 255);
-        doc.text(formatCurrency(heroRow.zar), xLeft, cy, { baseline: 'top' });
-        cy += 24 * LH + 1;
-
+      if (isExport) {
+        cy += 1;
         doc.setFontSize(13);
         doc.setFont(undefined, 'normal');
         doc.setTextColor(190, 210, 235);
@@ -872,39 +876,45 @@ export function generateEstimatePDF(estimate) {
         );
         cy += 13 * LH;
       }
+    }
 
-      // Support metrics — N columns, divider above
-      if (supportRows.length > 0) {
-        cy += 7;
-        doc.setDrawColor(50, 75, 105);
-        doc.setLineWidth(0.15);
-        doc.line(xLeft, cy, xRight, cy);
-        cy += 4;
+    // Support metrics — N columns, divider above
+    if (supportRows.length > 0) {
+      cy += 7;
+      // Slightly lighter divider tone vs. panel background
+      doc.setDrawColor(
+        Math.min(255, themeColor[0] + 35),
+        Math.min(255, themeColor[1] + 35),
+        Math.min(255, themeColor[2] + 35),
+      );
+      doc.setLineWidth(0.15);
+      doc.line(xLeft, cy, xRight, cy);
+      cy += 4;
 
-        const innerW = boxW - padX * 2;
-        const colW = innerW / supportRows.length;
+      const innerW = boxW - padX * 2;
+      const colW = innerW / supportRows.length;
 
-        supportRows.forEach((row, i) => {
-          const colX = xLeft + colW * i;
-          let scy = cy;
+      supportRows.forEach((row, i) => {
+        const colX = xLeft + colW * i;
+        let scy = cy;
 
-          // Label — tracked-out, muted heading colour
-          doc.setFontSize(10);
-          doc.setFont(undefined, 'bold');
-          doc.setTextColor(184, 198, 217);
-          try { doc.setCharSpace(0.3); } catch { /* */ }
-          doc.text(row.label, colX, scy, { baseline: 'top' });
-          try { doc.setCharSpace(0); } catch { /* */ }
-          scy += 10 * LH + 1;
+        // Label — tracked-out, muted heading colour
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(THEME.headingMuted[0], THEME.headingMuted[1], THEME.headingMuted[2]);
+        try { doc.setCharSpace(0.3); } catch { /* */ }
+        doc.text(row.label, colX, scy, { baseline: 'top' });
+        try { doc.setCharSpace(0); } catch { /* */ }
+        scy += 10 * LH + 1;
 
-          // ZAR
-          doc.setFontSize(13);
-          doc.setFont(undefined, 'bold');
-          doc.setTextColor(255, 255, 255);
-          doc.text(formatCurrency(row.zar), colX, scy, { baseline: 'top' });
+        // ZAR
+        doc.setFontSize(13);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(255, 255, 255);
+        doc.text(formatCurrency(row.zar), colX, scy, { baseline: 'top' });
+
+        if (isExport) {
           scy += 13 * LH + 1;
-
-          // Foreign
           doc.setFontSize(10);
           doc.setFont(undefined, 'normal');
           doc.setTextColor(190, 210, 235);
@@ -914,62 +924,16 @@ export function generateEstimatePDF(estimate) {
             scy,
             { baseline: 'top' },
           );
-        });
-      }
-
-      // Reset graphics state and bump the autoTable cursor for anything below
-      doc.setDrawColor(0, 0, 0);
-      doc.setTextColor(0, 0, 0);
-      doc.setFont(undefined, 'normal');
-      if (doc.lastAutoTable) {
-        doc.lastAutoTable.finalY = boxY + totalH;
-      }
-    } else {
-      // === Import summary (single-column, ZAR only) ===
-      const padX = 8;
-      const rowH = 11;
-      const totalH = 4 + summaryRows.length * rowH + 4;
-
-      doc.setFillColor(themeColor[0], themeColor[1], themeColor[2]);
-      doc.roundedRect(boxX, boxY, boxW, totalH, 2.5, 2.5, 'F');
-
-      let cy = boxY + 4;
-      summaryRows.forEach((row, idx) => {
-        const isTotal = row.kind === 'hero';
-        const labelSize = isTotal ? 12 : 10;
-        const valSize = isTotal ? 14 : 11;
-
-        doc.setTextColor(255, 255, 255);
-        doc.setFont(undefined, 'bold');
-        doc.setFontSize(labelSize);
-        doc.text(row.label, boxX + padX, cy + rowH / 2, { baseline: 'middle' });
-
-        doc.setFontSize(valSize);
-        doc.text(
-          formatCurrency(row.zar),
-          boxX + boxW - padX,
-          cy + rowH / 2,
-          { align: 'right', baseline: 'middle' },
-        );
-
-        if (idx < summaryRows.length - 1) {
-          doc.setDrawColor(
-            Math.min(255, themeColor[0] + 40),
-            Math.min(255, themeColor[1] + 40),
-            Math.min(255, themeColor[2] + 40),
-          );
-          doc.setLineWidth(0.1);
-          doc.line(boxX + padX, cy + rowH, boxX + boxW - padX, cy + rowH);
         }
-        cy += rowH;
       });
+    }
 
-      doc.setDrawColor(0, 0, 0);
-      doc.setTextColor(0, 0, 0);
-      doc.setFont(undefined, 'normal');
-      if (doc.lastAutoTable) {
-        doc.lastAutoTable.finalY = boxY + totalH;
-      }
+    // Reset graphics state and bump the autoTable cursor for anything below
+    doc.setDrawColor(0, 0, 0);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(undefined, 'normal');
+    if (doc.lastAutoTable) {
+      doc.lastAutoTable.finalY = boxY + totalH;
     }
   }
 
