@@ -71,12 +71,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+// ✅ Railway health check — MUST bypass all middleware
+app.use((req, res, next) => {
+  if (req.path === '/health') {
+    return res.status(200).send('OK');
+  }
+  next();
+});
 const PORT = process.env.PORT || 5001;
 
-/* ---------------- Health check (Railway-critical) ---------------- */
-app.get('/health', (_req, res) => {
-  res.status(200).send('OK');
-});
+
 
 // Create HTTP server for Socket.io compatibility
 const httpServer = http.createServer(app);
@@ -920,7 +924,6 @@ logger.info('Full initialization complete');
     logWarn('Server running with degraded functionality');
   }
 } // ✅ THIS CLOSING BRACE IS CRITICAL
-
 
 
 start().catch(e => {
