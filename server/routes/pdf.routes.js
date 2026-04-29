@@ -9,19 +9,50 @@ const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Where cached PDFs live
+// ============================
+// PDF Cache Configuration
+// ============================
 const CACHE_DIR = path.join(__dirname, '../pdf-cache');
-const PDF_NAME = 'Cost-Summary.pdf';
-const PDF_PATH = path.join(CACHE_DIR, PDF_NAME);
+const DEFAULT_PDF_NAME = 'Cost-Summary.pdf';
 
+// ============================
+// Helpers
+// ============================
+async function ensureCacheDir() {
+  await fs.mkdir(CACHE_DIR, { recursive: true });
+}
+
+async function generatePdfFromHtml(html) {
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  });
+
+  const page = await browser.newPage();
+  await page.setContent(html, { waitUntil: 'networkidle0' });
+
+  const pdfBuffer = await page.pdf({
+    format: 'A4',
+    printBackground: true,
+  });
+
+  await browser.close();
+  return pdfBuffer;
+}
+
+// ============================
+// DEFAULT COST SUMMARY
+// GET /api/pdf/cost-summary
+// ============================
 router.get('/cost-summary', async (_req, res) => {
   try {
-    // ✅ Ensure cache directory exists
-    await fs.mkdir(CACHE_DIR, { recursive: true });
+    await ensureCacheDir();
 
-    // ✅ If PDF already exists, serve it immediately
+    const pdfPath = path.join(CACHE_DIR, DEFAULT_PDF_NAME);
+
+    // ✅ Serve cached PDF if exists
     try {
-      const cachedPdf = await fs.readFile(PDF_PATH);
+      const cachedPdf = await fs.readFile(pdfPath);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader(
         'Content-Disposition',
@@ -30,7 +61,7 @@ router.get('/cost-summary', async (_req, res) => {
       res.setHeader('Content-Length', cachedPdf.length);
       return res.end(cachedPdf);
     } catch {
-      // File doesn’t exist yet → generate it
+      // Not cached yet → generate
     }
 
     // ✅ Load HTML template
@@ -40,26 +71,12 @@ router.get('/cost-summary', async (_req, res) => {
     );
     const html = await fs.readFile(htmlPath, 'utf8');
 
-    // ✅ Generate PDF
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+    const pdfBuffer = await generatePdfFromHtml(html);
 
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    // ✅ Cache PDF
+    await fs.writeFile(pdfPath, pdfBuffer);
 
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-    });
-
-    await browser.close();
-
-    // ✅ Cache the PDF
-    await fs.writeFile(PDF_PATH, pdfBuffer);
-
-    // ✅ Serve it
+    // ✅ Serve PDF
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
@@ -68,7 +85,7 @@ router.get('/cost-summary', async (_req, res) => {
     res.setHeader('Content-Length', pdfBuffer.length);
     res.end(pdfBuffer);
   } catch (error) {
-    console.error('PDF generation failed:', error);
+    console.error('Default PDF generation failed:', error);
     res.status(500).json({
       error: 'PDF generation failed',
       message: error.message,
@@ -76,5 +93,64 @@ router.get('/cost-summary', async (_req, res) => {
   }
 });
 
+// ============================
+// PER‑SHIPMENT COST SUMMARY
+// GET /api/pdf/cost-summary/:shipmentId
+// ============================
+router.get('/cost-summary/:shipmentId', async (req, res) => {
+  const { shipmentId } = req.params;
+
+  try {
+    await ensureCacheDir();
+
+    const pdfFileName = `${shipmentId}.pdf`;
+    const pdfPath = path.join(CACHE_DIR, pdfFileName);
+
+    // ✅ Serve cached shipment PDF if exists
+    try {
+      const cachedPdf = await fs.readFile(pdfPath);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${pdfFileName}"`
+      );
+      res.setHeader('Content-Length', cachedPdf.length);
+      return res.end(cachedPdf);
+    } catch {
+      // Not cached yet → generate
+    }
+
+    // ✅ Load HTML template
+    const htmlPath = path.join(
+      __dirname,
+      '../../cost-summary/index.html'
+    );
+    let html = await fs.readFile(htmlPath, 'utf8');
+
+    // ✅ Inject shipment reference (simple placeholder for now)
+    html = html.replace('{{SHIPMENT_ID}}', shipmentId);
+
+    const pdfBuffer = await generatePdfFromHtml(html);
+
+    // ✅ Cache PDF
+    await fs.writeFile(pdfPath, pdfBuffer);
+
+    // ✅ Serve PDF
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${pdfFileName}"`
+    );
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.end(pdfBuffer);
+  } catch (error) {
+    console.error('Per‑shipment PDF generation failed:', error);
+    res.status(500).json({
+      error: 'Per‑shipment PDF generation failed',
+      shipmentId,
+      message: error.message,
+    });
+  }
+});
+
 export default router;
-``
