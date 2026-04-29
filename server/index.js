@@ -163,8 +163,10 @@ const upload = multer({
 });
 
 /* ---------------- Readiness gate ---------------- */
-let isReady = true; // ✅ Health-ready immediately for Railway
-``
+let isReady = false;
+isReady = true;
+logger.info('Full initialization complete');
+
 // Only gate /api/* (allow /health, static, etc.)
 app.use('/api', (req, res, next) => {
   if (!isReady) return res.status(503).json({ ready: false });
