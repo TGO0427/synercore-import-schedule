@@ -130,12 +130,7 @@ app.get('/api-docs/swagger.json', (_req, res) => {
   res.send(swaggerSpec);
 });
 
-/* ---------------- Security Middleware & Health Check ---------------- */
-// Health check endpoint (before security middleware for Railway)
-// Always returns 200 for Railway health checks (even if not fully ready)
-app.get('/health', (_req, res) => {
-  res.status(200).json({ status: 'OK', ready: isReady, timestamp: new Date().toISOString() });
-});
+
 
 // Add request ID middleware early (for all requests)
 app.use(requestIdMiddleware);
@@ -164,8 +159,7 @@ const upload = multer({
 
 /* ---------------- Readiness gate ---------------- */
 let isReady = false;
-isReady = true;
-logger.info('Full initialization complete');
+
 
 // Only gate /api/* (allow /health, static, etc.)
 app.use('/api', (req, res, next) => {
@@ -909,30 +903,31 @@ async function start() {
     }
 
     // Initialize Socket.io for real-time updates
-    try {
-      socketManager.initialize(httpServer);
-      logger.info('WebSocket (Socket.io) initialized');
-    } catch (error) {
-      logWarn('Socket.io initialization warning', { error: error.message });
-    }
+try {
+  socketManager.initialize(httpServer);
+  logger.info('WebSocket (Socket.io) initialized');
+} catch (error) {
+  logWarn('Socket.io initialization warning', { error: error.message });
+}
 
-    isReady = true; // mark ready once init is done
-    logger.info('Full initialization complete');
+// ✅ THIS IS CRITICAL
+isReady = true;
+logger.info('Full initialization complete');
 
-    // Optional warm-up so first user hit isn't the initializer:
-    // try { await fetch(`http://127.0.0.1:${PORT}/api/shipments`); } catch {}
-  } catch (e) {
+} catch (e) {
     logError('FATAL: failed to initialize', e);
-    // Server is already listening from above, just mark as ready with degraded functionality
-    isReady = true;
+    isReady = true; // degraded but alive
     logWarn('Server running with degraded functionality');
   }
-}
+} // ✅ THIS CLOSING BRACE IS CRITICAL
+
+
+
 start().catch(e => {
   logError('FATAL: start() promise rejected', e);
-  // Server should already be listening, just ensure isReady is set
-  isReady = true;
+  isReady = true; // degraded but service remains alive
   logWarn('Server in emergency mode');
 });
+
 
 export default app;
