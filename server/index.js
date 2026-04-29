@@ -7,6 +7,8 @@ if (!process.env.DATABASE_URL) {
   dotenv.config();
 }
 
+import pdfRouter from './routes/pdf.routes.js';
+
 // Initialize Sentry early for error tracking
 import { initializeSentry, getSentryRequestHandler, getSentryErrorHandler } from './config/sentry.js';
 initializeSentry();
@@ -167,6 +169,7 @@ app.use('/api', (req, res, next) => {
 // Public routes (no auth required) - with stricter rate limiting for auth endpoints
 app.use('/api/auth', authRateLimiter, authRouter);
 app.use('/api/warehouse-capacity', warehouseCapacityRouter); // Has mixed auth requirements
+app.use('/api/pdf', pdfRouter);
 
 // Protected routes (auth required)
 app.use('/api/shipments', authenticateToken, shipmentsRouter);
