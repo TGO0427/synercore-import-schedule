@@ -73,7 +73,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 // ✅ Railway health check — MUST bypass all middleware
 app.use((req, res, next) => {
-  if (req.path === '/health') {
+  if (req.path === '/health' || req.path.startsWith('/health/')) {
     return res.status(200).send('OK');
   }
   next();
