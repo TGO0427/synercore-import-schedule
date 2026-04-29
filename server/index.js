@@ -73,6 +73,11 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+/* ---------------- Health check (Railway-critical) ---------------- */
+app.get('/health', (_req, res) => {
+  res.status(200).send('OK');
+});
+
 // Create HTTP server for Socket.io compatibility
 const httpServer = http.createServer(app);
 
