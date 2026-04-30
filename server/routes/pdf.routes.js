@@ -46,17 +46,18 @@ async function getShipmentByRef(shipmentRef) {
   const { rows } = await getPool().query(
     `
     SELECT
-      shipment_ref,
+      order_ref,
       supplier,
       total_weight
     FROM shipments
-    WHERE shipment_ref = $1
+    WHERE order_ref = $1
     `,
     [shipmentRef]
   );
 
   return rows[0];
 }
+``
 
 // ============================
 // DEFAULT COST SUMMARY
