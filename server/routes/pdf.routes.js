@@ -48,7 +48,7 @@ async function getEstimateByReference(referenceNumber) {
     SELECT
       reference_number,
       supplier
-    FROM cost_estimates
+    FROM import_cost_estimates
     WHERE TRIM(reference_number) ILIKE TRIM($1)
     `,
     [referenceNumber]
@@ -56,6 +56,7 @@ async function getEstimateByReference(referenceNumber) {
 
   return rows[0];
 }
+
 
 // ============================
 // DEFAULT COST SUMMARY (legacy / optional)
