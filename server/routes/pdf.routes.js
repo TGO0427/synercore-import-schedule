@@ -49,7 +49,7 @@ async function getShipmentByRef(shipmentRef) {
       order_ref,
       supplier
     FROM shipments
-    WHERE order_ref = $1
+    WHERE TRIM(order_ref) ILIKE TRIM($1)
     `,
     [shipmentRef]
   );
