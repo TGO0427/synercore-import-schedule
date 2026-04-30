@@ -11,9 +11,15 @@
 
     <h1 class="page-title">Summary</h1>
 
-    <!-- ✅ NEW: Visible shipment reference -->
+    <!-- ✅ Shipment context (explicit DB‑bound data) -->
+    <p style="margin-bottom: 4px; font-size: 14px;">
+      <strong>Shipment Reference:</strong> {{SHIPMENT_REF}}
+    </p>
+    <p style="margin-bottom: 4px; font-size: 14px;">
+      <strong>Supplier:</strong> {{SUPPLIER}}
+    </p>
     <p style="margin-bottom: 16px; font-size: 14px;">
-      <strong>Shipment Reference:</strong> {{SHIPMENT_ID}}
+      <strong>Total Weight:</strong> {{TOTAL_WEIGHT}} kg
     </p>
 
     <section class="cost-summary">

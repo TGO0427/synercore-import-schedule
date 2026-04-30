@@ -3,6 +3,7 @@ import puppeteer from 'puppeteer';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { getPool } from '../db/connection.js';
 
 const router = express.Router();
 
@@ -40,6 +41,23 @@ async function generatePdfFromHtml(html) {
   return pdfBuffer;
 }
 
+// ✅ Explicit DB lookup by shipment_ref
+async function getShipmentByRef(shipmentRef) {
+  const { rows } = await getPool().query(
+    `
+    SELECT
+      shipment_ref,
+      supplier,
+      total_weight
+    FROM shipments
+    WHERE shipment_ref = $1
+    `,
+    [shipmentRef]
+  );
+
+  return rows[0];
+}
+
 // ============================
 // DEFAULT COST SUMMARY
 // GET /api/pdf/cost-summary
@@ -50,7 +68,6 @@ router.get('/cost-summary', async (_req, res) => {
 
     const pdfPath = path.join(CACHE_DIR, DEFAULT_PDF_NAME);
 
-    // ✅ Serve cached PDF if exists
     try {
       const cachedPdf = await fs.readFile(pdfPath);
       res.setHeader('Content-Type', 'application/pdf');
@@ -60,11 +77,8 @@ router.get('/cost-summary', async (_req, res) => {
       );
       res.setHeader('Content-Length', cachedPdf.length);
       return res.end(cachedPdf);
-    } catch {
-      // Not cached yet → generate
-    }
+    } catch {}
 
-    // ✅ Load HTML template
     const htmlPath = path.join(
       __dirname,
       '../../cost-summary/index.html'
@@ -72,11 +86,8 @@ router.get('/cost-summary', async (_req, res) => {
     const html = await fs.readFile(htmlPath, 'utf8');
 
     const pdfBuffer = await generatePdfFromHtml(html);
-
-    // ✅ Cache PDF
     await fs.writeFile(pdfPath, pdfBuffer);
 
-    // ✅ Serve PDF
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
@@ -106,7 +117,7 @@ router.get('/cost-summary/:shipmentId', async (req, res) => {
     const pdfFileName = `${shipmentId}.pdf`;
     const pdfPath = path.join(CACHE_DIR, pdfFileName);
 
-    // ✅ Serve cached shipment PDF if exists
+    // Serve cached PDF if exists
     try {
       const cachedPdf = await fs.readFile(pdfPath);
       res.setHeader('Content-Type', 'application/pdf');
@@ -116,26 +127,33 @@ router.get('/cost-summary/:shipmentId', async (req, res) => {
       );
       res.setHeader('Content-Length', cachedPdf.length);
       return res.end(cachedPdf);
-    } catch {
-      // Not cached yet → generate
+    } catch {}
+
+    // ✅ Load shipment explicitly from DB
+    const shipment = await getShipmentByRef(shipmentId);
+
+    if (!shipment) {
+      return res.status(404).json({
+        error: 'Shipment not found',
+        shipment_ref: shipmentId,
+      });
     }
 
-    // ✅ Load HTML template
     const htmlPath = path.join(
       __dirname,
       '../../cost-summary/index.html'
     );
     let html = await fs.readFile(htmlPath, 'utf8');
 
-    // ✅ Inject shipment reference (simple placeholder for now)
-    html = html.replace('{{SHIPMENT_ID}}', shipmentId);
+    // ✅ Inject real shipment data
+    html = html
+      .replace('{{SHIPMENT_REF}}', shipment.shipment_ref)
+      .replace('{{SUPPLIER}}', shipment.supplier)
+      .replace('{{TOTAL_WEIGHT}}', shipment.total_weight.toLocaleString());
 
     const pdfBuffer = await generatePdfFromHtml(html);
-
-    // ✅ Cache PDF
     await fs.writeFile(pdfPath, pdfBuffer);
 
-    // ✅ Serve PDF
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
@@ -147,7 +165,7 @@ router.get('/cost-summary/:shipmentId', async (req, res) => {
     console.error('Per‑shipment PDF generation failed:', error);
     res.status(500).json({
       error: 'Per‑shipment PDF generation failed',
-      shipmentId,
+      shipment_ref: shipmentId,
       message: error.message,
     });
   }
