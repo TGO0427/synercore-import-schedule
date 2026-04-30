@@ -47,7 +47,7 @@ async function getEstimateByReference(referenceNumber) {
     `
     SELECT
       reference_number,
-      supplier
+      supplier_name
     FROM import_cost_estimates
     WHERE TRIM(reference_number) ILIKE TRIM($1)
     `,
@@ -56,6 +56,7 @@ async function getEstimateByReference(referenceNumber) {
 
   return rows[0];
 }
+
 
 
 // ============================
@@ -147,9 +148,9 @@ router.get('/cost-estimate/:estimateRef', async (req, res) => {
     let html = await fs.readFile(htmlPath, 'utf8');
 
     // ✅ Inject estimate data (matches template)
-    html = html
-      .replace('{{SHIPMENT_REF}}', estimate.reference_number)
-      .replace('{{SUPPLIER}}', estimate.supplier);
+    html = html  
+   .replace('{{SHIPMENT_REF}}', estimate.reference_number)
+   .replace('{{SUPPLIER}}', estimate.supplier_name);
 
     const pdfBuffer = await generatePdfFromHtml(html);
     await fs.writeFile(pdfPath, pdfBuffer);
