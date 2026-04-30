@@ -41,24 +41,24 @@ async function generatePdfFromHtml(html) {
   return pdfBuffer;
 }
 
-// ✅ Explicit DB lookup by shipment_ref
-async function getShipmentByRef(shipmentRef) {
+// ✅ ESTIMATE lookup (correct domain)
+async function getEstimateByReference(referenceNumber) {
   const { rows } = await getPool().query(
     `
     SELECT
-      order_ref,
+      reference_number,
       supplier
-    FROM shipments
-    WHERE TRIM(order_ref) ILIKE TRIM($1)
+    FROM cost_estimates
+    WHERE TRIM(reference_number) ILIKE TRIM($1)
     `,
-    [shipmentRef]
+    [referenceNumber]
   );
 
   return rows[0];
 }
 
 // ============================
-// DEFAULT COST SUMMARY
+// DEFAULT COST SUMMARY (legacy / optional)
 // GET /api/pdf/cost-summary
 // ============================
 router.get('/cost-summary', async (_req, res) => {
@@ -104,19 +104,19 @@ router.get('/cost-summary', async (_req, res) => {
 });
 
 // ============================
-// PER‑SHIPMENT COST SUMMARY
-// GET /api/pdf/cost-summary/:shipmentId
+// ✅ COST ESTIMATE PDF (MAIN ENDPOINT)
+// GET /api/pdf/cost-estimate/:estimateRef
 // ============================
-router.get('/cost-summary/:shipmentId', async (req, res) => {
-  const { shipmentId } = req.params;
+router.get('/cost-estimate/:estimateRef', async (req, res) => {
+  const { estimateRef } = req.params;
 
   try {
     await ensureCacheDir();
 
-    const pdfFileName = `${shipmentId}.pdf`;
+    const pdfFileName = `estimate-${estimateRef}.pdf`;
     const pdfPath = path.join(CACHE_DIR, pdfFileName);
 
-    // Serve cached PDF if exists
+    // ✅ Serve cached PDF if exists
     try {
       const cachedPdf = await fs.readFile(pdfPath);
       res.setHeader('Content-Type', 'application/pdf');
@@ -128,27 +128,27 @@ router.get('/cost-summary/:shipmentId', async (req, res) => {
       return res.end(cachedPdf);
     } catch {}
 
-    // ✅ Load shipment explicitly from DB
-    const shipment = await getShipmentByRef(shipmentId);
+    // ✅ Load estimate from DB
+    const estimate = await getEstimateByReference(estimateRef);
 
-    if (!shipment) {
+    if (!estimate) {
       return res.status(404).json({
-        error: 'Shipment not found',
-        shipment_ref: shipmentId,
+        error: 'Estimate not found',
+        estimate_ref: estimateRef,
       });
     }
 
+    // ✅ Load HTML template
     const htmlPath = path.join(
       __dirname,
       '../../cost-summary/index.html'
     );
     let html = await fs.readFile(htmlPath, 'utf8');
 
-    // ✅ Inject real shipment data
+    // ✅ Inject estimate data (matches template)
     html = html
-      .replace('{{SHIPMENT_REF}}', shipment.shipment_ref)
-      .replace('{{SUPPLIER}}', shipment.supplier)
-      .replace('{{TOTAL_WEIGHT}}', shipment.total_weight.toLocaleString());
+      .replace('{{SHIPMENT_REF}}', estimate.reference_number)
+      .replace('{{SUPPLIER}}', estimate.supplier);
 
     const pdfBuffer = await generatePdfFromHtml(html);
     await fs.writeFile(pdfPath, pdfBuffer);
@@ -160,11 +160,11 @@ router.get('/cost-summary/:shipmentId', async (req, res) => {
     );
     res.setHeader('Content-Length', pdfBuffer.length);
     res.end(pdfBuffer);
+
   } catch (error) {
-    console.error('Per‑shipment PDF generation failed:', error);
+    console.error('Estimate PDF generation failed:', error);
     res.status(500).json({
-      error: 'Per‑shipment PDF generation failed',
-      shipment_ref: shipmentId,
+      error: 'Estimate PDF generation failed',
       message: error.message,
     });
   }
