@@ -11,16 +11,17 @@
 
     <h1 class="page-title">Summary</h1>
 
-    <!-- ✅ Shipment context (explicit DB‑bound data) -->
+    <!-- ✅ Shipment context (explicit DB-bound data) -->
     <p style="margin-bottom: 4px; font-size: 14px;">
       <strong>Shipment Reference:</strong> {{SHIPMENT_REF}}
     </p>
-    <p style="margin-bottom: 4px; font-size: 14px;">
+    <p style="margin-bottom: 16px; font-size: 14px;">
       <strong>Supplier:</strong> {{SUPPLIER}}
     </p>
-    <p style="margin-bottom: 16px; font-size: 14px;">
-      <strong>Total Weight:</strong> {{TOTAL_WEIGHT}} kg
-    </p>
+
+    <!-- ❌ Total Weight intentionally removed
+         Weight is NOT stored on shipments table
+         It will be reintroduced later via correct JOIN or calculation -->
 
     <section class="cost-summary">
 
@@ -56,3 +57,4 @@
 
 </body>
 </html>
+``

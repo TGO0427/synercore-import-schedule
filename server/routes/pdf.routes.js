@@ -47,8 +47,7 @@ async function getShipmentByRef(shipmentRef) {
     `
     SELECT
       order_ref,
-      supplier,
-      total_weight
+      supplier
     FROM shipments
     WHERE order_ref = $1
     `,
@@ -57,7 +56,6 @@ async function getShipmentByRef(shipmentRef) {
 
   return rows[0];
 }
-``
 
 // ============================
 // DEFAULT COST SUMMARY
