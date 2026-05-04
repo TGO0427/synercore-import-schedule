@@ -9,6 +9,34 @@ import ErrorBoundary from './components/ErrorBoundary';
 import ConnectionOverlay from './components/ConnectionOverlay';
 import { VIEW_ROUTES } from './routes';
 
+// ✅ Map routes/views to sidebar sections
+const VIEW_TO_SECTION = {
+  dashboard: 'masterData',
+  suppliers: 'masterData',
+
+  shipping: 'operations',
+  workflow: 'operations',
+  'local-receiving': 'operations',
+  'iwt-incoming': 'operations',
+  'bol-audit': 'operations',
+
+  receiving: 'warehouse',
+  'dock-management': 'warehouse',
+  capacity: 'warehouse',
+  stored: 'warehouse',
+  archives: 'warehouse',
+  rates: 'finance',
+  costing: 'finance',
+  'export-costing': 'finance',
+  'costing-requests': 'finance',
+
+  reports: 'reports',
+  'advanced-reports': 'reports',
+  'supplier-performance': 'reports',
+  audit: 'reports',
+};
+
+
 // Lazy-loaded pages (code-split for faster initial load)
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const ArchiveView = lazy(() => import('./components/ArchiveView'));
@@ -355,6 +383,18 @@ function App() {
     if (path === '/iwt-incoming') return 'iwt-incoming';
     return 'shipping';
   })();
+
+  // ✅ Auto-open sidebar section for active view WITHOUT closing others
+useEffect(() => {
+  const section = VIEW_TO_SECTION[activeView];
+  if (!section) return;
+
+  setSidebarSections(prev => {
+    if (prev[section]) return prev; // already open → do nothing
+    return { ...prev, [section]: true };
+  });
+}, [activeView]);
+
 
   const StoredWrapper = () => {
     const storedShipments = shipments.filter(s => s.latestStatus === 'stored');
