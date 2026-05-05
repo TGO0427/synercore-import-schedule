@@ -36,6 +36,30 @@ const VIEW_TO_SECTION = {
   audit: 'reports',
 };
 
+const VIEW_TITLES = {
+  dashboard: 'Dashboard',
+  suppliers: 'Suppliers',
+  shipping: 'International Import',
+  workflow: 'Post-Arrival Workflow',
+  'local-receiving': 'Local Receiving',
+  'iwt-incoming': 'IWT Incoming',
+  'bol-audit': 'BOL Audit',
+  receiving: 'Goods Receiving',
+  'dock-management': 'Dock Management',
+  capacity: 'Warehouse Capacity',
+  stored: 'Stored Stock',
+  archives: 'Shipment Archives',
+  rates: 'Rates & Quotes',
+  costing: 'Import Costing',
+  'export-costing': 'Export Costing',
+  reports: 'Reports',
+  'advanced-reports': 'Advanced Reports',
+  'supplier-performance': 'Supplier Performance',
+  'costing-requests': 'Cost Requests',
+  users: 'User Management',
+  audit: 'Activity Log',
+};
+
 // Lazy-loaded pages (code-split for faster initial load)
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const ArchiveView = lazy(() => import('./components/ArchiveView'));
@@ -153,6 +177,28 @@ function App() {
       route: '/dashboard',
     },
   ]);
+
+  const openPageTab = (view, route = VIEW_ROUTES[view] || '/dashboard', title = VIEW_TITLES[view] || view) => {
+    setOpenTabs((prev) => {
+      if (prev.some(t => t.route === route)) return prev;
+
+      return [
+        ...prev,
+        {
+          id: view,
+          title,
+          route,
+        },
+      ];
+    });
+  };
+
+  const navigateToPage = (view, route = VIEW_ROUTES[view] || '/dashboard', title = VIEW_TITLES[view] || view) => {
+    startTransition(() => {
+      openPageTab(view, route, title);
+      navigate(route);
+    });
+  };
 
   // Costing Requests badge count (admin only)
   const [costingRequestCount, setCostingRequestCount] = useState(0);
@@ -413,42 +459,7 @@ function App() {
     const route = location.pathname;
     if (route === '/login') return;
 
-    setOpenTabs((prev) => {
-      if (prev.some(t => t.route === route)) return prev;
-
-      const titleMap = {
-        dashboard: 'Dashboard',
-        suppliers: 'Suppliers',
-        shipping: 'International Import',
-        workflow: 'Post-Arrival Workflow',
-        'local-receiving': 'Local Receiving',
-        'iwt-incoming': 'IWT Incoming',
-        'bol-audit': 'BOL Audit',
-        receiving: 'Goods Receiving',
-        'dock-management': 'Dock Management',
-        capacity: 'Warehouse Capacity',
-        stored: 'Stored Stock',
-        archives: 'Shipment Archives',
-        rates: 'Rates & Quotes',
-        costing: 'Import Costing',
-        'export-costing': 'Export Costing',
-        reports: 'Reports',
-        'advanced-reports': 'Advanced Reports',
-        'supplier-performance': 'Supplier Performance',
-        'costing-requests': 'Cost Requests',
-        users: 'User Management',
-        audit: 'Activity Log',
-      };
-
-      return [
-        ...prev,
-        {
-          id: activeView,
-          title: titleMap[activeView] || activeView,
-          route,
-        },
-      ];
-    });
+    openPageTab(activeView, route);
   }, [location.pathname, activeView]);
 
   const StoredWrapper = () => {
@@ -598,23 +609,7 @@ function App() {
                   const route = VIEW_ROUTES[item.view] || '/shipping';
 
                   const openTabAndNavigate = () => {
-                    startTransition(() => {
-                      setOpenTabs((prev) => {
-                        if (prev.some(t => t.route === route)) return prev;
-
-                        return [
-                          ...prev,
-                          {
-                            id: crypto.randomUUID(),
-                            view: item.view,
-                            title: item.label,
-                            route,
-                          },
-                        ];
-                      });
-
-                      navigate(route);
-                    });
+                    navigateToPage(item.view, route, item.label);
                   };
 
                   if (isNavigationBlocked()) {
@@ -800,7 +795,7 @@ function App() {
             <span className="nav-icon"><Building2 size={16} strokeWidth={2} /></span> <span className="nav-label">Supplier Portal</span>
           </button>
           {isAdmin && (
-            <button className={`nav-item ${activeView === 'users' ? 'active' : ''}`} onClick={() => startTransition(() => navigate('/users'))} title={sidebarCollapsed ? 'User Management' : undefined}>
+            <button className={`nav-item ${activeView === 'users' ? 'active' : ''}`} onClick={() => navigateToPage('users')} title={sidebarCollapsed ? 'User Management' : undefined}>
               <span className="nav-icon"><Users size={16} strokeWidth={2} /></span> <span className="nav-label">User Management</span>
             </button>
           )}
@@ -846,7 +841,7 @@ function App() {
             </button>
             {isAdmin && costingRequestCount > 0 && (
               <button
-                onClick={() => startTransition(() => navigate('/costing-requests'))}
+                onClick={() => navigateToPage('costing-requests')}
                 className="btn"
                 style={{
                   position: 'relative', fontSize: '0.9rem',
@@ -879,25 +874,28 @@ function App() {
             <div
               key={tab.id}
               className={`tab ${location.pathname === tab.route ? 'active' : ''}`}
-              onClick={() => navigate(tab.route)}
+              onClick={() => startTransition(() => navigate(tab.route))}
             >
               <span className="tab-title">{tab.title}</span>
 
-              {tab.id !== 'dashboard' && (
+              {tab.route !== '/dashboard' && (
                 <button
+                  type="button"
                   className="tab-close"
                   onClick={(e) => {
                     e.stopPropagation();
                     setOpenTabs((prev) => {
-                      const remaining = prev.filter(t => t.id !== tab.id);
+                      const remaining = prev.filter(t => t.route !== tab.route);
 
-                      if (location.pathname === tab.route && remaining.length > 0) {
-                        navigate(remaining[remaining.length - 1].route);
+                      if (location.pathname === tab.route) {
+                        const fallbackRoute = remaining[remaining.length - 1]?.route || '/dashboard';
+                        startTransition(() => navigate(fallbackRoute));
                       }
 
-                      return remaining;
+                      return remaining.length > 0 ? remaining : [{ id: 'dashboard', title: 'Dashboard', route: '/dashboard' }];
                     });
                   }}
+                  title={`Close ${tab.title}`}
                 >
                   ×
                 </button>
