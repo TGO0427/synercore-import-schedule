@@ -36,9 +36,6 @@ const VIEW_TO_SECTION = {
   audit: 'reports',
 };
 
-
-
-
 // Lazy-loaded pages (code-split for faster initial load)
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const ArchiveView = lazy(() => import('./components/ArchiveView'));
@@ -67,6 +64,7 @@ const GoodsReceiving = lazy(() => import('./components/GoodsReceiving'));
 const DockManagement = lazy(() => import('./components/DockManagement'));
 const LocalReceivingSchedule = lazy(() => import('./components/LocalReceivingSchedule'));
 const IWTIncoming = lazy(() => import('./components/IWTIncoming'));
+
 import SupplierLogin from './pages/SupplierLogin';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -146,15 +144,15 @@ function App() {
   const [liveBoardOpen, setLiveBoardOpen] = useState(false);
 
   // ============================
-// ✅ TAB STATE (ADD THIS)
-// ============================
-const [openTabs, setOpenTabs] = useState([
-  {
-    id: 'dashboard',
-    title: 'Dashboard',
-    route: '/dashboard',
-  },
-]);
+  // ✅ TAB STATE
+  // ============================
+  const [openTabs, setOpenTabs] = useState([
+    {
+      id: 'dashboard',
+      title: 'Dashboard',
+      route: '/dashboard',
+    },
+  ]);
 
   // Costing Requests badge count (admin only)
   const [costingRequestCount, setCostingRequestCount] = useState(0);
@@ -379,6 +377,7 @@ const [openTabs, setOpenTabs] = useState([
     if (path === '/dashboard') return 'dashboard';
     if (path === '/suppliers') return 'suppliers';
     if (path === '/workflow') return 'workflow';
+    if (path === '/local-receiving') return 'local-receiving';
     if (path === '/capacity') return 'capacity';
     if (path === '/stored') return 'stored';
     if (path === '/archives') return 'archives';
@@ -394,57 +393,63 @@ const [openTabs, setOpenTabs] = useState([
     if (path === '/receiving') return 'receiving';
     if (path === '/dock-management') return 'dock-management';
     if (path === '/iwt-incoming') return 'iwt-incoming';
+    if (path === '/bol-audit') return 'bol-audit';
     return 'shipping';
   })();
 
   // ✅ Auto-open sidebar section for active view WITHOUT closing others
-useEffect(() => {
-  const section = VIEW_TO_SECTION[activeView];
-  if (!section) return;
+  useEffect(() => {
+    const section = VIEW_TO_SECTION[activeView];
+    if (!section) return;
 
-  setSidebarSections(prev => {
-    if (prev[section]) return prev; // already open → do nothing
-    return { ...prev, [section]: true };
-  });
-}, [activeView]);
+    setSidebarSections(prev => {
+      if (prev[section]) return prev; // already open → do nothing
+      return { ...prev, [section]: true };
+    });
+  }, [activeView]);
 
-// ✅ Keep tabs in sync with direct navigation (refresh / deep link / back button)
-useEffect(() => {
-  const route = location.pathname;
-  if (route === '/login') return;
+  // ✅ Keep tabs in sync with direct navigation (refresh / deep link / back button)
+  useEffect(() => {
+    const route = location.pathname;
+    if (route === '/login') return;
 
-  setOpenTabs((prev) => {
-    if (prev.some(t => t.route === route)) return prev;
+    setOpenTabs((prev) => {
+      if (prev.some(t => t.route === route)) return prev;
 
-    const titleMap = {
-      dashboard: 'Dashboard',
-      suppliers: 'Suppliers',
-      shipping: 'International Import',
-      workflow: 'Post-Arrival Workflow',
-      capacity: 'Warehouse Capacity',
-      stored: 'Stored Stock',
-      archives: 'Shipment Archives',
-      rates: 'Rates & Quotes',
-      costing: 'Import Costing',
-      'export-costing': 'Export Costing',
-      reports: 'Reports',
-      'advanced-reports': 'Advanced Reports',
-      'supplier-performance': 'Supplier Performance',
-      audit: 'Activity Log',
-    };
+      const titleMap = {
+        dashboard: 'Dashboard',
+        suppliers: 'Suppliers',
+        shipping: 'International Import',
+        workflow: 'Post-Arrival Workflow',
+        'local-receiving': 'Local Receiving',
+        'iwt-incoming': 'IWT Incoming',
+        'bol-audit': 'BOL Audit',
+        receiving: 'Goods Receiving',
+        'dock-management': 'Dock Management',
+        capacity: 'Warehouse Capacity',
+        stored: 'Stored Stock',
+        archives: 'Shipment Archives',
+        rates: 'Rates & Quotes',
+        costing: 'Import Costing',
+        'export-costing': 'Export Costing',
+        reports: 'Reports',
+        'advanced-reports': 'Advanced Reports',
+        'supplier-performance': 'Supplier Performance',
+        'costing-requests': 'Cost Requests',
+        users: 'User Management',
+        audit: 'Activity Log',
+      };
 
-    return [
-      ...prev,
-      {
-        id: activeView,
-        title: titleMap[activeView] || activeView,
-        route,
-      },
-    ];
-  });
-}, [location.pathname]);
-``
-
+      return [
+        ...prev,
+        {
+          id: activeView,
+          title: titleMap[activeView] || activeView,
+          route,
+        },
+      ];
+    });
+  }, [location.pathname, activeView]);
 
   const StoredWrapper = () => {
     const storedShipments = shipments.filter(s => s.latestStatus === 'stored');
@@ -484,8 +489,6 @@ useEffect(() => {
 
   const currentUser = authUtils.getUser();
   const isAdmin = currentUser?.role === 'admin';
-
-  
 
   return (
     <div className={`container ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -578,7 +581,7 @@ useEffect(() => {
 
           const match = (label) => !q || label.toLowerCase().includes(q);
 
-                    const renderItem = (key) => {
+          const renderItem = (key) => {
             const item = navItems[key];
 
             if (!item) return null;
@@ -601,7 +604,12 @@ useEffect(() => {
 
                         return [
                           ...prev,
-                          { id: item.view, title: item.label, route },
+                          {
+                            id: crypto.randomUUID(),
+                            view: item.view,
+                            title: item.label,
+                            route,
+                          },
                         ];
                       });
 
@@ -684,96 +692,95 @@ useEffect(() => {
           const resourcesVisible = !q ? externalLinks : externalLinks.filter(l => l.label.toLowerCase().includes(q));
           const resourcesOpen = q ? resourcesVisible.length > 0 : sidebarSections.resources;
 
-           return (
-  <nav className="sidebar-nav">
-    {match('Dashboard') && renderItem('dashboard')}
-    {renderSection('Master Data', 'masterData', ['suppliers'])}
-    {renderSection('Operations', 'operations', ['shipping', 'localReceiving', 'iwtIncoming', 'workflow', 'bolAudit'])}
-    {renderSection('Warehouse', 'warehouse', ['receiving', 'dockManagement', 'capacity', 'stored'])}
-    {renderSection('Finance', 'finance', ['rates', 'costing', 'exportCosting', 'costingRequests'])}
-    {renderSection('Reports', 'reports', ['reports', 'advancedReports', 'supplierPerformance', 'audit'])}
+          return (
+            <nav className="sidebar-nav">
+              {match('Dashboard') && renderItem('dashboard')}
+              {renderSection('Master Data', 'masterData', ['suppliers'])}
+              {renderSection('Operations', 'operations', ['shipping', 'localReceiving', 'iwtIncoming', 'workflow', 'bolAudit'])}
+              {renderSection('Warehouse', 'warehouse', ['receiving', 'dockManagement', 'capacity', 'stored'])}
+              {renderSection('Finance', 'finance', ['rates', 'costing', 'exportCosting', 'costingRequests'])}
+              {renderSection('Reports', 'reports', ['reports', 'advancedReports', 'supplierPerformance', 'audit'])}
 
-    {!sidebarCollapsed && (!q || resourcesVisible.length > 0) && (
-      <div className="sidebar-resources">
-        <div
-          className="nav-section-header"
-          onClick={() => !q && toggleSection('resources')}
-        >
-          Resources
-          <span className={`chevron ${resourcesOpen ? 'open' : ''}`}>
-            {'\u25B8'}
-          </span>
-        </div>
+              {!sidebarCollapsed && (!q || resourcesVisible.length > 0) && (
+                <div className="sidebar-resources">
+                  <div
+                    className="nav-section-header"
+                    onClick={() => !q && toggleSection('resources')}
+                  >
+                    Resources
+                    <span className={`chevron ${resourcesOpen ? 'open' : ''}`}>
+                      {'\u25B8'}
+                    </span>
+                  </div>
 
-        <div className={`nav-section-items ${resourcesOpen ? 'expanded' : 'collapsed'}`}>
-          {resourcesVisible.map(link => {
-            const LinkIcon = link.icon;
+                  <div className={`nav-section-items ${resourcesOpen ? 'expanded' : 'collapsed'}`}>
+                    {resourcesVisible.map(link => {
+                      const LinkIcon = link.icon;
 
-            return (
-              <button
-                key={link.label}
-                className="nav-item"
-                onClick={() => window.open(link.url, '_blank')}
-              >
-                <span className="nav-icon">
-                  <LinkIcon size={16} strokeWidth={2} />
-                </span>
-                <span className="nav-label">{link.label}</span>
-                <span className="nav-external">{'\u2197'}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    )}
-  </nav>
-);
-})()}
-
+                      return (
+                        <button
+                          key={link.label}
+                          className="nav-item"
+                          onClick={() => window.open(link.url, '_blank')}
+                        >
+                          <span className="nav-icon">
+                            <LinkIcon size={16} strokeWidth={2} />
+                          </span>
+                          <span className="nav-label">{link.label}</span>
+                          <span className="nav-external">{'\u2197'}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </nav>
+          );
+        })()}
 
         {/* Quick Stats */}
-{!sidebarCollapsed && (
-  <div className="sidebar-quick-stats">
-    <div className="sidebar-qs-title">
-      Quick Stats{' '}
-      {calendarMonth !== null
-        ? `· ${[
-            'Jan','Feb','Mar','Apr','May','Jun',
-            'Jul','Aug','Sep','Oct','Nov','Dec'
-          ][calendarMonth]} ${calendarYear}`
-        : `· ${calendarYear}`}
-    </div>
+        {!sidebarCollapsed && (
+          <div className="sidebar-quick-stats">
+            <div className="sidebar-qs-title">
+              Quick Stats{' '}
+              {calendarMonth !== null
+                ? `· ${[
+                    'Jan','Feb','Mar','Apr','May','Jun',
+                    'Jul','Aug','Sep','Oct','Nov','Dec'
+                  ][calendarMonth]} ${calendarYear}`
+                : `· ${calendarYear}`}
+            </div>
 
-    <div className="sidebar-qs-row">
-      <span>Total Items</span>
-      <strong>{calendarFilteredShipments.length}</strong>
-    </div>
+            <div className="sidebar-qs-row">
+              <span>Total Items</span>
+              <strong>{calendarFilteredShipments.length}</strong>
+            </div>
 
-    <div className="sidebar-qs-row">
-      <span>In Transit</span>
-      <strong>
-        {
-          calendarFilteredShipments.filter(
-            s =>
-              s.latestStatus === 'in_transit_roadway' ||
-              s.latestStatus === 'in_transit_seaway'
-          ).length
-        }
-      </strong>
-    </div>
+            <div className="sidebar-qs-row">
+              <span>In Transit</span>
+              <strong>
+                {
+                  calendarFilteredShipments.filter(
+                    s =>
+                      s.latestStatus === 'in_transit_roadway' ||
+                      s.latestStatus === 'in_transit_seaway'
+                  ).length
+                }
+              </strong>
+            </div>
 
-    <div className="sidebar-qs-row">
-      <span>Delayed</span>
-      <strong style={{ color: '#fbbf24' }}>
-        {
-          calendarFilteredShipments.filter(
-            s => s.latestStatus && s.latestStatus.startsWith('delayed_')
-          ).length
-        }
-      </strong>
-    </div>
-  </div>
-)}
+            <div className="sidebar-qs-row">
+              <span>Delayed</span>
+              <strong style={{ color: '#fbbf24' }}>
+                {
+                  calendarFilteredShipments.filter(
+                    s => s.latestStatus && s.latestStatus.startsWith('delayed_')
+                  ).length
+                }
+              </strong>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="sidebar-footer">
@@ -802,8 +809,6 @@ useEffect(() => {
           </button>
         </div>
       </div>
-    
-      
 
       {/* main panel */}
       <div className="main-content">
@@ -867,41 +872,39 @@ useEffect(() => {
         </div>
 
         {/* ============================
-    ✅ TAB BAR (ADD THIS)
-============================ */}
-<div className="tab-bar">
-  {openTabs.map((tab) => (
-    <div
-      key={tab.id}
-      className={`tab ${location.pathname === tab.route ? 'active' : ''}`}
-      onClick={() => navigate(tab.route)}
-    >
-      <span className="tab-title">{tab.title}</span>
+            ✅ TAB BAR
+        ============================ */}
+        <div className="tab-bar">
+          {openTabs.map((tab) => (
+            <div
+              key={tab.id}
+              className={`tab ${location.pathname === tab.route ? 'active' : ''}`}
+              onClick={() => navigate(tab.route)}
+            >
+              <span className="tab-title">{tab.title}</span>
 
-      {tab.id !== 'dashboard' && (
-        <button
-          className="tab-close"
-          onClick={(e) => {
-            e.stopPropagation();
-            setOpenTabs((prev) => {
-              const remaining = prev.filter(t => t.id !== tab.id);
+              {tab.id !== 'dashboard' && (
+                <button
+                  className="tab-close"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenTabs((prev) => {
+                      const remaining = prev.filter(t => t.id !== tab.id);
 
-              if (location.pathname === tab.route && remaining.length > 0) {
-                navigate(remaining[remaining.length - 1].route);
-              }
+                      if (location.pathname === tab.route && remaining.length > 0) {
+                        navigate(remaining[remaining.length - 1].route);
+                      }
 
-              return remaining;
-            });
-          }}
-        >
-          ×
-        </button>
-      )}
-    </div>
-  ))}
-</div>
-
-
+                      return remaining;
+                    });
+                  }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
 
         <ErrorBoundary>
           <Routes>
@@ -1031,8 +1034,6 @@ useEffect(() => {
           onRefresh={() => fetchShipments(true)}
         />
       )}
-
-
 
       <AlertHub
         open={alertHubOpen}
