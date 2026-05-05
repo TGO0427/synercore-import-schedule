@@ -750,29 +750,28 @@ export function generateEstimatePDF(estimate) {
     }
   }
 
-  const lastMileRows = [
-    ['Service', LAST_MILE_SERVICE_TYPES.find(s => s.value === estimate.last_mile_service_type)?.label || estimate.last_mile_service_type || '-'],
-    ['Route', getLastMileRate(estimate.last_mile_service_type, estimate.last_mile_route)?.label || estimate.last_mile_route || '-'],
-    ['Chargeable Weight', `${formatNumber(totals._last_mile_weight_kg || estimate.last_mile_weight_kg || 0)} kg`],
-    ['Minimum', formatCurrency(totals._last_mile_minimum_zar || 0)],
-    ['Rate per kg', formatCurrency(totals._last_mile_rate_per_kg_zar || 0)],
-    ['Base Charge', formatCurrency(totals._last_mile_base_charge_zar || estimate.last_mile_manual_charge_zar || 0)],
-    ['Fuel Levy', formatCurrency(totals._last_mile_fuel_levy_zar || 0)],
-    ['Extra Charges', formatCurrency(estimate.last_mile_extra_charges_zar || 0)],
-  ].filter(([label, value]) => {
-    if (label === 'Service' || label === 'Route') return value && value !== '-';
-    const numericValue = parseFloat(String(value).replace(/[^0-9.-]/g, ''));
-    return !isNaN(numericValue) && numericValue !== 0;
+  const lastMileRows = (totals._last_mile_charge_lines || []).map((line, index) => {
+    const service = LAST_MILE_SERVICE_TYPES.find(s => s.value === line.service_type)?.label || line.service_type || '-';
+    const route = getLastMileRate(line.service_type, line.route)?.label || line.route || '-';
+    return [
+      `${index + 1}. ${service}`,
+      route,
+      `${formatNumber(line.calculated.weight_kg || 0)} kg`,
+      formatCurrency(line.calculated.base_charge_zar || 0),
+      formatCurrency(line.calculated.fuel_levy_zar || 0),
+      formatCurrency(line.extra_charges_zar || 0),
+      formatCurrency(line.calculated.subtotal_zar || 0),
+    ];
   });
   if (totals.last_mile_charges_subtotal_zar > 0) {
-    lastMileRows.push(['Sub-Total', formatCurrency(totals.last_mile_charges_subtotal_zar)]);
+    lastMileRows.push(['Sub-Total', '', '', '', '', '', formatCurrency(totals.last_mile_charges_subtotal_zar)]);
   }
   if (lastMileRows.length > 0) {
     let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
     secY = drawSectionDivider(doc, secY, 'Last Mile Charges', [194, 65, 12]);
     autoTable(doc, {
       startY: secY + 1,
-      head: [['Last Mile', 'Amount / Detail']],
+      head: [['Service', 'Route', 'Weight', 'Base', 'Fuel Levy', 'Extras', 'Total']],
       body: lastMileRows,
       theme: 'striped',
       headStyles: { fillColor: [194, 65, 12], textColor: [255, 255, 255] },
@@ -1121,25 +1120,23 @@ export function generateEstimatePDFBase64(estimate) {
     }
   }
 
-  const lastMileEmailRows = [
-    ['Service', LAST_MILE_SERVICE_TYPES.find(s => s.value === estimate.last_mile_service_type)?.label || estimate.last_mile_service_type || '-'],
-    ['Route', getLastMileRate(estimate.last_mile_service_type, estimate.last_mile_route)?.label || estimate.last_mile_route || '-'],
-    ['Chargeable Weight', `${formatNumber(totals._last_mile_weight_kg || estimate.last_mile_weight_kg || 0)} kg`],
-    ['Base Charge', formatCurrency(totals._last_mile_base_charge_zar || estimate.last_mile_manual_charge_zar || 0)],
-    ['Fuel Levy', formatCurrency(totals._last_mile_fuel_levy_zar || 0)],
-    ['Extra Charges', formatCurrency(estimate.last_mile_extra_charges_zar || 0)],
-  ].filter(([label, value]) => {
-    if (label === 'Service' || label === 'Route') return value && value !== '-';
-    const numericValue = parseFloat(String(value).replace(/[^0-9.-]/g, ''));
-    return !isNaN(numericValue) && numericValue !== 0;
+  const lastMileEmailRows = (totals._last_mile_charge_lines || []).map((line, index) => {
+    const service = LAST_MILE_SERVICE_TYPES.find(s => s.value === line.service_type)?.label || line.service_type || '-';
+    const route = getLastMileRate(line.service_type, line.route)?.label || line.route || '-';
+    return [
+      `${index + 1}. ${service}`,
+      route,
+      `${formatNumber(line.calculated.weight_kg || 0)} kg`,
+      formatCurrency(line.calculated.subtotal_zar || 0),
+    ];
   });
   if (totals.last_mile_charges_subtotal_zar > 0) {
-    lastMileEmailRows.push(['Sub-Total', formatCurrency(totals.last_mile_charges_subtotal_zar)]);
+    lastMileEmailRows.push(['Sub-Total', '', '', formatCurrency(totals.last_mile_charges_subtotal_zar)]);
   }
   if (lastMileEmailRows.length > 0) {
     autoTable(doc, {
       startY: doc.lastAutoTable.finalY + 10,
-      head: [['Last Mile Charges', 'Amount / Detail']],
+      head: [['Service', 'Route', 'Weight', 'Total']],
       body: lastMileEmailRows,
       theme: 'grid',
       headStyles: { fillColor: [194, 65, 12] },

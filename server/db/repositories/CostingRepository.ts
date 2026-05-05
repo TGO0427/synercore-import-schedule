@@ -139,6 +139,7 @@ export interface ImportCostEstimate {
   last_mile_manual_charge_zar?: number;
   last_mile_extra_charges_zar?: number;
   last_mile_charges_subtotal_zar?: number;
+  last_mile_charges?: any[];
   airline_name?: string;
   flight_number?: string;
   airport_of_departure?: string;
@@ -206,6 +207,7 @@ const COST_ESTIMATE_COLUMNS = [
   'last_mile_service_type', 'last_mile_route', 'last_mile_weight_kg',
   'last_mile_fuel_levy_percent', 'last_mile_manual_charge_zar',
   'last_mile_extra_charges_zar', 'last_mile_charges_subtotal_zar',
+  'last_mile_charges',
   'airline_name', 'flight_number', 'airport_of_departure', 'airport_of_arrival',
   'dimensions_length_cm', 'dimensions_width_cm', 'dimensions_height_cm', 'number_of_pieces',
   // Metadata
@@ -319,6 +321,7 @@ export class CostingRepository {
 
     // Handle products JSON serialization
     const products = data.products ? JSON.stringify(data.products) : '[]';
+    const lastMileCharges = data.last_mile_charges ? JSON.stringify(data.last_mile_charges) : '[]';
 
     const insertData: Record<string, any> = {
       ...data,
@@ -330,6 +333,7 @@ export class CostingRepository {
       created_at: now,
       updated_at: now,
       products,
+      last_mile_charges: lastMileCharges,
       // Default numeric values to 0
       origin_charge_usd: data.origin_charge_usd || 0,
       origin_charge_eur: data.origin_charge_eur || 0,
@@ -419,6 +423,9 @@ export class CostingRepository {
     // Handle products JSON serialization
     if (updateData.products !== undefined) {
       updateData.products = JSON.stringify(updateData.products);
+    }
+    if (updateData.last_mile_charges !== undefined) {
+      updateData.last_mile_charges = JSON.stringify(updateData.last_mile_charges);
     }
 
     // Filter to only known database columns to prevent errors from extra frontend fields

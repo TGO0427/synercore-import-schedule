@@ -736,6 +736,7 @@ const migrations = [
             last_mile_manual_charge_zar NUMERIC(12,2) DEFAULT 0,
             last_mile_extra_charges_zar NUMERIC(12,2) DEFAULT 0,
             last_mile_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0,
+            last_mile_charges JSONB DEFAULT '[]'::jsonb,
             status VARCHAR(50) DEFAULT 'draft',
             notes TEXT,
             created_by VARCHAR(255),
@@ -779,6 +780,7 @@ const migrations = [
         await addColumnIfNotExists('last_mile_manual_charge_zar NUMERIC(12,2) DEFAULT 0');
         await addColumnIfNotExists('last_mile_extra_charges_zar NUMERIC(12,2) DEFAULT 0');
         await addColumnIfNotExists('last_mile_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0');
+        await addColumnIfNotExists("last_mile_charges JSONB DEFAULT '[]'::jsonb");
       }
 
       // Create exchange_rate_cache table if it doesn't exist

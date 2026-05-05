@@ -246,6 +246,7 @@ export default async function addCostingColumns() {
     "last_mile_manual_charge_zar NUMERIC(12,2) DEFAULT 0",
     "last_mile_extra_charges_zar NUMERIC(12,2) DEFAULT 0",
     "last_mile_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0",
+    "last_mile_charges JSONB DEFAULT '[]'::jsonb",
   ];
 
   for (const col of lastMileColumns) {

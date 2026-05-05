@@ -105,6 +105,9 @@ function CostingFormSections({
   onAddProduct,
   onRemoveProduct,
   onUpdateProduct,
+  onAddLastMileCharge = () => {},
+  onRemoveLastMileCharge = () => {},
+  onUpdateLastMileCharge = () => {},
   onSubmit,
   onCancel,
   showAddSupplier,
@@ -819,52 +822,101 @@ function CostingFormSections({
 
       {/* Section: Last Mile Charges */}
       <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fff7ed', borderRadius: '8px', border: '2px solid #f97316' }}>
-        <h4 style={{ margin: '0 0 1rem', color: '#9a3412', fontSize: '1rem' }}>
-          Last Mile Charges - AFI/ALLMARK <InfoTip text="April 2026 AFI/ALLMARK rates. Amounts exclude fuel levy and VAT; fuel levy can be added below." />
-        </h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-          {select('Service Type', 'last_mile_service_type', LAST_MILE_SERVICE_TYPES)}
-          {select(
-            'Route',
-            'last_mile_route',
-            getLastMileRouteOptions(formData.last_mile_service_type),
-            'Routes from the AFI/ALLMARK April 2026 rate sheet.'
-          )}
-          {currencyInput(
-            'Chargeable Weight',
-            'last_mile_weight_kg',
-            'kg',
-            formData.transport_mode === 'air'
-              ? 'Leave blank/0 to use air chargeable weight.'
-              : 'Leave blank/0 to use total product weight.'
-          )}
-          {currencyInput('Fuel Levy', 'last_mile_fuel_levy_percent', '%', 'Optional percentage added to the calculated last mile base charge.')}
-          {currencyInput('Manual Last Mile Charge', 'last_mile_manual_charge_zar', 'ZAR', 'Use with Manual service, or for special drive-away / quoted charges.')}
-          {currencyInput('Extra Charges', 'last_mile_extra_charges_zar', 'ZAR', 'Examples: priority delivery, after hours, Saturday, public holiday, chain store, farm, mines, townships, documentation.')}
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#9a3412' }}>
-              Base Charge - Auto
-            </label>
-            <div style={{ padding: '8px 12px', backgroundColor: '#ffedd5', borderRadius: '6px', fontWeight: '600', color: '#9a3412' }}>
-              {formatCurrency(calculatedTotals._last_mile_base_charge_zar || 0)}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', gap: '1rem' }}>
+          <h4 style={{ margin: 0, color: '#9a3412', fontSize: '1rem' }}>
+            Last Mile Charges - AFI/ALLMARK <InfoTip text="April 2026 AFI/ALLMARK rates. Amounts exclude fuel levy and VAT; fuel levy can be added below." />
+          </h4>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '0.75rem', color: '#9a3412' }}>Last Mile Total</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: '700', color: '#9a3412' }}>
+                {formatCurrency(calculatedTotals.last_mile_charges_subtotal_zar || 0)}
+              </div>
             </div>
-          </div>
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#9a3412' }}>
-              Last Mile Sub-Total - Auto
-            </label>
-            <div style={{ padding: '8px 12px', backgroundColor: '#f97316', borderRadius: '6px', fontWeight: '700', color: 'white' }}>
-              {formatCurrency(calculatedTotals.last_mile_charges_subtotal_zar || 0)}
-            </div>
+            <button
+              type="button"
+              onClick={onAddLastMileCharge}
+              style={{ padding: '8px 12px', backgroundColor: '#f97316', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+            >
+              + Add Charge
+            </button>
           </div>
         </div>
-        {formData.last_mile_service_type && formData.last_mile_service_type !== 'manual' && (
-          <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#9a3412' }}>
-            Rate used: minimum {formatCurrency(calculatedTotals._last_mile_minimum_zar || 0)}
-            {' '}+ {formatCurrency(calculatedTotals._last_mile_rate_per_kg_zar || 0)}/kg,
-            weight {formatNumber(calculatedTotals._last_mile_weight_kg || 0)} kg.
-          </div>
-        )}
+
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#fed7aa', color: '#9a3412' }}>
+                <th style={{ padding: '8px', textAlign: 'left' }}>Service</th>
+                <th style={{ padding: '8px', textAlign: 'left' }}>Route</th>
+                <th style={{ padding: '8px', textAlign: 'right' }}>Weight kg</th>
+                <th style={{ padding: '8px', textAlign: 'right' }}>Fuel %</th>
+                <th style={{ padding: '8px', textAlign: 'right' }}>Manual</th>
+                <th style={{ padding: '8px', textAlign: 'right' }}>Extras</th>
+                <th style={{ padding: '8px', textAlign: 'right' }}>Base</th>
+                <th style={{ padding: '8px', textAlign: 'right' }}>Total</th>
+                <th style={{ padding: '8px' }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {(formData.last_mile_charges || []).map((charge, index) => {
+                const calculated = calculatedTotals._last_mile_charge_lines?.find(line => line._id === charge._id)?.calculated || {};
+                return (
+                  <tr key={charge._id || index} style={{ backgroundColor: index % 2 === 0 ? '#fff7ed' : '#ffedd5' }}>
+                    <td style={{ padding: '6px 8px' }}>
+                      <select
+                        value={charge.service_type || ''}
+                        onChange={(e) => onUpdateLastMileCharge(index, 'service_type', e.target.value)}
+                        style={{ width: '190px', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.82rem' }}
+                      >
+                        <option value="">Select...</option>
+                        {LAST_MILE_SERVICE_TYPES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                      </select>
+                    </td>
+                    <td style={{ padding: '6px 8px' }}>
+                      <select
+                        value={charge.route || ''}
+                        onChange={(e) => onUpdateLastMileCharge(index, 'route', e.target.value)}
+                        disabled={!charge.service_type || charge.service_type === 'manual'}
+                        style={{ width: '250px', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.82rem' }}
+                      >
+                        <option value="">Select...</option>
+                        {getLastMileRouteOptions(charge.service_type).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                      </select>
+                    </td>
+                    {['weight_kg', 'fuel_levy_percent', 'manual_charge_zar', 'extra_charges_zar'].map(field => (
+                      <td key={field} style={{ padding: '6px 8px' }}>
+                        <input
+                          type="number"
+                          value={charge[field] || ''}
+                          onChange={(e) => onUpdateLastMileCharge(index, field, parseFloat(e.target.value) || 0)}
+                          min="0"
+                          step="0.01"
+                          style={{ width: '90px', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.82rem', textAlign: 'right' }}
+                        />
+                      </td>
+                    ))}
+                    <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '600', color: '#9a3412' }}>
+                      {formatCurrency(calculated.base_charge_zar || 0)}
+                    </td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '700', color: '#9a3412' }}>
+                      {formatCurrency(calculated.subtotal_zar || 0)}
+                    </td>
+                    <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                      <button
+                        type="button"
+                        onClick={() => onRemoveLastMileCharge(index)}
+                        style={{ padding: '4px 8px', backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Section: Customs VAT & Duty Summary */}

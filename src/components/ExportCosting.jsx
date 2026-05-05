@@ -129,6 +129,9 @@ const INITIAL_FORM_STATE = {
   airport_transfer_fee_zar: 0,
   cartage_airport_to_whs_zar: 0,
   airfreight_insurance_percent: 0,
+  last_mile_charges: [
+    { _id: Date.now() + 1, service_type: '', route: '', weight_kg: 0, fuel_levy_percent: 0, manual_charge_zar: 0, extra_charges_zar: 0 }
+  ],
   notes: '',
   status: 'draft',
   presentation_currency: 'USD', // 'USD' or 'EUR' — drives the foreign-currency conversion of landed totals
@@ -334,6 +337,40 @@ function ExportCosting() {
     });
   };
 
+  const addLastMileCharge = () => {
+    setFormData(prev => ({
+      ...prev,
+      last_mile_charges: [
+        ...(prev.last_mile_charges || []),
+        { _id: Date.now() + Math.random(), service_type: '', route: '', weight_kg: 0, fuel_levy_percent: 0, manual_charge_zar: 0, extra_charges_zar: 0 }
+      ],
+    }));
+  };
+
+  const removeLastMileCharge = (index) => {
+    setFormData(prev => {
+      const nextCharges = (prev.last_mile_charges || []).filter((_, i) => i !== index);
+      return {
+        ...prev,
+        last_mile_charges: nextCharges.length > 0
+          ? nextCharges
+          : [{ _id: Date.now() + Math.random(), service_type: '', route: '', weight_kg: 0, fuel_levy_percent: 0, manual_charge_zar: 0, extra_charges_zar: 0 }],
+      };
+    });
+  };
+
+  const updateLastMileCharge = (index, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      last_mile_charges: (prev.last_mile_charges || []).map((item, i) => {
+        if (i !== index) return item;
+        const updatedItem = { ...item, [field]: value };
+        if (field === 'service_type') updatedItem.route = '';
+        return updatedItem;
+      }),
+    }));
+  };
+
   const getTotalWeight = () =>
     (formData.products || []).reduce((sum, p) => sum + (parseFloat(p.weight_kg) || 0), 0);
 
@@ -365,9 +402,16 @@ function ExportCosting() {
     const incoTerms = (formData.inco_terms || '').toUpperCase();
     const freightIncluded = ['CIF', 'CIP', 'CFR'].includes(incoTerms);
     let shippingToAllocate;
-    if (freightIncluded) {
+    if (formData.transport_mode === 'air') {
+      shippingToAllocate = freightIncluded
+        ? (calculatedTotals.air_local_charges_subtotal_zar || 0)
+          + (calculatedTotals.airfreight_insurance_zar || 0)
+          + (calculatedTotals.last_mile_charges_subtotal_zar || 0)
+        : calculatedTotals.total_shipping_cost_zar || 0;
+    } else if (freightIncluded) {
       shippingToAllocate = (calculatedTotals.local_charges_subtotal_zar || 0)
-        + (calculatedTotals.destination_charges_subtotal_zar || 0);
+        + (calculatedTotals.destination_charges_subtotal_zar || 0)
+        + (calculatedTotals.last_mile_charges_subtotal_zar || 0);
     } else {
       shippingToAllocate = calculatedTotals.total_shipping_cost_zar || 0;
     }
@@ -686,6 +730,9 @@ function ExportCosting() {
               onAddProduct={addProduct}
               onRemoveProduct={removeProduct}
               onUpdateProduct={updateProduct}
+              onAddLastMileCharge={addLastMileCharge}
+              onRemoveLastMileCharge={removeLastMileCharge}
+              onUpdateLastMileCharge={updateLastMileCharge}
               onSubmit={handleSubmit}
               onCancel={() => confirmCloseCosting(() => { setShowForm(false); setEditingId(null); })}
               showAddSupplier={showAddCustomer}

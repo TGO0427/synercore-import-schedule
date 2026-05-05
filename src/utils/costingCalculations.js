@@ -109,13 +109,14 @@ const getLastMileRateForWeight = (route, weightKg) => {
 };
 
 export const calculateLastMileCharge = (data, fallbackWeightKg = 0) => {
-  const serviceType = data.last_mile_service_type || '';
-  const route = getLastMileRate(serviceType, data.last_mile_route);
-  const enteredWeight = parseFloat(data.last_mile_weight_kg) || 0;
+  const serviceType = data.service_type || data.last_mile_service_type || '';
+  const routeKey = data.route || data.last_mile_route;
+  const route = getLastMileRate(serviceType, routeKey);
+  const enteredWeight = parseFloat(data.weight_kg ?? data.last_mile_weight_kg) || 0;
   const weightKg = enteredWeight > 0 ? enteredWeight : fallbackWeightKg;
-  const manualCharge = parseFloat(data.last_mile_manual_charge_zar) || 0;
-  const extraCharges = parseFloat(data.last_mile_extra_charges_zar) || 0;
-  const fuelLevyPercent = parseFloat(data.last_mile_fuel_levy_percent) || 0;
+  const manualCharge = parseFloat(data.manual_charge_zar ?? data.last_mile_manual_charge_zar) || 0;
+  const extraCharges = parseFloat(data.extra_charges_zar ?? data.last_mile_extra_charges_zar) || 0;
+  const fuelLevyPercent = parseFloat(data.fuel_levy_percent ?? data.last_mile_fuel_levy_percent) || 0;
 
   if (serviceType === 'manual') {
     const fuelLevyZar = manualCharge * (fuelLevyPercent / 100);
@@ -132,6 +133,44 @@ export const calculateLastMileCharge = (data, fallbackWeightKg = 0) => {
   const fuelLevyZar = baseCharge * (fuelLevyPercent / 100);
 
   return { route, weight_kg: weightKg, minimum_zar: minimum, rate_per_kg_zar: ratePerKg, base_charge_zar: baseCharge, fuel_levy_zar: fuelLevyZar, subtotal_zar: baseCharge + fuelLevyZar + extraCharges };
+};
+
+export const getLastMileChargeItems = (data) => {
+  const items = Array.isArray(data.last_mile_charges)
+    ? data.last_mile_charges.filter(item =>
+        item?.service_type ||
+        item?.route ||
+        parseFloat(item?.manual_charge_zar) > 0 ||
+        parseFloat(item?.extra_charges_zar) > 0
+      )
+    : [];
+  if (items.length > 0) return items;
+  if (
+    data.last_mile_service_type ||
+    data.last_mile_route ||
+    parseFloat(data.last_mile_manual_charge_zar) > 0 ||
+    parseFloat(data.last_mile_extra_charges_zar) > 0
+  ) {
+    return [{
+      _id: 'legacy-last-mile',
+      service_type: data.last_mile_service_type || '',
+      route: data.last_mile_route || '',
+      weight_kg: data.last_mile_weight_kg || 0,
+      fuel_levy_percent: data.last_mile_fuel_levy_percent || 0,
+      manual_charge_zar: data.last_mile_manual_charge_zar || 0,
+      extra_charges_zar: data.last_mile_extra_charges_zar || 0,
+    }];
+  }
+  return [];
+};
+
+export const calculateLastMileCharges = (data, fallbackWeightKg = 0) => {
+  const lines = getLastMileChargeItems(data).map(item => ({
+    ...item,
+    calculated: calculateLastMileCharge(item, fallbackWeightKg),
+  }));
+  const subtotal_zar = lines.reduce((sum, line) => sum + (line.calculated.subtotal_zar || 0), 0);
+  return { lines, subtotal_zar };
 };
 
 /**
@@ -418,7 +457,7 @@ export const calculateAllTotals = (data) => {
   const volumetricWeightKg = calculateVolumetricWeight(data);
   const chargeableWeightKg = calculateChargeableWeight(data);
   const lastMileWeightFallback = isAirfreight ? chargeableWeightKg : totalGrossWeightKg;
-  const lastMile = calculateLastMileCharge(data, lastMileWeightFallback);
+  const lastMile = calculateLastMileCharges(data, lastMileWeightFallback);
   const lastMileChargesSubtotalZar = lastMile.subtotal_zar;
 
   // Airfreight total (direct USD + EUR amounts)
@@ -539,11 +578,12 @@ export const calculateAllTotals = (data) => {
     airfreight_insurance_zar: r(airfreightInsuranceZar),
     total_airfreight_cost_zar: r(totalAirfreightCostZar),
     // Display-only fields (not saved to database, used for form display)
-    _last_mile_weight_kg: r(lastMile.weight_kg),
-    _last_mile_minimum_zar: r(lastMile.minimum_zar),
-    _last_mile_rate_per_kg_zar: r(lastMile.rate_per_kg_zar),
-    _last_mile_base_charge_zar: r(lastMile.base_charge_zar),
-    _last_mile_fuel_levy_zar: r(lastMile.fuel_levy_zar),
+    _last_mile_charge_lines: lastMile.lines,
+    _last_mile_weight_kg: r(lastMile.lines[0]?.calculated.weight_kg || 0),
+    _last_mile_minimum_zar: r(lastMile.lines[0]?.calculated.minimum_zar || 0),
+    _last_mile_rate_per_kg_zar: r(lastMile.lines[0]?.calculated.rate_per_kg_zar || 0),
+    _last_mile_base_charge_zar: r(lastMile.lines.reduce((sum, line) => sum + (line.calculated.base_charge_zar || 0), 0)),
+    _last_mile_fuel_levy_zar: r(lastMile.lines.reduce((sum, line) => sum + (line.calculated.fuel_levy_zar || 0), 0)),
     _ocean_freight_usd_zar: r(oceanFreightUsdZar),
     _ocean_freight_eur_zar: r(oceanFreightEurZar),
     _origin_charge_usd_zar: r(originChargeUsdZar),
@@ -1098,6 +1138,8 @@ export default {
   calculateDestinationSubtotal,
   calculateAirfreightChargesSubtotal,
   calculateLastMileCharge,
+  calculateLastMileCharges,
+  getLastMileChargeItems,
   calculateVolumetricWeight,
   calculateChargeableWeight,
   calculateAgencyFee,

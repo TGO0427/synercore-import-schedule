@@ -124,6 +124,9 @@ const INITIAL_FORM_STATE = {
   last_mile_fuel_levy_percent: 0,
   last_mile_manual_charge_zar: 0,
   last_mile_extra_charges_zar: 0,
+  last_mile_charges: [
+    { _id: Date.now() + 1, service_type: '', route: '', weight_kg: 0, fuel_levy_percent: 0, manual_charge_zar: 0, extra_charges_zar: 0 }
+  ],
   // Metadata
   notes: '',
   status: 'draft',
@@ -350,6 +353,42 @@ function ImportCosting() {
       }
       return updated;
     });
+  };
+
+  const addLastMileCharge = () => {
+    setFormData(prev => ({
+      ...prev,
+      last_mile_charges: [
+        ...(prev.last_mile_charges || []),
+        { _id: Date.now() + Math.random(), service_type: '', route: '', weight_kg: 0, fuel_levy_percent: 0, manual_charge_zar: 0, extra_charges_zar: 0 }
+      ],
+    }));
+  };
+
+  const removeLastMileCharge = (index) => {
+    setFormData(prev => {
+      const nextCharges = (prev.last_mile_charges || []).filter((_, i) => i !== index);
+      return {
+        ...prev,
+        last_mile_charges: nextCharges.length > 0
+          ? nextCharges
+          : [{ _id: Date.now() + Math.random(), service_type: '', route: '', weight_kg: 0, fuel_levy_percent: 0, manual_charge_zar: 0, extra_charges_zar: 0 }],
+      };
+    });
+  };
+
+  const updateLastMileCharge = (index, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      last_mile_charges: (prev.last_mile_charges || []).map((item, i) => {
+        if (i !== index) return item;
+        const updatedItem = { ...item, [field]: value };
+        if (field === 'service_type') {
+          updatedItem.route = '';
+        }
+        return updatedItem;
+      }),
+    }));
   };
 
   // Product helpers
@@ -805,8 +844,11 @@ function ImportCosting() {
               onInputChange={handleInputChange}
               onAddProduct={addProduct}
               onRemoveProduct={removeProduct}
-              onUpdateProduct={updateProduct}
-              onSubmit={handleSubmit}
+                onUpdateProduct={updateProduct}
+                onAddLastMileCharge={addLastMileCharge}
+                onRemoveLastMileCharge={removeLastMileCharge}
+                onUpdateLastMileCharge={updateLastMileCharge}
+                onSubmit={handleSubmit}
               onCancel={() => confirmCloseCosting(() => { setShowForm(false); setEditingId(null); })}
               showAddSupplier={showAddSupplier}
               onToggleAddSupplier={setShowAddSupplier}
