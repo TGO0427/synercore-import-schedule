@@ -846,14 +846,15 @@ function CostingFormSections({
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', minWidth: '1120px', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
             <colgroup>
-              <col style={{ width: '17%' }} />
-              <col style={{ width: '22%' }} />
+              <col style={{ width: '16%' }} />
+              <col style={{ width: '20%' }} />
               <col style={{ width: '8%' }} />
               <col style={{ width: '8%' }} />
               <col style={{ width: '8%' }} />
               <col style={{ width: '8%' }} />
-              <col style={{ width: '10%' }} />
-              <col style={{ width: '10%' }} />
+              <col style={{ width: '9%' }} />
+              <col style={{ width: '9%' }} />
+              <col style={{ width: '8%' }} />
               <col style={{ width: '9%' }} />
             </colgroup>
             <thead>
@@ -866,6 +867,7 @@ function CostingFormSections({
                 <th style={{ padding: '8px', textAlign: 'right' }}>Extras</th>
                 <th style={{ padding: '8px', textAlign: 'right' }}>Base</th>
                 <th style={{ padding: '8px', textAlign: 'right' }}>Total</th>
+                <th style={{ padding: '8px', textAlign: 'right' }}>Final/kg</th>
                 <th style={{ padding: '8px' }}></th>
               </tr>
             </thead>
@@ -912,6 +914,9 @@ function CostingFormSections({
                     </td>
                     <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '700', color: '#9a3412' }}>
                       {formatCurrency(calculated.subtotal_zar || 0)}
+                    </td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '700', color: '#9a3412' }}>
+                      {formatCurrency((calculated.weight_kg || 0) > 0 ? (calculated.subtotal_zar || 0) / calculated.weight_kg : 0)}
                     </td>
                     <td style={{ padding: '6px 8px', textAlign: 'center' }}>
                       <button

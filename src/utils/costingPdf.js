@@ -761,17 +761,18 @@ export function generateEstimatePDF(estimate) {
       formatCurrency(line.calculated.fuel_levy_zar || 0),
       formatCurrency(line.extra_charges_zar || 0),
       formatCurrency(line.calculated.subtotal_zar || 0),
+      formatCurrency((line.calculated.weight_kg || 0) > 0 ? (line.calculated.subtotal_zar || 0) / line.calculated.weight_kg : 0),
     ];
   });
   if (totals.last_mile_charges_subtotal_zar > 0) {
-    lastMileRows.push(['Sub-Total', '', '', '', '', '', formatCurrency(totals.last_mile_charges_subtotal_zar)]);
+    lastMileRows.push(['Sub-Total', '', '', '', '', '', formatCurrency(totals.last_mile_charges_subtotal_zar), '']);
   }
   if (lastMileRows.length > 0) {
     let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
     secY = drawSectionDivider(doc, secY, 'Last Mile Charges', [194, 65, 12]);
     autoTable(doc, {
       startY: secY + 1,
-      head: [['Service', 'Route', 'Weight', 'Base', 'Fuel Levy', 'Extras', 'Total']],
+      head: [['Service', 'Route', 'Weight', 'Base', 'Fuel Levy', 'Extras', 'Total', 'Final/kg']],
       body: lastMileRows,
       theme: 'striped',
       headStyles: { fillColor: [194, 65, 12], textColor: [255, 255, 255] },
@@ -1128,15 +1129,16 @@ export function generateEstimatePDFBase64(estimate) {
       route,
       `${formatNumber(line.calculated.weight_kg || 0)} kg`,
       formatCurrency(line.calculated.subtotal_zar || 0),
+      formatCurrency((line.calculated.weight_kg || 0) > 0 ? (line.calculated.subtotal_zar || 0) / line.calculated.weight_kg : 0),
     ];
   });
   if (totals.last_mile_charges_subtotal_zar > 0) {
-    lastMileEmailRows.push(['Sub-Total', '', '', formatCurrency(totals.last_mile_charges_subtotal_zar)]);
+    lastMileEmailRows.push(['Sub-Total', '', '', formatCurrency(totals.last_mile_charges_subtotal_zar), '']);
   }
   if (lastMileEmailRows.length > 0) {
     autoTable(doc, {
       startY: doc.lastAutoTable.finalY + 10,
-      head: [['Service', 'Route', 'Weight', 'Total']],
+      head: [['Service', 'Route', 'Weight', 'Total', 'Final/kg']],
       body: lastMileEmailRows,
       theme: 'grid',
       headStyles: { fillColor: [194, 65, 12] },
