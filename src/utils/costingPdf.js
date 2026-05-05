@@ -273,12 +273,12 @@ const getProductCostBreakdown = (product, estimate, totals, productTotals) => {
   let shippingToAllocate;
   if ((estimate.transport_mode || 'sea') === 'air') {
     shippingToAllocate = freightIncluded
-      ? (totals.air_local_charges_subtotal_zar || 0) + (totals.airfreight_insurance_zar || 0) + (totals.last_mile_charges_subtotal_zar || 0)
-      : totals.total_shipping_cost_zar || 0;
+      ? (totals.air_local_charges_subtotal_zar || 0) + (totals.airfreight_insurance_zar || 0)
+      : Math.max((totals.total_shipping_cost_zar || 0) - (totals.last_mile_charges_subtotal_zar || 0), 0);
   } else if (freightIncluded) {
-    shippingToAllocate = (totals.local_charges_subtotal_zar || 0) + (totals.destination_charges_subtotal_zar || 0) + (totals.last_mile_charges_subtotal_zar || 0);
+    shippingToAllocate = (totals.local_charges_subtotal_zar || 0) + (totals.destination_charges_subtotal_zar || 0);
   } else {
-    shippingToAllocate = totals.total_shipping_cost_zar || 0;
+    shippingToAllocate = Math.max((totals.total_shipping_cost_zar || 0) - (totals.last_mile_charges_subtotal_zar || 0), 0);
   }
   const allocatedShipping = shippingToAllocate * weightRatio;
   const transportCostPerKg = weight > 0 ? allocatedShipping / weight : 0;

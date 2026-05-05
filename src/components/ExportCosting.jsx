@@ -406,14 +406,12 @@ function ExportCosting() {
       shippingToAllocate = freightIncluded
         ? (calculatedTotals.air_local_charges_subtotal_zar || 0)
           + (calculatedTotals.airfreight_insurance_zar || 0)
-          + (calculatedTotals.last_mile_charges_subtotal_zar || 0)
-        : calculatedTotals.total_shipping_cost_zar || 0;
+        : Math.max((calculatedTotals.total_shipping_cost_zar || 0) - (calculatedTotals.last_mile_charges_subtotal_zar || 0), 0);
     } else if (freightIncluded) {
       shippingToAllocate = (calculatedTotals.local_charges_subtotal_zar || 0)
-        + (calculatedTotals.destination_charges_subtotal_zar || 0)
-        + (calculatedTotals.last_mile_charges_subtotal_zar || 0);
+        + (calculatedTotals.destination_charges_subtotal_zar || 0);
     } else {
-      shippingToAllocate = calculatedTotals.total_shipping_cost_zar || 0;
+      shippingToAllocate = Math.max((calculatedTotals.total_shipping_cost_zar || 0) - (calculatedTotals.last_mile_charges_subtotal_zar || 0), 0);
     }
     const allocatedShippingCost = shippingToAllocate * weightRatio;
 

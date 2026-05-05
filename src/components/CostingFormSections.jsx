@@ -137,6 +137,27 @@ function CostingFormSections({
     presentationCurrency === 'EUR' ? formData.roe_eur : formData.roe_origin
   ) || 0;
   const toPresentation = (zar) => (isExport && presentationRate > 0 ? zar / presentationRate : zar);
+  const getProductAllocationShippingTotal = () => {
+    const freightIncluded = ['CIF', 'CIP', 'CFR'].includes((formData.inco_terms || '').toUpperCase());
+    const lastMileTotal = calculatedTotals.last_mile_charges_subtotal_zar || 0;
+
+    if (formData.transport_mode === 'air') {
+      return freightIncluded
+        ? (calculatedTotals.air_local_charges_subtotal_zar || 0) + (calculatedTotals.airfreight_insurance_zar || 0)
+        : Math.max((calculatedTotals.total_shipping_cost_zar || 0) - lastMileTotal, 0);
+    }
+
+    return freightIncluded
+      ? (calculatedTotals.local_charges_subtotal_zar || 0) + (calculatedTotals.destination_charges_subtotal_zar || 0)
+      : Math.max((calculatedTotals.total_shipping_cost_zar || 0) - lastMileTotal, 0);
+  };
+  const getProductAllocationLandedTotal = () => {
+    const customsTotals = getCustomsTotals();
+    return customsTotals.totalCustomsValue
+      + customsTotals.totalDuties
+      + customsTotals.totalSchedule1Duty
+      + getProductAllocationShippingTotal();
+  };
   // Shorthand wrappers that bind formData and onInputChange
   const input = (label, field, type = 'text', options = {}, tooltip) =>
     renderInput(formData, onInputChange, label, field, type, options, tooltip);
@@ -1008,7 +1029,7 @@ function CostingFormSections({
         <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#ecfdf5', borderRadius: '8px', border: '2px solid #10b981' }}>
           <h4 style={{ margin: '0 0 1rem', color: '#065f46', fontSize: '1rem' }}>Product Cost Allocation <InfoTip text="Breaks down the total landed cost per product. Shipping is split by weight share." /></h4>
           <p style={{ margin: '0 0 1rem', fontSize: '0.8rem', color: '#047857' }}>
-            Shipping costs allocated by weight. Each product shows its share of total costs.
+            Shipping costs allocated by weight. Last mile charges are shown separately and excluded from this rate.
           </p>
 
           <div style={{ overflowX: 'auto' }}>
@@ -1070,29 +1091,14 @@ function CostingFormSections({
                   <td style={{ padding: '10px 8px', textAlign: 'center' }}>100%</td>
                   <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(getCustomsTotals().totalCustomsValue)}</td>
                   <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(getCustomsTotals().totalDuties + getCustomsTotals().totalSchedule1Duty)}</td>
-                  <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(
-                    formData.transport_mode === 'air'
-                      ? (['CIF', 'CIP', 'CFR'].includes((formData.inco_terms || '').toUpperCase())
-                          ? (calculatedTotals.air_local_charges_subtotal_zar || 0) + (calculatedTotals.airfreight_insurance_zar || 0) + (calculatedTotals.last_mile_charges_subtotal_zar || 0)
-                          : calculatedTotals.total_shipping_cost_zar)
-                      : ['CIF', 'CIP', 'CFR'].includes((formData.inco_terms || '').toUpperCase())
-                        ? (calculatedTotals.local_charges_subtotal_zar || 0) + (calculatedTotals.destination_charges_subtotal_zar || 0) + (calculatedTotals.last_mile_charges_subtotal_zar || 0)
-                      : calculatedTotals.total_shipping_cost_zar
-                  )}</td>
+                  <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(getProductAllocationShippingTotal())}</td>
                   <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(
                     getTotalWeight() > 0
-                      ? (formData.transport_mode === 'air'
-                          ? (['CIF', 'CIP', 'CFR'].includes((formData.inco_terms || '').toUpperCase())
-                              ? ((calculatedTotals.air_local_charges_subtotal_zar || 0) + (calculatedTotals.airfreight_insurance_zar || 0) + (calculatedTotals.last_mile_charges_subtotal_zar || 0))
-                              : (calculatedTotals.total_shipping_cost_zar || 0))
-                          : (['CIF', 'CIP', 'CFR'].includes((formData.inco_terms || '').toUpperCase())
-                              ? ((calculatedTotals.local_charges_subtotal_zar || 0) + (calculatedTotals.destination_charges_subtotal_zar || 0) + (calculatedTotals.last_mile_charges_subtotal_zar || 0))
-                              : (calculatedTotals.total_shipping_cost_zar || 0))
-                        ) / getTotalWeight()
+                      ? getProductAllocationShippingTotal() / getTotalWeight()
                       : 0
                   )}</td>
-                  <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(toPresentation(calculatedTotals.total_landed_cost_zar), presentationCurrency)}</td>
-                  <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(toPresentation(calculatedTotals.all_in_warehouse_cost_per_kg_zar), presentationCurrency)}</td>
+                  <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(toPresentation(getProductAllocationLandedTotal()), presentationCurrency)}</td>
+                  <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(toPresentation(getTotalWeight() > 0 ? getProductAllocationLandedTotal() / getTotalWeight() : 0), presentationCurrency)}</td>
                 </tr>
               </tbody>
             </table>
