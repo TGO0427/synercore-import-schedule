@@ -174,7 +174,11 @@ const getProductTotals = (estimate) => {
 };
 
 const buildLastMileRows = (totals) => {
-  const rows = (totals._last_mile_charge_lines || []).map((line, index) => {
+  const visibleLines = (totals._last_mile_charge_lines || []).filter(line =>
+    (line?.calculated?.subtotal_zar || 0) > 0
+  );
+
+  const rows = visibleLines.map((line, index) => {
     const service = LAST_MILE_SERVICE_TYPES.find(s => s.value === line.service_type)?.label || line.service_type || '-';
     const route = getLastMileRate(line.service_type, line.route)?.label || line.route || '-';
     const calculated = line.calculated || {};
@@ -445,8 +449,10 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
       let sumWeight = 0, sumCustomsValue = 0, sumImportDuty = 0, sumSchedule1Duty = 0;
       let sumAllocatedShipping = 0, sumTotalLanded = 0;
 
-      const allocationRows = products.map(p => {
+      const allocationRows = products.reduce((rows, p) => {
         const bd = getProductCostBreakdown(p, estimate, totals, productTotals);
+        if ((bd.costPerKg || 0) <= 0) return rows;
+
         sumWeight += bd.weight;
         sumCustomsValue += bd.customsValue;
         sumImportDuty += bd.importDuty;
@@ -456,7 +462,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
 
         const productCostZar = bd.customsValue + bd.importDuty + bd.schedule1Duty;
         const productCostPerKg = bd.weight > 0 ? productCostZar / bd.weight : 0;
-        return [
+        rows.push([
           p.name || '-',
           formatNumber(bd.weight, 0),
           `${(bd.weightRatio * 100).toFixed(1)}%`,
@@ -468,12 +474,15 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
           formatCurrency(bd.allocatedShipping),
           formatCurrency(toPresentation(bd.totalLanded), presCur),
           formatCurrency(toPresentation(bd.costPerKg), presCur),
-        ];
-      });
+        ]);
+
+        return rows;
+      }, []);
 
       const sumCostPerKg = sumWeight > 0 ? sumTotalLanded / sumWeight : 0;
       const sumProductCostPerKg = sumWeight > 0 ? (sumCustomsValue + sumImportDuty + sumSchedule1Duty) / sumWeight : 0;
-      allocationRows.push([
+      if (allocationRows.length > 0 && sumCostPerKg > 0) {
+        allocationRows.push([
         'TOTAL',
         formatNumber(sumWeight, 0),
         '100.0%',
@@ -485,16 +494,18 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
         formatCurrency(sumAllocatedShipping),
         formatCurrency(toPresentation(sumTotalLanded), presCur),
         formatCurrency(toPresentation(sumCostPerKg), presCur),
-      ]);
+        ]);
+      }
 
-      let allocY = doc.lastAutoTable.finalY + 4;
-      allocY = drawSectionDivider(doc, allocY, 'Product Cost Allocation', THEME.green);
+      if (allocationRows.length > 0) {
+        let allocY = doc.lastAutoTable.finalY + 4;
+        allocY = drawSectionDivider(doc, allocY, 'Product Cost Allocation', THEME.green);
 
-      const landedHeader = isExport ? `Total\nLanded\n(${presCur})` : 'Total\nLanded';
-      const costPerKgHeader = isExport ? `Cost/kg\n(${presCur})` : 'Cost/kg';
-      const allocHead = [['Product', 'Weight\n(kg)', 'Wt %', 'Invoice Value', 'Customs Val\n(ZAR)', 'Import\nDuty', 'Sch1\nDuty', 'Cost/kg\n(ZAR)', shippingLabel, landedHeader, costPerKgHeader]];
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const allocColumnStyles = computeColumnWidths(doc, allocHead, allocationRows, {
+        const landedHeader = isExport ? `Total\nLanded\n(${presCur})` : 'Total\nLanded';
+        const costPerKgHeader = isExport ? `Cost/kg\n(${presCur})` : 'Cost/kg';
+        const allocHead = [['Product', 'Weight\n(kg)', 'Wt %', 'Invoice Value', 'Customs Val\n(ZAR)', 'Import\nDuty', 'Sch1\nDuty', 'Cost/kg\n(ZAR)', shippingLabel, landedHeader, costPerKgHeader]];
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const allocColumnStyles = computeColumnWidths(doc, allocHead, allocationRows, {
         fontSize: 6,
         headFontSize: 6,
         paddingX: 2,
@@ -512,9 +523,9 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
           9: { halign: 'right', fontStyle: 'bold' },
           10: { halign: 'right', fontStyle: 'bold' },
         },
-      });
+        });
 
-      autoTable(doc, {
+        autoTable(doc, {
         startY: allocY + 1,
         head: allocHead,
         body: allocationRows,
@@ -542,7 +553,8 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
             data.cell.styles.fillColor = [229, 231, 235];
           }
         },
-      });
+        });
+      }
     }
   }
 };
