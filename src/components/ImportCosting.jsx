@@ -117,6 +117,13 @@ const INITIAL_FORM_STATE = {
   airport_transfer_fee_zar: 0,
   cartage_airport_to_whs_zar: 0,
   airfreight_insurance_percent: 0,
+  // Last Mile Charges - AFI/ALLMARK April 2026
+  last_mile_service_type: '',
+  last_mile_route: '',
+  last_mile_weight_kg: 0,
+  last_mile_fuel_levy_percent: 0,
+  last_mile_manual_charge_zar: 0,
+  last_mile_extra_charges_zar: 0,
   // Metadata
   notes: '',
   status: 'draft',
@@ -327,6 +334,9 @@ function ImportCosting() {
   const handleInputChange = (field, value) => {
     setFormData(prev => {
       const updated = { ...prev, [field]: value };
+      if (field === 'last_mile_service_type') {
+        updated.last_mile_route = '';
+      }
       // Auto-fill ocean freight when port, shipping line, or container type changes
       if (field === 'port_of_loading' || field === 'shipping_line' || field === 'container_type') {
         const rate = lookupOceanFreightRate(
@@ -425,9 +435,16 @@ function ImportCosting() {
     const incoTerms = (formData.inco_terms || '').toUpperCase();
     const freightIncluded = ['CIF', 'CIP', 'CFR'].includes(incoTerms);
     let shippingToAllocate;
-    if (freightIncluded) {
+    if (formData.transport_mode === 'air') {
+      shippingToAllocate = freightIncluded
+        ? (calculatedTotals.air_local_charges_subtotal_zar || 0)
+          + (calculatedTotals.airfreight_insurance_zar || 0)
+          + (calculatedTotals.last_mile_charges_subtotal_zar || 0)
+        : calculatedTotals.total_shipping_cost_zar || 0;
+    } else if (freightIncluded) {
       shippingToAllocate = (calculatedTotals.local_charges_subtotal_zar || 0)
-        + (calculatedTotals.destination_charges_subtotal_zar || 0);
+        + (calculatedTotals.destination_charges_subtotal_zar || 0)
+        + (calculatedTotals.last_mile_charges_subtotal_zar || 0);
     } else {
       shippingToAllocate = calculatedTotals.total_shipping_cost_zar || 0;
     }

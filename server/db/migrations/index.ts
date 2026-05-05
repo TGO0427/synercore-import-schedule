@@ -1312,6 +1312,13 @@ export const migrations: Migration[] = [
         'fuel_surcharge_dest_zar NUMERIC(12,2) DEFAULT 0',
         'agency_fee_dest_zar NUMERIC(12,2) DEFAULT 0',
         'facility_fee_zar NUMERIC(12,2) DEFAULT 0',
+        'last_mile_service_type VARCHAR(50)',
+        'last_mile_route VARCHAR(100)',
+        'last_mile_weight_kg NUMERIC(12,2) DEFAULT 0',
+        'last_mile_fuel_levy_percent NUMERIC(5,2) DEFAULT 0',
+        'last_mile_manual_charge_zar NUMERIC(12,2) DEFAULT 0',
+        'last_mile_extra_charges_zar NUMERIC(12,2) DEFAULT 0',
+        'last_mile_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0',
       ];
 
       for (const colDef of newColumns) {

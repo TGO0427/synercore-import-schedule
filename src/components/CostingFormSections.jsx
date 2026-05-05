@@ -11,6 +11,8 @@ import {
   AIRPORTS_OF_DEPARTURE,
   AIRPORTS_OF_ARRIVAL,
   AIRLINES,
+  LAST_MILE_SERVICE_TYPES,
+  getLastMileRouteOptions,
 } from '../utils/costingCalculations';
 
 // Payment terms options
@@ -815,6 +817,56 @@ function CostingFormSections({
       </>
       )}
 
+      {/* Section: Last Mile Charges */}
+      <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fff7ed', borderRadius: '8px', border: '2px solid #f97316' }}>
+        <h4 style={{ margin: '0 0 1rem', color: '#9a3412', fontSize: '1rem' }}>
+          Last Mile Charges - AFI/ALLMARK <InfoTip text="April 2026 AFI/ALLMARK rates. Amounts exclude fuel levy and VAT; fuel levy can be added below." />
+        </h4>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+          {select('Service Type', 'last_mile_service_type', LAST_MILE_SERVICE_TYPES)}
+          {select(
+            'Route',
+            'last_mile_route',
+            getLastMileRouteOptions(formData.last_mile_service_type),
+            'Routes from the AFI/ALLMARK April 2026 rate sheet.'
+          )}
+          {currencyInput(
+            'Chargeable Weight',
+            'last_mile_weight_kg',
+            'kg',
+            formData.transport_mode === 'air'
+              ? 'Leave blank/0 to use air chargeable weight.'
+              : 'Leave blank/0 to use total product weight.'
+          )}
+          {currencyInput('Fuel Levy', 'last_mile_fuel_levy_percent', '%', 'Optional percentage added to the calculated last mile base charge.')}
+          {currencyInput('Manual Last Mile Charge', 'last_mile_manual_charge_zar', 'ZAR', 'Use with Manual service, or for special drive-away / quoted charges.')}
+          {currencyInput('Extra Charges', 'last_mile_extra_charges_zar', 'ZAR', 'Examples: priority delivery, after hours, Saturday, public holiday, chain store, farm, mines, townships, documentation.')}
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#9a3412' }}>
+              Base Charge - Auto
+            </label>
+            <div style={{ padding: '8px 12px', backgroundColor: '#ffedd5', borderRadius: '6px', fontWeight: '600', color: '#9a3412' }}>
+              {formatCurrency(calculatedTotals._last_mile_base_charge_zar || 0)}
+            </div>
+          </div>
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#9a3412' }}>
+              Last Mile Sub-Total - Auto
+            </label>
+            <div style={{ padding: '8px 12px', backgroundColor: '#f97316', borderRadius: '6px', fontWeight: '700', color: 'white' }}>
+              {formatCurrency(calculatedTotals.last_mile_charges_subtotal_zar || 0)}
+            </div>
+          </div>
+        </div>
+        {formData.last_mile_service_type && formData.last_mile_service_type !== 'manual' && (
+          <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#9a3412' }}>
+            Rate used: minimum {formatCurrency(calculatedTotals._last_mile_minimum_zar || 0)}
+            {' '}+ {formatCurrency(calculatedTotals._last_mile_rate_per_kg_zar || 0)}/kg,
+            weight {formatNumber(calculatedTotals._last_mile_weight_kg || 0)} kg.
+          </div>
+        )}
+      </div>
+
       {/* Section: Customs VAT & Duty Summary */}
       <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fef3c7', borderRadius: '8px' }}>
         <h4 style={{ margin: '0 0 1rem', color: '#92400e', fontSize: '1rem' }}>Customs & Duties Summary <InfoTip text="SARS import duties and VAT calculated from customs value × duty rates per product." /></h4>
@@ -951,15 +1003,23 @@ function CostingFormSections({
                   <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(getCustomsTotals().totalCustomsValue)}</td>
                   <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(getCustomsTotals().totalDuties + getCustomsTotals().totalSchedule1Duty)}</td>
                   <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(
-                    ['CIF', 'CIP', 'CFR'].includes((formData.inco_terms || '').toUpperCase())
-                      ? (calculatedTotals.local_charges_subtotal_zar || 0) + (calculatedTotals.destination_charges_subtotal_zar || 0)
+                    formData.transport_mode === 'air'
+                      ? (['CIF', 'CIP', 'CFR'].includes((formData.inco_terms || '').toUpperCase())
+                          ? (calculatedTotals.air_local_charges_subtotal_zar || 0) + (calculatedTotals.airfreight_insurance_zar || 0) + (calculatedTotals.last_mile_charges_subtotal_zar || 0)
+                          : calculatedTotals.total_shipping_cost_zar)
+                      : ['CIF', 'CIP', 'CFR'].includes((formData.inco_terms || '').toUpperCase())
+                        ? (calculatedTotals.local_charges_subtotal_zar || 0) + (calculatedTotals.destination_charges_subtotal_zar || 0) + (calculatedTotals.last_mile_charges_subtotal_zar || 0)
                       : calculatedTotals.total_shipping_cost_zar
                   )}</td>
                   <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(
                     getTotalWeight() > 0
-                      ? (['CIF', 'CIP', 'CFR'].includes((formData.inco_terms || '').toUpperCase())
-                          ? ((calculatedTotals.local_charges_subtotal_zar || 0) + (calculatedTotals.destination_charges_subtotal_zar || 0))
-                          : (calculatedTotals.total_shipping_cost_zar || 0)
+                      ? (formData.transport_mode === 'air'
+                          ? (['CIF', 'CIP', 'CFR'].includes((formData.inco_terms || '').toUpperCase())
+                              ? ((calculatedTotals.air_local_charges_subtotal_zar || 0) + (calculatedTotals.airfreight_insurance_zar || 0) + (calculatedTotals.last_mile_charges_subtotal_zar || 0))
+                              : (calculatedTotals.total_shipping_cost_zar || 0))
+                          : (['CIF', 'CIP', 'CFR'].includes((formData.inco_terms || '').toUpperCase())
+                              ? ((calculatedTotals.local_charges_subtotal_zar || 0) + (calculatedTotals.destination_charges_subtotal_zar || 0) + (calculatedTotals.last_mile_charges_subtotal_zar || 0))
+                              : (calculatedTotals.total_shipping_cost_zar || 0))
                         ) / getTotalWeight()
                       : 0
                   )}</td>

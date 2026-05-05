@@ -238,6 +238,20 @@ export default async function addCostingColumns() {
     if (await addColumn(col)) added++;
   }
 
+  const lastMileColumns = [
+    "last_mile_service_type VARCHAR(50)",
+    "last_mile_route VARCHAR(100)",
+    "last_mile_weight_kg NUMERIC(12,2) DEFAULT 0",
+    "last_mile_fuel_levy_percent NUMERIC(5,2) DEFAULT 0",
+    "last_mile_manual_charge_zar NUMERIC(12,2) DEFAULT 0",
+    "last_mile_extra_charges_zar NUMERIC(12,2) DEFAULT 0",
+    "last_mile_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0",
+  ];
+
+  for (const col of lastMileColumns) {
+    if (await addColumn(col)) added++;
+  }
+
   // Export costing support: direction + customer
   const exportColumns = [
     "direction VARCHAR(20) DEFAULT 'import'",

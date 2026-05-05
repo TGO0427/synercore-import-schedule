@@ -131,6 +131,14 @@ export interface ImportCostEstimate {
   airfreight_origin_charges_zar?: number;
   air_local_charges_subtotal_zar?: number;
   total_airfreight_cost_zar?: number;
+  // Last mile charges
+  last_mile_service_type?: string;
+  last_mile_route?: string;
+  last_mile_weight_kg?: number;
+  last_mile_fuel_levy_percent?: number;
+  last_mile_manual_charge_zar?: number;
+  last_mile_extra_charges_zar?: number;
+  last_mile_charges_subtotal_zar?: number;
   airline_name?: string;
   flight_number?: string;
   airport_of_departure?: string;
@@ -194,6 +202,10 @@ const COST_ESTIMATE_COLUMNS = [
   'cartage_airport_to_whs_zar', 'airfreight_insurance_percent', 'airfreight_insurance_zar',
   'airfreight_origin_charges_usd', 'airfreight_origin_charges_eur', 'airfreight_origin_charges_zar',
   'air_local_charges_subtotal_zar', 'total_airfreight_cost_zar',
+  // Last mile charges
+  'last_mile_service_type', 'last_mile_route', 'last_mile_weight_kg',
+  'last_mile_fuel_levy_percent', 'last_mile_manual_charge_zar',
+  'last_mile_extra_charges_zar', 'last_mile_charges_subtotal_zar',
   'airline_name', 'flight_number', 'airport_of_departure', 'airport_of_arrival',
   'dimensions_length_cm', 'dimensions_width_cm', 'dimensions_height_cm', 'number_of_pieces',
   // Metadata

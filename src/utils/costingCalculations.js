@@ -15,6 +15,125 @@ export const COSTING_DEFAULTS = {
   VAT_RATE: 0.15,              // South African import VAT (15%)
 };
 
+export const LAST_MILE_SERVICE_TYPES = [
+  { value: 'express_air', label: 'Express Air - next day by 11:00' },
+  { value: 'overnight_air', label: 'Overnight Air' },
+  { value: 'express_road', label: 'Express Road - next day by 14:00' },
+  { value: 'local_regional', label: 'Local / Outlying / Regional' },
+  { value: 'economy_road', label: 'Economy Road - 48/72 hour' },
+  { value: 'manual', label: 'Manual last mile charge' },
+];
+
+export const LAST_MILE_RATES = {
+  express_air: [
+    { value: 'klapmuts-jhb-dbn', label: 'Klapmuts to Johannesburg / Durban', minimum: 850, rate: 40 },
+    { value: 'klapmuts-el-bfn-grj-plz', label: 'Klapmuts to East London / Bloem / George / Gqeberha', minimum: 850, rate: 55 },
+    { value: 'klapmuts-umt-kim', label: 'Klapmuts to Umtata / Kimberley', minimum: 850, rate: 60 },
+    { value: 'durban-cpt-jhb', label: 'Durban to Cape Town / Johannesburg', minimum: 820, rate: 40 },
+    { value: 'durban-el-bfn-grj-plz', label: 'Durban to East London / Bloem / George / Gqeberha', minimum: 820, rate: 55 },
+    { value: 'durban-umt-kim', label: 'Durban to Umtata / Kimberley', minimum: 820, rate: 60 },
+    { value: 'hermanstad-cpt-dbn', label: 'Hermanstad to Cape Town / Durban', minimum: 880, rate: 40 },
+    { value: 'hermanstad-el-bfn-grj-plz', label: 'Hermanstad to East London / Bloem / George / Gqeberha', minimum: 880, rate: 55 },
+    { value: 'hermanstad-umt-kim', label: 'Hermanstad to Umtata / Kimberley', minimum: 880, rate: 60 },
+    { value: 'dbn-airport-spring-meadow', label: 'DBN Airport to Spring Meadow', minimum: 950, rate: 0, flat: true },
+    { value: 'plz-airport-humansdorp', label: 'PLZ Airport to Humansdorp', minimum: 1560, rate: 0, flat: true },
+  ],
+  overnight_air: [
+    { value: 'klapmuts-jhb-dbn', label: 'Klapmuts to Johannesburg / Durban', minimum: 850, rate: 65 },
+    { value: 'klapmuts-el-bfn-grj-plz', label: 'Klapmuts to East London / Bloem / George / Gqeberha', minimum: 850, rate: 70 },
+    { value: 'klapmuts-umt-kim', label: 'Klapmuts to Umtata / Kimberley', minimum: 850, rate: 100 },
+    { value: 'durban-cpt-jhb', label: 'Durban to Cape Town / Johannesburg', minimum: 820, rate: 55 },
+    { value: 'durban-el-bfn-grj-plz', label: 'Durban to East London / Bloem / George / Gqeberha', minimum: 820, rate: 65 },
+    { value: 'durban-umt-kim', label: 'Durban to Umtata / Kimberley', minimum: 820, rate: 100 },
+    { value: 'hermanstad-cpt-dbn', label: 'Hermanstad to Cape Town / Durban', minimum: 880, rate: 65 },
+    { value: 'hermanstad-el-bfn-grj-plz', label: 'Hermanstad to East London / Bloem / George / Gqeberha', minimum: 880, rate: 70 },
+    { value: 'hermanstad-umt-kim', label: 'Hermanstad to Umtata / Kimberley', minimum: 880, rate: 100 },
+  ],
+  express_road: [
+    { value: 'klapmuts-gqeberha-george', label: 'Klapmuts to Gqeberha / George', minimum: 680, rate: 8.5 },
+    { value: 'klapmuts-bloemfontein', label: 'Klapmuts to Bloemfontein', minimum: 730, rate: 14.5 },
+    { value: 'klapmuts-hermanstad-pta', label: 'Klapmuts to Hermanstad / PTA', minimum: 820, rate: 16 },
+    { value: 'klapmuts-johannesburg', label: 'Klapmuts to Johannesburg', minimum: 780, rate: 15.5 },
+    { value: 'klapmuts-johannesburg-outlying', label: 'Klapmuts to Johannesburg outlying', minimum: 950, rate: 16.5 },
+    { value: 'durban-johannesburg', label: 'Durban to Johannesburg', minimum: 750, rate: 8.5 },
+    { value: 'hermanstad-bloemfontein', label: 'Hermanstad to Bloemfontein', minimum: 680, rate: 5.8 },
+    { value: 'hermanstad-cape-town', label: 'Hermanstad to Cape Town', minimum: 800, rate: 15.5 },
+    { value: 'hermanstad-cape-town-outlying', label: 'Hermanstad to Cape Town outlying', minimum: 950, rate: 16.5 },
+    { value: 'hermanstad-durban', label: 'Hermanstad to Durban', minimum: 680, rate: 8.5 },
+  ],
+  local_regional: [
+    { value: 'klapmuts-local-50', label: 'Klapmuts local within 50 km', minimum: 600, rate: 0.85, rate900: 0.75, rate3000: 0.7 },
+    { value: 'klapmuts-outlying-100', label: 'Klapmuts outlying within 100 km', minimum: 700, rate: 2, rate900: 1.5, rate3000: 1 },
+    { value: 'klapmuts-outlying-200', label: 'Klapmuts outlying within 200 km', minimum: 800, rate: 3, rate900: 2.7, rate3000: 2.3 },
+    { value: 'klapmuts-regional-300', label: 'Klapmuts regional max 300 km', minimum: 900, rate: 4, rate900: 3.35, rate3000: 3 },
+    { value: 'durban-local-50', label: 'Durban local within 50 km', minimum: 580, rate: 2.1, rate900: 1.8, rate3000: 1.5 },
+    { value: 'durban-outlying-100', label: 'Durban outlying within 100 km', minimum: 680, rate: 3, rate900: 2.4, rate3000: 2.1 },
+    { value: 'durban-regional-300', label: 'Durban regional max 300 km', minimum: 880, rate: 4.8, rate900: 3.1, rate3000: 2.9 },
+    { value: 'hermanstad-local-50', label: 'Hermanstad local within 50 km', minimum: 600, rate: 0.95, rate900: 0.85, rate3000: 0.75 },
+    { value: 'hermanstad-outlying-100', label: 'Hermanstad outlying within 100 km', minimum: 700, rate: 1.95, rate900: 1.6, rate3000: 1.1 },
+    { value: 'hermanstad-outlying-200', label: 'Hermanstad outlying within 200 km', minimum: 800, rate: 2.8, rate900: 2.5, rate3000: 2.4 },
+    { value: 'hermanstad-regional-300', label: 'Hermanstad regional max 300 km', minimum: 900, rate: 4, rate900: 3.5, rate3000: 3.2 },
+  ],
+  economy_road: [
+    { value: 'klapmuts-bloemfontein', label: 'Klapmuts to Bloemfontein', minimum: 700, rate: 3.2, rate900: 3, rate3000: 2.85 },
+    { value: 'klapmuts-durban', label: 'Klapmuts to Durban', minimum: 700, rate: 2.8, rate900: 2.6, rate3000: 2.45 },
+    { value: 'klapmuts-east-london-george', label: 'Klapmuts to East London / George', minimum: 700, rate: 3.4, rate900: 3.2, rate3000: 3.05 },
+    { value: 'klapmuts-gqeberha', label: 'Klapmuts to Gqeberha (PLZ)', minimum: 700, rate: 2.8, rate900: 2.6, rate3000: 2.45 },
+    { value: 'klapmuts-johannesburg', label: 'Klapmuts to Johannesburg', minimum: 700, rate: 2.65, rate900: 2.45, rate3000: 2.35 },
+    { value: 'klapmuts-kimberley', label: 'Klapmuts to Kimberley', minimum: 750, rate: 5.1, rate900: 4.75, rate3000: 4.55 },
+    { value: 'klapmuts-krugersdorp', label: 'Klapmuts to Krugersdorp', minimum: 800, rate: 3.25, rate900: 3.05, rate3000: 2.95 },
+    { value: 'klapmuts-mossel-bay', label: 'Klapmuts to Mossel Bay', minimum: 750, rate: 4.4, rate900: 4.25, rate3000: 4.05 },
+    { value: 'klapmuts-pretoria-olifantsfontein', label: 'Klapmuts to Pretoria / Olifantsfontein', minimum: 800, rate: 3.3, rate900: 3.1, rate3000: 2.95 },
+    { value: 'durban-klapmuts', label: 'Durban to Klapmuts', minimum: 800, rate: 2.9, rate900: 2.6, rate3000: 2.4 },
+    { value: 'durban-johannesburg', label: 'Durban to Johannesburg', minimum: 700, rate: 2, rate900: 1.75, rate3000: 1.7 },
+    { value: 'durban-hermanstad', label: 'Durban to Hermanstad', minimum: 800, rate: 2.6, rate900: 2.45, rate3000: 2.25 },
+    { value: 'hermanstad-bloemfontein', label: 'Hermanstad to Bloemfontein', minimum: 700, rate: 3, rate900: 2.9, rate3000: 2.8 },
+    { value: 'hermanstad-cape-town', label: 'Hermanstad to Cape Town', minimum: 700, rate: 3, rate900: 2.8, rate3000: 2.7 },
+    { value: 'hermanstad-durban', label: 'Hermanstad to Durban', minimum: 700, rate: 2.45, rate900: 2.25, rate3000: 2.15 },
+    { value: 'hermanstad-east-london', label: 'Hermanstad to East London', minimum: 700, rate: 5.2, rate900: 4.65, rate3000: 4.5 },
+    { value: 'hermanstad-gqeberha', label: 'Hermanstad to Gqeberha', minimum: 700, rate: 4.5, rate900: 3.95, rate3000: 3.8 },
+  ],
+};
+
+export const getLastMileRouteOptions = (serviceType) => LAST_MILE_RATES[serviceType] || [];
+
+export const getLastMileRate = (serviceType, routeKey) => {
+  return getLastMileRouteOptions(serviceType).find(route => route.value === routeKey) || null;
+};
+
+const getLastMileRateForWeight = (route, weightKg) => {
+  if (!route) return 0;
+  if (weightKg >= 3000 && route.rate3000 !== undefined) return route.rate3000;
+  if (weightKg >= 900 && route.rate900 !== undefined) return route.rate900;
+  return route.rate || 0;
+};
+
+export const calculateLastMileCharge = (data, fallbackWeightKg = 0) => {
+  const serviceType = data.last_mile_service_type || '';
+  const route = getLastMileRate(serviceType, data.last_mile_route);
+  const enteredWeight = parseFloat(data.last_mile_weight_kg) || 0;
+  const weightKg = enteredWeight > 0 ? enteredWeight : fallbackWeightKg;
+  const manualCharge = parseFloat(data.last_mile_manual_charge_zar) || 0;
+  const extraCharges = parseFloat(data.last_mile_extra_charges_zar) || 0;
+  const fuelLevyPercent = parseFloat(data.last_mile_fuel_levy_percent) || 0;
+
+  if (serviceType === 'manual') {
+    const fuelLevyZar = manualCharge * (fuelLevyPercent / 100);
+    return { route, weight_kg: weightKg, minimum_zar: 0, rate_per_kg_zar: 0, base_charge_zar: manualCharge, fuel_levy_zar: fuelLevyZar, subtotal_zar: manualCharge + fuelLevyZar + extraCharges };
+  }
+
+  const ratePerKg = getLastMileRateForWeight(route, weightKg);
+  const minimum = route?.minimum || 0;
+  const baseCharge = route?.flat
+    ? minimum
+    : route && weightKg > 0
+      ? minimum + (Math.max(weightKg - 1, 0) * ratePerKg)
+      : 0;
+  const fuelLevyZar = baseCharge * (fuelLevyPercent / 100);
+
+  return { route, weight_kg: weightKg, minimum_zar: minimum, rate_per_kg_zar: ratePerKg, base_charge_zar: baseCharge, fuel_levy_zar: fuelLevyZar, subtotal_zar: baseCharge + fuelLevyZar + extraCharges };
+};
+
 /**
  * Calculate DAVIF: 3.25% of customs value, minimum R125
  */
@@ -298,6 +417,9 @@ export const calculateAllTotals = (data) => {
   // === Airfreight-specific calculations ===
   const volumetricWeightKg = calculateVolumetricWeight(data);
   const chargeableWeightKg = calculateChargeableWeight(data);
+  const lastMileWeightFallback = isAirfreight ? chargeableWeightKg : totalGrossWeightKg;
+  const lastMile = calculateLastMileCharge(data, lastMileWeightFallback);
+  const lastMileChargesSubtotalZar = lastMile.subtotal_zar;
 
   // Airfreight total (direct USD + EUR amounts)
   const airfreightUsd = parseFloat(data.airfreight_usd) || 0;
@@ -328,7 +450,7 @@ export const calculateAllTotals = (data) => {
 
   // Total airfreight cost
   const totalAirfreightCostZar = airfreightTotalZar + fuelSurchargeTotalZar + securitySurchargeTotalZar
-    + airfreightOriginZar + airLocalChargesSubtotalZar + airfreightInsuranceZar;
+    + airfreightOriginZar + airLocalChargesSubtotalZar + airfreightInsuranceZar + lastMileChargesSubtotalZar;
 
   // === Unified shipping cost (sea or air) ===
   // Sea freight total. Origin Charges is omitted under FOB/FCA/EXW (it's goods value,
@@ -342,7 +464,8 @@ export const calculateAllTotals = (data) => {
   const totalShippingCostSeaZar = (oceanFreightIsBuyerCost ? 0 : totalOceanFreightZar)
     + (originChargesAreFobValue ? 0 : totalOriginChargesZar)
     + localChargesSubtotalZar
-    + destinationChargesSubtotalZar;
+    + destinationChargesSubtotalZar
+    + lastMileChargesSubtotalZar;
 
   // Use the right total based on transport mode
   const totalShippingCostZar = isAirfreight ? totalAirfreightCostZar : totalShippingCostSeaZar;
@@ -355,11 +478,11 @@ export const calculateAllTotals = (data) => {
   if (isAirfreight) {
     // For airfreight: if freight included in price, only allocate local charges + insurance
     shippingToAllocateZar = freightIncluded
-      ? airLocalChargesSubtotalZar + airfreightInsuranceZar
+      ? airLocalChargesSubtotalZar + airfreightInsuranceZar + lastMileChargesSubtotalZar
       : totalAirfreightCostZar;
   } else {
     shippingToAllocateZar = freightIncluded
-      ? localChargesSubtotalZar + destinationChargesSubtotalZar
+      ? localChargesSubtotalZar + destinationChargesSubtotalZar + lastMileChargesSubtotalZar
       : totalShippingCostSeaZar;
   }
 
@@ -390,6 +513,7 @@ export const calculateAllTotals = (data) => {
     total_origin_charges_zar: r(totalOriginChargesZar),
     local_charges_subtotal_zar: r(localChargesSubtotalZar),
     destination_charges_subtotal_zar: r(destinationChargesSubtotalZar),
+    last_mile_charges_subtotal_zar: r(lastMileChargesSubtotalZar),
     export_charges_subtotal_zar: r(exportChargesSubtotalZar),
     import_vat_zar: r(importVatZar),
     total_duties_zar: r(customsItemsTotals.totalDuties + customsItemsTotals.totalSchedule1Duty),
@@ -415,6 +539,11 @@ export const calculateAllTotals = (data) => {
     airfreight_insurance_zar: r(airfreightInsuranceZar),
     total_airfreight_cost_zar: r(totalAirfreightCostZar),
     // Display-only fields (not saved to database, used for form display)
+    _last_mile_weight_kg: r(lastMile.weight_kg),
+    _last_mile_minimum_zar: r(lastMile.minimum_zar),
+    _last_mile_rate_per_kg_zar: r(lastMile.rate_per_kg_zar),
+    _last_mile_base_charge_zar: r(lastMile.base_charge_zar),
+    _last_mile_fuel_levy_zar: r(lastMile.fuel_levy_zar),
     _ocean_freight_usd_zar: r(oceanFreightUsdZar),
     _ocean_freight_eur_zar: r(oceanFreightEurZar),
     _origin_charge_usd_zar: r(originChargeUsdZar),
@@ -968,6 +1097,7 @@ export default {
   calculateLocalChargesSubtotal,
   calculateDestinationSubtotal,
   calculateAirfreightChargesSubtotal,
+  calculateLastMileCharge,
   calculateVolumetricWeight,
   calculateChargeableWeight,
   calculateAgencyFee,
@@ -977,6 +1107,10 @@ export default {
   formatNumber,
   CONTAINER_TYPES,
   INCO_TERMS,
+  LAST_MILE_SERVICE_TYPES,
+  LAST_MILE_RATES,
+  getLastMileRouteOptions,
+  getLastMileRate,
   SA_PORTS,
   AFRICAN_PORTS,
   LOAD_TYPES,

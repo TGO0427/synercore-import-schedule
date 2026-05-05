@@ -729,6 +729,13 @@ const migrations = [
             total_shipping_cost_zar NUMERIC(14,2) DEFAULT 0,
             total_in_warehouse_cost_zar NUMERIC(14,2) DEFAULT 0,
             all_in_warehouse_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0,
+            last_mile_service_type VARCHAR(50),
+            last_mile_route VARCHAR(100),
+            last_mile_weight_kg NUMERIC(12,2) DEFAULT 0,
+            last_mile_fuel_levy_percent NUMERIC(5,2) DEFAULT 0,
+            last_mile_manual_charge_zar NUMERIC(12,2) DEFAULT 0,
+            last_mile_extra_charges_zar NUMERIC(12,2) DEFAULT 0,
+            last_mile_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0,
             status VARCHAR(50) DEFAULT 'draft',
             notes TEXT,
             created_by VARCHAR(255),
@@ -765,6 +772,13 @@ const migrations = [
         await addColumnIfNotExists('port_of_loading VARCHAR(100)');
         await addColumnIfNotExists('roe_customs NUMERIC(12,6)');
         await addColumnIfNotExists("products JSONB DEFAULT '[]'::jsonb");
+        await addColumnIfNotExists('last_mile_service_type VARCHAR(50)');
+        await addColumnIfNotExists('last_mile_route VARCHAR(100)');
+        await addColumnIfNotExists('last_mile_weight_kg NUMERIC(12,2) DEFAULT 0');
+        await addColumnIfNotExists('last_mile_fuel_levy_percent NUMERIC(5,2) DEFAULT 0');
+        await addColumnIfNotExists('last_mile_manual_charge_zar NUMERIC(12,2) DEFAULT 0');
+        await addColumnIfNotExists('last_mile_extra_charges_zar NUMERIC(12,2) DEFAULT 0');
+        await addColumnIfNotExists('last_mile_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0');
       }
 
       // Create exchange_rate_cache table if it doesn't exist
