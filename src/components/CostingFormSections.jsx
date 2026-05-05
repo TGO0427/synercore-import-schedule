@@ -844,7 +844,18 @@ function CostingFormSections({
         </div>
 
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+          <table style={{ width: '100%', minWidth: '1120px', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+            <colgroup>
+              <col style={{ width: '17%' }} />
+              <col style={{ width: '22%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '9%' }} />
+            </colgroup>
             <thead>
               <tr style={{ backgroundColor: '#fed7aa', color: '#9a3412' }}>
                 <th style={{ padding: '8px', textAlign: 'left' }}>Service</th>
@@ -867,7 +878,7 @@ function CostingFormSections({
                       <select
                         value={charge.service_type || ''}
                         onChange={(e) => onUpdateLastMileCharge(index, 'service_type', e.target.value)}
-                        style={{ width: '190px', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.82rem' }}
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.82rem' }}
                       >
                         <option value="">Select...</option>
                         {LAST_MILE_SERVICE_TYPES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
@@ -878,7 +889,7 @@ function CostingFormSections({
                         value={charge.route || ''}
                         onChange={(e) => onUpdateLastMileCharge(index, 'route', e.target.value)}
                         disabled={!charge.service_type || charge.service_type === 'manual'}
-                        style={{ width: '250px', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.82rem' }}
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.82rem' }}
                       >
                         <option value="">Select...</option>
                         {getLastMileRouteOptions(charge.service_type).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
@@ -892,7 +903,7 @@ function CostingFormSections({
                           onChange={(e) => onUpdateLastMileCharge(index, field, parseFloat(e.target.value) || 0)}
                           min="0"
                           step="0.01"
-                          style={{ width: '90px', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.82rem', textAlign: 'right' }}
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.82rem', textAlign: 'right' }}
                         />
                       </td>
                     ))}
