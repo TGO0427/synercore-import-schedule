@@ -173,6 +173,80 @@ const getProductTotals = (estimate) => {
   return { totalWeight, totalCustomsValue, totalDuties };
 };
 
+const buildLastMileRows = (totals) => {
+  const rows = (totals._last_mile_charge_lines || []).map((line, index) => {
+    const service = LAST_MILE_SERVICE_TYPES.find(s => s.value === line.service_type)?.label || line.service_type || '-';
+    const route = getLastMileRate(line.service_type, line.route)?.label || line.route || '-';
+    const calculated = line.calculated || {};
+    const weight = calculated.weight_kg || 0;
+    const fuel = calculated.fuel_levy_zar || 0;
+    const extras = parseFloat(line.extra_charges_zar) || 0;
+    const subtotal = calculated.subtotal_zar || 0;
+
+    return [
+      `${index + 1}. ${service}\n${route}`,
+      `${formatNumber(weight || 0)} kg`,
+      formatCurrency(calculated.base_charge_zar || 0),
+      `Fuel ${formatCurrency(fuel)}\nExtras ${formatCurrency(extras)}`,
+      formatCurrency(subtotal),
+      formatCurrency(weight > 0 ? subtotal / weight : 0),
+    ];
+  });
+
+  if (totals.last_mile_charges_subtotal_zar > 0) {
+    rows.push(['Sub-Total', '', '', '', formatCurrency(totals.last_mile_charges_subtotal_zar), '']);
+  }
+
+  return rows;
+};
+
+const renderLastMileTable = (doc, rows, startY, options = {}) => {
+  if (rows.length === 0) return null;
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const tableWidth = pageWidth - 28;
+  const head = [['Service / Route', 'Weight', 'Base', 'Fuel / Extras', 'Total', 'Final/kg']];
+  const columnStyles = {
+    0: { cellWidth: tableWidth * 0.38 },
+    1: { cellWidth: tableWidth * 0.10, halign: 'right' },
+    2: { cellWidth: tableWidth * 0.12, halign: 'right' },
+    3: { cellWidth: tableWidth * 0.17, halign: 'right' },
+    4: { cellWidth: tableWidth * 0.12, halign: 'right', fontStyle: 'bold' },
+    5: { cellWidth: tableWidth * 0.11, halign: 'right', fontStyle: 'bold' },
+  };
+
+  return autoTable(doc, {
+    startY,
+    head,
+    body: rows,
+    theme: options.theme || 'striped',
+    headStyles: {
+      fillColor: [194, 65, 12],
+      textColor: [255, 255, 255],
+      fontSize: options.headFontSize || 7,
+      cellPadding: { top: 2, right: 1.2, bottom: 2, left: 1.2 },
+    },
+    alternateRowStyles: { fillColor: THEME.rowAlt },
+    styles: {
+      fontSize: options.fontSize || 7,
+      cellPadding: { top: 2, right: 1.2, bottom: 2, left: 1.2 },
+      overflow: 'linebreak',
+      valign: 'middle',
+      textColor: THEME.bodyDark,
+    },
+    columnStyles,
+    didParseCell: (data) => {
+      if (data.section === 'body' && data.row.index === rows.length - 1) {
+        const lastLabel = rows[rows.length - 1]?.[0] || '';
+        if (lastLabel.startsWith('Sub-Total')) {
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fillColor = [255, 237, 213];
+        }
+      }
+    },
+  });
+};
+
 // Calculate per-product full cost breakdown (matches ImportCosting calculateProductAllocation)
 const getProductCostBreakdown = (product, estimate, totals, productTotals) => {
   const roeCustoms = parseFloat(estimate.roe_customs) || parseFloat(estimate.roe_origin) || 0;
@@ -750,37 +824,6 @@ export function generateEstimatePDF(estimate) {
     }
   }
 
-  const lastMileRows = (totals._last_mile_charge_lines || []).map((line, index) => {
-    const service = LAST_MILE_SERVICE_TYPES.find(s => s.value === line.service_type)?.label || line.service_type || '-';
-    const route = getLastMileRate(line.service_type, line.route)?.label || line.route || '-';
-    return [
-      `${index + 1}. ${service}`,
-      route,
-      `${formatNumber(line.calculated.weight_kg || 0)} kg`,
-      formatCurrency(line.calculated.base_charge_zar || 0),
-      formatCurrency(line.calculated.fuel_levy_zar || 0),
-      formatCurrency(line.extra_charges_zar || 0),
-      formatCurrency(line.calculated.subtotal_zar || 0),
-      formatCurrency((line.calculated.weight_kg || 0) > 0 ? (line.calculated.subtotal_zar || 0) / line.calculated.weight_kg : 0),
-    ];
-  });
-  if (totals.last_mile_charges_subtotal_zar > 0) {
-    lastMileRows.push(['Sub-Total', '', '', '', '', '', formatCurrency(totals.last_mile_charges_subtotal_zar), '']);
-  }
-  if (lastMileRows.length > 0) {
-    let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
-    secY = drawSectionDivider(doc, secY, 'Last Mile Charges', [194, 65, 12]);
-    autoTable(doc, {
-      startY: secY + 1,
-      head: [['Service', 'Route', 'Weight', 'Base', 'Fuel Levy', 'Extras', 'Total', 'Final/kg']],
-      body: lastMileRows,
-      theme: 'striped',
-      headStyles: { fillColor: [194, 65, 12], textColor: [255, 255, 255] },
-      alternateRowStyles: { fillColor: THEME.rowAlt },
-      didParseCell: chargeTableSubTotalHook(lastMileRows),
-    });
-  }
-
   // Customs & Duties — hidden for export (Agency Fee appears in Export Charges instead).
   const customsRows = isExport ? [] : filterZeroRows([
     ['Customs Value (for reference)', formatCurrency(totals.customs_value_zar)],
@@ -803,6 +846,13 @@ export function generateEstimatePDF(estimate) {
       alternateRowStyles: { fillColor: THEME.rowAlt },
       didParseCell: chargeTableSubTotalHook(customsRows),
     });
+  }
+
+  const lastMileRows = buildLastMileRows(totals);
+  if (lastMileRows.length > 0) {
+    let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 42);
+    secY = drawSectionDivider(doc, secY, 'Last Mile Charges', [194, 65, 12]);
+    renderLastMileTable(doc, lastMileRows, secY + 1);
   }
 
   // === SUMMARY SECTION (prominent dark box) ===
@@ -1121,30 +1171,6 @@ export function generateEstimatePDFBase64(estimate) {
     }
   }
 
-  const lastMileEmailRows = (totals._last_mile_charge_lines || []).map((line, index) => {
-    const service = LAST_MILE_SERVICE_TYPES.find(s => s.value === line.service_type)?.label || line.service_type || '-';
-    const route = getLastMileRate(line.service_type, line.route)?.label || line.route || '-';
-    return [
-      `${index + 1}. ${service}`,
-      route,
-      `${formatNumber(line.calculated.weight_kg || 0)} kg`,
-      formatCurrency(line.calculated.subtotal_zar || 0),
-      formatCurrency((line.calculated.weight_kg || 0) > 0 ? (line.calculated.subtotal_zar || 0) / line.calculated.weight_kg : 0),
-    ];
-  });
-  if (totals.last_mile_charges_subtotal_zar > 0) {
-    lastMileEmailRows.push(['Sub-Total', '', '', formatCurrency(totals.last_mile_charges_subtotal_zar), '']);
-  }
-  if (lastMileEmailRows.length > 0) {
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 10,
-      head: [['Service', 'Route', 'Weight', 'Total', 'Final/kg']],
-      body: lastMileEmailRows,
-      theme: 'grid',
-      headStyles: { fillColor: [194, 65, 12] },
-    });
-  }
-
   // Customs & Duties
   const customsRows = filterZeroRows([
     ['Customs Value', formatCurrency(totals.customs_value_zar)],
@@ -1159,6 +1185,11 @@ export function generateEstimatePDFBase64(estimate) {
       theme: 'grid',
       headStyles: { fillColor: THEME.amber },
     });
+  }
+
+  const lastMileEmailRows = buildLastMileRows(totals);
+  if (lastMileEmailRows.length > 0) {
+    renderLastMileTable(doc, lastMileEmailRows, doc.lastAutoTable.finalY + 10, { theme: 'grid' });
   }
 
   // Summary
