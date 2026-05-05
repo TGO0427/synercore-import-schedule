@@ -122,8 +122,20 @@ const computeColumnWidths = (doc, head, body, options = {}) => {
   return columnStyles;
 };
 
-// Shared helper: filter rows where the last column is zero or empty/dash
-const filterZeroRows = (rows) => rows.filter(row => {
+const zeroCurrencyPattern = /(?:R|US\$|\$|€|EUR|USD|ZAR)\s*-?0(?:[,.]00)?\b|-?0[,.]00\s*(?:ZAR|USD|EUR)\b/i;
+
+const cleanZeroCurrencyCell = (cell) => {
+  if (typeof cell !== 'string') return cell;
+
+  const lines = cell.split('\n').filter(line => !zeroCurrencyPattern.test(line.trim()));
+  return lines.join('\n');
+};
+
+const cleanZeroCurrencyRows = (rows) => rows.map(row => row.map(cleanZeroCurrencyCell));
+
+// Shared helper: filter rows where the last column is zero or empty/dash,
+// then blank any remaining zero-currency cells inside visible rows.
+const filterZeroRows = (rows) => cleanZeroCurrencyRows(rows.filter(row => {
   const value = row[row.length - 1];
   if (value === '-' || value === '' || value === null || value === undefined) return false;
   if (typeof value === 'string') {
@@ -132,7 +144,7 @@ const filterZeroRows = (rows) => rows.filter(row => {
     return !isNaN(numericValue) && numericValue !== 0;
   }
   return value !== 0;
-});
+}));
 
 // Format date nicely (e.g. "03 Mar 2026")
 const formatDate = (dateStr) => {
@@ -201,7 +213,7 @@ const buildLastMileRows = (totals) => {
     rows.push(['Sub-Total', '', '', '', formatCurrency(totals.last_mile_charges_subtotal_zar), '']);
   }
 
-  return rows;
+  return cleanZeroCurrencyRows(rows);
 };
 
 const renderLastMileTable = (doc, rows, startY, options = {}) => {
@@ -479,6 +491,10 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
         return rows;
       }, []);
 
+      cleanZeroCurrencyRows(allocationRows).forEach((row, index) => {
+        allocationRows[index] = row;
+      });
+
       const sumCostPerKg = sumWeight > 0 ? sumTotalLanded / sumWeight : 0;
       const sumProductCostPerKg = sumWeight > 0 ? (sumCustomsValue + sumImportDuty + sumSchedule1Duty) / sumWeight : 0;
       if (allocationRows.length > 0 && sumCostPerKg > 0) {
@@ -496,6 +512,10 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
         formatCurrency(toPresentation(sumCostPerKg), presCur),
         ]);
       }
+
+      cleanZeroCurrencyRows(allocationRows).forEach((row, index) => {
+        allocationRows[index] = row;
+      });
 
       if (allocationRows.length > 0) {
         let allocY = doc.lastAutoTable.finalY + 4;
