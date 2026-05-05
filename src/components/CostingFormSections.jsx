@@ -820,6 +820,74 @@ function CostingFormSections({
       </>
       )}
 
+      {/* Section: Customs VAT & Duty Summary */}
+      <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fef3c7', borderRadius: '8px' }}>
+        <h4 style={{ margin: '0 0 1rem', color: '#92400e', fontSize: '1rem' }}>Customs & Duties Summary <InfoTip text="SARS import duties and VAT calculated from customs value × duty rates per product." /></h4>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
+              ROE for Customs <InfoTip text="Rate of Exchange used by SARS for customs valuation. May differ from the commercial rate." />
+            </label>
+            <input
+              type="number"
+              value={formData.roe_customs || ''}
+              onChange={(e) => onInputChange('roe_customs', parseFloat(e.target.value) || '')}
+              placeholder={formData.roe_origin || 'Uses USD rate'}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '2px solid #f59e0b', fontSize: '0.9rem', fontWeight: '600' }}
+              step="0.01"
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
+              Total Customs Value
+            </label>
+            <div style={{ padding: '8px 12px', backgroundColor: '#fde68a', borderRadius: '6px', fontWeight: '600', color: '#78350f' }}>
+              {formatCurrency(getCustomsTotals().totalCustomsValue)}
+            </div>
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
+              Total Duties
+            </label>
+            <div style={{ padding: '8px 12px', backgroundColor: '#fde68a', borderRadius: '6px', fontWeight: '600', color: '#78350f' }}>
+              {formatCurrency(getCustomsTotals().totalDuties + getCustomsTotals().totalSchedule1Duty)}
+            </div>
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
+              IMPORT VAT (15%) <InfoTip text="15% VAT levied on (customs value + duties + schedule 1 duty)." />
+            </label>
+            <div style={{ padding: '8px 12px', backgroundColor: '#fde68a', borderRadius: '6px', fontWeight: '600', color: '#78350f' }}>
+              {formatCurrency(getCustomsTotals().totalVat)}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+          {currencyInput('Customs Declaration', 'customs_declaration_zar', 'ZAR', 'SARS customs processing/declaration fee charged per bill of entry.')}
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
+              Agency Fee ({formData.agency_fee_percentage}% min R{formData.agency_fee_min}) <InfoTip text="Clearing agent's fee — calculated as a percentage of duties + VAT, subject to a minimum." />
+            </label>
+            <div style={{ padding: '8px 12px', backgroundColor: '#fde68a', borderRadius: '6px', fontWeight: '600', color: '#92400e' }}>
+              {formatCurrency(calculatedTotals.agency_fee_zar)}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: '#78350f', marginTop: '2px' }}>
+              Based on Duties + Import VAT
+            </div>
+          </div>
+          <div style={{ gridColumn: 'span 2' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
+              Customs Sub-Total (excl. Import VAT)
+            </label>
+            <div style={{ padding: '8px 12px', backgroundColor: '#b45309', borderRadius: '6px', fontWeight: '700', color: 'white', fontSize: '1.1rem' }}>
+              {formatCurrency(getCustomsTotals().totalDuties + getCustomsTotals().totalSchedule1Duty + (parseFloat(formData.customs_declaration_zar) || 0) + (calculatedTotals.agency_fee_zar || 0))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Section: Last Mile Charges */}
       <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fff7ed', borderRadius: '8px', border: '2px solid #f97316' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', gap: '1rem' }}>
@@ -932,74 +1000,6 @@ function CostingFormSections({
               })}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* Section: Customs VAT & Duty Summary */}
-      <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fef3c7', borderRadius: '8px' }}>
-        <h4 style={{ margin: '0 0 1rem', color: '#92400e', fontSize: '1rem' }}>Customs & Duties Summary <InfoTip text="SARS import duties and VAT calculated from customs value × duty rates per product." /></h4>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
-              ROE for Customs <InfoTip text="Rate of Exchange used by SARS for customs valuation. May differ from the commercial rate." />
-            </label>
-            <input
-              type="number"
-              value={formData.roe_customs || ''}
-              onChange={(e) => onInputChange('roe_customs', parseFloat(e.target.value) || '')}
-              placeholder={formData.roe_origin || 'Uses USD rate'}
-              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '2px solid #f59e0b', fontSize: '0.9rem', fontWeight: '600' }}
-              step="0.01"
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
-              Total Customs Value
-            </label>
-            <div style={{ padding: '8px 12px', backgroundColor: '#fde68a', borderRadius: '6px', fontWeight: '600', color: '#78350f' }}>
-              {formatCurrency(getCustomsTotals().totalCustomsValue)}
-            </div>
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
-              Total Duties
-            </label>
-            <div style={{ padding: '8px 12px', backgroundColor: '#fde68a', borderRadius: '6px', fontWeight: '600', color: '#78350f' }}>
-              {formatCurrency(getCustomsTotals().totalDuties + getCustomsTotals().totalSchedule1Duty)}
-            </div>
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
-              IMPORT VAT (15%) <InfoTip text="15% VAT levied on (customs value + duties + schedule 1 duty)." />
-            </label>
-            <div style={{ padding: '8px 12px', backgroundColor: '#fde68a', borderRadius: '6px', fontWeight: '600', color: '#78350f' }}>
-              {formatCurrency(getCustomsTotals().totalVat)}
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-          {currencyInput('Customs Declaration', 'customs_declaration_zar', 'ZAR', 'SARS customs processing/declaration fee charged per bill of entry.')}
-          <div>
-            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
-              Agency Fee ({formData.agency_fee_percentage}% min R{formData.agency_fee_min}) <InfoTip text="Clearing agent's fee — calculated as a percentage of duties + VAT, subject to a minimum." />
-            </label>
-            <div style={{ padding: '8px 12px', backgroundColor: '#fde68a', borderRadius: '6px', fontWeight: '600', color: '#92400e' }}>
-              {formatCurrency(calculatedTotals.agency_fee_zar)}
-            </div>
-            <div style={{ fontSize: '0.7rem', color: '#78350f', marginTop: '2px' }}>
-              Based on Duties + Import VAT
-            </div>
-          </div>
-          <div style={{ gridColumn: 'span 2' }}>
-            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#92400e' }}>
-              Customs Sub-Total (excl. Import VAT)
-            </label>
-            <div style={{ padding: '8px 12px', backgroundColor: '#b45309', borderRadius: '6px', fontWeight: '700', color: 'white', fontSize: '1.1rem' }}>
-              {formatCurrency(getCustomsTotals().totalDuties + getCustomsTotals().totalSchedule1Duty + (parseFloat(formData.customs_declaration_zar) || 0) + (calculatedTotals.agency_fee_zar || 0))}
-            </div>
-          </div>
         </div>
       </div>
 
