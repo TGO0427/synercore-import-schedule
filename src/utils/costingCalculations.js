@@ -118,9 +118,9 @@ export const calculateLastMileCharge = (data, fallbackWeightKg = 0) => {
   const extraCharges = parseFloat(data.extra_charges_zar ?? data.last_mile_extra_charges_zar) || 0;
   const fuelLevyPercent = parseFloat(data.fuel_levy_percent ?? data.last_mile_fuel_levy_percent) || 0;
 
-  if (serviceType === 'manual') {
+  if (manualCharge > 0 || serviceType === 'manual') {
     const fuelLevyZar = manualCharge * (fuelLevyPercent / 100);
-    return { route, weight_kg: weightKg, minimum_zar: 0, rate_per_kg_zar: 0, base_charge_zar: manualCharge, fuel_levy_zar: fuelLevyZar, subtotal_zar: manualCharge + fuelLevyZar + extraCharges };
+    return { route, weight_kg: weightKg, minimum_zar: 0, rate_per_kg_zar: 0, base_charge_zar: manualCharge, fuel_levy_zar: fuelLevyZar, subtotal_zar: manualCharge + fuelLevyZar + extraCharges, is_manual_override: manualCharge > 0 };
   }
 
   const ratePerKg = getLastMileRateForWeight(route, weightKg);

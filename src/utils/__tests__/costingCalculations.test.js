@@ -8,12 +8,31 @@ import {
   calculateEurChargeZAR,
   calculateCustomsValue,
   calculateAllTotals,
+  calculateLastMileCharge,
   formatCurrency,
   formatNumber,
   lookupOceanFreightRate,
 } from '../costingCalculations.js';
 
 // ── calculateDAVIF ──
+
+describe('calculateLastMileCharge', () => {
+  it('uses manual charge as an override for automated route rates', () => {
+    const result = calculateLastMileCharge({
+      service_type: 'overnight_air',
+      route: 'hermanstad-el-bfn-grj-plz',
+      weight_kg: 100,
+      manual_charge_zar: 5000,
+      fuel_levy_percent: 10,
+      extra_charges_zar: 250,
+    });
+
+    expect(result.base_charge_zar).toBe(5000);
+    expect(result.fuel_levy_zar).toBe(500);
+    expect(result.subtotal_zar).toBe(5750);
+    expect(result.is_manual_override).toBe(true);
+  });
+});
 
 describe('calculateDAVIF', () => {
   it('returns 3.25% of customs value when result exceeds R125', () => {
