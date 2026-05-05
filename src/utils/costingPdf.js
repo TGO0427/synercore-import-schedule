@@ -133,6 +133,26 @@ const cleanZeroCurrencyCell = (cell) => {
 
 const cleanZeroCurrencyRows = (rows) => rows.map(row => row.map(cleanZeroCurrencyCell));
 
+const removeEmptyColumns = (head, body, alwaysKeep = []) => {
+  const headerRow = head[0] || [];
+  const keepSet = new Set(alwaysKeep);
+  const keepIndexes = headerRow
+    .map((_, index) => index)
+    .filter(index => {
+      if (keepSet.has(index)) return true;
+      return body.some(row => {
+        const value = row[index];
+        return value !== null && value !== undefined && String(value).trim() !== '';
+      });
+    });
+
+  return {
+    head: [keepIndexes.map(index => headerRow[index])],
+    body: body.map(row => keepIndexes.map(index => row[index])),
+    keepIndexes,
+  };
+};
+
 // Shared helper: filter rows where the last column is zero or empty/dash,
 // then blank any remaining zero-currency cells inside visible rows.
 const filterZeroRows = (rows) => cleanZeroCurrencyRows(rows.filter(row => {
@@ -523,32 +543,31 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
 
         const landedHeader = isExport ? `Total\nLanded\n(${presCur})` : 'Total\nLanded';
         const costPerKgHeader = isExport ? `Cost/kg\n(${presCur})` : 'Cost/kg';
-        const allocHead = [['Product', 'Weight\n(kg)', 'Wt %', 'Invoice Value', 'Customs Val\n(ZAR)', 'Import\nDuty', 'Sch1\nDuty', 'Cost/kg\n(ZAR)', shippingLabel, landedHeader, costPerKgHeader]];
+        const allocHead = [['Product', 'Weight kg', 'Wt %', 'Invoice Value', 'Customs Val\n(ZAR)', 'Import Duty', 'Sch1 Duty', 'Cost/kg\n(ZAR)', shippingLabel, landedHeader, costPerKgHeader]];
+        const visibleAllocation = removeEmptyColumns(allocHead, allocationRows, [0, 1, 2, 9, 10]);
         const pageWidth = doc.internal.pageSize.getWidth();
-        const allocColumnStyles = computeColumnWidths(doc, allocHead, allocationRows, {
-        fontSize: 6,
-        headFontSize: 6,
-        paddingX: 2,
-        maxTotalWidth: pageWidth - 28,
-        overrides: {
-          0: { halign: 'left', overflow: 'linebreak', minWidth: 20 },
-          1: { halign: 'right' },
-          2: { halign: 'right' },
-          3: { halign: 'right' },
-          4: { halign: 'right' },
-          5: { halign: 'right' },
-          6: { halign: 'right' },
-          7: { halign: 'right', fontStyle: 'bold' },
-          8: { halign: 'right' },
-          9: { halign: 'right', fontStyle: 'bold' },
-          10: { halign: 'right', fontStyle: 'bold' },
-        },
+        const dynamicOverrides = {};
+        visibleAllocation.keepIndexes.forEach((originalIndex, newIndex) => {
+          const header = visibleAllocation.head[0][newIndex] || '';
+          dynamicOverrides[newIndex] = {
+            halign: originalIndex === 0 ? 'left' : 'right',
+            overflow: originalIndex === 0 ? 'linebreak' : undefined,
+            minWidth: originalIndex === 0 ? 24 : originalIndex === 1 ? 14 : originalIndex === 5 ? 17 : 10,
+            fontStyle: /Total|Cost\/kg/.test(header) ? 'bold' : undefined,
+          };
+        });
+        const allocColumnStyles = computeColumnWidths(doc, visibleAllocation.head, visibleAllocation.body, {
+          fontSize: 6,
+          headFontSize: 6,
+          paddingX: 2.5,
+          maxTotalWidth: pageWidth - 28,
+          overrides: dynamicOverrides,
         });
 
         autoTable(doc, {
         startY: allocY + 1,
-        head: allocHead,
-        body: allocationRows,
+        head: visibleAllocation.head,
+        body: visibleAllocation.body,
         theme: 'striped',
         tableWidth: 'wrap',
         margin: { left: 14, right: 14 },
@@ -568,7 +587,7 @@ const buildEstimateHeader = (doc, estimate, productTotals, totals) => {
         },
         columnStyles: allocColumnStyles,
         didParseCell: (data) => {
-          if (data.section === 'body' && data.row.index === allocationRows.length - 1) {
+          if (data.section === 'body' && data.row.index === visibleAllocation.body.length - 1) {
             data.cell.styles.fontStyle = 'bold';
             data.cell.styles.fillColor = [229, 231, 235];
           }
