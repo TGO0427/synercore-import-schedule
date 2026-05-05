@@ -770,6 +770,19 @@ function CostingFormSections({
           </div>
         </div>
 
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginTop: '1rem' }}>
+          {currencyInput('Origin Charges', 'airfreight_origin_charges_usd', 'USD')}
+          {currencyInput('Origin Charges', 'airfreight_origin_charges_eur', 'EUR')}
+          <div style={{ marginBottom: '12px', gridColumn: 'span 2' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#5b21b6' }}>
+              Origin Charges (ZAR) - Auto
+            </label>
+            <div style={{ padding: '8px 12px', backgroundColor: '#ede9fe', borderRadius: '6px', fontWeight: '600', color: '#5b21b6' }}>
+              {formatCurrency(calculatedTotals.airfreight_origin_charges_zar || 0)}
+            </div>
+          </div>
+        </div>
+
         {/* Surcharges - USD + EUR totals */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginTop: '1rem' }}>
           {currencyInput('Fuel Surcharge', 'fuel_surcharge_usd', 'USD')}
@@ -800,18 +813,6 @@ function CostingFormSections({
       {/* Section: Air Freight SA Landside Charges */}
       <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f0fdf4', borderRadius: '8px' }}>
         <h4 style={{ margin: '0 0 1rem', color: '#166534', fontSize: '1rem' }}>SA Landside Charges <InfoTip text="South African airfreight landside charges: cartage, waybill processing, airline handling, transfer, documentation, EDI, and landside delivery." /></h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-          {currencyInput('Origin Charges', 'airfreight_origin_charges_usd', 'USD')}
-          {currencyInput('Origin Charges', 'airfreight_origin_charges_eur', 'EUR')}
-          <div style={{ marginBottom: '12px', gridColumn: 'span 2' }}>
-            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#166534' }}>
-              Origin Charges (ZAR) - Auto
-            </label>
-            <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', borderRadius: '6px', fontWeight: '600', color: '#166534' }}>
-              {formatCurrency(calculatedTotals.airfreight_origin_charges_zar || 0)}
-            </div>
-          </div>
-        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginTop: '0.5rem' }}>
           {currencyInput('Screening Fee', 'screening_fee_zar', 'ZAR')}
           {currencyInput('Import Waybill Processing', 'awb_fee_zar', 'ZAR', 'Import waybill processing fee.')}

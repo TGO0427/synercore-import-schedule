@@ -583,16 +583,18 @@ export function generateEstimatePDF(estimate) {
     const airRows = filterZeroRows([
       ['Airfreight (USD)', formatCurrency(estimate.airfreight_usd, 'USD'), formatCurrency(totals._airfreight_usd_zar)],
       ['Airfreight (EUR)', formatCurrency(estimate.airfreight_eur, 'EUR'), formatCurrency(totals._airfreight_eur_zar)],
+      ['Origin Charges (USD)', formatCurrency(estimate.airfreight_origin_charges_usd, 'USD'), formatCurrency((parseFloat(estimate.airfreight_origin_charges_usd) || 0) * (parseFloat(estimate.roe_origin) || 0))],
+      ['Origin Charges (EUR)', formatCurrency(estimate.airfreight_origin_charges_eur, 'EUR'), formatCurrency((parseFloat(estimate.airfreight_origin_charges_eur) || 0) * (parseFloat(estimate.roe_eur) || 0))],
     ]);
-    if (totals.airfreight_total_zar > 0) {
-      airRows.push(['Total Airfreight', '', formatCurrency(totals.airfreight_total_zar)]);
+    if (totals.airfreight_total_zar > 0 || totals.airfreight_origin_charges_zar > 0) {
+      airRows.push(['Airfreight + Origin Sub-Total', '', formatCurrency((totals.airfreight_total_zar || 0) + (totals.airfreight_origin_charges_zar || 0))]);
     }
     if (airRows.length > 0) {
       let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
-      secY = drawSectionDivider(doc, secY, 'Airfreight Charges', THEME.purple);
+      secY = drawSectionDivider(doc, secY, 'Air Freight Rate & Origin', THEME.purple);
       autoTable(doc, {
         startY: secY + 1,
-        head: [['Airfreight', 'Amount', 'ZAR']],
+        head: [['Air Freight Rate & Origin', 'Amount', 'ZAR']],
         body: airRows,
         theme: 'striped',
         headStyles: { fillColor: THEME.purple, textColor: [255, 255, 255] },
@@ -627,8 +629,6 @@ export function generateEstimatePDF(estimate) {
 
     // SA Landside Charges
     const airLocalRows = filterZeroRows([
-      ['Origin Charges (USD)', formatCurrency(estimate.airfreight_origin_charges_usd, 'USD')],
-      ['Origin Charges (EUR)', formatCurrency(estimate.airfreight_origin_charges_eur, 'EUR')],
       ['Screening Fee', formatCurrency(estimate.screening_fee_zar)],
       ['Import Waybill Processing', formatCurrency(estimate.awb_fee_zar)],
       ['Airline Handling Fee', formatCurrency(estimate.airline_handling_fee_zar)],
@@ -639,8 +639,8 @@ export function generateEstimatePDF(estimate) {
       ['Airline Landside Delivery', formatCurrency(estimate.airline_landside_delivery_zar)],
       ['Insurance', formatCurrency(totals.airfreight_insurance_zar)],
     ]);
-    if (totals.airfreight_origin_charges_zar > 0 || totals.air_local_charges_subtotal_zar > 0) {
-      airLocalRows.push(['Sub-Total', formatCurrency((totals.airfreight_origin_charges_zar || 0) + (totals.air_local_charges_subtotal_zar || 0) + (totals.airfreight_insurance_zar || 0))]);
+    if (totals.air_local_charges_subtotal_zar > 0 || totals.airfreight_insurance_zar > 0) {
+      airLocalRows.push(['Sub-Total', formatCurrency((totals.air_local_charges_subtotal_zar || 0) + (totals.airfreight_insurance_zar || 0))]);
     }
     if (airLocalRows.length > 0) {
       let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
@@ -1097,14 +1097,16 @@ export function generateEstimatePDFBase64(estimate) {
     const airRows = filterZeroRows([
       ['Airfreight (USD)', formatCurrency(estimate.airfreight_usd, 'USD'), formatCurrency(totals._airfreight_usd_zar)],
       ['Airfreight (EUR)', formatCurrency(estimate.airfreight_eur, 'EUR'), formatCurrency(totals._airfreight_eur_zar)],
+      ['Origin Charges (USD)', formatCurrency(estimate.airfreight_origin_charges_usd, 'USD'), formatCurrency((parseFloat(estimate.airfreight_origin_charges_usd) || 0) * (parseFloat(estimate.roe_origin) || 0))],
+      ['Origin Charges (EUR)', formatCurrency(estimate.airfreight_origin_charges_eur, 'EUR'), formatCurrency((parseFloat(estimate.airfreight_origin_charges_eur) || 0) * (parseFloat(estimate.roe_eur) || 0))],
     ]);
-    if (totals.airfreight_total_zar > 0) {
-      airRows.push(['Total Airfreight', '', formatCurrency(totals.airfreight_total_zar)]);
+    if (totals.airfreight_total_zar > 0 || totals.airfreight_origin_charges_zar > 0) {
+      airRows.push(['Airfreight + Origin Sub-Total', '', formatCurrency((totals.airfreight_total_zar || 0) + (totals.airfreight_origin_charges_zar || 0))]);
     }
     if (airRows.length > 0) {
       autoTable(doc, {
         startY: doc.lastAutoTable.finalY + 10,
-        head: [['Airfreight', 'Amount', 'ZAR']],
+        head: [['Air Freight Rate & Origin', 'Amount', 'ZAR']],
         body: airRows,
         theme: 'grid',
         headStyles: { fillColor: THEME.purple },
@@ -1133,8 +1135,6 @@ export function generateEstimatePDFBase64(estimate) {
 
     // SA Landside Charges
     const airLocalRows = filterZeroRows([
-      ['Origin Charges (USD)', formatCurrency(estimate.airfreight_origin_charges_usd, 'USD')],
-      ['Origin Charges (EUR)', formatCurrency(estimate.airfreight_origin_charges_eur, 'EUR')],
       ['Screening Fee', formatCurrency(estimate.screening_fee_zar)],
       ['Import Waybill Processing', formatCurrency(estimate.awb_fee_zar)],
       ['Airline Handling Fee', formatCurrency(estimate.airline_handling_fee_zar)],
@@ -1145,8 +1145,8 @@ export function generateEstimatePDFBase64(estimate) {
       ['Airline Landside Delivery', formatCurrency(estimate.airline_landside_delivery_zar)],
       ['Insurance', formatCurrency(totals.airfreight_insurance_zar)],
     ]);
-    if (totals.airfreight_origin_charges_zar > 0 || totals.air_local_charges_subtotal_zar > 0) {
-      airLocalRows.push(['Sub-Total', formatCurrency((totals.airfreight_origin_charges_zar || 0) + (totals.air_local_charges_subtotal_zar || 0) + (totals.airfreight_insurance_zar || 0))]);
+    if (totals.air_local_charges_subtotal_zar > 0 || totals.airfreight_insurance_zar > 0) {
+      airLocalRows.push(['Sub-Total', formatCurrency((totals.air_local_charges_subtotal_zar || 0) + (totals.airfreight_insurance_zar || 0))]);
     }
     if (airLocalRows.length > 0) {
       autoTable(doc, {
