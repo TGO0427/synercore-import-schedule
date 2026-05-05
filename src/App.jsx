@@ -37,6 +37,8 @@ const VIEW_TO_SECTION = {
 };
 
 
+
+
 // Lazy-loaded pages (code-split for faster initial load)
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const ArchiveView = lazy(() => import('./components/ArchiveView'));
@@ -142,6 +144,17 @@ function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [notificationPrefsOpen, setNotificationPrefsOpen] = useState(false);
   const [liveBoardOpen, setLiveBoardOpen] = useState(false);
+
+  // ============================
+// ✅ TAB STATE (ADD THIS)
+// ============================
+const [openTabs, setOpenTabs] = useState([
+  {
+    id: 'dashboard',
+    title: 'Dashboard',
+    route: '/dashboard',
+  },
+]);
 
   // Costing Requests badge count (admin only)
   const [costingRequestCount, setCostingRequestCount] = useState(0);
@@ -395,6 +408,43 @@ useEffect(() => {
   });
 }, [activeView]);
 
+// ✅ Keep tabs in sync with direct navigation (refresh / deep link / back button)
+useEffect(() => {
+  const route = location.pathname;
+  if (route === '/login') return;
+
+  setOpenTabs((prev) => {
+    if (prev.some(t => t.route === route)) return prev;
+
+    const titleMap = {
+      dashboard: 'Dashboard',
+      suppliers: 'Suppliers',
+      shipping: 'International Import',
+      workflow: 'Post-Arrival Workflow',
+      capacity: 'Warehouse Capacity',
+      stored: 'Stored Stock',
+      archives: 'Shipment Archives',
+      rates: 'Rates & Quotes',
+      costing: 'Import Costing',
+      'export-costing': 'Export Costing',
+      reports: 'Reports',
+      'advanced-reports': 'Advanced Reports',
+      'supplier-performance': 'Supplier Performance',
+      audit: 'Activity Log',
+    };
+
+    return [
+      ...prev,
+      {
+        id: activeView,
+        title: titleMap[activeView] || activeView,
+        route,
+      },
+    ];
+  });
+}, [location.pathname]);
+``
+
 
   const StoredWrapper = () => {
     const storedShipments = shipments.filter(s => s.latestStatus === 'stored');
@@ -434,6 +484,8 @@ useEffect(() => {
 
   const currentUser = authUtils.getUser();
   const isAdmin = currentUser?.role === 'admin';
+
+  
 
   return (
     <div className={`container ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -526,30 +578,50 @@ useEffect(() => {
 
           const match = (label) => !q || label.toLowerCase().includes(q);
 
-          const renderItem = (key) => {
+                    const renderItem = (key) => {
             const item = navItems[key];
+
             if (!item) return null;
             if (item.adminOnly && !isAdmin) return null;
             if (!match(item.label)) return null;
+
             const IconComp = item.icon;
+
             return (
               <button
                 key={key}
                 className={`nav-item ${activeView === item.view ? 'active' : ''}`}
                 onClick={() => {
                   const route = VIEW_ROUTES[item.view] || '/shipping';
+
+                  const openTabAndNavigate = () => {
+                    startTransition(() => {
+                      setOpenTabs((prev) => {
+                        if (prev.some(t => t.route === route)) return prev;
+
+                        return [
+                          ...prev,
+                          { id: item.view, title: item.label, route },
+                        ];
+                      });
+
+                      navigate(route);
+                    });
+                  };
+
                   if (isNavigationBlocked()) {
                     confirm({
                       title: 'Unsaved Changes',
-                      message: 'You have unsaved changes that will be lost. Are you sure you want to leave this page?',
+                      message:
+                        'You have unsaved changes that will be lost. Are you sure you want to leave this page?',
                       confirmText: 'Leave',
                       cancelText: 'Stay',
                       type: 'warning',
                     }).then((confirmed) => {
-                      if (confirmed) startTransition(() => navigate(route));
+                      if (confirmed) openTabAndNavigate();
                     });
                   } else {
-                    startTransition(() => navigate(route));
+                    openTabAndNavigate();
                   }
                 }}
                 title={sidebarCollapsed ? item.label : undefined}
@@ -557,9 +629,19 @@ useEffect(() => {
                 <span className="nav-icon">
                   <IconComp size={16} strokeWidth={2} />
                 </span>
+
                 <span className="nav-label">{item.label}</span>
+
                 {item.badge > 0 && (
-                  <span className={`nav-badge ${item.badgeType === 'danger' ? 'nav-badge-danger' : item.badgeType === 'info' ? 'nav-badge-info' : ''}`}>
+                  <span
+                    className={`nav-badge ${
+                      item.badgeType === 'danger'
+                        ? 'nav-badge-danger'
+                        : item.badgeType === 'info'
+                        ? 'nav-badge-info'
+                        : ''
+                    }`}
+                  >
                     {item.badge}
                   </span>
                 )}
@@ -602,62 +684,96 @@ useEffect(() => {
           const resourcesVisible = !q ? externalLinks : externalLinks.filter(l => l.label.toLowerCase().includes(q));
           const resourcesOpen = q ? resourcesVisible.length > 0 : sidebarSections.resources;
 
-          return (
-            <nav className="sidebar-nav">
-              {match('Dashboard') && renderItem('dashboard')}
-              {renderSection('Master Data', 'masterData', ['suppliers'])}
-              {renderSection('Operations', 'operations', ['shipping', 'localReceiving', 'iwtIncoming', 'workflow', 'bolAudit'])}
-              {renderSection('Warehouse', 'warehouse', ['receiving', 'dockManagement', 'capacity', 'stored'])}
-              {renderSection('Finance', 'finance', ['rates', 'costing', 'exportCosting', 'costingRequests'])}
-              {renderSection('Reports', 'reports', ['reports', 'advancedReports', 'supplierPerformance', 'audit'])}
+           return (
+  <nav className="sidebar-nav">
+    {match('Dashboard') && renderItem('dashboard')}
+    {renderSection('Master Data', 'masterData', ['suppliers'])}
+    {renderSection('Operations', 'operations', ['shipping', 'localReceiving', 'iwtIncoming', 'workflow', 'bolAudit'])}
+    {renderSection('Warehouse', 'warehouse', ['receiving', 'dockManagement', 'capacity', 'stored'])}
+    {renderSection('Finance', 'finance', ['rates', 'costing', 'exportCosting', 'costingRequests'])}
+    {renderSection('Reports', 'reports', ['reports', 'advancedReports', 'supplierPerformance', 'audit'])}
 
-              {!sidebarCollapsed && (!q || resourcesVisible.length > 0) && (
-                <div className="sidebar-resources">
-                  <div className="nav-section-header" onClick={() => !q && toggleSection('resources')}>
-                    Resources
-                    <span className={`chevron ${resourcesOpen ? 'open' : ''}`}>{'\u25B8'}</span>
-                  </div>
-                  <div className={`nav-section-items ${resourcesOpen ? 'expanded' : 'collapsed'}`}>
-                    {resourcesVisible.map(link => {
-                      const LinkIcon = link.icon;
-                      return (
-                      <button
-                        key={link.label}
-                        className="nav-item"
-                        onClick={() => window.open(link.url, '_blank')}
-                      >
-                        <span className="nav-icon">
-                          <LinkIcon size={16} strokeWidth={2} />
-                        </span>
-                        <span className="nav-label">{link.label}</span>
-                        <span className="nav-external">{'\u2197'}</span>
-                      </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </nav>
-          );
-        })()}
+    {!sidebarCollapsed && (!q || resourcesVisible.length > 0) && (
+      <div className="sidebar-resources">
+        <div
+          className="nav-section-header"
+          onClick={() => !q && toggleSection('resources')}
+        >
+          Resources
+          <span className={`chevron ${resourcesOpen ? 'open' : ''}`}>
+            {'\u25B8'}
+          </span>
+        </div>
+
+        <div className={`nav-section-items ${resourcesOpen ? 'expanded' : 'collapsed'}`}>
+          {resourcesVisible.map(link => {
+            const LinkIcon = link.icon;
+
+            return (
+              <button
+                key={link.label}
+                className="nav-item"
+                onClick={() => window.open(link.url, '_blank')}
+              >
+                <span className="nav-icon">
+                  <LinkIcon size={16} strokeWidth={2} />
+                </span>
+                <span className="nav-label">{link.label}</span>
+                <span className="nav-external">{'\u2197'}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    )}
+  </nav>
+);
+})()}
+
 
         {/* Quick Stats */}
-        {!sidebarCollapsed && (
-          <div className="sidebar-quick-stats">
-            <div className="sidebar-qs-title">
-              Quick Stats {calendarMonth !== null ? `· ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][calendarMonth]} ${calendarYear}` : `· ${calendarYear}`}
-            </div>
-            <div className="sidebar-qs-row">
-              <span>Total Items</span><strong>{calendarFilteredShipments.length}</strong>
-            </div>
-            <div className="sidebar-qs-row">
-              <span>In Transit</span><strong>{calendarFilteredShipments.filter(s => s.latestStatus === 'in_transit_roadway' || s.latestStatus === 'in_transit_seaway').length}</strong>
-            </div>
-            <div className="sidebar-qs-row">
-              <span>Delayed</span><strong style={{ color: '#fbbf24' }}>{calendarFilteredShipments.filter(s => s.latestStatus && s.latestStatus.startsWith('delayed_')).length}</strong>
-            </div>
-          </div>
-        )}
+{!sidebarCollapsed && (
+  <div className="sidebar-quick-stats">
+    <div className="sidebar-qs-title">
+      Quick Stats{' '}
+      {calendarMonth !== null
+        ? `· ${[
+            'Jan','Feb','Mar','Apr','May','Jun',
+            'Jul','Aug','Sep','Oct','Nov','Dec'
+          ][calendarMonth]} ${calendarYear}`
+        : `· ${calendarYear}`}
+    </div>
+
+    <div className="sidebar-qs-row">
+      <span>Total Items</span>
+      <strong>{calendarFilteredShipments.length}</strong>
+    </div>
+
+    <div className="sidebar-qs-row">
+      <span>In Transit</span>
+      <strong>
+        {
+          calendarFilteredShipments.filter(
+            s =>
+              s.latestStatus === 'in_transit_roadway' ||
+              s.latestStatus === 'in_transit_seaway'
+          ).length
+        }
+      </strong>
+    </div>
+
+    <div className="sidebar-qs-row">
+      <span>Delayed</span>
+      <strong style={{ color: '#fbbf24' }}>
+        {
+          calendarFilteredShipments.filter(
+            s => s.latestStatus && s.latestStatus.startsWith('delayed_')
+          ).length
+        }
+      </strong>
+    </div>
+  </div>
+)}
 
         {/* Footer */}
         <div className="sidebar-footer">
@@ -686,6 +802,8 @@ useEffect(() => {
           </button>
         </div>
       </div>
+    
+      
 
       {/* main panel */}
       <div className="main-content">
@@ -747,6 +865,43 @@ useEffect(() => {
             )}
           </div>
         </div>
+
+        {/* ============================
+    ✅ TAB BAR (ADD THIS)
+============================ */}
+<div className="tab-bar">
+  {openTabs.map((tab) => (
+    <div
+      key={tab.id}
+      className={`tab ${location.pathname === tab.route ? 'active' : ''}`}
+      onClick={() => navigate(tab.route)}
+    >
+      <span className="tab-title">{tab.title}</span>
+
+      {tab.id !== 'dashboard' && (
+        <button
+          className="tab-close"
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpenTabs((prev) => {
+              const remaining = prev.filter(t => t.id !== tab.id);
+
+              if (location.pathname === tab.route && remaining.length > 0) {
+                navigate(remaining[remaining.length - 1].route);
+              }
+
+              return remaining;
+            });
+          }}
+        >
+          ×
+        </button>
+      )}
+    </div>
+  ))}
+</div>
+
+
 
         <ErrorBoundary>
           <Routes>
@@ -876,6 +1031,9 @@ useEffect(() => {
           onRefresh={() => fetchShipments(true)}
         />
       )}
+
+
+
       <AlertHub
         open={alertHubOpen}
         onClose={() => setAlertHubOpen(false)}
