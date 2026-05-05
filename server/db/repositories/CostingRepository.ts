@@ -124,6 +124,9 @@ export interface ImportCostEstimate {
   airline_handling_fee_zar?: number;
   airport_transfer_fee_zar?: number;
   cartage_airport_to_whs_zar?: number;
+  air_edi_fee_zar?: number;
+  air_import_documentation_zar?: number;
+  airline_landside_delivery_zar?: number;
   airfreight_insurance_percent?: number;
   airfreight_insurance_zar?: number;
   airfreight_origin_charges_usd?: number;
@@ -200,7 +203,8 @@ const COST_ESTIMATE_COLUMNS = [
   'fuel_surcharge_usd', 'fuel_surcharge_eur', 'fuel_surcharge_total_zar',
   'security_surcharge_usd', 'security_surcharge_eur', 'security_surcharge_total_zar',
   'screening_fee_zar', 'awb_fee_zar', 'airline_handling_fee_zar', 'airport_transfer_fee_zar',
-  'cartage_airport_to_whs_zar', 'airfreight_insurance_percent', 'airfreight_insurance_zar',
+  'cartage_airport_to_whs_zar', 'air_edi_fee_zar', 'air_import_documentation_zar',
+  'airline_landside_delivery_zar', 'airfreight_insurance_percent', 'airfreight_insurance_zar',
   'airfreight_origin_charges_usd', 'airfreight_origin_charges_eur', 'airfreight_origin_charges_zar',
   'air_local_charges_subtotal_zar', 'total_airfreight_cost_zar',
   // Last mile charges

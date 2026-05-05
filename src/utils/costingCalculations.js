@@ -328,7 +328,10 @@ export const calculateAirfreightChargesSubtotal = (data) => {
     (parseFloat(data.awb_fee_zar) || 0) +
     (parseFloat(data.airline_handling_fee_zar) || 0) +
     (parseFloat(data.airport_transfer_fee_zar) || 0) +
-    (parseFloat(data.cartage_airport_to_whs_zar) || 0)
+    (parseFloat(data.cartage_airport_to_whs_zar) || 0) +
+    (parseFloat(data.air_edi_fee_zar) || 0) +
+    (parseFloat(data.air_import_documentation_zar) || 0) +
+    (parseFloat(data.airline_landside_delivery_zar) || 0)
   );
 };
 

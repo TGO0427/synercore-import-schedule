@@ -128,6 +128,9 @@ const INITIAL_FORM_STATE = {
   airline_handling_fee_zar: 0,
   airport_transfer_fee_zar: 0,
   cartage_airport_to_whs_zar: 0,
+  air_edi_fee_zar: 0,
+  air_import_documentation_zar: 0,
+  airline_landside_delivery_zar: 0,
   airfreight_insurance_percent: 0,
   last_mile_charges: [
     { _id: Date.now() + 1, service_type: '', route: '', weight_kg: 0, fuel_levy_percent: 0, manual_charge_zar: 0, extra_charges_zar: 0 }

@@ -781,6 +781,9 @@ const migrations = [
         await addColumnIfNotExists('last_mile_extra_charges_zar NUMERIC(12,2) DEFAULT 0');
         await addColumnIfNotExists('last_mile_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0');
         await addColumnIfNotExists("last_mile_charges JSONB DEFAULT '[]'::jsonb");
+        await addColumnIfNotExists('air_edi_fee_zar NUMERIC(12,2) DEFAULT 0');
+        await addColumnIfNotExists('air_import_documentation_zar NUMERIC(12,2) DEFAULT 0');
+        await addColumnIfNotExists('airline_landside_delivery_zar NUMERIC(12,2) DEFAULT 0');
       }
 
       // Create exchange_rate_cache table if it doesn't exist

@@ -116,6 +116,9 @@ const INITIAL_FORM_STATE = {
   airline_handling_fee_zar: 0,
   airport_transfer_fee_zar: 0,
   cartage_airport_to_whs_zar: 0,
+  air_edi_fee_zar: 0,
+  air_import_documentation_zar: 0,
+  airline_landside_delivery_zar: 0,
   airfreight_insurance_percent: 0,
   // Last Mile Charges - AFI/ALLMARK April 2026
   last_mile_service_type: '',

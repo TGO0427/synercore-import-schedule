@@ -1320,6 +1320,9 @@ export const migrations: Migration[] = [
         'last_mile_extra_charges_zar NUMERIC(12,2) DEFAULT 0',
         'last_mile_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0',
         "last_mile_charges JSONB DEFAULT '[]'::jsonb",
+        'air_edi_fee_zar NUMERIC(12,2) DEFAULT 0',
+        'air_import_documentation_zar NUMERIC(12,2) DEFAULT 0',
+        'airline_landside_delivery_zar NUMERIC(12,2) DEFAULT 0',
       ];
 
       for (const colDef of newColumns) {

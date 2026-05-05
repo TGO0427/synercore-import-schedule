@@ -797,9 +797,9 @@ function CostingFormSections({
         </div>
       </div>
 
-      {/* Section: Air Freight Origin & Local Charges */}
+      {/* Section: Air Freight SA Landside Charges */}
       <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f0fdf4', borderRadius: '8px' }}>
-        <h4 style={{ margin: '0 0 1rem', color: '#166534', fontSize: '1rem' }}>Origin & Local Charges <InfoTip text="Origin handling, airport fees, and local transport from airport to warehouse." /></h4>
+        <h4 style={{ margin: '0 0 1rem', color: '#166534', fontSize: '1rem' }}>SA Landside Charges <InfoTip text="South African airfreight landside charges: cartage, waybill processing, airline handling, transfer, documentation, EDI, and landside delivery." /></h4>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
           {currencyInput('Origin Charges', 'airfreight_origin_charges_usd', 'USD')}
           {currencyInput('Origin Charges', 'airfreight_origin_charges_eur', 'EUR')}
@@ -814,10 +814,13 @@ function CostingFormSections({
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginTop: '0.5rem' }}>
           {currencyInput('Screening Fee', 'screening_fee_zar', 'ZAR')}
-          {currencyInput('AWB Fee', 'awb_fee_zar', 'ZAR', 'Air Waybill documentation fee.')}
-          {currencyInput('Airline Handling Fee', 'airline_handling_fee_zar', 'ZAR')}
-          {currencyInput('Airport Transfer Fee', 'airport_transfer_fee_zar', 'ZAR')}
+          {currencyInput('Import Waybill Processing', 'awb_fee_zar', 'ZAR', 'Import waybill processing fee.')}
+          {currencyInput('Airline Handling Fee', 'airline_handling_fee_zar', 'ZAR', 'Airline handling charge, e.g. R3.70/ch.wt subject to minimum.')}
+          {currencyInput('Airline Transfer Fee', 'airport_transfer_fee_zar', 'ZAR')}
           {currencyInput(isExport ? 'Cartage: Warehouse to Airport' : 'Cartage: Airport to Warehouse', 'cartage_airport_to_whs_zar', 'ZAR')}
+          {currencyInput('Air EDI Fee', 'air_edi_fee_zar', 'ZAR')}
+          {currencyInput('Import Documentation', 'air_import_documentation_zar', 'ZAR')}
+          {currencyInput('Airline Landside Delivery', 'airline_landside_delivery_zar', 'ZAR')}
           {currencyInput('Insurance %', 'airfreight_insurance_percent', '%')}
           <div style={{ marginBottom: '12px' }}>
             <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#166534' }}>
