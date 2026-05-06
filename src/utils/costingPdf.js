@@ -283,6 +283,32 @@ const renderLastMileTable = (doc, rows, startY, options = {}) => {
   });
 };
 
+const buildFinalChargeRows = (customsRows, lastMileRows) => {
+  const rows = [];
+
+  customsRows.forEach(row => {
+    rows.push(['Customs & Duties', row[0], row[1] || '']);
+  });
+
+  lastMileRows.forEach(row => {
+    const label = row[0] || '';
+    if (label.startsWith('Sub-Total')) {
+      rows.push(['Last Mile', 'Sub-Total', row[4] || '']);
+      return;
+    }
+
+    const detailParts = [
+      row[0],
+      row[1] ? `Weight: ${row[1]}` : '',
+      row[3] || '',
+      row[5] ? `Final/kg: ${row[5]}` : '',
+    ].filter(Boolean);
+    rows.push(['Last Mile', detailParts.join('\n'), row[4] || '']);
+  });
+
+  return cleanZeroCurrencyRows(rows);
+};
+
 // Calculate per-product full cost breakdown (matches ImportCosting calculateProductAllocation)
 const getProductCostBreakdown = (product, estimate, totals, productTotals) => {
   const roeCustoms = parseFloat(estimate.roe_customs) || parseFloat(estimate.roe_origin) || 0;
@@ -888,25 +914,40 @@ export function generateEstimatePDF(estimate) {
   if (!isExport && totals.customs_subtotal_zar > 0) {
     customsRows.push(['Sub-Total (excl. Import VAT)', formatCurrency(totals.customs_subtotal_zar)]);
   }
-  if (customsRows.length > 0) {
-    let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
-    secY = drawSectionDivider(doc, secY, 'Customs & Duties', THEME.amber);
+  const lastMileRows = buildLastMileRows(totals);
+  const finalChargeRows = buildFinalChargeRows(customsRows, lastMileRows);
+  if (finalChargeRows.length > 0) {
+    let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 42);
+    secY = drawSectionDivider(doc, secY, 'Final Charges', THEME.amber);
     autoTable(doc, {
       startY: secY + 1,
-      head: [['Customs & Duties', 'ZAR']],
-      body: customsRows,
+      head: [['Type', 'Charge', 'Amount']],
+      body: finalChargeRows,
       theme: 'striped',
       headStyles: { fillColor: THEME.amber, textColor: [255, 255, 255] },
       alternateRowStyles: { fillColor: THEME.rowAlt },
-      didParseCell: chargeTableSubTotalHook(customsRows),
+      styles: {
+        fontSize: 7.2,
+        cellPadding: { top: 1.8, right: 1.5, bottom: 1.8, left: 1.5 },
+        overflow: 'linebreak',
+        valign: 'middle',
+        textColor: THEME.bodyDark,
+      },
+      columnStyles: {
+        0: { cellWidth: 30, fontStyle: 'bold' },
+        1: { cellWidth: pageWidth - 88 },
+        2: { cellWidth: 30, halign: 'right', fontStyle: 'bold' },
+      },
+      didParseCell: (data) => {
+        if (data.section === 'body') {
+          const label = finalChargeRows[data.row.index]?.[1] || '';
+          if (label.startsWith('Sub-Total')) {
+            data.cell.styles.fontStyle = 'bold';
+            data.cell.styles.fillColor = [243, 244, 246];
+          }
+        }
+      },
     });
-  }
-
-  const lastMileRows = buildLastMileRows(totals);
-  if (lastMileRows.length > 0) {
-    let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 42);
-    secY = drawSectionDivider(doc, secY, 'Last Mile Charges', [194, 65, 12]);
-    renderLastMileTable(doc, lastMileRows, secY + 1);
   }
 
   // === SUMMARY SECTION (prominent dark box) ===
