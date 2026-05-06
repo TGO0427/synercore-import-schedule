@@ -236,7 +236,54 @@ const buildLastMileRows = (totals) => {
   return cleanZeroCurrencyRows(rows);
 };
 
-const buildFinalChargeRows = (landsideRows, customsRows, lastMileRows) => {
+const renderLastMileTable = (doc, rows, startY, options = {}) => {
+  if (rows.length === 0) return null;
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const tableWidth = pageWidth - 28;
+  const head = [['Service / Route', 'Weight', 'Base', 'Fuel / Extras', 'Total', 'Final/kg']];
+  const columnStyles = {
+    0: { cellWidth: tableWidth * 0.38 },
+    1: { cellWidth: tableWidth * 0.10, halign: 'right' },
+    2: { cellWidth: tableWidth * 0.12, halign: 'right' },
+    3: { cellWidth: tableWidth * 0.17, halign: 'right' },
+    4: { cellWidth: tableWidth * 0.12, halign: 'right', fontStyle: 'bold' },
+    5: { cellWidth: tableWidth * 0.11, halign: 'right', fontStyle: 'bold' },
+  };
+
+  return autoTable(doc, {
+    startY,
+    head,
+    body: rows,
+    theme: options.theme || 'striped',
+    headStyles: {
+      fillColor: [194, 65, 12],
+      textColor: [255, 255, 255],
+      fontSize: options.headFontSize || 7,
+      cellPadding: { top: 2, right: 1.2, bottom: 2, left: 1.2 },
+    },
+    alternateRowStyles: { fillColor: THEME.rowAlt },
+    styles: {
+      fontSize: options.fontSize || 7,
+      cellPadding: { top: 2, right: 1.2, bottom: 2, left: 1.2 },
+      overflow: 'linebreak',
+      valign: 'middle',
+      textColor: THEME.bodyDark,
+    },
+    columnStyles,
+    didParseCell: (data) => {
+      if (data.section === 'body' && data.row.index === rows.length - 1) {
+        const lastLabel = rows[rows.length - 1]?.[0] || '';
+        if (lastLabel.startsWith('Sub-Total')) {
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fillColor = [255, 237, 213];
+        }
+      }
+    },
+  });
+};
+
+const buildFinalChargeRows = (landsideRows, customsRows) => {
   const rows = [];
 
   landsideRows.forEach(row => {
@@ -245,22 +292,6 @@ const buildFinalChargeRows = (landsideRows, customsRows, lastMileRows) => {
 
   customsRows.forEach(row => {
     rows.push(['Customs & Duties', row[0], row[1] || '']);
-  });
-
-  lastMileRows.forEach(row => {
-    const label = row[0] || '';
-    if (label.startsWith('Sub-Total')) {
-      rows.push(['Last Mile', 'Sub-Total', row[4] || '']);
-      return;
-    }
-
-    const detailParts = [
-      row[0],
-      row[1] ? `Weight: ${row[1]}` : '',
-      row[3] || '',
-      row[5] ? `Final/kg: ${row[5]}` : '',
-    ].filter(Boolean);
-    rows.push(['Last Mile', detailParts.join('\n'), row[4] || '']);
   });
 
   return cleanZeroCurrencyRows(rows);
@@ -861,14 +892,12 @@ export function generateEstimatePDF(estimate) {
     customsRows.push(['Sub-Total (excl. Import VAT)', formatCurrency(totals.customs_subtotal_zar)]);
   }
   const lastMileRows = buildLastMileRows(totals);
-  const finalChargeRows = buildFinalChargeRows(airFinalLandsideRows, customsRows, lastMileRows);
+  const finalChargeRows = buildFinalChargeRows(airFinalLandsideRows, customsRows);
   if (finalChargeRows.length > 0) {
     let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 70);
-    const finalChargeTitle = airFinalLandsideRows.length > 0 && lastMileRows.length > 0
-      ? 'SA Landside, Customs & Last Mile'
-      : airFinalLandsideRows.length > 0
-        ? 'SA Landside & Customs'
-        : 'Final Charges';
+    const finalChargeTitle = airFinalLandsideRows.length > 0
+      ? 'SA Landside & Customs'
+      : 'Final Charges';
     secY = drawSectionDivider(doc, secY, finalChargeTitle, THEME.amber);
     autoTable(doc, {
       startY: secY + 1,
@@ -899,6 +928,11 @@ export function generateEstimatePDF(estimate) {
         }
       },
     });
+  }
+  if (lastMileRows.length > 0) {
+    let lastMileY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 55);
+    lastMileY = drawSectionDivider(doc, lastMileY, 'Last Mile Charges', [194, 65, 12]);
+    renderLastMileTable(doc, lastMileRows, lastMileY + 1);
   }
 
   // === SUMMARY SECTION (prominent dark box) ===
@@ -1200,7 +1234,6 @@ export function generateEstimatePDFBase64(estimate) {
       ['Origin Charges', formatCurrency(totals.total_origin_charges_zar)],
       ['Local Charges', formatCurrency(totals.local_charges_subtotal_zar)],
       ['Destination Charges', formatCurrency(totals.destination_charges_subtotal_zar)],
-      ['Last Mile Charges', formatCurrency(totals.last_mile_charges_subtotal_zar)],
     ]);
     if (seaSummaryRows.length > 0) {
       autoTable(doc, {
@@ -1220,7 +1253,7 @@ export function generateEstimatePDFBase64(estimate) {
     ['Agency Fee', formatCurrency(totals.agency_fee_zar)],
   ]);
   const lastMileEmailRows = buildLastMileRows(totals);
-  const finalEmailChargeRows = buildFinalChargeRows(airEmailLandsideRows, customsRows, lastMileEmailRows);
+  const finalEmailChargeRows = buildFinalChargeRows(airEmailLandsideRows, customsRows);
   if (finalEmailChargeRows.length > 0) {
     autoTable(doc, {
       startY: doc.lastAutoTable.finalY + 10,
@@ -1229,6 +1262,9 @@ export function generateEstimatePDFBase64(estimate) {
       theme: 'grid',
       headStyles: { fillColor: THEME.amber },
     });
+  }
+  if (lastMileEmailRows.length > 0) {
+    renderLastMileTable(doc, lastMileEmailRows, doc.lastAutoTable.finalY + 10, { theme: 'grid' });
   }
 
   // Summary
