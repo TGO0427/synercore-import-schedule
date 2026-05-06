@@ -247,13 +247,17 @@ const buildWarehouseChargeRows = (estimate, totals) => {
   if (weight > 0 && handlingRate > 0 && handlingEvents > 0) {
     const handlingPerEvent = weight * handlingRate;
     rows.push([
-      `Warehouse Handling - Receiving (${formatNumber(weight)} kg x R${formatNumber(handlingRate, 2)})`,
+      'Handling Fee - Receiving',
+      `${formatNumber(handlingRate, 2)} ZAR/kg`,
+      `${formatNumber(weight)} kg`,
       formatCurrency(handlingPerEvent),
     ]);
 
     if (handlingEvents >= 2) {
       rows.push([
-        `Warehouse Handling - Dispatching (${formatNumber(weight)} kg x R${formatNumber(handlingRate, 2)})`,
+        'Handling Fee - Dispatching',
+        `${formatNumber(handlingRate, 2)} ZAR/kg`,
+        `${formatNumber(weight)} kg`,
         formatCurrency(handlingPerEvent),
       ]);
     }
@@ -261,7 +265,9 @@ const buildWarehouseChargeRows = (estimate, totals) => {
     if (handlingEvents > 2) {
       const additionalEvents = handlingEvents - 2;
       rows.push([
-        `Warehouse Handling - Additional (${formatNumber(additionalEvents, 2)} event${additionalEvents === 1 ? '' : 's'})`,
+        'Handling Fee - Additional',
+        `${formatNumber(handlingRate, 2)} ZAR/kg`,
+        `${formatNumber(weight)} kg x ${formatNumber(additionalEvents, 2)} event${additionalEvents === 1 ? '' : 's'}`,
         formatCurrency(handlingPerEvent * additionalEvents),
       ]);
     }
@@ -269,12 +275,57 @@ const buildWarehouseChargeRows = (estimate, totals) => {
 
   if (weight > 0 && storageRate > 0 && storageMonths > 0) {
     rows.push([
-      `Warehouse Storage (${formatNumber(weight)} kg x R${formatNumber(storageRate, 2)} x ${formatNumber(storageMonths, 2)} month${storageMonths === 1 ? '' : 's'})`,
+      'Storage for a Month',
+      `${formatNumber(storageRate, 2)} ZAR/kg/month`,
+      `${formatNumber(weight)} kg x ${formatNumber(storageMonths, 2)} month${storageMonths === 1 ? '' : 's'}`,
       formatCurrency(totals.warehouse_storage_fee_zar),
     ]);
   }
 
+  if (totals.warehouse_charges_subtotal_zar > 0) {
+    rows.push(['Sub-Total', '', '', formatCurrency(totals.warehouse_charges_subtotal_zar)]);
+  }
+
   return filterZeroRows(rows);
+};
+
+const renderWarehouseChargeTable = (doc, rows, startY, options = {}) => {
+  if (rows.length === 0) return null;
+
+  return autoTable(doc, {
+    startY,
+    head: [['Description', 'Rate', 'Basis', 'Amount']],
+    body: rows,
+    theme: options.theme || 'striped',
+    headStyles: {
+      fillColor: [51, 65, 85],
+      textColor: [255, 255, 255],
+      fontSize: options.headFontSize || 7.2,
+    },
+    alternateRowStyles: { fillColor: THEME.rowAlt },
+    styles: {
+      fontSize: options.fontSize || 7.2,
+      cellPadding: { top: 1.8, right: 1.5, bottom: 1.8, left: 1.5 },
+      overflow: 'linebreak',
+      valign: 'middle',
+      textColor: THEME.bodyDark,
+    },
+    columnStyles: {
+      0: { cellWidth: 56 },
+      1: { cellWidth: 36, halign: 'right' },
+      2: { cellWidth: 56 },
+      3: { cellWidth: 32, halign: 'right', fontStyle: 'bold' },
+    },
+    didParseCell: (data) => {
+      if (data.section === 'body') {
+        const label = rows[data.row.index]?.[0] || '';
+        if (label.startsWith('Sub-Total')) {
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fillColor = [226, 232, 240];
+        }
+      }
+    },
+  });
 };
 
 const renderLastMileTable = (doc, rows, startY, options = {}) => {
@@ -744,11 +795,10 @@ export function generateEstimatePDF(estimate) {
       ['Air EDI Fee', formatCurrency(estimate.air_edi_fee_zar)],
       ['Import Documentation', formatCurrency(estimate.air_import_documentation_zar)],
       ['Airline Landside Delivery', formatCurrency(estimate.airline_landside_delivery_zar)],
-      ...buildWarehouseChargeRows(estimate, totals),
       ['Insurance', formatCurrency(totals.airfreight_insurance_zar)],
     ]);
-    if (totals.air_local_charges_subtotal_zar > 0 || totals.warehouse_charges_subtotal_zar > 0 || totals.airfreight_insurance_zar > 0) {
-      airLocalRows.push(['Sub-Total', formatCurrency((totals.air_local_charges_subtotal_zar || 0) + (totals.warehouse_charges_subtotal_zar || 0) + (totals.airfreight_insurance_zar || 0))]);
+    if (totals.air_local_charges_subtotal_zar > 0 || totals.airfreight_insurance_zar > 0) {
+      airLocalRows.push(['Sub-Total', formatCurrency((totals.air_local_charges_subtotal_zar || 0) + (totals.airfreight_insurance_zar || 0))]);
     }
     airFinalLandsideRows = airLocalRows;
 
@@ -812,7 +862,6 @@ export function generateEstimatePDF(estimate) {
       [isExport ? 'Transport: WHS to DBN Port' : 'Transport: DBN Port to WHS', formatCurrency(estimate.transport_dbn_to_whs_zar)],
       ['Unpack / Reload', formatCurrency(estimate.unpack_reload_zar)],
       ['Storage', formatCurrency(estimate.storage_zar)],
-      ...buildWarehouseChargeRows(estimate, totals),
       ['Outlying Container Depot Surcharge', formatCurrency(estimate.outlying_depot_surcharge_zar)],
       [isExport ? 'Local Cartage: PTA to DBN WHS (Tautliner A)' : 'Local Cartage: DBN WHS to PTA (Tautliner A)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_opt_a_zar)],
       [isExport ? 'Local Cartage: PTA to DBN WHS (Tautliner B)' : 'Local Cartage: DBN WHS to PTA (Tautliner B)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_opt_b_zar)],
@@ -820,8 +869,9 @@ export function generateEstimatePDF(estimate) {
       [isExport ? 'Local Cartage: PTA to DBN WHS (12M Deck)' : 'Local Cartage: DBN WHS to PTA (12M Deck)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_12m_zar)],
       [isExport ? 'Transport: Pretoria to PE/Coega Port' : 'Transport: PE/Coega Port to Pretoria', formatCurrency(estimate.transport_pe_coega_to_pretoria_zar)],
     ]);
-    if (totals.local_charges_subtotal_zar > 0) {
-      localChargeRows.push(['Sub-Total', formatCurrency(totals.local_charges_subtotal_zar)]);
+    const localChargesExcludingWarehouse = Math.max((totals.local_charges_subtotal_zar || 0) - (totals.warehouse_charges_subtotal_zar || 0), 0);
+    if (localChargesExcludingWarehouse > 0) {
+      localChargeRows.push(['Sub-Total', formatCurrency(localChargesExcludingWarehouse)]);
     }
     if (localChargeRows.length > 0) {
       let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
@@ -925,6 +975,13 @@ export function generateEstimatePDF(estimate) {
   }
 
   // Customs & Duties — hidden for export (Agency Fee appears in Export Charges instead).
+  const warehouseChargeRows = buildWarehouseChargeRows(estimate, totals);
+  if (warehouseChargeRows.length > 0) {
+    let warehouseY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 48);
+    warehouseY = drawSectionDivider(doc, warehouseY, 'Warehouse Handling & Storage', [51, 65, 85]);
+    renderWarehouseChargeTable(doc, warehouseChargeRows, warehouseY + 1);
+  }
+
   const customsRows = isExport ? [] : filterZeroRows([
     ['Customs Value (for reference)', formatCurrency(totals.customs_value_zar)],
     ['Duties', formatCurrency(productTotals.totalDuties || estimate.duties_zar)],
@@ -1264,11 +1321,10 @@ export function generateEstimatePDFBase64(estimate) {
       ['Air EDI Fee', formatCurrency(estimate.air_edi_fee_zar)],
       ['Import Documentation', formatCurrency(estimate.air_import_documentation_zar)],
       ['Airline Landside Delivery', formatCurrency(estimate.airline_landside_delivery_zar)],
-      ...buildWarehouseChargeRows(estimate, totals),
       ['Insurance', formatCurrency(totals.airfreight_insurance_zar)],
     ]);
-    if (totals.air_local_charges_subtotal_zar > 0 || totals.warehouse_charges_subtotal_zar > 0 || totals.airfreight_insurance_zar > 0) {
-      airLocalRows.push(['Sub-Total', formatCurrency((totals.air_local_charges_subtotal_zar || 0) + (totals.warehouse_charges_subtotal_zar || 0) + (totals.airfreight_insurance_zar || 0))]);
+    if (totals.air_local_charges_subtotal_zar > 0 || totals.airfreight_insurance_zar > 0) {
+      airLocalRows.push(['Sub-Total', formatCurrency((totals.air_local_charges_subtotal_zar || 0) + (totals.airfreight_insurance_zar || 0))]);
     }
     airEmailLandsideRows = airLocalRows;
   } else {
@@ -1288,6 +1344,17 @@ export function generateEstimatePDFBase64(estimate) {
         headStyles: { fillColor: THEME.ocean },
       });
     }
+  }
+
+  const warehouseEmailRows = buildWarehouseChargeRows(estimate, totals);
+  if (warehouseEmailRows.length > 0) {
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 10,
+      head: [['Description', 'Rate', 'Basis', 'Amount']],
+      body: warehouseEmailRows,
+      theme: 'grid',
+      headStyles: { fillColor: [51, 65, 85] },
+    });
   }
 
   // Final arrival charges
