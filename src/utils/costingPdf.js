@@ -236,6 +236,47 @@ const buildLastMileRows = (totals) => {
   return cleanZeroCurrencyRows(rows);
 };
 
+const buildWarehouseChargeRows = (estimate, totals) => {
+  const weight = totals._warehouse_chargeable_weight_kg || 0;
+  const handlingRate = parseFloat(estimate.warehouse_handling_rate_per_kg_zar) || 0;
+  const handlingEvents = parseFloat(estimate.warehouse_handling_events) || 0;
+  const storageRate = parseFloat(estimate.warehouse_storage_rate_per_kg_month_zar) || 0;
+  const storageMonths = parseFloat(estimate.warehouse_storage_months) || 0;
+  const rows = [];
+
+  if (weight > 0 && handlingRate > 0 && handlingEvents > 0) {
+    const handlingPerEvent = weight * handlingRate;
+    rows.push([
+      `Warehouse Handling - Receiving (${formatNumber(weight)} kg x R${formatNumber(handlingRate, 2)})`,
+      formatCurrency(handlingPerEvent),
+    ]);
+
+    if (handlingEvents >= 2) {
+      rows.push([
+        `Warehouse Handling - Dispatching (${formatNumber(weight)} kg x R${formatNumber(handlingRate, 2)})`,
+        formatCurrency(handlingPerEvent),
+      ]);
+    }
+
+    if (handlingEvents > 2) {
+      const additionalEvents = handlingEvents - 2;
+      rows.push([
+        `Warehouse Handling - Additional (${formatNumber(additionalEvents, 2)} event${additionalEvents === 1 ? '' : 's'})`,
+        formatCurrency(handlingPerEvent * additionalEvents),
+      ]);
+    }
+  }
+
+  if (weight > 0 && storageRate > 0 && storageMonths > 0) {
+    rows.push([
+      `Warehouse Storage (${formatNumber(weight)} kg x R${formatNumber(storageRate, 2)} x ${formatNumber(storageMonths, 2)} month${storageMonths === 1 ? '' : 's'})`,
+      formatCurrency(totals.warehouse_storage_fee_zar),
+    ]);
+  }
+
+  return filterZeroRows(rows);
+};
+
 const renderLastMileTable = (doc, rows, startY, options = {}) => {
   if (rows.length === 0) return null;
 
@@ -703,8 +744,7 @@ export function generateEstimatePDF(estimate) {
       ['Air EDI Fee', formatCurrency(estimate.air_edi_fee_zar)],
       ['Import Documentation', formatCurrency(estimate.air_import_documentation_zar)],
       ['Airline Landside Delivery', formatCurrency(estimate.airline_landside_delivery_zar)],
-      [`Warehouse Handling (${formatNumber(totals._warehouse_chargeable_weight_kg || 0)} kg x R${formatNumber(estimate.warehouse_handling_rate_per_kg_zar || 0, 2)} x ${formatNumber(estimate.warehouse_handling_events || 0, 2)})`, formatCurrency(totals.warehouse_handling_fee_zar)],
-      [`Warehouse Storage (${formatNumber(totals._warehouse_chargeable_weight_kg || 0)} kg x R${formatNumber(estimate.warehouse_storage_rate_per_kg_month_zar || 0, 2)} x ${formatNumber(estimate.warehouse_storage_months || 0, 2)} month)`, formatCurrency(totals.warehouse_storage_fee_zar)],
+      ...buildWarehouseChargeRows(estimate, totals),
       ['Insurance', formatCurrency(totals.airfreight_insurance_zar)],
     ]);
     if (totals.air_local_charges_subtotal_zar > 0 || totals.warehouse_charges_subtotal_zar > 0 || totals.airfreight_insurance_zar > 0) {
@@ -772,8 +812,7 @@ export function generateEstimatePDF(estimate) {
       [isExport ? 'Transport: WHS to DBN Port' : 'Transport: DBN Port to WHS', formatCurrency(estimate.transport_dbn_to_whs_zar)],
       ['Unpack / Reload', formatCurrency(estimate.unpack_reload_zar)],
       ['Storage', formatCurrency(estimate.storage_zar)],
-      [`Warehouse Handling (${formatNumber(totals._warehouse_chargeable_weight_kg || 0)} kg x R${formatNumber(estimate.warehouse_handling_rate_per_kg_zar || 0, 2)} x ${formatNumber(estimate.warehouse_handling_events || 0, 2)})`, formatCurrency(totals.warehouse_handling_fee_zar)],
-      [`Warehouse Storage (${formatNumber(totals._warehouse_chargeable_weight_kg || 0)} kg x R${formatNumber(estimate.warehouse_storage_rate_per_kg_month_zar || 0, 2)} x ${formatNumber(estimate.warehouse_storage_months || 0, 2)} month)`, formatCurrency(totals.warehouse_storage_fee_zar)],
+      ...buildWarehouseChargeRows(estimate, totals),
       ['Outlying Container Depot Surcharge', formatCurrency(estimate.outlying_depot_surcharge_zar)],
       [isExport ? 'Local Cartage: PTA to DBN WHS (Tautliner A)' : 'Local Cartage: DBN WHS to PTA (Tautliner A)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_opt_a_zar)],
       [isExport ? 'Local Cartage: PTA to DBN WHS (Tautliner B)' : 'Local Cartage: DBN WHS to PTA (Tautliner B)', formatCurrency(estimate.local_cartage_dbn_whs_pretoria_opt_b_zar)],
@@ -1225,8 +1264,7 @@ export function generateEstimatePDFBase64(estimate) {
       ['Air EDI Fee', formatCurrency(estimate.air_edi_fee_zar)],
       ['Import Documentation', formatCurrency(estimate.air_import_documentation_zar)],
       ['Airline Landside Delivery', formatCurrency(estimate.airline_landside_delivery_zar)],
-      [`Warehouse Handling (${formatNumber(totals._warehouse_chargeable_weight_kg || 0)} kg x R${formatNumber(estimate.warehouse_handling_rate_per_kg_zar || 0, 2)} x ${formatNumber(estimate.warehouse_handling_events || 0, 2)})`, formatCurrency(totals.warehouse_handling_fee_zar)],
-      [`Warehouse Storage (${formatNumber(totals._warehouse_chargeable_weight_kg || 0)} kg x R${formatNumber(estimate.warehouse_storage_rate_per_kg_month_zar || 0, 2)} x ${formatNumber(estimate.warehouse_storage_months || 0, 2)} month)`, formatCurrency(totals.warehouse_storage_fee_zar)],
+      ...buildWarehouseChargeRows(estimate, totals),
       ['Insurance', formatCurrency(totals.airfreight_insurance_zar)],
     ]);
     if (totals.air_local_charges_subtotal_zar > 0 || totals.warehouse_charges_subtotal_zar > 0 || totals.airfreight_insurance_zar > 0) {
