@@ -1581,6 +1581,7 @@ function WarehouseCapacity({ shipments, initialWarehouse = 'all', lockWarehouse 
       <div style={{ marginBottom: '2rem' }}>
         <CapacityForecastTable
           shipments={shipments}
+          selectedWarehouse={selectedWarehouse}
           currentBinsUsed={{
             'PRETORIA': warehouseData.warehouseStats['PRETORIA']?.usedBins || 0,
             'KLAPMUTS': warehouseData.warehouseStats['KLAPMUTS']?.usedBins || 0,
