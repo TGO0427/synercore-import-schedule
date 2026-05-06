@@ -3,10 +3,10 @@ import { CapacityForecast } from '../utils/capacityForecast';
 
 const WAREHOUSE_NAMES = ['PRETORIA', 'KLAPMUTS', 'OFFSITE'];
 
-function CapacityForecastTable({ shipments, currentBinsUsed, selectedWarehouse = 'all' }) {
+function CapacityForecastTable({ shipments, currentBinsUsed, warehouseCapacities, selectedWarehouse = 'all' }) {
   const forecast = useMemo(() => {
-    return CapacityForecast.generateForecast(shipments, currentBinsUsed);
-  }, [shipments, currentBinsUsed]);
+    return CapacityForecast.generateForecast(shipments, currentBinsUsed, warehouseCapacities);
+  }, [shipments, currentBinsUsed, warehouseCapacities]);
 
   const visibleWarehouses = selectedWarehouse === 'all'
     ? WAREHOUSE_NAMES

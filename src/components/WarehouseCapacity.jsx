@@ -1587,6 +1587,11 @@ function WarehouseCapacity({ shipments, initialWarehouse = 'all', lockWarehouse 
             'KLAPMUTS': warehouseData.warehouseStats['KLAPMUTS']?.usedBins || 0,
             'OFFSITE': warehouseData.warehouseStats['OFFSITE']?.usedBins || 0
           }}
+          warehouseCapacities={{
+            'PRETORIA': warehouseData.warehouseStats['PRETORIA']?.totalBins || 650,
+            'KLAPMUTS': warehouseData.warehouseStats['KLAPMUTS']?.totalBins || 384,
+            'OFFSITE': warehouseData.warehouseStats['OFFSITE']?.totalBins || 384
+          }}
         />
       </div>
 

@@ -57,7 +57,7 @@ export class CapacityForecast {
    * Generate 8-week capacity forecast
    * Returns array of forecasts with alerts and recommendations
    */
-  static generateForecast(shipments, currentBinsUsed) {
+  static generateForecast(shipments, currentBinsUsed, warehouseCapacities = this.WAREHOUSE_CAPACITY) {
     const currentWeek = this.getCurrentWeekNumber();
     const forecast = [];
 
@@ -74,7 +74,7 @@ export class CapacityForecast {
       };
 
       // Calculate for each warehouse
-      Object.keys(this.WAREHOUSE_CAPACITY).forEach(warehouse => {
+      Object.keys(warehouseCapacities).forEach(warehouse => {
         const incomingPallets = this.getIncomingPalletsForWeek(shipments, warehouse, forecastWeek);
         const incomingBins = this.calculateBinsFromPallets(incomingPallets);
 
@@ -89,12 +89,15 @@ export class CapacityForecast {
         }
 
         const projectedBinsUsed = Math.round(estimatedBinsUsed + incomingBins);
-        const capacity = this.WAREHOUSE_CAPACITY[warehouse];
-        const percentUsed = Math.round((projectedBinsUsed / capacity) * 100);
+        const capacity = warehouseCapacities[warehouse] || this.WAREHOUSE_CAPACITY[warehouse] || 0;
+        const percentUsed = capacity > 0 ? Math.round((projectedBinsUsed / capacity) * 100) : 0;
 
         // Determine alert level
         let alert = 'ok';
-        if (percentUsed > 100) {
+        if (capacity === 0 && projectedBinsUsed > 0) {
+          alert = 'overflow';
+          forecastWithWeek.totalAlert = 'overflow';
+        } else if (percentUsed > 100) {
           alert = 'overflow';
           forecastWithWeek.totalAlert = 'overflow';
         } else if (percentUsed >= 95) {
