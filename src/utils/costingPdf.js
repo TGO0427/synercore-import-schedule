@@ -236,55 +236,12 @@ const buildLastMileRows = (totals) => {
   return cleanZeroCurrencyRows(rows);
 };
 
-const renderLastMileTable = (doc, rows, startY, options = {}) => {
-  if (rows.length === 0) return null;
-
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const tableWidth = pageWidth - 28;
-  const head = [['Service / Route', 'Weight', 'Base', 'Fuel / Extras', 'Total', 'Final/kg']];
-  const columnStyles = {
-    0: { cellWidth: tableWidth * 0.38 },
-    1: { cellWidth: tableWidth * 0.10, halign: 'right' },
-    2: { cellWidth: tableWidth * 0.12, halign: 'right' },
-    3: { cellWidth: tableWidth * 0.17, halign: 'right' },
-    4: { cellWidth: tableWidth * 0.12, halign: 'right', fontStyle: 'bold' },
-    5: { cellWidth: tableWidth * 0.11, halign: 'right', fontStyle: 'bold' },
-  };
-
-  return autoTable(doc, {
-    startY,
-    head,
-    body: rows,
-    theme: options.theme || 'striped',
-    headStyles: {
-      fillColor: [194, 65, 12],
-      textColor: [255, 255, 255],
-      fontSize: options.headFontSize || 7,
-      cellPadding: { top: 2, right: 1.2, bottom: 2, left: 1.2 },
-    },
-    alternateRowStyles: { fillColor: THEME.rowAlt },
-    styles: {
-      fontSize: options.fontSize || 7,
-      cellPadding: { top: 2, right: 1.2, bottom: 2, left: 1.2 },
-      overflow: 'linebreak',
-      valign: 'middle',
-      textColor: THEME.bodyDark,
-    },
-    columnStyles,
-    didParseCell: (data) => {
-      if (data.section === 'body' && data.row.index === rows.length - 1) {
-        const lastLabel = rows[rows.length - 1]?.[0] || '';
-        if (lastLabel.startsWith('Sub-Total')) {
-          data.cell.styles.fontStyle = 'bold';
-          data.cell.styles.fillColor = [255, 237, 213];
-        }
-      }
-    },
-  });
-};
-
-const buildFinalChargeRows = (customsRows, lastMileRows) => {
+const buildFinalChargeRows = (landsideRows, customsRows, lastMileRows) => {
   const rows = [];
+
+  landsideRows.forEach(row => {
+    rows.push(['SA Landside', row[0], row[1] || '']);
+  });
 
   customsRows.forEach(row => {
     rows.push(['Customs & Duties', row[0], row[1] || '']);
@@ -641,6 +598,7 @@ export function generateEstimatePDF(estimate) {
   const agencyFeeMinLabel = isExport
     ? `@ 3.5% min R${Math.round(parseFloat(estimate.agency_fee_min) || 1270)}`
     : `@ 3.5% min R${Math.round(parseFloat(estimate.agency_fee_min) || 1187)}`;
+  let airFinalLandsideRows = [];
 
   // Helper to style sub-total rows in charge tables
   const chargeTableSubTotalHook = (rows) => (data) => {
@@ -719,19 +677,7 @@ export function generateEstimatePDF(estimate) {
     if (totals.air_local_charges_subtotal_zar > 0 || totals.airfreight_insurance_zar > 0) {
       airLocalRows.push(['Sub-Total', formatCurrency((totals.air_local_charges_subtotal_zar || 0) + (totals.airfreight_insurance_zar || 0))]);
     }
-    if (airLocalRows.length > 0) {
-      let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 30);
-      secY = drawSectionDivider(doc, secY, 'SA Landside Charges', THEME.green);
-      autoTable(doc, {
-        startY: secY + 1,
-        head: [['SA Landside Charges', 'Amount']],
-        body: airLocalRows,
-        theme: 'striped',
-        headStyles: { fillColor: THEME.green, textColor: [255, 255, 255] },
-        alternateRowStyles: { fillColor: THEME.rowAlt },
-        didParseCell: chargeTableSubTotalHook(airLocalRows),
-      });
-    }
+    airFinalLandsideRows = airLocalRows;
 
   } else {
     // === SEA FREIGHT PDF SECTIONS ===
@@ -915,10 +861,15 @@ export function generateEstimatePDF(estimate) {
     customsRows.push(['Sub-Total (excl. Import VAT)', formatCurrency(totals.customs_subtotal_zar)]);
   }
   const lastMileRows = buildLastMileRows(totals);
-  const finalChargeRows = buildFinalChargeRows(customsRows, lastMileRows);
+  const finalChargeRows = buildFinalChargeRows(airFinalLandsideRows, customsRows, lastMileRows);
   if (finalChargeRows.length > 0) {
-    let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 42);
-    secY = drawSectionDivider(doc, secY, 'Final Charges', THEME.amber);
+    let secY = checkPageBreak(doc, doc.lastAutoTable.finalY + 4, 70);
+    const finalChargeTitle = airFinalLandsideRows.length > 0 && lastMileRows.length > 0
+      ? 'SA Landside, Customs & Last Mile'
+      : airFinalLandsideRows.length > 0
+        ? 'SA Landside & Customs'
+        : 'Final Charges';
+    secY = drawSectionDivider(doc, secY, finalChargeTitle, THEME.amber);
     autoTable(doc, {
       startY: secY + 1,
       head: [['Type', 'Charge', 'Amount']],
@@ -1183,6 +1134,7 @@ export function generateEstimatePDFBase64(estimate) {
   buildEstimateHeader(doc, estimate, productTotals, totals);
 
   const isAir = (estimate.transport_mode || 'sea') === 'air';
+  let airEmailLandsideRows = [];
 
   if (isAir) {
     // Airfreight Charges
@@ -1240,15 +1192,7 @@ export function generateEstimatePDFBase64(estimate) {
     if (totals.air_local_charges_subtotal_zar > 0 || totals.airfreight_insurance_zar > 0) {
       airLocalRows.push(['Sub-Total', formatCurrency((totals.air_local_charges_subtotal_zar || 0) + (totals.airfreight_insurance_zar || 0))]);
     }
-    if (airLocalRows.length > 0) {
-      autoTable(doc, {
-        startY: doc.lastAutoTable.finalY + 10,
-        head: [['SA Landside Charges', 'Amount']],
-        body: airLocalRows,
-        theme: 'grid',
-        headStyles: { fillColor: THEME.green },
-      });
-    }
+    airEmailLandsideRows = airLocalRows;
   } else {
     // Sea freight summary for email
     const seaSummaryRows = filterZeroRows([
@@ -1269,25 +1213,22 @@ export function generateEstimatePDFBase64(estimate) {
     }
   }
 
-  // Customs & Duties
+  // Final arrival charges
   const customsRows = filterZeroRows([
     ['Customs Value', formatCurrency(totals.customs_value_zar)],
     ['Duties', formatCurrency(productTotals.totalDuties || estimate.duties_zar)],
     ['Agency Fee', formatCurrency(totals.agency_fee_zar)],
   ]);
-  if (customsRows.length > 0) {
+  const lastMileEmailRows = buildLastMileRows(totals);
+  const finalEmailChargeRows = buildFinalChargeRows(airEmailLandsideRows, customsRows, lastMileEmailRows);
+  if (finalEmailChargeRows.length > 0) {
     autoTable(doc, {
       startY: doc.lastAutoTable.finalY + 10,
-      head: [['Customs & Duties', 'ZAR']],
-      body: customsRows,
+      head: [['Type', 'Charge', 'Amount']],
+      body: finalEmailChargeRows,
       theme: 'grid',
       headStyles: { fillColor: THEME.amber },
     });
-  }
-
-  const lastMileEmailRows = buildLastMileRows(totals);
-  if (lastMileEmailRows.length > 0) {
-    renderLastMileTable(doc, lastMileEmailRows, doc.lastAutoTable.finalY + 10, { theme: 'grid' });
   }
 
   // Summary
