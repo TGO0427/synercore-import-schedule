@@ -463,7 +463,10 @@ function App() {
   }, [location.pathname, activeView]);
 
   const StoredWrapper = () => {
-    const storedShipments = shipments.filter(s => s.latestStatus === 'stored');
+    const storedShipments = shipments.filter(s => {
+      const warehouse = (s.receivingWarehouse || '').toUpperCase();
+      return s.latestStatus === 'stored' || warehouse === 'OFFSITE' || s.latestStatus === 'arrived_offsite';
+    });
     return (
       <WarehouseStored
         shipments={storedShipments}

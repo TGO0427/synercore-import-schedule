@@ -11,6 +11,14 @@ import { applyPlugin } from 'jspdf-autotable';
 applyPlugin(jsPDF);
 import * as XLSX from 'xlsx';
 
+const getWarehouseName = (shipment) => {
+  if ((shipment.receivingWarehouse || '').toUpperCase() === 'OFFSITE') return 'OFFSITE';
+  if (shipment.latestStatus === 'arrived_offsite') return 'OFFSITE';
+  return shipment.receivingWarehouse || 'Unassigned';
+};
+
+const isOffsiteShipment = (shipment) => getWarehouseName(shipment).toUpperCase() === 'OFFSITE';
+
 function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onCreateShipment, loading }) {
   const { showSuccess, showError, confirm: confirmAction } = useNotification();
   const [searchParamsObj, setSearchParamsObj] = useSearchParams();
@@ -82,9 +90,10 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onCrea
   const filteredAndSortedShipments = useMemo(() => {
     let filtered = shipments.filter(shipment => {
       const hasSearch = searchTerm.trim() !== '';
+      const isOffsite = isOffsiteShipment(shipment);
 
       // 90-day filter (unless Show All toggled)
-      if (!showAll && !hasSearch) {
+      if (!showAll && !hasSearch && !isOffsite) {
         const storedDate = new Date(shipment.receivingDate || shipment.updatedAt || shipment.createdAt);
         if (storedDate < ninetyDaysAgo) return false;
       }
@@ -93,7 +102,8 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onCrea
         shipment.orderRef?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         shipment.supplier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         shipment.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        shipment.receivingWarehouse?.toLowerCase().includes(searchTerm.toLowerCase());
+        shipment.receivingWarehouse?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        shipment.finalPod?.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesWeek = weekFilters.length === 0 || weekFilters.includes(shipment.weekNumber);
 
@@ -123,7 +133,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onCrea
   const groupedByWarehouse = useMemo(() => {
     const groups = {};
     for (const s of filteredAndSortedShipments) {
-      const wh = s.receivingWarehouse || 'Unassigned';
+      const wh = getWarehouseName(s);
       if (!groups[wh]) groups[wh] = [];
       groups[wh].push(s);
     }
@@ -166,6 +176,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onCrea
 
   const olderCount = useMemo(() => {
     return shipments.filter(s => {
+      if (isOffsiteShipment(s)) return false;
       const storedDate = new Date(s.receivingDate || s.updatedAt || s.createdAt);
       return storedDate < ninetyDaysAgo;
     }).length;
@@ -304,15 +315,15 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onCrea
       'Pallet Qty': Math.round(s.palletQty || 0),
       'CBM': s.cbm || 0,
       'Week': s.weekNumber || '',
-      'Warehouse': s.receivingWarehouse || 'Unassigned',
+      'Warehouse': getWarehouseName(s),
       'Final POD': s.finalPod || '',
       'Stored Date': formatDate(s.receivingDate || s.updatedAt || s.estimatedArrival),
-      'Days in Storage': (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE' ? getDaysInStorage(s) : '-',
-      'Storage Cost (ZAR)': (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE' ? getStorageCost(s) : '-'
+      'Days in Storage': isOffsiteShipment(s) ? getDaysInStorage(s) : '-',
+      'Storage Cost (ZAR)': isOffsiteShipment(s) ? getStorageCost(s) : '-'
     }));
     // Add total storage cost row
     const totalStorageCost = filteredAndSortedShipments
-      .filter(s => (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE')
+      .filter(s => isOffsiteShipment(s))
       .reduce((sum, s) => sum + getStorageCost(s), 0);
     dataRows.push({
       'Order Ref': '',
@@ -388,14 +399,14 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onCrea
       head: [['Order Ref', 'Supplier', 'Product', 'Qty', 'Pallets', 'Warehouse', 'Stored Date', 'Days', 'Cost (ZAR)']],
       body: [
         ...filteredAndSortedShipments.map(s => {
-          const isOffsite = (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE';
+          const isOffsite = isOffsiteShipment(s);
           return [
             s.orderRef || '',
             s.supplier || '',
             s.productName || '',
             s.quantity || 0,
             Math.round(s.palletQty || 0) || 1,
-            s.receivingWarehouse || 'Unassigned',
+            getWarehouseName(s),
             formatDate(s.receivingDate || s.updatedAt || s.estimatedArrival),
             isOffsite ? getDaysInStorage(s) : '-',
             isOffsite ? `R ${getStorageCost(s).toLocaleString()}` : '-'
@@ -405,7 +416,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onCrea
           { content: 'TOTAL', colSpan: 8, styles: { halign: 'right', fontStyle: 'bold' } },
           {
             content: `R ${filteredAndSortedShipments
-              .filter(s => (s.receivingWarehouse || '').toUpperCase() === 'OFFSITE')
+              .filter(s => isOffsiteShipment(s))
               .reduce((sum, s) => sum + getStorageCost(s), 0)
               .toLocaleString()}`,
             styles: { fontStyle: 'bold' }
@@ -1004,7 +1015,7 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onCrea
                 ['Pallets', s.palletQty ? (Math.round(s.palletQty) || 1) : '-'],
                 ['CBM', s.cbm || '-'],
                 ['Week', s.weekNumber ? `Week ${s.weekNumber}` : '-'],
-                ['Warehouse', s.receivingWarehouse || 'Unassigned'],
+                ['Warehouse', getWarehouseName(s)],
                 ['Freight Type', s.freightType || '-'],
                 ['Final POD', s.finalPod || '-'],
                 ['Stored Date', formatDate(s.receivingDate || s.updatedAt || s.estimatedArrival)],
