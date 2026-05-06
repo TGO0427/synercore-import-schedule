@@ -81,8 +81,10 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onCrea
 
   const filteredAndSortedShipments = useMemo(() => {
     let filtered = shipments.filter(shipment => {
+      const hasSearch = searchTerm.trim() !== '';
+
       // 90-day filter (unless Show All toggled)
-      if (!showAll) {
+      if (!showAll && !hasSearch) {
         const storedDate = new Date(shipment.receivingDate || shipment.updatedAt || shipment.createdAt);
         if (storedDate < ninetyDaysAgo) return false;
       }
@@ -537,6 +539,11 @@ function WarehouseStored({ shipments, onUpdateShipment, onDeleteShipment, onCrea
               fontSize: 13, width: 200, background: 'var(--surface)'
             }}
           />
+          {searchTerm.trim() && !showAll && (
+            <span style={{ fontSize: 12, color: 'var(--text-500)' }}>
+              searching all dates
+            </span>
+          )}
           <div style={{ position: 'relative' }}>
             <button
               className="btn btn-ghost"
