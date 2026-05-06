@@ -90,8 +90,9 @@ const SimpleBinInput = ({ warehouseKey, initialValue, maxValue, onUpdate, hasUns
   );
 };
 
-function WarehouseCapacity({ shipments }) {
-  const [selectedWarehouse, setSelectedWarehouse] = useState('all');
+function WarehouseCapacity({ shipments, initialWarehouse = 'all', lockWarehouse = false }) {
+  const normalizedInitialWarehouse = initialWarehouse || 'all';
+  const [selectedWarehouse, setSelectedWarehouse] = useState(normalizedInitialWarehouse);
   const [showSettings, setShowSettings] = useState(false);
   const [editableBinsUsed, setEditableBinsUsed] = useState({});
   const [savedBinsUsed, setSavedBinsUsed] = useState({});
@@ -108,6 +109,10 @@ function WarehouseCapacity({ shipments }) {
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(null);
   const [detailProduct, setDetailProduct] = useState(null);
   const { showError, showWarning, showSuccess } = useNotification();
+
+  useEffect(() => {
+    setSelectedWarehouse(normalizedInitialWarehouse);
+  }, [normalizedInitialWarehouse]);
 
   // Load warehouse capacity data from database on mount
   useEffect(() => {
@@ -514,11 +519,13 @@ function WarehouseCapacity({ shipments }) {
   }, [pendingChanges, pendingAvailableBinsChanges, pendingTotalCapacityChanges, editableBinsUsed, editableAvailableBins, editableTotalCapacity]);
 
   const handleCardClick = useCallback((warehouse) => {
+    if (lockWarehouse) return;
+
     // Toggle between selected warehouse and "all"
-    setSelectedWarehouse(prevSelected => 
+    setSelectedWarehouse(prevSelected =>
       prevSelected === warehouse ? 'all' : warehouse
     );
-  }, []);
+  }, [lockWarehouse]);
 
   const handleExportToPDF = useCallback(() => {
     try {
@@ -1365,6 +1372,8 @@ function WarehouseCapacity({ shipments }) {
     const warnings = [];
 
     Object.entries(warehouseData.warehouseStats || {}).forEach(([warehouse, stats]) => {
+      if (selectedWarehouse !== 'all' && warehouse !== selectedWarehouse) return;
+
       if (stats.totalBins > 0) {
         const utilizationPercent = (stats.usedBins / stats.totalBins) * 100;
 
@@ -1441,20 +1450,28 @@ function WarehouseCapacity({ shipments }) {
       }}>
         <div>
           <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-900)' }}>
-            Warehouse Capacity
+            {selectedWarehouse === 'all' ? 'Warehouse Capacity' : `${selectedWarehouse} Capacity`}
           </h2>
           <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--text-500)' }}>
-            {Object.keys(warehouseData.warehouseStats).length} location{Object.keys(warehouseData.warehouseStats).length !== 1 ? 's' : ''} &middot; Bin management & forecasting
+            {selectedWarehouse === 'all'
+              ? `${Object.keys(warehouseData.warehouseStats).length} location${Object.keys(warehouseData.warehouseStats).length !== 1 ? 's' : ''}`
+              : '1 location'} &middot; Bin management & forecasting
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <select value={selectedWarehouse} onChange={(e) => setSelectedWarehouse(e.target.value)}
-            className="select" style={{ fontSize: 13, minWidth: 140 }}>
-            <option value="all">All Warehouses</option>
-            {Object.keys(warehouseData.warehouseStats).map(w => (
-              <option key={w} value={w}>{w}</option>
-            ))}
-          </select>
+          {lockWarehouse ? (
+            <span className="badge" style={{ fontSize: 12, fontWeight: 700 }}>
+              {selectedWarehouse}
+            </span>
+          ) : (
+            <select value={selectedWarehouse} onChange={(e) => setSelectedWarehouse(e.target.value)}
+              className="select" style={{ fontSize: 13, minWidth: 140 }}>
+              <option value="all">All Warehouses</option>
+              {Object.keys(warehouseData.warehouseStats).map(w => (
+                <option key={w} value={w}>{w}</option>
+              ))}
+            </select>
+          )}
           {(Object.keys(pendingChanges).length > 0 || Object.keys(pendingAvailableBinsChanges).length > 0 || Object.keys(pendingTotalCapacityChanges).length > 0) && (
             <button onClick={saveAllChanges} disabled={isSaving} className="btn"
               style={{ background: 'var(--accent)', color: '#fff', fontSize: 13, border: 'none', fontWeight: 600 }}>

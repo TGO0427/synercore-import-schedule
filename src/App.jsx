@@ -23,6 +23,9 @@ const VIEW_TO_SECTION = {
   receiving: 'warehouse',
   'dock-management': 'warehouse',
   capacity: 'warehouse',
+  'capacity-pretoria': 'warehouseCapacitySites',
+  'capacity-klapmuts': 'warehouseCapacitySites',
+  'capacity-offsite': 'warehouseCapacitySites',
   stored: 'warehouse',
   archives: 'warehouse',
   rates: 'finance',
@@ -47,6 +50,9 @@ const VIEW_TITLES = {
   receiving: 'Goods Receiving',
   'dock-management': 'Dock Management',
   capacity: 'Warehouse Capacity',
+  'capacity-pretoria': 'Pretoria Capacity',
+  'capacity-klapmuts': 'Klapmuts Capacity',
+  'capacity-offsite': 'Offsite Capacity',
   stored: 'Stored Stock',
   archives: 'Shipment Archives',
   rates: 'Rates & Quotes',
@@ -231,6 +237,7 @@ function App() {
     masterData: true,
     operations: true,
     warehouse: true,
+    warehouseCapacitySites: true,
     finance: true,
     reports: true,
     resources: false,
@@ -425,6 +432,9 @@ function App() {
     if (path === '/workflow') return 'workflow';
     if (path === '/local-receiving') return 'local-receiving';
     if (path === '/capacity') return 'capacity';
+    if (path === '/capacity/pretoria') return 'capacity-pretoria';
+    if (path === '/capacity/klapmuts') return 'capacity-klapmuts';
+    if (path === '/capacity/offsite') return 'capacity-offsite';
     if (path === '/stored') return 'stored';
     if (path === '/archives') return 'archives';
     if (path === '/rates') return 'rates';
@@ -578,6 +588,9 @@ function App() {
             iwtIncoming: { label: 'IWT Incoming', icon: Repeat, view: 'iwt-incoming' },
             workflow: { label: 'Post-Arrival Workflow', icon: ClipboardList, view: 'workflow', badge: workflowCount, badgeType: 'info' },
             capacity: { label: 'Warehouse Capacity', icon: Factory, view: 'capacity' },
+            capacityPretoria: { label: 'Pretoria', icon: Factory, view: 'capacity-pretoria' },
+            capacityKlapmuts: { label: 'Klapmuts', icon: Factory, view: 'capacity-klapmuts' },
+            capacityOffsite: { label: 'Offsite', icon: Factory, view: 'capacity-offsite' },
             stored: { label: 'Stored Stock', icon: Store, view: 'stored' },
             archives: { label: 'Shipment Archives', icon: Package, view: 'archives' },
             rates: { label: 'Rates & Quotes', icon: Wallet, view: 'rates' },
@@ -695,7 +708,8 @@ function App() {
               {match('Dashboard') && renderItem('dashboard')}
               {renderSection('Master Data', 'masterData', ['suppliers'])}
               {renderSection('Operations', 'operations', ['shipping', 'localReceiving', 'iwtIncoming', 'workflow', 'bolAudit'])}
-              {renderSection('Warehouse', 'warehouse', ['receiving', 'dockManagement', 'capacity', 'stored'])}
+              {renderSection('Warehouse', 'warehouse', ['receiving', 'dockManagement', 'stored'])}
+              {renderSection('Warehouse Capacity per site', 'warehouseCapacitySites', ['capacityPretoria', 'capacityKlapmuts', 'capacityOffsite'])}
               {renderSection('Finance', 'finance', ['rates', 'costing', 'exportCosting', 'costingRequests'])}
               {renderSection('Reports', 'reports', ['reports', 'advancedReports', 'supplierPerformance', 'audit'])}
 
@@ -965,6 +979,15 @@ function App() {
             } />
             <Route path="/capacity" element={
               <Suspense fallback={<PageLoader />}><ErrorBoundary><WarehouseCapacity shipments={shipments} /></ErrorBoundary></Suspense>
+            } />
+            <Route path="/capacity/pretoria" element={
+              <Suspense fallback={<PageLoader />}><ErrorBoundary><WarehouseCapacity shipments={shipments} initialWarehouse="PRETORIA" lockWarehouse /></ErrorBoundary></Suspense>
+            } />
+            <Route path="/capacity/klapmuts" element={
+              <Suspense fallback={<PageLoader />}><ErrorBoundary><WarehouseCapacity shipments={shipments} initialWarehouse="KLAPMUTS" lockWarehouse /></ErrorBoundary></Suspense>
+            } />
+            <Route path="/capacity/offsite" element={
+              <Suspense fallback={<PageLoader />}><ErrorBoundary><WarehouseCapacity shipments={shipments} initialWarehouse="OFFSITE" lockWarehouse /></ErrorBoundary></Suspense>
             } />
             <Route path="/stored" element={
               <Suspense fallback={<PageLoader />}><ErrorBoundary><StoredWrapper /></ErrorBoundary></Suspense>
