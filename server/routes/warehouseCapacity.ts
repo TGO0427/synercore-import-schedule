@@ -7,7 +7,7 @@
 import { Router, Request, Response } from 'express';
 import pool from '../db/connection.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.ts';
-import { validateWarehouseCapacity, validateWarehouseCapacityUpdate } from '../middleware/validation.js';
+import { validateWarehouseCapacity, validateWarehouseCapacityUpdate, validateWarehouseTotalCapacityUpdate } from '../middleware/validation.js';
 
 const router = Router();
 
@@ -105,7 +105,7 @@ router.get('/', async (req: Request, res: Response) => {
 
 // PUT/UPDATE total capacity for a specific warehouse
 // MUST be before /:warehouseName to match correctly
-router.put('/:warehouseName/total-capacity', authenticateToken, requireAdmin, validateWarehouseCapacity, (req: Request, res: Response) => {
+router.put('/:warehouseName/total-capacity', authenticateToken, requireAdmin, validateWarehouseTotalCapacityUpdate, (req: Request, res: Response) => {
   // Wrap in explicit error handler
   (async () => {
     try {

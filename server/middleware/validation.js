@@ -422,6 +422,19 @@ export const validateWarehouseCapacityUpdate = [
   validate
 ];
 
+export const validateWarehouseTotalCapacityUpdate = [
+  param('warehouseName')
+    .notEmpty()
+    .withMessage('Warehouse name is required')
+    .isLength({ max: 100 })
+    .withMessage('Warehouse name must be less than 100 characters')
+    .trim(),
+  body('totalCapacity')
+    .isInt({ min: 0 })
+    .withMessage('Total capacity must be a non-negative integer'),
+  validate
+];
+
 // Scheduler validation rules
 export const validateSchedulerConfig = [
   body('jobName')
