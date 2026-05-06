@@ -196,16 +196,26 @@ function WarehouseCapacity({ shipments, initialWarehouse = 'all', lockWarehouse 
       };
     });
 
-    // Filter shipments to only include those in current month's weeks and exclude stored shipments
+    const getCapacityWarehouse = (shipment) => {
+      if ((shipment.receivingWarehouse || '').toUpperCase() === 'OFFSITE') return 'OFFSITE';
+      if (shipment.latestStatus === 'arrived_offsite') return 'OFFSITE';
+      return shipment.receivingWarehouse || shipment.finalPod || 'Unassigned';
+    };
+
+    const isOffsiteStoredStock = (shipment) => {
+      return getCapacityWarehouse(shipment) === 'OFFSITE' && shipment.latestStatus === ShipmentStatus.STORED;
+    };
+
+    // Filter shipments to current month, but always keep stored OFFSITE stock for capacity.
     const currentMonthShipments = shipments.filter(shipment => {
       const weekNumber = parseInt(shipment.weekNumber) || currentWeek;
       const isCurrentMonth = currentMonthWeeks.includes(weekNumber);
       const notStored = shipment.latestStatus !== ShipmentStatus.STORED;
-      return isCurrentMonth && notStored;
+      return (isCurrentMonth && notStored) || isOffsiteStoredStock(shipment);
     });
 
     currentMonthShipments.forEach(shipment => {
-      const warehouse = shipment.receivingWarehouse || shipment.finalPod || 'Unassigned';
+      const warehouse = getCapacityWarehouse(shipment);
       // Use palletQty field only
       const pallets = shipment.palletQty || 0;
       const weekNumber = parseInt(shipment.weekNumber) || currentWeek;
@@ -231,7 +241,7 @@ function WarehouseCapacity({ shipments, initialWarehouse = 'all', lockWarehouse 
       }
       
       // Incoming (all non-arrived shipments) - count pallets
-      const arrivedStatuses = ['arrived_pta', 'arrived_klm', 'unloading', 'inspection_pending', 'inspecting', 'inspection_failed', 'inspection_passed', 'receiving', 'received', 'stored'];
+      const arrivedStatuses = ['arrived_pta', 'arrived_klm', 'arrived_offsite', 'unloading', 'inspection_pending', 'inspecting', 'inspection_failed', 'inspection_passed', 'receiving', 'received', 'stored'];
 
       // Current stock (arrived shipments) - count pallets
       if (arrivedStatuses.includes(shipment.latestStatus)) {
@@ -268,10 +278,13 @@ function WarehouseCapacity({ shipments, initialWarehouse = 'all', lockWarehouse 
     Object.keys(warehouseStats).forEach(warehouse => {
       const stats = warehouseStats[warehouse];
 
-      // Use editable bins used if available, otherwise calculate from current stock
-      const currentBinsUsed = editableBinsUsed[warehouse] !== undefined 
-        ? editableBinsUsed[warehouse] 
-        : Math.ceil(stats.currentStock / stats.avgItemsPerBin);
+      const calculatedCurrentBins = Math.ceil(stats.currentStock / stats.avgItemsPerBin);
+      const manualBinsUsed = editableBinsUsed[warehouse];
+      const currentBinsUsed = warehouse === 'OFFSITE' && manualBinsUsed !== undefined
+        ? Math.max(manualBinsUsed, calculatedCurrentBins)
+        : manualBinsUsed !== undefined
+        ? manualBinsUsed
+        : calculatedCurrentBins;
       
       stats.usedBins = currentBinsUsed;
       stats.projectedBinsUsed = currentBinsUsed + Math.ceil(stats.incoming / stats.avgItemsPerBin);
