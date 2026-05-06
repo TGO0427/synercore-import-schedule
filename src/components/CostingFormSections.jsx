@@ -845,6 +845,52 @@ function CostingFormSections({
       </>
       )}
 
+      {/* Section: Warehouse Handling & Storage */}
+      <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+        <h4 style={{ margin: '0 0 1rem', color: '#334155', fontSize: '1rem' }}>
+          Warehouse Handling & Storage <InfoTip text="Handling is charged per kg for receiving and dispatching. Storage is charged per kg per month." />
+        </h4>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+          {currencyInput('Handling Rate / kg', 'warehouse_handling_rate_per_kg_zar', 'ZAR')}
+          {input('Handling Events', 'warehouse_handling_events', 'number')}
+          {currencyInput('Storage Rate / kg / month', 'warehouse_storage_rate_per_kg_month_zar', 'ZAR')}
+          {input('Storage Months', 'warehouse_storage_months', 'number')}
+          {input('Override Weight kg', 'warehouse_chargeable_weight_kg', 'number')}
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#334155' }}>
+              Chargeable Weight - Auto
+            </label>
+            <div style={{ padding: '8px 12px', backgroundColor: '#e2e8f0', borderRadius: '6px', fontWeight: '600', color: '#334155' }}>
+              {formatNumber(calculatedTotals._warehouse_chargeable_weight_kg || 0)} kg
+            </div>
+          </div>
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#334155' }}>
+              Handling Fee - Auto
+            </label>
+            <div style={{ padding: '8px 12px', backgroundColor: '#e2e8f0', borderRadius: '6px', fontWeight: '600', color: '#334155' }}>
+              {formatCurrency(calculatedTotals.warehouse_handling_fee_zar || 0)}
+            </div>
+          </div>
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: '#334155' }}>
+              Storage Fee - Auto
+            </label>
+            <div style={{ padding: '8px 12px', backgroundColor: '#e2e8f0', borderRadius: '6px', fontWeight: '600', color: '#334155' }}>
+              {formatCurrency(calculatedTotals.warehouse_storage_fee_zar || 0)}
+            </div>
+          </div>
+        </div>
+        <div style={{ marginTop: '1rem', padding: '12px', backgroundColor: '#334155', borderRadius: '6px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontWeight: '500', color: 'white' }}>Warehouse Charges Total</span>
+            <span style={{ fontSize: '1.25rem', fontWeight: '700', color: 'white' }}>
+              {formatCurrency(calculatedTotals.warehouse_charges_subtotal_zar || 0)}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Section: Customs VAT & Duty Summary */}
       <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fef3c7', borderRadius: '8px' }}>
         <h4 style={{ margin: '0 0 1rem', color: '#92400e', fontSize: '1rem' }}>Customs & Duties Summary <InfoTip text="SARS import duties and VAT calculated from customs value × duty rates per product." /></h4>

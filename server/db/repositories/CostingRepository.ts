@@ -71,6 +71,14 @@ export interface ImportCostEstimate {
   unpack_reload_zar: number;
   storage_zar: number;
   storage_days: number;
+  warehouse_handling_rate_per_kg_zar?: number;
+  warehouse_handling_events?: number;
+  warehouse_storage_rate_per_kg_month_zar?: number;
+  warehouse_storage_months?: number;
+  warehouse_chargeable_weight_kg?: number;
+  warehouse_handling_fee_zar?: number;
+  warehouse_storage_fee_zar?: number;
+  warehouse_charges_subtotal_zar?: number;
   outlying_depot_surcharge_zar: number;
   local_cartage_dbn_whs_pretoria_opt_a_zar: number;
   local_cartage_dbn_whs_pretoria_opt_b_zar: number;
@@ -180,6 +188,10 @@ const COST_ESTIMATE_COLUMNS = [
   'local_cartage_cpt_klapmuts_20ton_zar', 'local_cartage_cpt_klapmuts_28ton_zar',
   'transport_dbn_to_pretoria_20ft_zar', 'transport_dbn_to_pretoria_40ft_zar', 'transport_dbn_to_whs_zar',
   'unpack_reload_zar', 'storage_zar', 'storage_days', 'outlying_depot_surcharge_zar',
+  'warehouse_handling_rate_per_kg_zar', 'warehouse_handling_events',
+  'warehouse_storage_rate_per_kg_month_zar', 'warehouse_storage_months',
+  'warehouse_chargeable_weight_kg', 'warehouse_handling_fee_zar',
+  'warehouse_storage_fee_zar', 'warehouse_charges_subtotal_zar',
   'local_cartage_dbn_whs_pretoria_opt_a_zar', 'local_cartage_dbn_whs_pretoria_opt_b_zar',
   'local_cartage_dbn_whs_pretoria_6m_zar', 'local_cartage_dbn_whs_pretoria_12m_zar',
   'transport_pe_coega_to_pretoria_zar', 'local_charges_subtotal_zar',

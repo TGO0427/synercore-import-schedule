@@ -702,6 +702,14 @@ const migrations = [
             unpack_reload_zar NUMERIC(12,2) DEFAULT 0,
             storage_zar NUMERIC(12,2) DEFAULT 0,
             storage_days INTEGER DEFAULT 0,
+            warehouse_handling_rate_per_kg_zar NUMERIC(8,2) DEFAULT 0.62,
+            warehouse_handling_events NUMERIC(5,2) DEFAULT 2,
+            warehouse_storage_rate_per_kg_month_zar NUMERIC(8,2) DEFAULT 0.82,
+            warehouse_storage_months NUMERIC(5,2) DEFAULT 1,
+            warehouse_chargeable_weight_kg NUMERIC(12,2) DEFAULT 0,
+            warehouse_handling_fee_zar NUMERIC(12,2) DEFAULT 0,
+            warehouse_storage_fee_zar NUMERIC(12,2) DEFAULT 0,
+            warehouse_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0,
             outlying_depot_surcharge_zar NUMERIC(12,2) DEFAULT 0,
             local_cartage_dbn_whs_pretoria_opt_a_zar NUMERIC(12,2) DEFAULT 0,
             local_cartage_dbn_whs_pretoria_opt_b_zar NUMERIC(12,2) DEFAULT 0,
@@ -781,6 +789,14 @@ const migrations = [
         await addColumnIfNotExists('last_mile_extra_charges_zar NUMERIC(12,2) DEFAULT 0');
         await addColumnIfNotExists('last_mile_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0');
         await addColumnIfNotExists("last_mile_charges JSONB DEFAULT '[]'::jsonb");
+        await addColumnIfNotExists('warehouse_handling_rate_per_kg_zar NUMERIC(8,2) DEFAULT 0.62');
+        await addColumnIfNotExists('warehouse_handling_events NUMERIC(5,2) DEFAULT 2');
+        await addColumnIfNotExists('warehouse_storage_rate_per_kg_month_zar NUMERIC(8,2) DEFAULT 0.82');
+        await addColumnIfNotExists('warehouse_storage_months NUMERIC(5,2) DEFAULT 1');
+        await addColumnIfNotExists('warehouse_chargeable_weight_kg NUMERIC(12,2) DEFAULT 0');
+        await addColumnIfNotExists('warehouse_handling_fee_zar NUMERIC(12,2) DEFAULT 0');
+        await addColumnIfNotExists('warehouse_storage_fee_zar NUMERIC(12,2) DEFAULT 0');
+        await addColumnIfNotExists('warehouse_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0');
         await addColumnIfNotExists('air_edi_fee_zar NUMERIC(12,2) DEFAULT 0');
         await addColumnIfNotExists('air_import_documentation_zar NUMERIC(12,2) DEFAULT 0');
         await addColumnIfNotExists('airline_landside_delivery_zar NUMERIC(12,2) DEFAULT 0');

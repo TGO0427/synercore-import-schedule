@@ -55,6 +55,11 @@ const INITIAL_FORM_STATE = {
   unpack_reload_zar: 5430,
   storage_zar: 15,
   storage_days: 0,
+  warehouse_handling_rate_per_kg_zar: 0.62,
+  warehouse_handling_events: 2,
+  warehouse_storage_rate_per_kg_month_zar: 0.82,
+  warehouse_storage_months: 1,
+  warehouse_chargeable_weight_kg: 0,
   outlying_depot_surcharge_zar: 964,
   local_cartage_dbn_whs_pretoria_opt_a_zar: 17000,
   local_cartage_dbn_whs_pretoria_opt_b_zar: 19260,
@@ -480,6 +485,7 @@ function ImportCosting() {
     if (formData.transport_mode === 'air') {
       shippingToAllocate = freightIncluded
         ? (calculatedTotals.air_local_charges_subtotal_zar || 0)
+          + (calculatedTotals.warehouse_charges_subtotal_zar || 0)
           + (calculatedTotals.airfreight_insurance_zar || 0)
         : Math.max((calculatedTotals.total_shipping_cost_zar || 0) - (calculatedTotals.last_mile_charges_subtotal_zar || 0), 0);
     } else if (freightIncluded) {

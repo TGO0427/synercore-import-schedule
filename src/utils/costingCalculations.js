@@ -210,6 +210,23 @@ export const calculateLocalChargesSubtotal = (data) => {
   );
 };
 
+export const calculateWarehouseCharges = (data, weightKg = 0) => {
+  const chargeableWeightKg = parseFloat(data.warehouse_chargeable_weight_kg) || weightKg || 0;
+  const handlingRate = parseFloat(data.warehouse_handling_rate_per_kg_zar) || 0;
+  const handlingEvents = parseFloat(data.warehouse_handling_events) || 0;
+  const storageRate = parseFloat(data.warehouse_storage_rate_per_kg_month_zar) || 0;
+  const storageMonths = parseFloat(data.warehouse_storage_months) || 0;
+  const handlingFeeZar = chargeableWeightKg * handlingRate * handlingEvents;
+  const storageFeeZar = chargeableWeightKg * storageRate * storageMonths;
+
+  return {
+    chargeable_weight_kg: chargeableWeightKg,
+    handling_fee_zar: handlingFeeZar,
+    storage_fee_zar: storageFeeZar,
+    subtotal_zar: handlingFeeZar + storageFeeZar,
+  };
+};
+
 /**
  * Calculate destination charges (port/shipping) subtotal
  */
@@ -399,7 +416,9 @@ export const calculateAllTotals = (data) => {
   const isExport = data.direction === 'export';
 
   // Local charges subtotal (transport/cartage)
-  const localChargesSubtotalZar = calculateLocalChargesSubtotal(data);
+  const warehouseCharges = calculateWarehouseCharges(data, totalGrossWeightKg);
+  const warehouseChargesSubtotalZar = warehouseCharges.subtotal_zar;
+  const localChargesSubtotalZar = calculateLocalChargesSubtotal(data) + warehouseChargesSubtotalZar;
 
   // Destination charges subtotal (port/shipping)
   // For export, this is replaced by Export Charges (Landside, Declaration, VGM,
@@ -492,7 +511,7 @@ export const calculateAllTotals = (data) => {
 
   // Total airfreight cost
   const totalAirfreightCostZar = airfreightTotalZar + fuelSurchargeTotalZar + securitySurchargeTotalZar
-    + airfreightOriginZar + airLocalChargesSubtotalZar + airfreightInsuranceZar + lastMileChargesSubtotalZar;
+    + airfreightOriginZar + airLocalChargesSubtotalZar + warehouseChargesSubtotalZar + airfreightInsuranceZar + lastMileChargesSubtotalZar;
 
   // === Unified shipping cost (sea or air) ===
   // Sea freight total. Origin Charges is omitted under FOB/FCA/EXW (it's goods value,
@@ -520,7 +539,7 @@ export const calculateAllTotals = (data) => {
   if (isAirfreight) {
     // For airfreight: if freight included in price, only allocate local charges + insurance
     shippingToAllocateZar = freightIncluded
-      ? airLocalChargesSubtotalZar + airfreightInsuranceZar + lastMileChargesSubtotalZar
+      ? airLocalChargesSubtotalZar + warehouseChargesSubtotalZar + airfreightInsuranceZar + lastMileChargesSubtotalZar
       : totalAirfreightCostZar;
   } else {
     shippingToAllocateZar = freightIncluded
@@ -555,6 +574,9 @@ export const calculateAllTotals = (data) => {
     total_origin_charges_zar: r(totalOriginChargesZar),
     local_charges_subtotal_zar: r(localChargesSubtotalZar),
     destination_charges_subtotal_zar: r(destinationChargesSubtotalZar),
+    warehouse_handling_fee_zar: r(warehouseCharges.handling_fee_zar),
+    warehouse_storage_fee_zar: r(warehouseCharges.storage_fee_zar),
+    warehouse_charges_subtotal_zar: r(warehouseChargesSubtotalZar),
     last_mile_charges_subtotal_zar: r(lastMileChargesSubtotalZar),
     export_charges_subtotal_zar: r(exportChargesSubtotalZar),
     import_vat_zar: r(importVatZar),
@@ -587,6 +609,7 @@ export const calculateAllTotals = (data) => {
     _last_mile_rate_per_kg_zar: r(lastMile.lines[0]?.calculated.rate_per_kg_zar || 0),
     _last_mile_base_charge_zar: r(lastMile.lines.reduce((sum, line) => sum + (line.calculated.base_charge_zar || 0), 0)),
     _last_mile_fuel_levy_zar: r(lastMile.lines.reduce((sum, line) => sum + (line.calculated.fuel_levy_zar || 0), 0)),
+    _warehouse_chargeable_weight_kg: r(warehouseCharges.chargeable_weight_kg),
     _ocean_freight_usd_zar: r(oceanFreightUsdZar),
     _ocean_freight_eur_zar: r(oceanFreightEurZar),
     _origin_charge_usd_zar: r(originChargeUsdZar),

@@ -22,6 +22,9 @@ export interface CalculatedTotals {
   total_origin_charges_zar: number;
   local_charges_subtotal_zar: number;
   destination_charges_subtotal_zar: number;
+  warehouse_handling_fee_zar?: number;
+  warehouse_storage_fee_zar?: number;
+  warehouse_charges_subtotal_zar?: number;
   agency_fee_zar: number;
   customs_subtotal_zar: number;
   total_shipping_cost_zar: number;
@@ -177,6 +180,14 @@ export class CostingController {
     const oceanFreightUsd = Number(data.ocean_freight_usd) || 0;
     const oceanFreightEur = Number(data.ocean_freight_eur) || 0;
     const totalGrossWeightKg = Number(data.total_gross_weight_kg) || 0;
+    const warehouseChargeableWeightKg = Number((data as any).warehouse_chargeable_weight_kg) || totalGrossWeightKg;
+    const warehouseHandlingFeeZar = warehouseChargeableWeightKg
+      * (Number((data as any).warehouse_handling_rate_per_kg_zar) || 0)
+      * (Number((data as any).warehouse_handling_events) || 0);
+    const warehouseStorageFeeZar = warehouseChargeableWeightKg
+      * (Number((data as any).warehouse_storage_rate_per_kg_month_zar) || 0)
+      * (Number((data as any).warehouse_storage_months) || 0);
+    const warehouseChargesSubtotalZar = warehouseHandlingFeeZar + warehouseStorageFeeZar;
 
     // Calculate customs value from invoice values
     const customsValueZar = this.calculateCustomsValue(data);
@@ -206,7 +217,8 @@ export class CostingController {
       (Number(data.local_cartage_dbn_whs_pretoria_opt_b_zar) || 0) +
       (Number(data.local_cartage_dbn_whs_pretoria_6m_zar) || 0) +
       (Number(data.local_cartage_dbn_whs_pretoria_12m_zar) || 0) +
-      (Number(data.transport_pe_coega_to_pretoria_zar) || 0);
+      (Number(data.transport_pe_coega_to_pretoria_zar) || 0) +
+      warehouseChargesSubtotalZar;
 
     // Destination charges subtotal (Port/Shipping)
     const destinationChargesSubtotalZar =
@@ -262,6 +274,9 @@ export class CostingController {
       total_origin_charges_zar: Math.round(totalOriginChargesZar * 100) / 100,
       local_charges_subtotal_zar: Math.round(localChargesSubtotalZar * 100) / 100,
       destination_charges_subtotal_zar: Math.round(destinationChargesSubtotalZar * 100) / 100,
+      warehouse_handling_fee_zar: Math.round(warehouseHandlingFeeZar * 100) / 100,
+      warehouse_storage_fee_zar: Math.round(warehouseStorageFeeZar * 100) / 100,
+      warehouse_charges_subtotal_zar: Math.round(warehouseChargesSubtotalZar * 100) / 100,
       agency_fee_zar: Math.round(agencyFeeZar * 100) / 100,
       customs_subtotal_zar: Math.round(customsSubtotalZar * 100) / 100,
       total_shipping_cost_zar: Math.round(totalShippingCostZar * 100) / 100,
