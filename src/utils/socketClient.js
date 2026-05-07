@@ -30,16 +30,26 @@ class SocketClient {
     this.isConnected = false;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
+    this.connectionRefs = 0;
   }
 
   /**
    * Initialize Socket.io connection
    * @param {string} token - JWT token for authentication
    */
-  connect(token = null) {
-    if (this.socket?.connected) {
-      logDiagnostics('Already connected, skipping connection attempt');
-      return; // Already connected
+  connect(token = null, { retain = true } = {}) {
+    if (retain) this.connectionRefs++;
+
+    if (this.socket) {
+      if (this.socket.connected) {
+        logDiagnostics('Already connected, skipping connection attempt');
+      }
+      return this.socket;
+    }
+
+    if (!navigator.onLine) {
+      logDiagnostics('Browser is offline, skipping connection attempt');
+      return null;
     }
 
     try {
@@ -132,7 +142,7 @@ class SocketClient {
         totalAttempts: this.reconnectAttempts,
         fallback: 'Using polling mode for data updates'
       });
-      this.disconnect();
+      this.disconnect({ force: true });
     }
   }
 
@@ -161,10 +171,8 @@ class SocketClient {
    * @param {Function} callback - Callback function
    */
   on(event, callback) {
-    if (!this.socket) {
-      console.warn('[SocketClient] Socket not initialized');
-      return;
-    }
+    if (!this.socket) this.connect(null, { retain: false });
+    if (!this.socket) return;
 
     this.socket.on(event, callback);
   }
@@ -175,10 +183,8 @@ class SocketClient {
    * @param {Function} callback - Callback function
    */
   once(event, callback) {
-    if (!this.socket) {
-      console.warn('[SocketClient] Socket not initialized');
-      return;
-    }
+    if (!this.socket) this.connect(null, { retain: false });
+    if (!this.socket) return;
 
     this.socket.once(event, callback);
   }
@@ -197,7 +203,14 @@ class SocketClient {
   /**
    * Disconnect from server
    */
-  disconnect() {
+  disconnect({ force = false } = {}) {
+    if (force) {
+      this.connectionRefs = 0;
+    } else {
+      this.connectionRefs = Math.max(0, this.connectionRefs - 1);
+      if (this.connectionRefs > 0) return;
+    }
+
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
@@ -228,7 +241,7 @@ class SocketClient {
     if (this.socket) {
       this.socket.connect();
     } else {
-      this.connect();
+      this.connect(null, { retain: false });
     }
   }
 

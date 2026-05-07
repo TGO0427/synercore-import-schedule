@@ -70,10 +70,29 @@ import socketManager from './websocket/socketManager.ts';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+/* ============ CORS - Whitelist allowed origins ============ */
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3002',
+  'http://localhost:5173',
+  'https://synercore-import-schedule.vercel.app',
+  process.env.FRONTEND_URL,
+  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [])
+].filter(Boolean); // Remove any undefined/null values
+
 const app = express();
 // ✅ Railway health check — MUST bypass all middleware
 app.use((req, res, next) => {
   if (req.path === '/health' || req.path.startsWith('/health/')) {
+    const origin = req.headers.origin;
+    if (origin && allowedOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cache-Control, Pragma, X-Requested-With');
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
     return res.status(200).send('OK');
   }
   next();
@@ -84,16 +103,6 @@ const PORT = process.env.PORT || 5001;
 
 // Create HTTP server for Socket.io compatibility
 const httpServer = http.createServer(app);
-
-/* ============ CORS - Whitelist allowed origins ============ */
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3002',
-  'http://localhost:5173',
-  'https://synercore-import-schedule.vercel.app',
-  process.env.FRONTEND_URL,
-  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [])
-].filter(Boolean); // Remove any undefined/null values
 
 logger.info('CORS origins configured', { origins: allowedOrigins });
 
