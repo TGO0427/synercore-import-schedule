@@ -200,13 +200,13 @@ function PostArrivalWorkflow() {
     if (action === 'mark-stored') {
       try {
         setActionLoading(true);
-        const response = await authFetch(getApiUrl(`/api/shipments/${shipment.id}`), {
-          method: 'PUT',
+        const response = await authFetch(getApiUrl(`/api/shipments/${shipment.id}/status`), {
+          method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            latestStatus: 'stored'
+            status: 'stored'
           })
         });
 
@@ -268,10 +268,10 @@ function PostArrivalWorkflow() {
       if (!confirmed) return;
       try {
         setActionLoading(true);
-        const response = await authFetch(getApiUrl(`/api/shipments/${shipment.id}`), {
-          method: 'PUT',
+        const response = await authFetch(getApiUrl(`/api/shipments/${shipment.id}/status`), {
+          method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ latestStatus: 'in_transit_seafreight' })
+          body: JSON.stringify({ status: 'in_transit_seafreight' })
         });
         if (response.ok) {
           showSuccess(`Shipment ${shipment.orderRef} has been reverted to shipping status and will now appear in the Shipping Schedule.`);
@@ -804,10 +804,10 @@ function PostArrivalWorkflow() {
               if (allSuccess || responses.length === 0) {
                 // If mark as stored was checked, make another call to mark as stored
                 if (formData.markAsStored && (workflowAction === 'complete-receiving' || workflowAction === 'start-receiving')) {
-                  const storedResponse = await authFetch(getApiUrl(`/api/shipments/${selectedShipment.id}`), {
-                    method: 'PUT',
+                  const storedResponse = await authFetch(getApiUrl(`/api/shipments/${selectedShipment.id}/status`), {
+                    method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ latestStatus: 'stored' })
+                    body: JSON.stringify({ status: 'stored' })
                   });
 
                   if (storedResponse.ok) {
