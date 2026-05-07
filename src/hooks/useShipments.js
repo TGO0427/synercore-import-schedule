@@ -178,7 +178,14 @@ export function useShipments() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
       });
-      if (!response.ok) throw new Error('Failed to update shipment');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const fieldDetails = errorData?.details?.fields || errorData?.details;
+        const validationMessage = Array.isArray(fieldDetails)
+          ? fieldDetails.map((field) => `${field.field || field.path}: ${field.message || field.msg}`).join(', ')
+          : null;
+        throw new Error(validationMessage || errorData?.error || 'Failed to update shipment');
+      }
       await fetchShipments();
       showSuccess('Shipment updated successfully');
     } catch (err) { showError(err.message); }

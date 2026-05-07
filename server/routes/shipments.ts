@@ -91,7 +91,7 @@ const validateUpdateShipment = [
     ])
     .withMessage('Invalid shipment status'),
   body('notes').optional().trim(),
-  body('quantity').optional().isInt({ min: 1 }).withMessage('Quantity must be a positive integer'),
+  body('quantity').optional({ nullable: true }).isInt({ min: 0 }).withMessage('Quantity must be a non-negative integer'),
   // Additional fields that frontend sends during amendment
   body('supplier').optional().trim(),
   body('orderRef').optional().trim(),
