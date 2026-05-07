@@ -97,9 +97,6 @@ function WarehouseCapacity({ shipments, initialWarehouse = 'all', lockWarehouse 
   const [editableBinsUsed, setEditableBinsUsed] = useState({});
   const [savedBinsUsed, setSavedBinsUsed] = useState({});
   const [pendingChanges, setPendingChanges] = useState({});
-  const [editableAvailableBins, setEditableAvailableBins] = useState({});
-  const [savedAvailableBins, setSavedAvailableBins] = useState({});
-  const [pendingAvailableBinsChanges, setPendingAvailableBinsChanges] = useState({});
   const [editableTotalCapacity, setEditableTotalCapacity] = useState({});
   const [savedTotalCapacity, setSavedTotalCapacity] = useState({});
   const [pendingTotalCapacityChanges, setPendingTotalCapacityChanges] = useState({});
@@ -125,12 +122,10 @@ function WarehouseCapacity({ shipments, initialWarehouse = 'all', lockWarehouse 
           const data = await response.json();
 
           // Handle both old and new API response formats
-          if (data.binsUsed && data.availableBins) {
-            // New format with binsUsed, availableBins, and optionally totalCapacity
+          if (data.binsUsed) {
+            // New format with binsUsed and optionally totalCapacity
             setEditableBinsUsed(data.binsUsed);
             setSavedBinsUsed(data.binsUsed);
-            setEditableAvailableBins(data.availableBins);
-            setSavedAvailableBins(data.availableBins);
             if (data.totalCapacity) {
               setEditableTotalCapacity(data.totalCapacity);
               setSavedTotalCapacity(data.totalCapacity);
@@ -329,27 +324,6 @@ function WarehouseCapacity({ shipments, initialWarehouse = 'all', lockWarehouse 
     }
   }, [editableBinsUsed, savedBinsUsed]);
 
-  const handleAvailableBinsChange = useCallback((warehouse, newValue) => {
-    const updatedAvailableBins = {
-      ...editableAvailableBins,
-      [warehouse]: newValue
-    };
-
-    setEditableAvailableBins(updatedAvailableBins);
-
-    // Track as pending if different from saved value
-    if (newValue !== savedAvailableBins[warehouse]) {
-      setPendingAvailableBinsChanges(prev => ({ ...prev, [warehouse]: newValue }));
-    } else {
-      // Remove from pending if value matches saved value
-      setPendingAvailableBinsChanges(prev => {
-        const updated = { ...prev };
-        delete updated[warehouse];
-        return updated;
-      });
-    }
-  }, [editableAvailableBins, savedAvailableBins]);
-
   const handleTotalCapacityChange = useCallback((warehouse, newValue) => {
     const updatedTotalCapacity = {
       ...editableTotalCapacity,
@@ -373,10 +347,9 @@ function WarehouseCapacity({ shipments, initialWarehouse = 'all', lockWarehouse 
 
   const saveAllChanges = useCallback(async () => {
     const hasPendingBinsChanges = Object.keys(pendingChanges).length > 0;
-    const hasPendingAvailableBinsChanges = Object.keys(pendingAvailableBinsChanges).length > 0;
     const hasPendingTotalCapacityChanges = Object.keys(pendingTotalCapacityChanges).length > 0;
 
-    if (!hasPendingBinsChanges && !hasPendingAvailableBinsChanges && !hasPendingTotalCapacityChanges) return;
+    if (!hasPendingBinsChanges && !hasPendingTotalCapacityChanges) return;
 
     setIsSaving(true);
     const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
@@ -426,40 +399,6 @@ function WarehouseCapacity({ shipments, initialWarehouse = 'all', lockWarehouse 
       }
     }
 
-    // Save available bins changes
-    for (const [warehouse, newValue] of Object.entries(pendingAvailableBinsChanges)) {
-      try {
-        const url = `${apiUrl}/api/warehouse-capacity/${encodeURIComponent(warehouse)}/available-bins`;
-        const response = await fetch(url, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            ...authUtils.getAuthHeader()
-          },
-          body: JSON.stringify({ availableBins: newValue }),
-        });
-
-        if (response.status === 401 || response.status === 403) {
-          showError('Your session has expired. Please log in again.');
-          authUtils.clearAuth();
-          window.location.reload();
-          setIsSaving(false);
-          return;
-        }
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to save available bins: ${response.status} ${errorText}`);
-        }
-
-        await response.json();
-        successCount++;
-      } catch (error) {
-        console.error(`Failed to save ${warehouse} available bins:`, error.message);
-        failCount++;
-      }
-    }
-
     // Save total capacity changes
     for (const [warehouse, newValue] of Object.entries(pendingTotalCapacityChanges)) {
       try {
@@ -497,8 +436,6 @@ function WarehouseCapacity({ shipments, initialWarehouse = 'all', lockWarehouse 
     // Update saved values and clear pending changes
     setSavedBinsUsed({ ...editableBinsUsed });
     setPendingChanges({});
-    setSavedAvailableBins({ ...editableAvailableBins });
-    setPendingAvailableBinsChanges({});
     setSavedTotalCapacity({ ...editableTotalCapacity });
     setPendingTotalCapacityChanges({});
     setIsSaving(false);
@@ -513,11 +450,9 @@ function WarehouseCapacity({ shipments, initialWarehouse = 'all', lockWarehouse 
         const response = await fetch(`${apiUrl}/api/warehouse-capacity`);
         if (response.ok) {
           const data = await response.json();
-          if (data.binsUsed && data.availableBins) {
+          if (data.binsUsed) {
             setEditableBinsUsed(data.binsUsed);
             setSavedBinsUsed(data.binsUsed);
-            setEditableAvailableBins(data.availableBins);
-            setSavedAvailableBins(data.availableBins);
             if (data.totalCapacity) {
               setEditableTotalCapacity(data.totalCapacity);
               setSavedTotalCapacity(data.totalCapacity);
@@ -529,7 +464,7 @@ function WarehouseCapacity({ shipments, initialWarehouse = 'all', lockWarehouse 
         // Silently fail - data will refresh on next load
       }
     }
-  }, [pendingChanges, pendingAvailableBinsChanges, pendingTotalCapacityChanges, editableBinsUsed, editableAvailableBins, editableTotalCapacity]);
+  }, [pendingChanges, pendingTotalCapacityChanges, editableBinsUsed, editableTotalCapacity]);
 
   const handleCardClick = useCallback((warehouse) => {
     if (lockWarehouse) return;
@@ -1485,10 +1420,10 @@ function WarehouseCapacity({ shipments, initialWarehouse = 'all', lockWarehouse 
               ))}
             </select>
           )}
-          {(Object.keys(pendingChanges).length > 0 || Object.keys(pendingAvailableBinsChanges).length > 0 || Object.keys(pendingTotalCapacityChanges).length > 0) && (
+          {(Object.keys(pendingChanges).length > 0 || Object.keys(pendingTotalCapacityChanges).length > 0) && (
             <button onClick={saveAllChanges} disabled={isSaving} className="btn"
               style={{ background: 'var(--accent)', color: '#fff', fontSize: 13, border: 'none', fontWeight: 600 }}>
-              {isSaving ? 'Saving...' : `Save ${Object.keys(pendingChanges).length + Object.keys(pendingAvailableBinsChanges).length + Object.keys(pendingTotalCapacityChanges).length} change${(Object.keys(pendingChanges).length + Object.keys(pendingAvailableBinsChanges).length + Object.keys(pendingTotalCapacityChanges).length) !== 1 ? 's' : ''}`}
+              {isSaving ? 'Saving...' : `Save ${Object.keys(pendingChanges).length + Object.keys(pendingTotalCapacityChanges).length} change${(Object.keys(pendingChanges).length + Object.keys(pendingTotalCapacityChanges).length) !== 1 ? 's' : ''}`}
             </button>
           )}
           <button className="btn btn-ghost" onClick={handleExportToPDF} style={{ fontSize: 13 }}>PDF</button>
@@ -1513,7 +1448,7 @@ function WarehouseCapacity({ shipments, initialWarehouse = 'all', lockWarehouse 
         >
           <span style={{ transform: showSettings ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s', fontSize: 11 }}>▶</span>
           Warehouse Settings
-          <span style={{ fontWeight: 400, color: 'var(--text-500)', fontSize: 12 }}>Edit bins used, available bins, and total capacity</span>
+          <span style={{ fontWeight: 400, color: 'var(--text-500)', fontSize: 12 }}>Edit bins used and total capacity; available bins is calculated</span>
         </button>
         {showSettings && (
           <div className="dash-panel" style={{ borderRadius: '0 0 8px 8px', padding: '1rem 1.25rem' }}>
@@ -1527,38 +1462,56 @@ function WarehouseCapacity({ shipments, initialWarehouse = 'all', lockWarehouse 
                 </tr>
               </thead>
               <tbody>
-                {filteredWarehouses.map(([warehouse, stats]) => (
-                  <tr key={warehouse} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '10px 0', fontWeight: 600, color: 'var(--text-900)' }}>{warehouse}</td>
-                    <td style={{ textAlign: 'center', padding: '10px 0' }}>
-                      <input type="number" className="input"
-                        value={editableBinsUsed[warehouse] !== undefined ? editableBinsUsed[warehouse] : stats.usedBins}
-                        onChange={(e) => handleBinsUsedChange(warehouse, Math.max(0, Math.min(parseInt(e.target.value) || 0, stats.totalBins)))}
-                        style={{ width: 70, textAlign: 'center', fontSize: 13, fontWeight: 700,
-                          border: pendingChanges[warehouse] !== undefined ? '2px solid var(--warning)' : undefined,
-                          backgroundColor: pendingChanges[warehouse] !== undefined ? '#fff3e0' : undefined }}
-                        min="0" max={stats.totalBins} />
-                    </td>
-                    <td style={{ textAlign: 'center', padding: '10px 0' }}>
-                      <input type="number" className="input"
-                        value={editableAvailableBins[warehouse] !== undefined ? editableAvailableBins[warehouse] : stats.availableBins}
-                        onChange={(e) => handleAvailableBinsChange(warehouse, Math.max(0, parseInt(e.target.value) || 0))}
-                        style={{ width: 70, textAlign: 'center', fontSize: 13, fontWeight: 700,
-                          border: pendingAvailableBinsChanges[warehouse] !== undefined ? '2px solid var(--success)' : undefined,
-                          backgroundColor: pendingAvailableBinsChanges[warehouse] !== undefined ? '#e8f5e9' : undefined }}
-                        min="0" />
-                    </td>
-                    <td style={{ textAlign: 'center', padding: '10px 0' }}>
-                      <input type="number" className="input"
-                        value={editableTotalCapacity[warehouse] !== undefined ? editableTotalCapacity[warehouse] : stats.totalBins}
-                        onChange={(e) => handleTotalCapacityChange(warehouse, Math.max(0, parseInt(e.target.value) || 0))}
-                        style={{ width: 70, textAlign: 'center', fontSize: 13, fontWeight: 700,
-                          border: pendingTotalCapacityChanges[warehouse] !== undefined ? '2px solid var(--info)' : undefined,
-                          backgroundColor: pendingTotalCapacityChanges[warehouse] !== undefined ? '#e3f2fd' : undefined }}
-                        min="0" />
-                    </td>
-                  </tr>
-                ))}
+                {filteredWarehouses.map(([warehouse, stats]) => {
+                  const currentBinsUsed = editableBinsUsed[warehouse] !== undefined ? editableBinsUsed[warehouse] : stats.usedBins;
+                  const totalCapacity = editableTotalCapacity[warehouse] !== undefined ? editableTotalCapacity[warehouse] : stats.totalBins;
+                  const availableBins = totalCapacity - currentBinsUsed;
+
+                  return (
+                    <tr key={warehouse} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '10px 0', fontWeight: 600, color: 'var(--text-900)' }}>{warehouse}</td>
+                      <td style={{ textAlign: 'center', padding: '10px 0' }}>
+                        <input type="number" className="input"
+                          value={currentBinsUsed}
+                          onChange={(e) => handleBinsUsedChange(warehouse, Math.max(0, Math.min(parseInt(e.target.value) || 0, totalCapacity)))}
+                          style={{ width: 70, textAlign: 'center', fontSize: 13, fontWeight: 700,
+                            border: pendingChanges[warehouse] !== undefined ? '2px solid var(--warning)' : undefined,
+                            backgroundColor: pendingChanges[warehouse] !== undefined ? '#fff3e0' : undefined }}
+                          min="0" max={totalCapacity} />
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '10px 0' }}>
+                        <span
+                          className="input"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 70,
+                            minHeight: 34,
+                            textAlign: 'center',
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: availableBins >= 0 ? 'var(--text-900)' : 'var(--danger)',
+                            backgroundColor: 'var(--surface-2)',
+                            cursor: 'default'
+                          }}
+                          title="Total capacity minus bins used"
+                        >
+                          {availableBins >= 0 ? availableBins : `(${Math.abs(availableBins)})`}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '10px 0' }}>
+                        <input type="number" className="input"
+                          value={totalCapacity}
+                          onChange={(e) => handleTotalCapacityChange(warehouse, Math.max(0, parseInt(e.target.value) || 0))}
+                          style={{ width: 70, textAlign: 'center', fontSize: 13, fontWeight: 700,
+                            border: pendingTotalCapacityChanges[warehouse] !== undefined ? '2px solid var(--info)' : undefined,
+                            backgroundColor: pendingTotalCapacityChanges[warehouse] !== undefined ? '#e3f2fd' : undefined }}
+                          min="0" />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
