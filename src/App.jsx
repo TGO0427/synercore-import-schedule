@@ -928,6 +928,7 @@ function App() {
                 <ErrorBoundary>
                   <ShippingView
                     shipments={shipments}
+                    suppliers={suppliers}
                     onFileUpload={async (file) => {
                       await handleFileUpload(file, handleAddSupplier);
                       await fetchSuppliers();

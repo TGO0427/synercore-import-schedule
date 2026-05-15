@@ -34,7 +34,7 @@ const STAT_CARD_DEFS = [
   { key: 'cancelled', status: 'cancelled', label: 'Cancelled', icon: '\u274C', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
 ];
 
-function ShippingView({ shipments, onFileUpload, onUpdateShipment, onDeleteShipment, onCreateShipment, loading }) {
+function ShippingView({ shipments, suppliers = [], onFileUpload, onUpdateShipment, onDeleteShipment, onCreateShipment, loading }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const statusFilter = searchParams.get('status') || null;
   const globalSearchTerm = searchParams.get('search') || '';
@@ -208,6 +208,7 @@ function ShippingView({ shipments, onFileUpload, onUpdateShipment, onDeleteShipm
 
       <ShipmentTable
         shipments={shippingShipments}
+        suppliers={suppliers}
         onUpdateShipment={onUpdateShipment}
         onDeleteShipment={onDeleteShipment}
         onCreateShipment={onCreateShipment}

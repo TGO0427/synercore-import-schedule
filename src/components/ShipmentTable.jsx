@@ -15,7 +15,7 @@ import { authFetch } from '../utils/authFetch';
 import { copyToClipboard } from '../utils/clipboard';
 import { useNotification } from '../contexts/NotificationContext';
 
-function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreateShipment, loading, globalSearchTerm, onClearGlobalSearch }) {
+function ShipmentTable({ shipments, suppliers = [], onUpdateShipment, onDeleteShipment, onCreateShipment, loading, globalSearchTerm, onClearGlobalSearch }) {
   const { showSuccess, showError, confirm: confirmAction } = useNotification();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState(['all']);
@@ -112,15 +112,19 @@ function ShipmentTable({ shipments, onUpdateShipment, onDeleteShipment, onCreate
     return filtered;
   }, [shipments, searchTerm, statusFilter, sortConfig, weekFrom, weekTo]);
 
-  // Extract unique suppliers for dropdown
+  // Extract unique suppliers for dropdown. Use both the supplier master list
+  // and current shipments so new shipments can be created before a supplier
+  // has an active visible shipment.
   const uniqueSuppliers = useMemo(() => {
-    const suppliers = shipments
-      .map(shipment => shipment.supplier)
+    const supplierNames = [
+      ...suppliers.map(supplier => supplier?.name),
+      ...shipments.map(shipment => shipment.supplier),
+    ]
       .filter(supplier => supplier && supplier.trim() !== '')
       .filter((supplier, index, self) => self.indexOf(supplier) === index)
       .sort();
-    return suppliers;
-  }, [shipments]);
+    return supplierNames;
+  }, [shipments, suppliers]);
 
   const handleSort = (key) => {
     let direction = 'asc';
