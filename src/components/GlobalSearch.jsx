@@ -123,7 +123,9 @@ function GlobalSearch({ shipments }) {
   const handleSelect = (shipment) => {
     setOpen(false);
     setQuery('');
-    navigate(`/shipping?search=${encodeURIComponent(shipment.orderRef)}`);
+    const searchValue = shipment.orderRef || query;
+    const targetPath = shipment.latestStatus === 'stored' ? '/stored' : '/shipping';
+    navigate(`${targetPath}?search=${encodeURIComponent(searchValue)}`);
   };
 
   const highlight = (text, q) => {
