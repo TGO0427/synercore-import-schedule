@@ -35,17 +35,71 @@ export class ExcelProcessor {
 
     return null;
   }
+  static _excelSerialToDate(value) {
+    const serial = Number(value);
+    if (!Number.isFinite(serial) || serial < 30000 || serial > 60000) return null;
+
+    const parsed = XLSX.SSF.parse_date_code(serial);
+    if (!parsed) return null;
+
+    return new Date(parsed.y, parsed.m - 1, parsed.d);
+  }
+  static _parseDateString(value) {
+    const raw = String(value ?? '').trim();
+    if (!raw) return null;
+
+    const isoMatch = raw.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
+    if (isoMatch) {
+      const [, year, month, day] = isoMatch;
+      const date = new Date(Number(year), Number(month) - 1, Number(day));
+      return isNaN(date.getTime()) ? null : date;
+    }
+
+    const localMatch = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+    if (localMatch) {
+      const [, day, month, year] = localMatch;
+      const date = new Date(Number(year), Number(month) - 1, Number(day));
+      return isNaN(date.getTime()) ? null : date;
+    }
+
+    return null;
+  }
+  static _getWeekSource(row) {
+    return row['WEEK NUMBER'] ??
+      row['Week Number'] ??
+      row['WEEK'] ??
+      row['Week'] ??
+      row['DELIVERY DATE'] ??
+      row['Delivery Date'] ??
+      row['DELIVERY DATES'] ??
+      row['Delivery Dates'] ??
+      row['DEL DATE'] ??
+      row['Del Date'] ??
+      row['ETA DATE'] ??
+      row['ETA Date'] ??
+      row['ETA'];
+  }
   static parseWeekNumber(weekValue) {
     if (!weekValue && weekValue !== 0) return null;
-    if (typeof weekValue === 'number') return weekValue;
-    const valueStr = weekValue.toString();
-    if (/-/.test(valueStr)) {
-      const d = new Date(valueStr);
-      if (!isNaN(d.getTime())) {
-        const y0 = new Date(d.getFullYear(), 0, 1);
-        return Math.ceil((((d - y0) / 86400000) + y0.getDay() + 1) / 7);
-      }
+    if (weekValue instanceof Date && !isNaN(weekValue.getTime())) {
+      return getWeekNumber(weekValue);
     }
+    if (typeof weekValue === 'number') {
+      if (weekValue >= 1 && weekValue <= 53) return weekValue;
+      const date = this._excelSerialToDate(weekValue);
+      return date ? getWeekNumber(date) : weekValue;
+    }
+    const valueStr = weekValue.toString().trim();
+    if (/^\d+(\.\d+)?$/.test(valueStr)) {
+      const numericValue = Number(valueStr);
+      if (numericValue >= 1 && numericValue <= 53) return numericValue;
+      const date = this._excelSerialToDate(numericValue);
+      if (date) return getWeekNumber(date);
+    }
+
+    const parsedDate = this._parseDateString(valueStr);
+    if (parsedDate) return getWeekNumber(parsedDate);
+
     const weekNum = parseInt(valueStr.replace(/\D/g, ''), 10);
     return isNaN(weekNum) ? null : weekNum;
   }
@@ -159,7 +213,7 @@ export class ExcelProcessor {
     }
 
     // Week Number validation (1-53)
-    const weekNumber = this.parseWeekNumber(row['WEEK NUMBER'] || row['Week Number']);
+    const weekNumber = this.parseWeekNumber(this._getWeekSource(row));
     if (weekNumber && (weekNumber < 1 || weekNumber > 53)) {
       errors.push(new ExcelValidationError(rowIndex, 'WEEK NUMBER', 'Week Number must be between 1 and 53'));
     }
@@ -285,7 +339,7 @@ export class ExcelProcessor {
         row['PALLET QTY'] ?? row['Pallet Qty'] ?? row['PALLETS'] ?? row['Pallet'] ?? row['Pallet Quantity'] ?? row['pallet qty'] ?? row['pallets'];
       const palletQtyValue = this.parseQuantity(palletQtyRaw);
 
-      const weekNumber = this.parseWeekNumber(row['WEEK NUMBER'] || row['Week Number']);
+      const weekNumber = this.parseWeekNumber(this._getWeekSource(row));
       const selectedWeekDate = this.calculateWeekDate(weekNumber);
 
       return new Shipment({
