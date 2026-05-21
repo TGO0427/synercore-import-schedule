@@ -38,6 +38,7 @@ const ChartEmpty = ({ label }) => (
 const STATUS_COLORS = { Planned: '#f59e0b', 'In Transit': '#3b82f6', Stored: '#10b981', Delayed: '#ef4444', Cancelled: '#6b7280' };
 const WAREHOUSE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 const RANK_COLORS = ['#f59e0b', '#94a3b8', '#cd7f32', '#64748b', '#64748b'];
+const STORED_AVERAGE_YEAR = 2026;
 
 function Dashboard({ shipments, onOpenLiveBoard }) {
   const navigate = useNavigate();
@@ -635,6 +636,25 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
 
   const formattedStorageCost = `R${Math.round(totalStorageCost).toLocaleString('en-ZA')}`;
 
+  const avgStoredShipments2026PerMonth = useMemo(() => {
+    const now = new Date();
+    const monthsInAverage = now.getFullYear() === STORED_AVERAGE_YEAR
+      ? now.getMonth() + 1
+      : now.getFullYear() > STORED_AVERAGE_YEAR ? 12 : 0;
+    if (monthsInAverage === 0) return '0';
+
+    const storedRefs = new Set();
+    internationalShipments.forEach(s => {
+      if (![ShipmentStatus.STORED, ShipmentStatus.ARCHIVED].includes(s.latestStatus)) return;
+      const storedDate = new Date(s.storedDate || s.receivingDate || s.updatedAt || s.createdAt);
+      if (Number.isNaN(storedDate.getTime()) || storedDate.getFullYear() !== STORED_AVERAGE_YEAR) return;
+      storedRefs.add(String(s.orderRef || s.id || '').trim().toUpperCase());
+    });
+
+    const average = storedRefs.size / monthsInAverage;
+    return Number.isInteger(average) ? String(average) : average.toFixed(1);
+  }, [internationalShipments]);
+
   const getUpcomingOrders = () => {
     const currentWeek = getCurrentWeek();
     const activeStatuses = [
@@ -659,7 +679,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
   const kpiCards = [
     { key: 'total', value: stats.total, label: 'Total Shipments', icon: '📦', ring: 'ring-accent', tint: 'rgba(5,150,105,0.1)', filter: null, delta: stats.deltas.total, pctDelta: pctDeltas.total },
     { key: 'transit', value: stats.inTransit, label: 'In Transit', icon: '🚢', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)', filter: 'in_transit', delta: stats.deltas.inTransit, pctDelta: pctDeltas.inTransit, info: stats.inTransit > 0 ? { label: 'Active', pill: 'pill-info' } : null },
-    { key: 'stored', value: stats.stored, label: 'Stored', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)', filter: 'stored', view: 'stored', delta: stats.deltas.stored, pctDelta: pctDeltas.stored, info: stats.stored > 0 ? { label: 'In Stock', pill: 'pill-ok' } : null },
+    { key: 'stored', value: stats.stored, label: 'Stored', icon: '✅', ring: 'ring-success', tint: 'rgba(16,185,129,0.1)', filter: 'stored', view: 'stored', delta: stats.deltas.stored, pctDelta: pctDeltas.stored, info: { label: `${avgStoredShipments2026PerMonth}/mo in 2026`, pill: 'pill-ok' } },
     { key: 'delayed', value: stats.delayed, label: 'Delayed', icon: '⚠️', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)', filter: 'delayed', delta: stats.deltas.delayed, pctDelta: pctDeltas.delayed, info: stats.delayed > 0 ? { label: 'Needs Attention', pill: 'pill-bad' } : null },
     { key: 'planned', value: stats.planned, label: 'Planned', icon: '📅', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)', filter: 'planned', delta: stats.deltas.planned, pctDelta: pctDeltas.planned },
     { key: 'berthWorking', value: stats.berthWorking, label: 'Berth Working', icon: '🏗️', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)', filter: 'berth_working', delta: null, pctDelta: null, info: stats.berthWorking > 0 ? { label: 'At Port', pill: 'pill-info' } : null },

@@ -4,7 +4,7 @@
     "target": "ES2022",
     "lib": ["ES2022"],
     "module": "ES2022",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
 
     /* Emit Settings */
     "declaration": true,
@@ -45,17 +45,16 @@
     "skipLibCheck": true,
 
     /* Path Mapping */
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["server/*"],
-      "@config/*": ["server/config/*"],
-      "@middleware/*": ["server/middleware/*"],
-      "@routes/*": ["server/routes/*"],
-      "@utils/*": ["server/utils/*"],
-      "@db/*": ["server/db/*"],
-      "@types/*": ["server/types/*"],
-      "@websocket/*": ["server/websocket/*"],
-      "@jobs/*": ["server/jobs/*"]
+      "@/*": ["./server/*"],
+      "@config/*": ["./server/config/*"],
+      "@middleware/*": ["./server/middleware/*"],
+      "@routes/*": ["./server/routes/*"],
+      "@utils/*": ["./server/utils/*"],
+      "@db/*": ["./server/db/*"],
+      "@types/*": ["./server/types/*"],
+      "@websocket/*": ["./server/websocket/*"],
+      "@jobs/*": ["./server/jobs/*"]
     }
   },
   "include": [
