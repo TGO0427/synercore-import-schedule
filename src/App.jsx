@@ -255,7 +255,7 @@ function App() {
   }, [theme]);
 
   // WebSocket integration
-  const { isConnected: wsConnected, onShipmentUpdate, onDocumentUpload } = useWebSocket();
+  const { isConnected: wsConnected, onShipmentUpdate, onDocumentUpload } = useWebSocket({ enabled: isAuthenticated });
 
   const initializedRef = useRef(false);
 

@@ -3,7 +3,7 @@
  * Tracks user interactions and page views
  */
 
-const GA_ID = process.env.REACT_APP_GA_ID;
+const GA_ID = import.meta.env.VITE_GA_ID || import.meta.env.VITE_GA_MEASUREMENT_ID;
 
 /**
  * Initialize Google Analytics
@@ -11,7 +11,7 @@ const GA_ID = process.env.REACT_APP_GA_ID;
  */
 export function initializeAnalytics() {
   if (!GA_ID) {
-    console.warn('⚠️  REACT_APP_GA_ID not set. Analytics disabled.');
+    console.warn('⚠️  VITE_GA_ID not set. Analytics disabled.');
     return false;
   }
 

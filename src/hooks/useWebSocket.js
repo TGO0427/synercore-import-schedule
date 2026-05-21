@@ -14,12 +14,19 @@ import socketClient from '../utils/socketClient';
  *   onDocumentUpload((data) => console.log('Document uploaded:', data));
  * }, [onShipmentUpdate, onDocumentUpload]);
  */
-export function useWebSocket() {
+export function useWebSocket({ enabled = true } = {}) {
   const [isConnected, setIsConnected] = useState(false);
   const [activeShipments, setActiveShipments] = useState(new Set());
 
   // Initialize WebSocket on mount
   useEffect(() => {
+    if (!enabled) {
+      setIsConnected(false);
+      setActiveShipments(new Set());
+      socketClient.disconnect({ force: true });
+      return undefined;
+    }
+
     const handleConnect = () => {
       setIsConnected(true);
     };
@@ -39,28 +46,28 @@ export function useWebSocket() {
       socketClient.off('disconnect', handleDisconnect);
       socketClient.disconnect();
     };
-  }, []);
+  }, [enabled]);
 
   /**
    * Join a shipment room to receive real-time updates
    * @param {string} shipmentId - Shipment ID
    */
   const joinShipment = useCallback((shipmentId) => {
-    if (!shipmentId) return;
+    if (!enabled || !shipmentId) return;
 
     socketClient.emit('join:shipment', { shipmentId }, (response) => {
       if (response?.shipmentId) {
         setActiveShipments(prev => new Set(prev).add(shipmentId));
       }
     });
-  }, []);
+  }, [enabled]);
 
   /**
    * Leave a shipment room
    * @param {string} shipmentId - Shipment ID
    */
   const leaveShipment = useCallback((shipmentId) => {
-    if (!shipmentId) return;
+    if (!enabled || !shipmentId) return;
 
     socketClient.emit('leave:shipment', { shipmentId });
     setActiveShipments(prev => {
@@ -68,7 +75,7 @@ export function useWebSocket() {
       updated.delete(shipmentId);
       return updated;
     });
-  }, []);
+  }, [enabled]);
 
   /**
    * Register callback for shipment updates
@@ -76,12 +83,14 @@ export function useWebSocket() {
    * @returns {Function} Unsubscribe function
    */
   const onShipmentUpdate = useCallback((callback) => {
+    if (!enabled) return () => {};
+
     socketClient.on('shipment:updated', callback);
 
     return () => {
       socketClient.off('shipment:updated', callback);
     };
-  }, []);
+  }, [enabled]);
 
   /**
    * Register callback for document uploads
@@ -89,12 +98,14 @@ export function useWebSocket() {
    * @returns {Function} Unsubscribe function
    */
   const onDocumentUpload = useCallback((callback) => {
+    if (!enabled) return () => {};
+
     socketClient.on('document:uploaded', callback);
 
     return () => {
       socketClient.off('document:uploaded', callback);
     };
-  }, []);
+  }, [enabled]);
 
   /**
    * Register callback for user viewing updates
@@ -102,12 +113,14 @@ export function useWebSocket() {
    * @returns {Function} Unsubscribe function
    */
   const onUserViewing = useCallback((callback) => {
+    if (!enabled) return () => {};
+
     socketClient.on('user:viewing', callback);
 
     return () => {
       socketClient.off('user:viewing', callback);
     };
-  }, []);
+  }, [enabled]);
 
   /**
    * Register callback for user disconnection
@@ -115,12 +128,14 @@ export function useWebSocket() {
    * @returns {Function} Unsubscribe function
    */
   const onUserDisconnected = useCallback((callback) => {
+    if (!enabled) return () => {};
+
     socketClient.on('user:disconnected', callback);
 
     return () => {
       socketClient.off('user:disconnected', callback);
     };
-  }, []);
+  }, [enabled]);
 
   /**
    * Register callback for warehouse capacity changes
@@ -128,12 +143,14 @@ export function useWebSocket() {
    * @returns {Function} Unsubscribe function
    */
   const onWarehouseCapacityChange = useCallback((callback) => {
+    if (!enabled) return () => {};
+
     socketClient.on('warehouse:capacity_updated', callback);
 
     return () => {
       socketClient.off('warehouse:capacity_updated', callback);
     };
-  }, []);
+  }, [enabled]);
 
   /**
    * Emit custom event to server
@@ -141,8 +158,9 @@ export function useWebSocket() {
    * @param {*} data - Event data
    */
   const emit = useCallback((event, data) => {
+    if (!enabled) return;
     socketClient.emit(event, data);
-  }, []);
+  }, [enabled]);
 
   return {
     isConnected,
