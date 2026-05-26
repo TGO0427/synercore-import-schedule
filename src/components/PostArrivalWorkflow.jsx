@@ -41,6 +41,8 @@ function PostArrivalWorkflow() {
   });
 
   const isAdmin = authUtils.getUser()?.role === 'admin';
+  const canBulkShipToStored = (shipment) =>
+    shipment.latest_status !== 'stored' && shipment.latest_status !== 'inspection_failed';
 
   const [showRejectionDialog, setShowRejectionDialog] = useState(false);
   const [rejectionData, setRejectionData] = useState({
@@ -428,15 +430,20 @@ function PostArrivalWorkflow() {
   };
 
   const handleShipAllToStored = async () => {
-    const eligible = postArrivalShipments.filter(s => s.latest_status !== 'stored');
+    const eligible = postArrivalShipments.filter(canBulkShipToStored);
+    const skippedInspectionFailed = postArrivalShipments.filter(s => s.latest_status === 'inspection_failed').length;
     if (eligible.length === 0) {
-      showWarning('No shipments available to ship to stored.');
+      showWarning(
+        skippedInspectionFailed > 0
+          ? 'No shipments available to ship to stored. Inspection failed shipments were skipped.'
+          : 'No shipments available to ship to stored.'
+      );
       return;
     }
 
     const confirmed = await confirmAction({
       title: 'Ship All to Stored',
-      message: `Skip all remaining workflow steps for ${eligible.length} shipment(s)?\n\nThis will mark unloading, inspection (passed), and receiving as complete, then set status to Stored for every shipment in the Post-Arrival Workflow.`,
+      message: `Skip all remaining workflow steps for ${eligible.length} shipment(s)?\n\nThis will mark unloading, inspection (passed), and receiving as complete, then set status to Stored. Inspection failed shipments will be ignored.`,
       confirmText: 'Ship All',
       cancelText: 'Cancel',
       type: 'warning',
@@ -465,7 +472,8 @@ function PostArrivalWorkflow() {
       const failed = results.filter(r => r.status === 'rejected');
 
       if (failed.length === 0) {
-        showSuccess(`✅ All ${succeeded} shipment(s) marked as stored.`);
+        const skippedMessage = skippedInspectionFailed > 0 ? ` ${skippedInspectionFailed} inspection failed shipment(s) skipped.` : '';
+        showSuccess(`✅ All ${succeeded} eligible shipment(s) marked as stored.${skippedMessage}`);
       } else {
         showError(`Stored ${succeeded} of ${eligible.length}. ${failed.length} failed: ${failed.map(f => f.reason?.message).join('; ')}`);
       }
@@ -518,7 +526,7 @@ function PostArrivalWorkflow() {
             Manage shipments through unloading, inspection, receiving, and storage
           </p>
         </div>
-        {isAdmin && postArrivalShipments.some(s => s.latest_status !== 'stored') && (
+        {isAdmin && postArrivalShipments.some(canBulkShipToStored) && (
           <button
             onClick={handleShipAllToStored}
             disabled={actionLoading}
