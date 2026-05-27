@@ -173,10 +173,20 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
   // Import costing KPI computations
   const costingKpis = useMemo(() => {
     const active = costingEstimates.filter(e => !e.archived);
-    if (active.length === 0) return { avgLandedPerKg: 0, seaCount: 0, airCount: 0, totalCostedValue: 0, seaTotalCost: 0, airTotalCost: 0 };
+    if (active.length === 0) return {
+      seaAvgLandedPerKg: 0,
+      airAvgLandedPerKg: 0,
+      seaCount: 0,
+      airCount: 0,
+      totalCostedValue: 0,
+      seaTotalCost: 0,
+      airTotalCost: 0,
+    };
 
-    let totalLandedPerKg = 0;
-    let landedPerKgCount = 0;
+    let seaTotalLandedPerKg = 0;
+    let airTotalLandedPerKg = 0;
+    let seaLandedPerKgCount = 0;
+    let airLandedPerKgCount = 0;
     let seaCount = 0;
     let airCount = 0;
     let totalCostedValue = 0;
@@ -189,24 +199,28 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
       const costPerKg = totals.all_in_warehouse_cost_per_kg_zar || 0;
       const isAir = (est.transport_mode || 'sea') === 'air';
 
-      if (costPerKg > 0) {
-        totalLandedPerKg += costPerKg;
-        landedPerKgCount++;
-      }
-
       totalCostedValue += landedCost;
 
       if (isAir) {
         airCount++;
         airTotalCost += landedCost;
+        if (costPerKg > 0) {
+          airTotalLandedPerKg += costPerKg;
+          airLandedPerKgCount++;
+        }
       } else {
         seaCount++;
         seaTotalCost += landedCost;
+        if (costPerKg > 0) {
+          seaTotalLandedPerKg += costPerKg;
+          seaLandedPerKgCount++;
+        }
       }
     });
 
     return {
-      avgLandedPerKg: landedPerKgCount > 0 ? totalLandedPerKg / landedPerKgCount : 0,
+      seaAvgLandedPerKg: seaLandedPerKgCount > 0 ? seaTotalLandedPerKg / seaLandedPerKgCount : 0,
+      airAvgLandedPerKg: airLandedPerKgCount > 0 ? airTotalLandedPerKg / airLandedPerKgCount : 0,
       seaCount,
       airCount,
       totalCostedValue,
@@ -1277,17 +1291,30 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
 
           {/* Costing KPI Tiles */}
           <div className="stats-grid">
-            <div className="stat-card ring-accent" style={{ cursor: 'pointer' }} onClick={() => navigate('/costing')}>
+            <div className="stat-card ring-info" style={{ cursor: 'pointer' }} onClick={() => navigate('/costing')}>
               <div style={{
                 width: 24, height: 24, borderRadius: '50%', display: 'flex',
                 alignItems: 'center', justifyContent: 'center', fontSize: 12,
-                backgroundColor: 'rgba(5,150,105,0.1)', marginBottom: 6,
-              }}>R</div>
+                backgroundColor: 'rgba(59,130,246,0.1)', marginBottom: 6,
+              }}>S</div>
               <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 1px', color: 'var(--navy-900)' }}>
-                {formatCurrency(costingKpis.avgLandedPerKg)}
+                {formatCurrency(costingKpis.seaAvgLandedPerKg)}
               </h3>
               <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>
-                Avg Landed Cost/KG
+                Sea Avg Landed Cost/KG
+              </p>
+            </div>
+            <div className="stat-card ring-warning" style={{ cursor: 'pointer' }} onClick={() => navigate('/costing')}>
+              <div style={{
+                width: 24, height: 24, borderRadius: '50%', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', fontSize: 12,
+                backgroundColor: 'rgba(245,158,11,0.1)', marginBottom: 6,
+              }}>A</div>
+              <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 1px', color: 'var(--navy-900)' }}>
+                {formatCurrency(costingKpis.airAvgLandedPerKg)}
+              </h3>
+              <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600, color: 'var(--text-500)', margin: 0 }}>
+                Air Avg Landed Cost/KG
               </p>
             </div>
             <div className="stat-card ring-info" style={{ cursor: 'pointer' }} onClick={() => navigate('/costing')}>
