@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import useFormDraft from '../hooks/useFormDraft';
 import { getApiUrl } from '../config/api';
 import { authFetch } from '../utils/authFetch';
@@ -141,6 +142,7 @@ const INITIAL_FORM_STATE = {
 };
 
 function ImportCosting() {
+  const [searchParams] = useSearchParams();
   const { showSuccess, showError, confirm: confirmAction } = useNotification();
   const currentUser = authUtils.getUser();
   const isAdmin = currentUser?.role === 'admin';
@@ -171,6 +173,9 @@ function ImportCosting() {
   // Admin request queue state
   const [pendingRequestCount, setPendingRequestCount] = useState(0);
   const [showRequests, setShowRequests] = useState(false);
+  const initialTransportModeFilter = ['sea', 'air'].includes(searchParams.get('mode'))
+    ? searchParams.get('mode')
+    : 'all';
 
   // Warn before leaving with unsaved form data
   useEffect(() => {
@@ -875,6 +880,7 @@ function ImportCosting() {
       <CostingEstimatesTable
         estimates={estimates}
         isAdmin={isAdmin}
+        initialTransportModeFilter={initialTransportModeFilter}
         onEdit={handleEdit}
         onDelete={handleDelete}
         onDuplicate={handleDuplicate}

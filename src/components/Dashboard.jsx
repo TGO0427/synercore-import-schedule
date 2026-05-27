@@ -1291,7 +1291,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
 
           {/* Costing KPI Tiles */}
           <div className="stats-grid">
-            <div className="stat-card ring-info" style={{ cursor: 'pointer' }} onClick={() => navigate('/costing')}>
+            <div className="stat-card ring-info" style={{ cursor: 'pointer' }} onClick={() => navigate('/costing?mode=sea')}>
               <div style={{
                 width: 24, height: 24, borderRadius: '50%', display: 'flex',
                 alignItems: 'center', justifyContent: 'center', fontSize: 12,
@@ -1304,7 +1304,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
                 Sea Avg Landed Cost/KG
               </p>
             </div>
-            <div className="stat-card ring-warning" style={{ cursor: 'pointer' }} onClick={() => navigate('/costing')}>
+            <div className="stat-card ring-warning" style={{ cursor: 'pointer' }} onClick={() => navigate('/costing?mode=air')}>
               <div style={{
                 width: 24, height: 24, borderRadius: '50%', display: 'flex',
                 alignItems: 'center', justifyContent: 'center', fontSize: 12,
@@ -1317,7 +1317,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
                 Air Avg Landed Cost/KG
               </p>
             </div>
-            <div className="stat-card ring-info" style={{ cursor: 'pointer' }} onClick={() => navigate('/costing')}>
+            <div className="stat-card ring-info" style={{ cursor: 'pointer' }} onClick={() => navigate('/costing?mode=sea')}>
               <div style={{
                 width: 24, height: 24, borderRadius: '50%', display: 'flex',
                 alignItems: 'center', justifyContent: 'center', fontSize: 12,
@@ -1330,7 +1330,7 @@ function Dashboard({ shipments, onOpenLiveBoard }) {
                 Sea Estimates
               </p>
             </div>
-            <div className="stat-card ring-warning" style={{ cursor: 'pointer' }} onClick={() => navigate('/costing')}>
+            <div className="stat-card ring-warning" style={{ cursor: 'pointer' }} onClick={() => navigate('/costing?mode=air')}>
               <div style={{
                 width: 24, height: 24, borderRadius: '50%', display: 'flex',
                 alignItems: 'center', justifyContent: 'center', fontSize: 12,

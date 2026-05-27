@@ -1,13 +1,17 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   calculateAllTotals,
   formatCurrency,
   formatNumber,
 } from '../utils/costingCalculations';
 
-function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplicate, onGeneratePDF, onEmailEstimate, isExport = false }) {
+function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplicate, onGeneratePDF, onEmailEstimate, isExport = false, initialTransportModeFilter = 'all' }) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [transportModeFilter, setTransportModeFilter] = useState('all'); // 'all', 'sea', 'air'
+  const [transportModeFilter, setTransportModeFilter] = useState(initialTransportModeFilter); // 'all', 'sea', 'air'
+
+  useEffect(() => {
+    setTransportModeFilter(initialTransportModeFilter);
+  }, [initialTransportModeFilter]);
 
   const partyLabel = isExport ? 'Customer' : 'Supplier';
   const partyFor = (est) => (isExport ? est.customer_name : est.supplier_name) || '-';
