@@ -34,7 +34,12 @@ function CostingEstimatesTable({ estimates, isAdmin, onEdit, onDelete, onDuplica
       .sort((a, b) => {
         const dateA = new Date(a.costing_date || a.created_at || 0);
         const dateB = new Date(b.costing_date || b.created_at || 0);
-        return dateB - dateA; // newest first
+        const costingDateDiff = dateB - dateA;
+        if (costingDateDiff !== 0) return costingDateDiff;
+
+        const createdA = new Date(a.created_at || 0);
+        const createdB = new Date(b.created_at || 0);
+        return createdB - createdA; // newest first
       });
   }, [estimates, searchTerm, transportModeFilter, isExport]);
 

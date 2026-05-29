@@ -517,6 +517,7 @@ export class CostingRepository {
     return this.create({
       ...copyData,
       reference_number: reference_number ? `${reference_number}-COPY` : undefined,
+      costing_date: new Date().toISOString().split('T')[0],
       status: 'draft',
     });
   }
