@@ -131,10 +131,7 @@ const cleanZeroCurrencyCell = (cell) => {
   return lines.join('\n');
 };
 
-const cleanZeroCurrencyRows = (rows, keepLabels = []) => {
-  const keepSet = new Set(keepLabels);
-  return rows.map(row => keepSet.has(row[0]) ? row : row.map(cleanZeroCurrencyCell));
-};
+const cleanZeroCurrencyRows = (rows) => rows.map(row => row.map(cleanZeroCurrencyCell));
 
 const removeEmptyColumns = (head, body, alwaysKeep = []) => {
   const headerRow = head[0] || [];
@@ -158,20 +155,16 @@ const removeEmptyColumns = (head, body, alwaysKeep = []) => {
 
 // Shared helper: filter rows where the last column is zero or empty/dash,
 // then blank any remaining zero-currency cells inside visible rows.
-const filterZeroRows = (rows, keepLabels = []) => {
-  const keepSet = new Set(keepLabels);
-  return cleanZeroCurrencyRows(rows.filter(row => {
-    if (keepSet.has(row[0])) return true;
-    const value = row[row.length - 1];
-    if (value === '-' || value === '' || value === null || value === undefined) return false;
-    if (typeof value === 'string') {
-      if (value.trim() === '-') return false;
-      const numericValue = parseFloat(value.replace(/[^0-9.-]/g, ''));
-      return !isNaN(numericValue) && numericValue !== 0;
-    }
-    return value !== 0;
-  }), keepLabels);
-};
+const filterZeroRows = (rows) => cleanZeroCurrencyRows(rows.filter(row => {
+  const value = row[row.length - 1];
+  if (value === '-' || value === '' || value === null || value === undefined) return false;
+  if (typeof value === 'string') {
+    if (value.trim() === '-') return false;
+    const numericValue = parseFloat(value.replace(/[^0-9.-]/g, ''));
+    return !isNaN(numericValue) && numericValue !== 0;
+  }
+  return value !== 0;
+}));
 
 // Format date nicely (e.g. "03 Mar 2026")
 const formatDate = (dateStr) => {
@@ -962,7 +955,7 @@ export function generateEstimatePDF(estimate) {
         ['Agency Fee', formatCurrency(estimate.agency_fee_dest_zar)],
         ['Handover Fee', formatCurrency(estimate.handover_fee_zar)],
         ['Facility Fee', formatCurrency(estimate.facility_fee_zar)],
-      ], ['Handover Fee']);
+      ]);
       if (totals.destination_charges_subtotal_zar > 0) {
         destChargeRows.push(['Sub-Total', formatCurrency(totals.destination_charges_subtotal_zar)]);
       }
@@ -1376,7 +1369,7 @@ export function generateEstimatePDFBase64(estimate) {
       ['Agency Fee', formatCurrency(estimate.agency_fee_dest_zar)],
       ['Handover Fee', formatCurrency(estimate.handover_fee_zar)],
       ['Facility Fee', formatCurrency(estimate.facility_fee_zar)],
-    ], ['Handover Fee']);
+    ]);
     if (destinationDetailRows.length > 0) {
       if (totals.destination_charges_subtotal_zar > 0) {
         destinationDetailRows.push(['Sub-Total', formatCurrency(totals.destination_charges_subtotal_zar)]);
