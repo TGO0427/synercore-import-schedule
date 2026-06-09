@@ -8,6 +8,7 @@ const FileUpload = lazy(() => import('./FileUpload'));
 // Static card definitions — only value/active are dynamic
 const STAT_CARD_DEFS = [
   { key: 'total', status: null, label: 'Total Shipments', icon: '\u{1F4E6}', ring: 'ring-accent', tint: 'rgba(5,150,105,0.1)' },
+  { key: 'tbc', status: 'tbc', label: 'TBC', icon: '\u2754', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)', alwaysShow: true },
   { key: 'planned_airfreight', status: 'planned_airfreight', label: 'Planned Airfreight', icon: '\u2708\uFE0F', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
   { key: 'planned_seafreight', status: 'planned_seafreight', label: 'Planned Seafreight', icon: '\u{1F6A2}', ring: 'ring-warning', tint: 'rgba(245,158,11,0.1)' },
   { key: 'in_transit_airfreight', status: 'in_transit_airfreight', label: 'In Transit Air', icon: '\u2708\uFE0F', ring: 'ring-info', tint: 'rgba(59,130,246,0.1)' },
@@ -33,6 +34,24 @@ const STAT_CARD_DEFS = [
   { key: 'delayed_supplier', status: 'delayed_supplier', label: 'Delayed - Supplier', icon: '\u{1F3ED}', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
   { key: 'cancelled', status: 'cancelled', label: 'Cancelled', icon: '\u274C', ring: 'ring-danger', tint: 'rgba(239,68,68,0.1)' },
 ];
+
+const isTbcShipment = (shipment) => {
+  const tbcFields = [
+    shipment.orderRef,
+    shipment.productName,
+    shipment.finalPod,
+    shipment.receivingWarehouse,
+    shipment.forwardingAgent,
+    shipment.vesselName,
+    shipment.incoterm,
+    shipment.notes,
+  ];
+
+  return tbcFields.some((field) => {
+    const value = String(field || '').trim().toUpperCase();
+    return value === 'TBC' || value.includes(' TBC') || value.includes('TBC ') || value.includes('TO BE CONFIRMED');
+  });
+};
 
 function ShippingView({ shipments, suppliers = [], onFileUpload, onUpdateShipment, onDeleteShipment, onCreateShipment, loading }) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -75,7 +94,9 @@ function ShippingView({ shipments, suppliers = [], onFileUpload, onUpdateShipmen
       delayed: ['delayed_port', 'delayed_customs', 'delayed_documents', 'delayed_supplier'],
     };
 
-    if (statusFilter === 'delayed') {
+    if (statusFilter === 'tbc') {
+      shippingShipments = shippingShipments.filter(isTbcShipment);
+    } else if (statusFilter === 'delayed') {
       // Include both explicit delayed statuses AND overdue shipments (pre-arrival past their week)
       const currentWeek = getCurrentWeek();
       shippingShipments = shippingShipments.filter(s =>
@@ -109,6 +130,7 @@ function ShippingView({ shipments, suppliers = [], onFileUpload, onUpdateShipmen
 
     const result = {
       total: uniqueOrderRefs.size,
+      tbc: 0,
       planned_airfreight: 0, planned_seafreight: 0,
       in_transit_airfreight: 0, in_transit_roadway: 0, in_transit_seaway: 0,
       moored: 0, berth_working: 0, berth_complete: 0, gated_in_port: 0,
@@ -126,13 +148,20 @@ function ShippingView({ shipments, suppliers = [], onFileUpload, onUpdateShipmen
       }
     });
 
+    result.tbc = new Set(
+      shippingShipments
+        .filter(isTbcShipment)
+        .map(s => norm(s.orderRef))
+        .filter(Boolean)
+    ).size;
+
     return result;
   }, [shippingShipments]);
 
   const statCards = useMemo(() =>
     STAT_CARD_DEFS
       .map(def => ({ ...def, value: def.status === null ? stats.total : stats[def.status] || 0 }))
-      .filter(card => card.status === null || card.value > 0),
+      .filter(card => card.status === null || card.alwaysShow || card.value > 0),
     [stats]
   );
 
