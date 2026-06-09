@@ -16,8 +16,10 @@ export interface CostingFilterParams {
 }
 
 export interface CalculatedTotals {
+  total_gross_weight_kg: number;
   customs_value_zar: number;
   ocean_freight_zar: number;
+  total_ocean_freight_zar: number;
   origin_charge_zar: number;
   total_origin_charges_zar: number;
   local_charges_subtotal_zar: number;
@@ -29,7 +31,9 @@ export interface CalculatedTotals {
   customs_subtotal_zar: number;
   total_shipping_cost_zar: number;
   total_in_warehouse_cost_zar: number;
+  total_landed_cost_zar: number;
   all_in_warehouse_cost_per_kg_zar: number;
+  overhead_cost_per_kg_zar: number;
 }
 
 export class CostingController {
@@ -150,12 +154,12 @@ export class CostingController {
   }
 
   /**
-   * Calculate Agency Fee: 3.5% of customs value, minimum R1187
+   * Calculate agency fee: 3.5% of duties + import VAT, minimum R1187
    */
-  static calculateAgencyFee(customsValue: number): number {
-    if (!customsValue || customsValue <= 0) return 0;
-    const percentage = customsValue * 0.035;
-    return Math.max(percentage, 1187);
+  static calculateAgencyFee(dutiesAndVat: number, minimum = 1187): number {
+    if (!dutiesAndVat || dutiesAndVat <= 0) return minimum;
+    const percentage = dutiesAndVat * 0.035;
+    return Math.max(percentage, minimum);
   }
 
   /**
@@ -169,6 +173,60 @@ export class CostingController {
     return (invoiceValueUsd * roeOrigin) + (invoiceValueEur * roeEur);
   }
 
+  static getProducts(data: Partial<ImportCostEstimate>): any[] {
+    if (Array.isArray(data.products)) return data.products;
+    if (typeof data.products === 'string') {
+      try {
+        const parsed = JSON.parse(data.products);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }
+
+  static calculateCustomsItemsTotals(data: Partial<ImportCostEstimate>): {
+    totalCustomsValue: number;
+    totalDuties: number;
+    totalSchedule1Duty: number;
+    totalVat: number;
+    totalWeight: number;
+  } {
+    const products = this.getProducts(data);
+    const roeCustoms = Number(data.roe_customs) || Number(data.roe_origin) || 0;
+    const roeEur = Number(data.roe_eur) || roeCustoms;
+
+    return products.reduce((totals, product) => {
+      const invoiceValue = Number(product.invoice_value) || 0;
+      const currency = product.currency || 'USD';
+      const dutyPercent = Number(product.duty_percent) || 0;
+      const schedule1Percent = Number(product.duty_schedule1_percent) || 0;
+      let roe = roeCustoms;
+      if (currency === 'EUR') roe = roeEur;
+      if (currency === 'ZAR') roe = 1;
+
+      const customsValue = invoiceValue * roe;
+      const duties = customsValue * (dutyPercent / 100);
+      const schedule1Duty = customsValue * (schedule1Percent / 100);
+      const vat = (customsValue + duties + schedule1Duty) * 0.15;
+
+      return {
+        totalCustomsValue: totals.totalCustomsValue + customsValue,
+        totalDuties: totals.totalDuties + duties,
+        totalSchedule1Duty: totals.totalSchedule1Duty + schedule1Duty,
+        totalVat: totals.totalVat + vat,
+        totalWeight: totals.totalWeight + (Number(product.weight_kg) || 0),
+      };
+    }, {
+      totalCustomsValue: 0,
+      totalDuties: 0,
+      totalSchedule1Duty: 0,
+      totalVat: 0,
+      totalWeight: 0,
+    });
+  }
+
   /**
    * Calculate all totals based on input values
    */
@@ -179,7 +237,10 @@ export class CostingController {
     const originChargeEur = Number(data.origin_charge_eur) || 0;
     const oceanFreightUsd = Number(data.ocean_freight_usd) || 0;
     const oceanFreightEur = Number(data.ocean_freight_eur) || 0;
-    const totalGrossWeightKg = Number(data.total_gross_weight_kg) || 0;
+    const customsItemsTotals = this.calculateCustomsItemsTotals(data);
+    const totalGrossWeightKg = customsItemsTotals.totalWeight > 0
+      ? customsItemsTotals.totalWeight
+      : Number(data.total_gross_weight_kg) || 0;
     const warehouseChargeableWeightKg = Number((data as any).warehouse_chargeable_weight_kg) || totalGrossWeightKg;
     const warehouseHandlingFeeZar = warehouseChargeableWeightKg
       * (Number((data as any).warehouse_handling_rate_per_kg_zar) || 0)
@@ -189,8 +250,10 @@ export class CostingController {
       * (Number((data as any).warehouse_storage_months) || 0);
     const warehouseChargesSubtotalZar = warehouseHandlingFeeZar + warehouseStorageFeeZar;
 
-    // Calculate customs value from invoice values
-    const customsValueZar = this.calculateCustomsValue(data);
+    // Calculate customs value from product rows first, then legacy invoice fields.
+    const customsValueZar = customsItemsTotals.totalCustomsValue > 0
+      ? customsItemsTotals.totalCustomsValue
+      : this.calculateCustomsValue(data);
 
     // Ocean freight conversion (USD and EUR)
     const oceanFreightUsdZar = oceanFreightUsd * roeOrigin;
@@ -202,6 +265,8 @@ export class CostingController {
     const originChargeEurZar = originChargeEur * roeEur;
     const originChargeZar = originChargeUsdZar + originChargeEurZar;
     const totalOriginChargesZar = originChargeZar;
+    const incoTermsUpper = (data.inco_terms || '').toUpperCase();
+    const originChargesAreFobValue = ['FOB', 'FCA', 'EXW'].includes(incoTermsUpper);
 
     // Local charges subtotal (Transport/Cartage)
     const localChargesSubtotalZar =
@@ -244,32 +309,45 @@ export class CostingController {
       (Number(data.agency_fee_dest_zar) || 0) +
       (Number(data.facility_fee_zar) || 0);
 
-    // Agency fee: 3.5% of customs value, min R1187
-    const agencyFeeZar = this.calculateAgencyFee(customsValueZar);
+    // Agency fee: 3.5% of duties + VAT, min R1187.
+    const dutiesAndVat = customsItemsTotals.totalDuties + customsItemsTotals.totalSchedule1Duty + customsItemsTotals.totalVat;
+    const agencyFeeZar = this.calculateAgencyFee(dutiesAndVat, Number((data as any).agency_fee_min) || 1187);
 
-    // Customs subtotal (duties + VAT + declaration + agency)
+    // Customs subtotal (duties + declaration + agency). Import VAT is excluded
+    // from client-facing landed cost.
     const customsDutyNotApplicable = data.customs_duty_not_applicable || false;
-    const dutiesZar = customsDutyNotApplicable ? 0 : (Number(data.duties_zar) || 0);
+    const calculatedDutiesZar = customsItemsTotals.totalDuties + customsItemsTotals.totalSchedule1Duty;
+    const dutiesZar = customsDutyNotApplicable ? 0 : (calculatedDutiesZar || Number(data.duties_zar) || 0);
     const customsSubtotalZar =
       dutiesZar +
-      (Number(data.customs_vat_zar) || 0) +
       (Number(data.customs_declaration_zar) || 0) +
       agencyFeeZar;
 
-    // Total shipping cost (ocean freight + origin + local + destination charges)
-    const totalShippingCostZar = oceanFreightZar + totalOriginChargesZar + localChargesSubtotalZar + destinationChargesSubtotalZar;
+    // Under FOB/FCA/EXW, origin charges hold the FOB goods value. That is part
+    // of customs/product value, not a transport charge, so it must not inflate
+    // total shipping cost.
+    const transportOriginChargesZar = originChargesAreFobValue ? 0 : totalOriginChargesZar;
+    const totalShippingCostZar = oceanFreightZar + transportOriginChargesZar + localChargesSubtotalZar + destinationChargesSubtotalZar;
 
-    // Total in warehouse cost (shipping + customs)
+    // Total in warehouse cost (transport/customs overhead only)
     const totalInWarehouseCostZar = totalShippingCostZar + customsSubtotalZar;
+
+    // Total landed cost (product value + duties + transport)
+    const totalLandedCostZar = customsValueZar + dutiesZar + totalShippingCostZar;
 
     // Cost per KG
     const allInWarehouseCostPerKgZar = totalGrossWeightKg > 0
+      ? totalLandedCostZar / totalGrossWeightKg
+      : 0;
+    const overheadCostPerKgZar = totalGrossWeightKg > 0
       ? totalInWarehouseCostZar / totalGrossWeightKg
       : 0;
 
     return {
+      total_gross_weight_kg: Math.round(totalGrossWeightKg * 100) / 100,
       customs_value_zar: Math.round(customsValueZar * 100) / 100,
       ocean_freight_zar: Math.round(oceanFreightZar * 100) / 100,
+      total_ocean_freight_zar: Math.round(oceanFreightZar * 100) / 100,
       origin_charge_zar: Math.round(originChargeZar * 100) / 100,
       total_origin_charges_zar: Math.round(totalOriginChargesZar * 100) / 100,
       local_charges_subtotal_zar: Math.round(localChargesSubtotalZar * 100) / 100,
@@ -281,7 +359,9 @@ export class CostingController {
       customs_subtotal_zar: Math.round(customsSubtotalZar * 100) / 100,
       total_shipping_cost_zar: Math.round(totalShippingCostZar * 100) / 100,
       total_in_warehouse_cost_zar: Math.round(totalInWarehouseCostZar * 100) / 100,
+      total_landed_cost_zar: Math.round(totalLandedCostZar * 100) / 100,
       all_in_warehouse_cost_per_kg_zar: Math.round(allInWarehouseCostPerKgZar * 100) / 100,
+      overhead_cost_per_kg_zar: Math.round(overheadCostPerKgZar * 100) / 100,
     };
   }
 }
