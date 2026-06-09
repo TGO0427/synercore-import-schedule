@@ -756,7 +756,9 @@ export const migrations: Migration[] = [
           -- Calculated Totals
           total_shipping_cost_zar NUMERIC(14,2) DEFAULT 0,
           total_in_warehouse_cost_zar NUMERIC(14,2) DEFAULT 0,
+          total_landed_cost_zar NUMERIC(14,2) DEFAULT 0,
           all_in_warehouse_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0,
+          overhead_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0,
 
           -- Metadata
           status VARCHAR(50) DEFAULT 'draft',
@@ -927,6 +929,8 @@ export const migrations: Migration[] = [
           'products JSONB DEFAULT \'[]\'',
           'total_duties_zar NUMERIC(14,2) DEFAULT 0',
           'import_vat_zar NUMERIC(14,2) DEFAULT 0',
+          'total_landed_cost_zar NUMERIC(14,2) DEFAULT 0',
+          'overhead_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0',
         ];
 
         for (const colDef of missingColumns) {
@@ -1328,6 +1332,8 @@ export const migrations: Migration[] = [
         'last_mile_extra_charges_zar NUMERIC(12,2) DEFAULT 0',
         'last_mile_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0',
         "last_mile_charges JSONB DEFAULT '[]'::jsonb",
+        'total_landed_cost_zar NUMERIC(14,2) DEFAULT 0',
+        'overhead_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0',
         'warehouse_handling_rate_per_kg_zar NUMERIC(8,2) DEFAULT 0.62',
         'warehouse_handling_events NUMERIC(5,2) DEFAULT 2',
         'warehouse_storage_rate_per_kg_month_zar NUMERIC(8,2) DEFAULT 0.82',

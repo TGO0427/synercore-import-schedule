@@ -328,12 +328,16 @@ export class CostingController {
     // total shipping cost.
     const transportOriginChargesZar = originChargesAreFobValue ? 0 : totalOriginChargesZar;
     const totalShippingCostZar = oceanFreightZar + transportOriginChargesZar + localChargesSubtotalZar + destinationChargesSubtotalZar;
+    const freightIncludedInProductPrice = ['CIF', 'CIP', 'CFR'].includes(incoTermsUpper);
+    const shippingToAllocateZar = freightIncludedInProductPrice
+      ? localChargesSubtotalZar + destinationChargesSubtotalZar
+      : totalShippingCostZar;
 
     // Total in warehouse cost (transport/customs overhead only)
-    const totalInWarehouseCostZar = totalShippingCostZar + customsSubtotalZar;
+    const totalInWarehouseCostZar = shippingToAllocateZar + customsSubtotalZar;
 
     // Total landed cost (product value + duties + transport)
-    const totalLandedCostZar = customsValueZar + dutiesZar + totalShippingCostZar;
+    const totalLandedCostZar = customsValueZar + dutiesZar + shippingToAllocateZar;
 
     // Cost per KG
     const allInWarehouseCostPerKgZar = totalGrossWeightKg > 0

@@ -71,7 +71,9 @@ export default async function addCostingColumns() {
         customs_duty_not_applicable BOOLEAN DEFAULT false,
         total_shipping_cost_zar NUMERIC(14,2) DEFAULT 0,
         total_in_warehouse_cost_zar NUMERIC(14,2) DEFAULT 0,
+        total_landed_cost_zar NUMERIC(14,2) DEFAULT 0,
         all_in_warehouse_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0,
+        overhead_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0,
         status VARCHAR(50) DEFAULT 'draft',
         notes TEXT,
         created_by VARCHAR(255),
@@ -261,6 +263,15 @@ export default async function addCostingColumns() {
   ];
 
   for (const col of lastMileColumns) {
+    if (await addColumn(col)) added++;
+  }
+
+  const summaryTotalColumns = [
+    'total_landed_cost_zar NUMERIC(14,2) DEFAULT 0',
+    'overhead_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0',
+  ];
+
+  for (const col of summaryTotalColumns) {
     if (await addColumn(col)) added++;
   }
 

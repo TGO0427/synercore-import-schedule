@@ -400,6 +400,20 @@ function ImportCosting() {
       if (field === 'last_mile_service_type') {
         updated.last_mile_route = '';
       }
+      if (field === 'inco_terms' && ['FOB', 'FCA', 'EXW'].includes(String(value || '').toUpperCase())) {
+        const currentOceanFreightUsd = parseFloat(updated.ocean_freight_usd) || 0;
+        const currentOceanFreightEur = parseFloat(updated.ocean_freight_eur) || 0;
+        if (updated.transport_mode !== 'air' && currentOceanFreightUsd === 0 && currentOceanFreightEur === 0) {
+          const rate = lookupOceanFreightRate(
+            updated.port_of_loading,
+            updated.shipping_line,
+            updated.container_type
+          );
+          if (rate !== null) {
+            updated.ocean_freight_usd = rate;
+          }
+        }
+      }
       // Auto-fill ocean freight when port, shipping line, or container type changes
       if (field === 'port_of_loading' || field === 'shipping_line' || field === 'container_type') {
         const rate = lookupOceanFreightRate(

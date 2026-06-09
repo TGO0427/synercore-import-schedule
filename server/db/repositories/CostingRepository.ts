@@ -110,7 +110,9 @@ export interface ImportCostEstimate {
   // Totals
   total_shipping_cost_zar: number;
   total_in_warehouse_cost_zar: number;
+  total_landed_cost_zar?: number;
   all_in_warehouse_cost_per_kg_zar: number;
+  overhead_cost_per_kg_zar?: number;
   // Airfreight
   transport_mode?: string;
   airfreight_usd?: number;
@@ -208,7 +210,8 @@ const COST_ESTIMATE_COLUMNS = [
   'agency_fee_percentage', 'agency_fee_min', 'customs_duty_not_applicable', 'customs_subtotal_zar',
   // Totals
   'total_shipping_cost_zar', 'total_in_warehouse_cost_zar',
-  'all_in_warehouse_cost_per_kg_zar',
+  'total_landed_cost_zar', 'all_in_warehouse_cost_per_kg_zar',
+  'overhead_cost_per_kg_zar',
   // Airfreight
   'transport_mode', 'airfreight_usd', 'airfreight_eur', 'actual_weight_kg', 'volumetric_weight_kg',
   'chargeable_weight_kg', 'volumetric_divisor', 'airfreight_total_usd', 'airfreight_total_zar',
@@ -400,7 +403,9 @@ export class CostingRepository {
       // Totals
       total_shipping_cost_zar: data.total_shipping_cost_zar || 0,
       total_in_warehouse_cost_zar: data.total_in_warehouse_cost_zar || 0,
+      total_landed_cost_zar: data.total_landed_cost_zar || 0,
       all_in_warehouse_cost_per_kg_zar: data.all_in_warehouse_cost_per_kg_zar || 0,
+      overhead_cost_per_kg_zar: data.overhead_cost_per_kg_zar || 0,
     };
 
     // Filter to only known database columns to prevent errors from extra frontend fields

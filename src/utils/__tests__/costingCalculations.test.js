@@ -422,14 +422,38 @@ describe('calculateAllTotals', () => {
     expect(result.overhead_cost_per_kg_zar).toBe(0);
   });
 
-  it('zeroes out origin charges that match invoice totals (historical bug fix)', () => {
-    const buggyData = {
+  it('keeps FOB goods value out of transport totals when it matches invoice totals', () => {
+    const fobGoodsValueData = {
       ...sampleData,
       origin_charge_usd: '10000', // matches the product invoice_value
     };
-    const result = calculateAllTotals(buggyData);
-    // origin_charge should be zeroed out because it matches invoice total
-    expect(result.origin_charge_zar).toBe(0);
+    const result = calculateAllTotals(fobGoodsValueData);
+    expect(result.origin_charge_zar).toBe(180000);
+    expect(result.total_shipping_cost_zar).toBe(36000);
+    expect(result.total_landed_cost_zar).toBe(234000);
+  });
+
+  it('includes ocean freight when a copied CIF estimate is changed to FOB', () => {
+    const copiedCifData = {
+      ...sampleData,
+      inco_terms: 'CIF',
+      ocean_freight_usd: '2000',
+      local_cartage_cpt_klapmuts_20ton_zar: '1000',
+      shipping_line_charges_zar: '500',
+      origin_charge_usd: '0',
+    };
+    const changedToFobData = {
+      ...copiedCifData,
+      inco_terms: 'FOB',
+      origin_charge_usd: '10000',
+    };
+
+    const cifResult = calculateAllTotals(copiedCifData);
+    const fobResult = calculateAllTotals(changedToFobData);
+
+    expect(cifResult.total_landed_cost_zar).toBe(199500);
+    expect(fobResult.total_shipping_cost_zar).toBe(37500);
+    expect(fobResult.total_landed_cost_zar).toBe(235500);
   });
 });
 
