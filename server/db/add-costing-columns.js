@@ -153,6 +153,7 @@ export default async function addCostingColumns() {
     'daff_inspection_zar NUMERIC(12,2) DEFAULT 0',
     'state_vet_cancellation_fee_zar NUMERIC(12,2) DEFAULT 0',
     'jnb_turn_in_zar NUMERIC(12,2) DEFAULT 0',
+    'handover_fee_zar NUMERIC(12,2) DEFAULT 0',
     'destination_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0',
   ];
 

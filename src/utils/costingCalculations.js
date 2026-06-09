@@ -252,6 +252,7 @@ export const calculateDestinationSubtotal = (data) => {
     (parseFloat(data.cartage_dest_zar) || 0) +
     (parseFloat(data.fuel_surcharge_dest_zar) || 0) +
     (parseFloat(data.agency_fee_dest_zar) || 0) +
+    (parseFloat(data.handover_fee_zar) || 0) +
     (parseFloat(data.facility_fee_zar) || 0)
   );
 };

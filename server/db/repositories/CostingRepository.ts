@@ -95,6 +95,7 @@ export interface ImportCostEstimate {
   daff_inspection_zar: number;
   state_vet_cancellation_fee_zar: number;
   jnb_turn_in_zar: number;
+  handover_fee_zar?: number;
   destination_charges_subtotal_zar: number;
   // Customs & Duties
   duties_zar: number;
@@ -203,7 +204,7 @@ const COST_ESTIMATE_COLUMNS = [
   'jnb_turn_in_zar', 'bill_of_lading_fee_zar', 'manifest_filing_zar',
   'currency_adjustment_factor_zar', 'degrouping_zar', 'edi_fee_zar', 'communication_dest_zar',
   'documentation_fee_dest_zar', 'cfs_lcl_handling_out_zar', 'delivery_release_order_zar',
-  'cartage_dest_zar', 'fuel_surcharge_dest_zar', 'agency_fee_dest_zar', 'facility_fee_zar',
+  'cartage_dest_zar', 'fuel_surcharge_dest_zar', 'agency_fee_dest_zar', 'handover_fee_zar', 'facility_fee_zar',
   'destination_charges_subtotal_zar',
   // Customs & Duties
   'duties_zar', 'total_duties_zar', 'customs_vat_zar', 'import_vat_zar', 'customs_declaration_zar', 'agency_fee_zar',
@@ -388,6 +389,7 @@ export class CostingRepository {
       daff_inspection_zar: data.daff_inspection_zar || 0,
       state_vet_cancellation_fee_zar: data.state_vet_cancellation_fee_zar || 0,
       jnb_turn_in_zar: data.jnb_turn_in_zar || 0,
+      handover_fee_zar: data.handover_fee_zar || 0,
       destination_charges_subtotal_zar: data.destination_charges_subtotal_zar || 0,
       // Customs & Duties
       duties_zar: data.duties_zar || 0,

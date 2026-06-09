@@ -780,6 +780,7 @@ function CostingFormSections({
             {currencyInput('Cartage', 'cartage_dest_zar')}
             {currencyInput('Fuel Surcharge', 'fuel_surcharge_dest_zar')}
             {currencyInput('Agency Fee', 'agency_fee_dest_zar')}
+            {currencyInput('Handover Fee', 'handover_fee_zar')}
             {currencyInput('Facility Fee', 'facility_fee_zar')}
             <div style={{ marginBottom: '12px' }}>
               <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>

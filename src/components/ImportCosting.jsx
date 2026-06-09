@@ -90,6 +90,7 @@ const INITIAL_FORM_STATE = {
   cartage_dest_zar: 0,
   fuel_surcharge_dest_zar: 0,
   agency_fee_dest_zar: 0,
+  handover_fee_zar: 0,
   facility_fee_zar: 0,
   // Products - each product in the container
   products: [

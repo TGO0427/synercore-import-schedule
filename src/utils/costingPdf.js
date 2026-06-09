@@ -953,6 +953,7 @@ export function generateEstimatePDF(estimate) {
         ['Cartage', formatCurrency(estimate.cartage_dest_zar)],
         ['Fuel Surcharge', formatCurrency(estimate.fuel_surcharge_dest_zar)],
         ['Agency Fee', formatCurrency(estimate.agency_fee_dest_zar)],
+        ['Handover Fee', formatCurrency(estimate.handover_fee_zar)],
         ['Facility Fee', formatCurrency(estimate.facility_fee_zar)],
       ]);
       if (totals.destination_charges_subtotal_zar > 0) {

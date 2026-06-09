@@ -881,6 +881,7 @@ async function start() {
         'cartage_dest_zar NUMERIC(12,2) DEFAULT 0',
         'fuel_surcharge_dest_zar NUMERIC(12,2) DEFAULT 0',
         'agency_fee_dest_zar NUMERIC(12,2) DEFAULT 0',
+        'handover_fee_zar NUMERIC(12,2) DEFAULT 0',
         'facility_fee_zar NUMERIC(12,2) DEFAULT 0',
       ];
       for (const colDef of destCols) {

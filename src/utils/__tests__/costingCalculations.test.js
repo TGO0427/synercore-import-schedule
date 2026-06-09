@@ -132,8 +132,9 @@ describe('calculateDestinationSubtotal', () => {
       daff_inspection_zar: '200',
       state_vet_cancellation_fee_zar: '0',
       jnb_turn_in_zar: '0',
+      handover_fee_zar: '450',
     };
-    expect(calculateDestinationSubtotal(data)).toBe(7550);
+    expect(calculateDestinationSubtotal(data)).toBe(8000);
   });
 
   it('returns 0 for empty data', () => {

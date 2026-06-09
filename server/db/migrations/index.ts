@@ -855,6 +855,7 @@ export const migrations: Migration[] = [
           'daff_inspection_zar NUMERIC(12,2) DEFAULT 0',
           'state_vet_cancellation_fee_zar NUMERIC(12,2) DEFAULT 0',
           'jnb_turn_in_zar NUMERIC(12,2) DEFAULT 0',
+          'handover_fee_zar NUMERIC(12,2) DEFAULT 0',
         ];
 
         for (const colDef of destChargeColumns) {
@@ -1323,6 +1324,7 @@ export const migrations: Migration[] = [
         'cartage_dest_zar NUMERIC(12,2) DEFAULT 0',
         'fuel_surcharge_dest_zar NUMERIC(12,2) DEFAULT 0',
         'agency_fee_dest_zar NUMERIC(12,2) DEFAULT 0',
+        'handover_fee_zar NUMERIC(12,2) DEFAULT 0',
         'facility_fee_zar NUMERIC(12,2) DEFAULT 0',
         'last_mile_service_type VARCHAR(50)',
         'last_mile_route VARCHAR(100)',

@@ -725,6 +725,7 @@ const migrations = [
             daff_inspection_zar NUMERIC(12,2) DEFAULT 0,
             state_vet_cancellation_fee_zar NUMERIC(12,2) DEFAULT 0,
             jnb_turn_in_zar NUMERIC(12,2) DEFAULT 0,
+            handover_fee_zar NUMERIC(12,2) DEFAULT 0,
             destination_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0,
             duties_zar NUMERIC(12,2) DEFAULT 0,
             customs_vat_zar NUMERIC(12,2) DEFAULT 0,
@@ -799,6 +800,7 @@ const migrations = [
         await addColumnIfNotExists('warehouse_handling_fee_zar NUMERIC(12,2) DEFAULT 0');
         await addColumnIfNotExists('warehouse_storage_fee_zar NUMERIC(12,2) DEFAULT 0');
         await addColumnIfNotExists('warehouse_charges_subtotal_zar NUMERIC(14,2) DEFAULT 0');
+        await addColumnIfNotExists('handover_fee_zar NUMERIC(12,2) DEFAULT 0');
         await addColumnIfNotExists('total_landed_cost_zar NUMERIC(14,2) DEFAULT 0');
         await addColumnIfNotExists('overhead_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0');
         await addColumnIfNotExists('air_edi_fee_zar NUMERIC(12,2) DEFAULT 0');

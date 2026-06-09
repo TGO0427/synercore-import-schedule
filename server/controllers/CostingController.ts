@@ -307,6 +307,7 @@ export class CostingController {
       (Number(data.cartage_dest_zar) || 0) +
       (Number(data.fuel_surcharge_dest_zar) || 0) +
       (Number(data.agency_fee_dest_zar) || 0) +
+      (Number((data as any).handover_fee_zar) || 0) +
       (Number(data.facility_fee_zar) || 0);
 
     // Agency fee: 3.5% of duties + VAT, min R1187.
