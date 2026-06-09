@@ -8,6 +8,8 @@ import {
   calculateAllTotals,
   formatNumber,
   lookupOceanFreightRate,
+  AFRICAN_PORTS,
+  PORTS_OF_LOADING,
 } from '../utils/costingCalculations';
 import { generateEstimatePDF, generateEstimatePDFBase64 } from '../utils/costingPdf';
 import { useNotification } from '../contexts/NotificationContext';
@@ -141,6 +143,27 @@ const INITIAL_FORM_STATE = {
   status: 'draft',
 };
 
+const CUSTOM_IMPORT_PORTS_KEY = 'synercore_custom_import_ports';
+
+const normalizePortOptions = (ports) => {
+  const seen = new Set();
+  return (ports || [])
+    .filter(port => port?.value && port?.label)
+    .filter(port => {
+      const key = String(port.value).toUpperCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => a.label.localeCompare(b.label));
+};
+
+const createCustomPortOption = (name) => {
+  const label = String(name || '').trim();
+  if (!label) return null;
+  return { value: label, label: `${label} (Custom)` };
+};
+
 function ImportCosting() {
   const [searchParams] = useSearchParams();
   const { showSuccess, showError, confirm: confirmAction } = useNotification();
@@ -165,6 +188,13 @@ function ImportCosting() {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailEstimate, setEmailEstimate] = useState(null);
   const [showReports, setShowReports] = useState(false);
+  const [customImportPorts, setCustomImportPorts] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(CUSTOM_IMPORT_PORTS_KEY) || '[]');
+    } catch {
+      return [];
+    }
+  });
 
   // Costing request state (for non-admin users)
   const [showRequestModal, setShowRequestModal] = useState(false);
@@ -176,6 +206,23 @@ function ImportCosting() {
   const initialTransportModeFilter = ['sea', 'air'].includes(searchParams.get('mode'))
     ? searchParams.get('mode')
     : 'all';
+
+  const importPortOptions = normalizePortOptions([...PORTS_OF_LOADING, ...customImportPorts]);
+  const importDischargePortOptions = normalizePortOptions([...AFRICAN_PORTS, ...customImportPorts]);
+
+  const addCustomImportPort = (portName, field) => {
+    const newPort = createCustomPortOption(portName);
+    if (!newPort) return false;
+
+    setCustomImportPorts(prev => {
+      const exists = prev.some(port => String(port.value).toUpperCase() === newPort.value.toUpperCase());
+      const next = exists ? prev : normalizePortOptions([...prev, newPort]);
+      localStorage.setItem(CUSTOM_IMPORT_PORTS_KEY, JSON.stringify(next));
+      return next;
+    });
+    handleInputChange(field, newPort.value);
+    return true;
+  };
 
   // Warn before leaving with unsaved form data
   useEffect(() => {
@@ -871,6 +918,10 @@ function ImportCosting() {
               getCustomsTotals={getCustomsTotals}
               calculateProductCustomsValues={calculateProductCustomsValues}
               calculateProductAllocation={calculateProductAllocation}
+              originPortOptions={importPortOptions}
+              dischargePortOptions={importDischargePortOptions}
+              onAddOriginPort={(portName) => addCustomImportPort(portName, 'port_of_loading')}
+              onAddDischargePort={(portName) => addCustomImportPort(portName, 'port_of_discharge')}
             />
           </div>
         </div>

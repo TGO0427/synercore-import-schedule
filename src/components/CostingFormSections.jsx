@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   formatCurrency,
   formatNumber,
@@ -127,7 +127,12 @@ function CostingFormSections({
   dischargePortOptions,              // optional override for Port of Discharge list
   departureAirportOptions,           // optional override for Airport of Departure list
   arrivalAirportOptions,             // optional override for Airport of Arrival list
+  onAddOriginPort,
+  onAddDischargePort,
 }) {
+  const [addingPortField, setAddingPortField] = useState(null);
+  const [newPortName, setNewPortName] = useState('');
+
   // Export mode reverses the inland leg directions (warehouse → port instead of port → warehouse)
   const isExport = partyLabel === 'Customer';
   // In export mode, landed cost is shown in the user-selected presentation currency.
@@ -167,6 +172,88 @@ function CostingFormSections({
 
   const currencyInput = (label, field, currency = 'ZAR', tooltip) =>
     renderCurrencyInput(formData, onInputChange, label, field, currency, tooltip);
+
+  const getOptionsWithCurrentValue = (options, field) => {
+    const currentValue = formData[field];
+    if (!currentValue || options.some(opt => opt.value === currentValue)) return options;
+    return [
+      ...options,
+      { value: currentValue, label: `${currentValue} (Custom)` },
+    ];
+  };
+
+  const addCustomPort = (field, onAddPort) => {
+    const added = onAddPort?.(newPortName);
+    if (!added) return;
+    setAddingPortField(null);
+    setNewPortName('');
+  };
+
+  const renderPortSelect = (label, field, options, onAddPort) => {
+    const resolvedOptions = getOptionsWithCurrentValue(options, field);
+
+    return (
+      <div style={{ marginBottom: '12px' }}>
+        <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>
+          {label}
+        </label>
+        {addingPortField === field ? (
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input
+              type="text"
+              value={newPortName}
+              onChange={(e) => setNewPortName(e.target.value)}
+              placeholder="Enter port name..."
+              className="input"
+              style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid #059669' }}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); addCustomPort(field, onAddPort); }
+                if (e.key === 'Escape') { setAddingPortField(null); setNewPortName(''); }
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => addCustomPort(field, onAddPort)}
+              style={{ padding: '8px 12px', backgroundColor: '#059669', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}
+            >
+              Add
+            </button>
+            <button
+              type="button"
+              onClick={() => { setAddingPortField(null); setNewPortName(''); }}
+              style={{ padding: '8px 12px', backgroundColor: '#f3f4f6', color: 'var(--text-500)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <select
+              value={formData[field] || ''}
+              onChange={(e) => onInputChange(field, e.target.value)}
+              className="select"
+              style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}
+            >
+              <option value="">Select...</option>
+              {resolvedOptions.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            {onAddPort && (
+              <button
+                type="button"
+                onClick={() => { setAddingPortField(field); setNewPortName(''); }}
+                style={{ padding: '8px 12px', backgroundColor: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+              >
+                + New
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <form onSubmit={onSubmit} style={{ padding: '1.5rem' }}>
@@ -245,8 +332,8 @@ function CostingFormSections({
             </>
           ) : (
             <>
-              {select('Port of Loading', 'port_of_loading', originPortOptions || PORTS_OF_LOADING)}
-              {select('Port of Discharge', 'port_of_discharge', dischargePortOptions || AFRICAN_PORTS)}
+              {renderPortSelect('Port of Loading', 'port_of_loading', originPortOptions || PORTS_OF_LOADING, onAddOriginPort)}
+              {renderPortSelect('Port of Discharge', 'port_of_discharge', dischargePortOptions || AFRICAN_PORTS, onAddDischargePort)}
               {select('Load Type', 'load_type', LOAD_TYPES, 'FCL = Full Container Load (exclusive use). LCL = Less than Container Load (shared).')}
               {select('Container Type', 'container_type', CONTAINER_TYPES)}
             </>
