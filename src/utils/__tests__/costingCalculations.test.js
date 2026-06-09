@@ -334,6 +334,15 @@ describe('calculateAllTotals', () => {
     expect(result.ocean_freight_zar).toBe(36000);
   });
 
+  it('uses customs ROE for USD ocean freight when USD/ZAR rate is missing', () => {
+    const result = calculateAllTotals({
+      ...sampleData,
+      roe_origin: '',
+      roe_customs: '18.5',
+    });
+    expect(result.ocean_freight_zar).toBe(37000);
+  });
+
   it('calculates origin charge in ZAR correctly', () => {
     const result = calculateAllTotals(sampleData);
     // 300 * 18 = 5400

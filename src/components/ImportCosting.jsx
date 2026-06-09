@@ -247,6 +247,14 @@ function ImportCosting() {
     setCalculatedTotals(totals);
   }, [formData]);
 
+  useEffect(() => {
+    if (!showForm || !exchangeRate?.rate || parseFloat(formData.roe_origin) > 0) return;
+    setFormData(prev => ({
+      ...prev,
+      roe_origin: parseFloat(prev.roe_customs) || exchangeRate.rate,
+    }));
+  }, [showForm, exchangeRate, formData.roe_origin, formData.roe_customs]);
+
   // Auto-sync Origin Charges with Products in Container totals under FOB/FCA/EXW.
   // Under these Incoterms, origin value is the FOB goods value (buyer's customs basis),
   // not a separate forwarder fee — so it tracks the Products totals directly.
@@ -646,10 +654,22 @@ function ImportCosting() {
     }
   };
 
-  const handleEdit = (estimate) => {
-    setFormData({
+  const normalizeEstimateForForm = (estimate) => {
+    const fallbackUsdRate = parseFloat(estimate.roe_origin)
+      || parseFloat(estimate.roe_customs)
+      || parseFloat(exchangeRate?.rate)
+      || '';
+
+    return {
       ...INITIAL_FORM_STATE,
       ...estimate,
+      roe_origin: fallbackUsdRate,
+    };
+  };
+
+  const handleEdit = (estimate) => {
+    setFormData({
+      ...normalizeEstimateForForm(estimate),
     });
     setEditingId(estimate.id);
     setShowForm(true);

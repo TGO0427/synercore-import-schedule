@@ -328,7 +328,7 @@ export const calculateEurChargeZAR = (originChargeEur, roeEur) => {
  * Calculate Customs Value from invoice values
  */
 export const calculateCustomsValue = (data) => {
-  const roeOrigin = parseFloat(data.roe_origin) || 0;
+  const roeOrigin = parseFloat(data.roe_origin) || parseFloat(data.roe_customs) || 0;
   const roeEur = parseFloat(data.roe_eur) || 0;
   const invoiceValueUsd = parseFloat(data.invoice_value_usd) || 0;
   const invoiceValueEur = parseFloat(data.invoice_value_eur) || 0;
@@ -378,7 +378,7 @@ export const calculateChargeableWeight = (data) => {
  * Calculate all totals from form data
  */
 export const calculateAllTotals = (data) => {
-  const roeOrigin = parseFloat(data.roe_origin) || 0;  // USD/ZAR
+  const roeOrigin = parseFloat(data.roe_origin) || parseFloat(data.roe_customs) || 0;  // USD/ZAR
   const roeEur = parseFloat(data.roe_eur) || 0;        // EUR/ZAR
   const oceanFreightUsd = parseFloat(data.ocean_freight_usd) || 0;
   const oceanFreightEur = parseFloat(data.ocean_freight_eur) || 0;

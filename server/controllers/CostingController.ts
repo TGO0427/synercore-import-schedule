@@ -166,7 +166,7 @@ export class CostingController {
    * Calculate Customs Value from invoice values
    */
   static calculateCustomsValue(data: Partial<ImportCostEstimate>): number {
-    const roeOrigin = Number(data.roe_origin) || 0;
+    const roeOrigin = Number(data.roe_origin) || Number(data.roe_customs) || 0;
     const roeEur = Number(data.roe_eur) || 0;
     const invoiceValueUsd = Number(data.invoice_value_usd) || 0;
     const invoiceValueEur = Number(data.invoice_value_eur) || 0;
@@ -231,7 +231,7 @@ export class CostingController {
    * Calculate all totals based on input values
    */
   static calculateAllTotals(data: Partial<ImportCostEstimate>): CalculatedTotals {
-    const roeOrigin = Number(data.roe_origin) || 0;
+    const roeOrigin = Number(data.roe_origin) || Number(data.roe_customs) || 0;
     const roeEur = Number(data.roe_eur) || 0;
     const originChargeUsd = Number(data.origin_charge_usd) || 0;
     const originChargeEur = Number(data.origin_charge_eur) || 0;
