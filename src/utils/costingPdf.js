@@ -1345,6 +1345,43 @@ export function generateEstimatePDFBase64(estimate) {
         headStyles: { fillColor: THEME.ocean },
       });
     }
+
+    const destinationDetailRows = filterZeroRows([
+      ['Shipping Line Charges (At Cost)', formatCurrency(estimate.shipping_line_charges_zar)],
+      ['Cargo Dues (20FT)', formatCurrency(estimate.cargo_dues_20ft_zar)],
+      ['Cargo Dues (40FT)', formatCurrency(estimate.cargo_dues_40ft_zar)],
+      ['CTO Fee', formatCurrency(estimate.cto_fee_zar)],
+      ['Port Health Inspection', formatCurrency(estimate.port_health_inspection_zar)],
+      ['DAFF Inspection', formatCurrency(estimate.daff_inspection_zar)],
+      ['State Vet Cancellation Fee', formatCurrency(estimate.state_vet_cancellation_fee_zar)],
+      ['JNB Turn In (At Cost)', formatCurrency(estimate.jnb_turn_in_zar)],
+      ['Bill of Lading Fee', formatCurrency(estimate.bill_of_lading_fee_zar)],
+      ['RCG Manifest Filing', formatCurrency(estimate.manifest_filing_zar)],
+      ['Currency Adjustment Factor (CAF)', formatCurrency(estimate.currency_adjustment_factor_zar)],
+      ['Degrouping', formatCurrency(estimate.degrouping_zar)],
+      ['EDI Fee', formatCurrency(estimate.edi_fee_zar)],
+      ['Communication', formatCurrency(estimate.communication_dest_zar)],
+      ['Documentation Fee', formatCurrency(estimate.documentation_fee_dest_zar)],
+      ['CFS LCL Handling Out', formatCurrency(estimate.cfs_lcl_handling_out_zar)],
+      ['Delivery Release Order (DRO)', formatCurrency(estimate.delivery_release_order_zar)],
+      ['Cartage', formatCurrency(estimate.cartage_dest_zar)],
+      ['Fuel Surcharge', formatCurrency(estimate.fuel_surcharge_dest_zar)],
+      ['Agency Fee', formatCurrency(estimate.agency_fee_dest_zar)],
+      ['Handover Fee', formatCurrency(estimate.handover_fee_zar)],
+      ['Facility Fee', formatCurrency(estimate.facility_fee_zar)],
+    ]);
+    if (destinationDetailRows.length > 0) {
+      if (totals.destination_charges_subtotal_zar > 0) {
+        destinationDetailRows.push(['Sub-Total', formatCurrency(totals.destination_charges_subtotal_zar)]);
+      }
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Destination Charges', 'ZAR']],
+        body: destinationDetailRows,
+        theme: 'grid',
+        headStyles: { fillColor: THEME.ocean },
+      });
+    }
   }
 
   const warehouseEmailRows = buildWarehouseChargeRows(estimate, totals);
