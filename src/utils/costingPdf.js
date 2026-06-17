@@ -174,6 +174,12 @@ const formatDate = (dateStr) => {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
+const formatPercentChange = (value) => {
+  if (value === null || value === undefined || Number.isNaN(value)) return '-';
+  const sign = value > 0 ? '+' : '';
+  return `${sign}${value.toFixed(1)}%`;
+};
+
 // Shared helper: calculate product weight/customs/duties totals
 const getProductTotals = (estimate) => {
   const products = estimate.products || [];
@@ -1095,12 +1101,21 @@ export function generateEstimatePDF(estimate) {
     };
 
     // Pre-compute card height
+    const referenceChange = estimate._referenceChange?.baselineCostPerKg > 0
+      ? estimate._referenceChange
+      : null;
     let bodyH = 11 * LH; // "COST SUMMARY" header (now 11pt to match spec)
     if (heroRow) {
       bodyH += 9;             // generous gap header → hero
       bodyH += 13 * LH + 2;   // hero label
       bodyH += 28 * LH;       // hero ZAR (bumped for dominance)
       if (isExport) bodyH += 2 + 14 * LH; // foreign line
+      if (referenceChange) {
+        bodyH += 6;
+        bodyH += 8 * LH + 1;
+        bodyH += 10 * LH + 1;
+        bodyH += 8 * LH;
+      }
     }
     if (supportRows.length > 0) {
       bodyH += 9;             // gap before divider
@@ -1161,6 +1176,40 @@ export function generateEstimatePDF(estimate) {
           );
         });
         cy += 14 * LH;
+      }
+
+      if (referenceChange) {
+        cy += 6;
+        const previousText = `${referenceChange.baselineLabel || 'Previous'}: ${formatCurrency(referenceChange.baselineCostPerKg)}/kg`;
+        const currentText = `Current: ${formatCurrency(referenceChange.currentCostPerKg)}/kg`;
+        const changeText = `${formatPercentChange(referenceChange.changePercent)} change`;
+        const periodText = referenceChange.periodLabel && referenceChange.periodLabel !== '-'
+          ? `Over ${referenceChange.periodLabel} (${formatDate(referenceChange.baselineDate)} to ${formatDate(referenceChange.currentDate)})`
+          : `${formatDate(referenceChange.baselineDate)} to ${formatDate(referenceChange.currentDate)}`;
+
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(255, 255, 255);
+        try { doc.setCharSpace(0.45); } catch { /* */ }
+        withOpacity(0.72, () => {
+          doc.text('REFERENCE CHANGE', xLeft, cy, { baseline: 'top' });
+        });
+        try { doc.setCharSpace(0); } catch { /* */ }
+        cy += 8 * LH + 1;
+
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(255, 255, 255);
+        doc.text(`${previousText}  |  ${currentText}  |  ${changeText}`, xLeft, cy, { baseline: 'top' });
+        cy += 10 * LH + 1;
+
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(255, 255, 255);
+        withOpacity(0.72, () => {
+          doc.text(periodText, xLeft, cy, { baseline: 'top' });
+        });
+        cy += 8 * LH;
       }
     }
 

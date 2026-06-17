@@ -911,9 +911,61 @@ function ImportCosting() {
     }
   };
 
-  const generatePDF = (estimate) => generateEstimatePDF(estimate);
+  const getReferenceChangeForEstimate = (targetEstimate) => {
+    const reference = String(targetEstimate?.reference_number || '').trim();
+    if (!reference) return null;
 
-  const generatePDFBase64 = (estimate) => generateEstimatePDFBase64(estimate);
+    const group = (estimates || [])
+      .filter(est => est.status !== 'archived' && String(est.reference_number || '').trim().toLowerCase() === reference.toLowerCase())
+      .map(est => {
+        const totals = calculateAllTotals(est);
+        return {
+          est,
+          landedPerKg: parseFloat(totals.all_in_warehouse_cost_per_kg_zar) || 0,
+          totalLanded: parseFloat(totals.total_landed_cost_zar) || 0,
+          manualPreviousCostPerKg: parseFloat(est.manual_previous_cost_per_kg_zar) || 0,
+          manualPreviousCostDate: est.manual_previous_cost_date,
+        };
+      })
+      .sort((a, b) => {
+        const dateDiff = getEstimateDateValue(a.est) - getEstimateDateValue(b.est);
+        if (dateDiff !== 0) return dateDiff;
+        return String(a.est.id || '').localeCompare(String(b.est.id || ''));
+      });
+
+    const index = group.findIndex(item => item.est.id === targetEstimate.id);
+    if (index < 0) return null;
+
+    const item = group[index];
+    const previous = index > 0 ? group[index - 1] : null;
+    const baselineCostPerKg = previous?.landedPerKg || item.manualPreviousCostPerKg || 0;
+    if (baselineCostPerKg <= 0) return null;
+
+    const baselineLabel = previous ? 'Previous costing' : 'Manual price';
+    const baselineDate = previous ? (previous.est.costing_date || previous.est.created_at) : item.manualPreviousCostDate;
+    const currentDate = item.est.costing_date || item.est.created_at;
+    const changePercent = ((item.landedPerKg - baselineCostPerKg) / baselineCostPerKg) * 100;
+
+    return {
+      reference,
+      currentCostPerKg: item.landedPerKg,
+      baselineCostPerKg,
+      baselineLabel,
+      baselineDate,
+      currentDate,
+      periodLabel: getPeriodLabel(baselineDate, currentDate),
+      changePercent,
+    };
+  };
+
+  const withReferenceChange = (estimate) => ({
+    ...estimate,
+    _referenceChange: getReferenceChangeForEstimate(estimate),
+  });
+
+  const generatePDF = (estimate) => generateEstimatePDF(withReferenceChange(estimate));
+
+  const generatePDFBase64 = (estimate) => generateEstimatePDFBase64(withReferenceChange(estimate));
 
   // Send email with PDF attachment
   const sendEstimateEmail = async (emailTo, estimate) => {
