@@ -37,6 +37,7 @@ const createCostEstimateValidation = [
   body('container_type').optional({ nullable: true }).trim(),
   body('reference_number').optional({ nullable: true }).trim(),
   body('manual_previous_cost_per_kg_zar').optional({ nullable: true }).isFloat({ min: 0, max: 1000000 }).withMessage('Manual previous cost/kg must be between 0 and 1,000,000'),
+  body('manual_previous_cost_date').optional({ nullable: true }).isISO8601().withMessage('Manual previous cost date must be a valid date'),
   body('shipping_line').optional({ nullable: true }).trim(),
   body('commodity').optional({ nullable: true }).trim(),
   body('notes').optional({ nullable: true }).trim(),

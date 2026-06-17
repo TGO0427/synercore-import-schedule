@@ -24,6 +24,7 @@ const INITIAL_FORM_STATE = {
   transport_mode: 'sea', // 'sea' or 'air'
   reference_number: '',
   manual_previous_cost_per_kg_zar: 0,
+  manual_previous_cost_date: '',
   // Origin details
   country_of_origin: '',
   port_of_loading: '',
@@ -185,6 +186,21 @@ const formatPercentChange = (value) => {
   return `${sign}${value.toFixed(1)}%`;
 };
 
+const getPeriodLabel = (startDate, endDate) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  if (!startDate || !endDate || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '-';
+
+  const days = Math.max(0, Math.round((end - start) / (1000 * 60 * 60 * 24)));
+  if (days < 45) return `${days} day${days === 1 ? '' : 's'}`;
+
+  const months = Math.round(days / 30.4375);
+  if (months < 18) return `${months} month${months === 1 ? '' : 's'}`;
+
+  const years = Math.round((months / 12) * 10) / 10;
+  return `${years} year${years === 1 ? '' : 's'}`;
+};
+
 function ReferenceChangeView({ estimates, onClose }) {
   const referenceRows = useMemo(() => {
     const groups = new Map();
@@ -197,7 +213,14 @@ function ReferenceChangeView({ estimates, onClose }) {
         const landedPerKg = parseFloat(totals.all_in_warehouse_cost_per_kg_zar) || 0;
         const totalLanded = parseFloat(totals.total_landed_cost_zar) || 0;
         const manualPreviousCostPerKg = parseFloat(est.manual_previous_cost_per_kg_zar) || 0;
-        const item = { est, reference, landedPerKg, totalLanded, manualPreviousCostPerKg };
+        const item = {
+          est,
+          reference,
+          landedPerKg,
+          totalLanded,
+          manualPreviousCostPerKg,
+          manualPreviousCostDate: est.manual_previous_cost_date,
+        };
         groups.set(reference.toLowerCase(), [...(groups.get(reference.toLowerCase()) || []), item]);
       });
 
@@ -214,10 +237,13 @@ function ReferenceChangeView({ estimates, onClose }) {
           const previous = index > 0 ? sorted[index - 1] : null;
           const baselineCostPerKg = previous?.landedPerKg || item.manualPreviousCostPerKg || 0;
           const baselineLabel = previous ? 'Previous costing' : item.manualPreviousCostPerKg > 0 ? 'Manual price' : '';
+          const baselineDate = previous ? (previous.est.costing_date || previous.est.created_at) : item.manualPreviousCostDate;
+          const currentDate = item.est.costing_date || item.est.created_at;
+          const periodLabel = baselineCostPerKg > 0 ? getPeriodLabel(baselineDate, currentDate) : '-';
           const changePercent = baselineCostPerKg > 0
             ? ((item.landedPerKg - baselineCostPerKg) / baselineCostPerKg) * 100
             : null;
-          return { ...item, previous, baselineCostPerKg, baselineLabel, changePercent, runNumber: index + 1, runCount: sorted.length };
+          return { ...item, previous, baselineCostPerKg, baselineLabel, baselineDate, periodLabel, changePercent, runNumber: index + 1, runCount: sorted.length };
         });
       })
       .sort((a, b) => {
@@ -274,6 +300,7 @@ function ReferenceChangeView({ estimates, onClose }) {
               <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Supplier</th>
               <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Current Cost/KG</th>
               <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Previous Cost/KG</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Period</th>
               <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Change</th>
               <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Total Landed</th>
             </tr>
@@ -281,7 +308,7 @@ function ReferenceChangeView({ estimates, onClose }) {
           <tbody>
             {referenceRows.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: '36px', textAlign: 'center', color: '#9ca3af' }}>
+                <td colSpan={8} style={{ padding: '36px', textAlign: 'center', color: '#9ca3af' }}>
                   No repeated references found yet.
                 </td>
               </tr>
@@ -307,8 +334,16 @@ function ReferenceChangeView({ estimates, onClose }) {
                           {row.baselineLabel && (
                             <div style={{ marginTop: '2px', fontSize: '0.72rem', color: '#9ca3af' }}>{row.baselineLabel}</div>
                           )}
+                          {row.baselineDate && (
+                            <div style={{ marginTop: '2px', fontSize: '0.72rem', color: '#9ca3af' }}>
+                              {new Date(row.baselineDate).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </div>
+                          )}
                         </>
                       ) : '-'}
+                    </td>
+                    <td style={{ padding: '12px 16px', color: '#374151', fontWeight: 600 }}>
+                      {row.periodLabel !== '-' ? `Over ${row.periodLabel}` : '-'}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                       <span style={{

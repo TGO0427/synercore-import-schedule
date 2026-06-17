@@ -75,6 +75,7 @@ export default async function addCostingColumns() {
         all_in_warehouse_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0,
         overhead_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0,
         manual_previous_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0,
+        manual_previous_cost_date DATE,
         status VARCHAR(50) DEFAULT 'draft',
         notes TEXT,
         created_by VARCHAR(255),
@@ -272,6 +273,7 @@ export default async function addCostingColumns() {
     'total_landed_cost_zar NUMERIC(14,2) DEFAULT 0',
     'overhead_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0',
     'manual_previous_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0',
+    'manual_previous_cost_date DATE',
   ];
 
   for (const col of summaryTotalColumns) {

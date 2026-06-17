@@ -760,6 +760,7 @@ export const migrations: Migration[] = [
           all_in_warehouse_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0,
           overhead_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0,
           manual_previous_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0,
+          manual_previous_cost_date DATE,
 
           -- Metadata
           status VARCHAR(50) DEFAULT 'draft',
@@ -934,6 +935,7 @@ export const migrations: Migration[] = [
           'total_landed_cost_zar NUMERIC(14,2) DEFAULT 0',
           'overhead_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0',
           'manual_previous_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0',
+          'manual_previous_cost_date DATE',
         ];
 
         for (const colDef of missingColumns) {
@@ -1339,6 +1341,7 @@ export const migrations: Migration[] = [
         'total_landed_cost_zar NUMERIC(14,2) DEFAULT 0',
         'overhead_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0',
         'manual_previous_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0',
+        'manual_previous_cost_date DATE',
         'warehouse_handling_rate_per_kg_zar NUMERIC(8,2) DEFAULT 0.62',
         'warehouse_handling_events NUMERIC(5,2) DEFAULT 2',
         'warehouse_storage_rate_per_kg_month_zar NUMERIC(8,2) DEFAULT 0.82',
