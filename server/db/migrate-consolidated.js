@@ -740,6 +740,7 @@ const migrations = [
             total_landed_cost_zar NUMERIC(14,2) DEFAULT 0,
             all_in_warehouse_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0,
             overhead_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0,
+            manual_previous_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0,
             last_mile_service_type VARCHAR(50),
             last_mile_route VARCHAR(100),
             last_mile_weight_kg NUMERIC(12,2) DEFAULT 0,
@@ -803,6 +804,7 @@ const migrations = [
         await addColumnIfNotExists('handover_fee_zar NUMERIC(12,2) DEFAULT 0');
         await addColumnIfNotExists('total_landed_cost_zar NUMERIC(14,2) DEFAULT 0');
         await addColumnIfNotExists('overhead_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0');
+        await addColumnIfNotExists('manual_previous_cost_per_kg_zar NUMERIC(12,4) DEFAULT 0');
         await addColumnIfNotExists('air_edi_fee_zar NUMERIC(12,2) DEFAULT 0');
         await addColumnIfNotExists('air_import_documentation_zar NUMERIC(12,2) DEFAULT 0');
         await addColumnIfNotExists('airline_landside_delivery_zar NUMERIC(12,2) DEFAULT 0');

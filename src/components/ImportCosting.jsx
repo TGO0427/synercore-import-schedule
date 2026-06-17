@@ -23,6 +23,7 @@ import CostingRequests from './CostingRequests';
 const INITIAL_FORM_STATE = {
   transport_mode: 'sea', // 'sea' or 'air'
   reference_number: '',
+  manual_previous_cost_per_kg_zar: 0,
   // Origin details
   country_of_origin: '',
   port_of_loading: '',
@@ -195,12 +196,13 @@ function ReferenceChangeView({ estimates, onClose }) {
         const totals = calculateAllTotals(est);
         const landedPerKg = parseFloat(totals.all_in_warehouse_cost_per_kg_zar) || 0;
         const totalLanded = parseFloat(totals.total_landed_cost_zar) || 0;
-        const item = { est, reference, landedPerKg, totalLanded };
+        const manualPreviousCostPerKg = parseFloat(est.manual_previous_cost_per_kg_zar) || 0;
+        const item = { est, reference, landedPerKg, totalLanded, manualPreviousCostPerKg };
         groups.set(reference.toLowerCase(), [...(groups.get(reference.toLowerCase()) || []), item]);
       });
 
     return Array.from(groups.values())
-      .filter(group => group.length > 1)
+      .filter(group => group.length > 1 || group.some(item => item.manualPreviousCostPerKg > 0))
       .flatMap(group => {
         const sorted = group.sort((a, b) => {
           const dateDiff = getEstimateDateValue(a.est) - getEstimateDateValue(b.est);
@@ -210,10 +212,12 @@ function ReferenceChangeView({ estimates, onClose }) {
 
         return sorted.map((item, index) => {
           const previous = index > 0 ? sorted[index - 1] : null;
-          const changePercent = previous?.landedPerKg > 0
-            ? ((item.landedPerKg - previous.landedPerKg) / previous.landedPerKg) * 100
+          const baselineCostPerKg = previous?.landedPerKg || item.manualPreviousCostPerKg || 0;
+          const baselineLabel = previous ? 'Previous costing' : item.manualPreviousCostPerKg > 0 ? 'Manual price' : '';
+          const changePercent = baselineCostPerKg > 0
+            ? ((item.landedPerKg - baselineCostPerKg) / baselineCostPerKg) * 100
             : null;
-          return { ...item, previous, changePercent, runNumber: index + 1, runCount: sorted.length };
+          return { ...item, previous, baselineCostPerKg, baselineLabel, changePercent, runNumber: index + 1, runCount: sorted.length };
         });
       })
       .sort((a, b) => {
@@ -223,7 +227,7 @@ function ReferenceChangeView({ estimates, onClose }) {
       });
   }, [estimates]);
 
-  const latestChanges = referenceRows.filter(row => row.previous);
+  const latestChanges = referenceRows.filter(row => row.baselineCostPerKg > 0);
   const averageChange = latestChanges.length > 0
     ? latestChanges.reduce((sum, row) => sum + (row.changePercent || 0), 0) / latestChanges.length
     : null;
@@ -236,7 +240,7 @@ function ReferenceChangeView({ estimates, onClose }) {
         <div>
           <h3 style={{ margin: 0, fontSize: '1rem', color: '#111827' }}>Reference Cost Changes</h3>
           <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: '0.82rem' }}>
-            Compares landed cost/kg against the previous costing with the same reference.
+            Compares landed cost/kg against the previous costing, or a manual previous price when entered.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -297,7 +301,14 @@ function ReferenceChangeView({ estimates, onClose }) {
                     <td style={{ padding: '12px 16px', color: '#374151' }}>{row.est.supplier_name || '-'}</td>
                     <td style={{ padding: '12px 16px', textAlign: 'right', color: '#d97706', fontWeight: 600 }}>{formatCurrency(row.landedPerKg)}</td>
                     <td style={{ padding: '12px 16px', textAlign: 'right', color: '#6b7280' }}>
-                      {row.previous ? formatCurrency(row.previous.landedPerKg) : '-'}
+                      {row.baselineCostPerKg > 0 ? (
+                        <>
+                          <div>{formatCurrency(row.baselineCostPerKg)}</div>
+                          {row.baselineLabel && (
+                            <div style={{ marginTop: '2px', fontSize: '0.72rem', color: '#9ca3af' }}>{row.baselineLabel}</div>
+                          )}
+                        </>
+                      ) : '-'}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                       <span style={{
@@ -310,7 +321,7 @@ function ReferenceChangeView({ estimates, onClose }) {
                         fontWeight: 700,
                         fontSize: '0.78rem',
                       }}>
-                        {row.previous ? formatPercentChange(row.changePercent) : 'Base'}
+                        {row.baselineCostPerKg > 0 ? formatPercentChange(row.changePercent) : 'Base'}
                       </span>
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right', color: '#059669', fontWeight: 600 }}>{formatCurrency(row.totalLanded)}</td>

@@ -22,6 +22,7 @@ export interface ImportCostEstimate {
   shipment_id?: string;
   supplier_id?: string;
   reference_number?: string;
+  manual_previous_cost_per_kg_zar?: number;
   country_of_destination: string;
   country_of_origin?: string;
   port_of_loading?: string;
@@ -179,7 +180,7 @@ export interface ExchangeRate {
 }
 
 const COST_ESTIMATE_COLUMNS = [
-  'id', 'shipment_id', 'supplier_id', 'reference_number', 'country_of_destination',
+  'id', 'shipment_id', 'supplier_id', 'reference_number', 'manual_previous_cost_per_kg_zar', 'country_of_destination',
   'country_of_origin', 'port_of_loading', 'load_type', 'port_of_discharge', 'shipping_line', 'routing', 'frequency', 'transit_time_days',
   'inco_terms', 'inco_term_place', 'container_type', 'quantity', 'hs_code',
   'gross_weight_kg', 'total_gross_weight_kg', 'origin_rate_usd', 'ocean_freight_rate_usd',

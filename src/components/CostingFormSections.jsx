@@ -265,6 +265,7 @@ function CostingFormSections({
         </h4>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
           {input('Reference Number', 'reference_number')}
+          {!isExport && input('Manual Previous Cost/KG', 'manual_previous_cost_per_kg_zar', 'number', { min: 0, step: '0.01' }, 'Optional ZAR cost/kg baseline used in Reference Changes when there is no previous costing for this reference.')}
           <div style={{ marginBottom: '12px' }}>
             <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-900)' }}>
               {partyLabel}

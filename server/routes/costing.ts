@@ -36,6 +36,7 @@ const createCostEstimateValidation = [
   body('port_of_discharge').optional({ nullable: true }).trim(),
   body('container_type').optional({ nullable: true }).trim(),
   body('reference_number').optional({ nullable: true }).trim(),
+  body('manual_previous_cost_per_kg_zar').optional({ nullable: true }).isFloat({ min: 0, max: 1000000 }).withMessage('Manual previous cost/kg must be between 0 and 1,000,000'),
   body('shipping_line').optional({ nullable: true }).trim(),
   body('commodity').optional({ nullable: true }).trim(),
   body('notes').optional({ nullable: true }).trim(),
