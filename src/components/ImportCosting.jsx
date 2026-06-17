@@ -236,7 +236,7 @@ function ReferenceChangeView({ estimates, onClose }) {
         return sorted.map((item, index) => {
           const previous = index > 0 ? sorted[index - 1] : null;
           const baselineCostPerKg = previous?.landedPerKg || item.manualPreviousCostPerKg || 0;
-          const baselineLabel = previous ? 'Previous costing' : item.manualPreviousCostPerKg > 0 ? 'Manual price' : '';
+          const baselineLabel = previous ? 'Previous costing' : item.manualPreviousCostPerKg > 0 ? 'Historical baseline' : '';
           const baselineDate = previous ? (previous.est.costing_date || previous.est.created_at) : item.manualPreviousCostDate;
           const currentDate = item.est.costing_date || item.est.created_at;
           const periodLabel = baselineCostPerKg > 0 ? getPeriodLabel(baselineDate, currentDate) : '-';
@@ -941,7 +941,7 @@ function ImportCosting() {
     const baselineCostPerKg = previous?.landedPerKg || item.manualPreviousCostPerKg || 0;
     if (baselineCostPerKg <= 0) return null;
 
-    const baselineLabel = previous ? 'Previous costing' : 'Manual price';
+    const baselineLabel = previous ? 'Previous costing' : 'Historical baseline';
     const baselineDate = previous ? (previous.est.costing_date || previous.est.created_at) : item.manualPreviousCostDate;
     const currentDate = item.est.costing_date || item.est.created_at;
     const changePercent = ((item.landedPerKg - baselineCostPerKg) / baselineCostPerKg) * 100;
