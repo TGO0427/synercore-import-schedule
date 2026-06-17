@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import useFormDraft from '../hooks/useFormDraft';
 import { getApiUrl } from '../config/api';
@@ -6,6 +6,7 @@ import { authFetch } from '../utils/authFetch';
 import { authUtils } from '../utils/auth';
 import {
   calculateAllTotals,
+  formatCurrency,
   formatNumber,
   lookupOceanFreightRate,
   AFRICAN_PORTS,
@@ -165,6 +166,165 @@ const createCustomPortOption = (name) => {
   return { value: label, label: `${label} (Custom)` };
 };
 
+const getEstimateDateValue = (estimate) => {
+  const value = estimate.costing_date || estimate.created_at || '';
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+const formatEstimateDate = (estimate) => {
+  const value = estimate.costing_date || estimate.created_at;
+  if (!value) return '-';
+  return new Date(value).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const formatPercentChange = (value) => {
+  if (value === null || value === undefined || Number.isNaN(value)) return '-';
+  const sign = value > 0 ? '+' : '';
+  return `${sign}${value.toFixed(1)}%`;
+};
+
+function ReferenceChangeView({ estimates, onClose }) {
+  const referenceRows = useMemo(() => {
+    const groups = new Map();
+
+    (estimates || [])
+      .filter(est => est.status !== 'archived' && String(est.reference_number || '').trim())
+      .forEach(est => {
+        const reference = String(est.reference_number || '').trim();
+        const totals = calculateAllTotals(est);
+        const landedPerKg = parseFloat(totals.all_in_warehouse_cost_per_kg_zar) || 0;
+        const totalLanded = parseFloat(totals.total_landed_cost_zar) || 0;
+        const item = { est, reference, landedPerKg, totalLanded };
+        groups.set(reference.toLowerCase(), [...(groups.get(reference.toLowerCase()) || []), item]);
+      });
+
+    return Array.from(groups.values())
+      .filter(group => group.length > 1)
+      .flatMap(group => {
+        const sorted = group.sort((a, b) => {
+          const dateDiff = getEstimateDateValue(a.est) - getEstimateDateValue(b.est);
+          if (dateDiff !== 0) return dateDiff;
+          return String(a.est.id || '').localeCompare(String(b.est.id || ''));
+        });
+
+        return sorted.map((item, index) => {
+          const previous = index > 0 ? sorted[index - 1] : null;
+          const changePercent = previous?.landedPerKg > 0
+            ? ((item.landedPerKg - previous.landedPerKg) / previous.landedPerKg) * 100
+            : null;
+          return { ...item, previous, changePercent, runNumber: index + 1, runCount: sorted.length };
+        });
+      })
+      .sort((a, b) => {
+        const latestA = getEstimateDateValue(a.est);
+        const latestB = getEstimateDateValue(b.est);
+        return latestB - latestA;
+      });
+  }, [estimates]);
+
+  const latestChanges = referenceRows.filter(row => row.previous);
+  const averageChange = latestChanges.length > 0
+    ? latestChanges.reduce((sum, row) => sum + (row.changePercent || 0), 0) / latestChanges.length
+    : null;
+  const increases = latestChanges.filter(row => row.changePercent > 0).length;
+  const decreases = latestChanges.filter(row => row.changePercent < 0).length;
+
+  return (
+    <div className="dash-panel" style={{ marginBottom: '1rem', overflow: 'hidden' }}>
+      <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div>
+          <h3 style={{ margin: 0, fontSize: '1rem', color: '#111827' }}>Reference Cost Changes</h3>
+          <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: '0.82rem' }}>
+            Compares landed cost/kg against the previous costing with the same reference.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ padding: '6px 10px', borderRadius: '6px', backgroundColor: '#f3f4f6', color: '#374151', fontSize: '0.78rem', fontWeight: 600 }}>
+            {latestChanges.length} comparisons
+          </span>
+          <span style={{ padding: '6px 10px', borderRadius: '6px', backgroundColor: '#ecfdf5', color: '#047857', fontSize: '0.78rem', fontWeight: 600 }}>
+            {decreases} decreases
+          </span>
+          <span style={{ padding: '6px 10px', borderRadius: '6px', backgroundColor: '#fef2f2', color: '#b91c1c', fontSize: '0.78rem', fontWeight: 600 }}>
+            {increases} increases
+          </span>
+          <span style={{ padding: '6px 10px', borderRadius: '6px', backgroundColor: '#eff6ff', color: '#1d4ed8', fontSize: '0.78rem', fontWeight: 600 }}>
+            Avg {formatPercentChange(averageChange)}
+          </span>
+          <button
+            onClick={onClose}
+            style={{ padding: '7px 12px', backgroundColor: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.78rem' }}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ backgroundColor: '#f8fafc' }}>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Reference</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Date</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Supplier</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Current Cost/KG</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Previous Cost/KG</th>
+              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Change</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Total Landed</th>
+            </tr>
+          </thead>
+          <tbody>
+            {referenceRows.length === 0 ? (
+              <tr>
+                <td colSpan={7} style={{ padding: '36px', textAlign: 'center', color: '#9ca3af' }}>
+                  No repeated references found yet.
+                </td>
+              </tr>
+            ) : (
+              referenceRows.map((row) => {
+                const isIncrease = row.changePercent > 0;
+                const isDecrease = row.changePercent < 0;
+                return (
+                  <tr key={`${row.est.id}-${row.runNumber}`} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                    <td style={{ padding: '12px 16px', color: '#111827', fontWeight: 600 }}>
+                      {row.reference}
+                      <div style={{ marginTop: '2px', color: '#6b7280', fontSize: '0.72rem', fontWeight: 500 }}>
+                        {row.runNumber} of {row.runCount}
+                      </div>
+                    </td>
+                    <td style={{ padding: '12px 16px', color: '#6b7280', whiteSpace: 'nowrap' }}>{formatEstimateDate(row.est)}</td>
+                    <td style={{ padding: '12px 16px', color: '#374151' }}>{row.est.supplier_name || '-'}</td>
+                    <td style={{ padding: '12px 16px', textAlign: 'right', color: '#d97706', fontWeight: 600 }}>{formatCurrency(row.landedPerKg)}</td>
+                    <td style={{ padding: '12px 16px', textAlign: 'right', color: '#6b7280' }}>
+                      {row.previous ? formatCurrency(row.previous.landedPerKg) : '-'}
+                    </td>
+                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                      <span style={{
+                        display: 'inline-block',
+                        minWidth: '72px',
+                        padding: '5px 8px',
+                        borderRadius: '6px',
+                        backgroundColor: isIncrease ? '#fef2f2' : isDecrease ? '#ecfdf5' : '#f3f4f6',
+                        color: isIncrease ? '#b91c1c' : isDecrease ? '#047857' : '#6b7280',
+                        fontWeight: 700,
+                        fontSize: '0.78rem',
+                      }}>
+                        {row.previous ? formatPercentChange(row.changePercent) : 'Base'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 16px', textAlign: 'right', color: '#059669', fontWeight: 600 }}>{formatCurrency(row.totalLanded)}</td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function ImportCosting() {
   const [searchParams] = useSearchParams();
   const { showSuccess, showError, confirm: confirmAction } = useNotification();
@@ -189,6 +349,7 @@ function ImportCosting() {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailEstimate, setEmailEstimate] = useState(null);
   const [showReports, setShowReports] = useState(false);
+  const [showReferenceChanges, setShowReferenceChanges] = useState(false);
   const [customImportPorts, setCustomImportPorts] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem(CUSTOM_IMPORT_PORTS_KEY) || '[]');
@@ -781,13 +942,28 @@ function ImportCosting() {
             </div>
           )}
           <button
-            onClick={() => setShowReports(!showReports)}
+            onClick={() => {
+              setShowReports(!showReports);
+              if (!showReports) setShowReferenceChanges(false);
+            }}
             style={{
               padding: '10px 20px', backgroundColor: showReports ? '#7c3aed' : '#8b5cf6', color: 'white',
               border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500'
             }}
           >
             {showReports ? '✕ Close Reports' : '📊 Reports'}
+          </button>
+          <button
+            onClick={() => {
+              setShowReferenceChanges(!showReferenceChanges);
+              if (!showReferenceChanges) setShowReports(false);
+            }}
+            style={{
+              padding: '10px 20px', backgroundColor: showReferenceChanges ? '#0f766e' : '#14b8a6', color: 'white',
+              border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500'
+            }}
+          >
+            {showReferenceChanges ? 'Close Changes' : 'Reference Changes'}
           </button>
           {isAdmin ? (
             <>
@@ -855,6 +1031,10 @@ function ImportCosting() {
       {/* Reports Section */}
       {showReports && (
         <CostingReportsPanel estimates={estimates} onClose={() => setShowReports(false)} />
+      )}
+
+      {showReferenceChanges && (
+        <ReferenceChangeView estimates={estimates} onClose={() => setShowReferenceChanges(false)} />
       )}
 
       {/* Form Modal */}
