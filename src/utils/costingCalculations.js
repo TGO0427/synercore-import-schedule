@@ -24,6 +24,46 @@ export const LAST_MILE_SERVICE_TYPES = [
   { value: 'manual', label: 'Manual last mile charge' },
 ];
 
+const normalizeRuleName = (value) => (value || '')
+  .toString()
+  .trim()
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, ' ')
+  .replace(/\s+/g, ' ');
+
+export const CUSTOMER_SPECIFIC_EXPORT_RULES = [
+  {
+    id: 'dairibord-zimbabwe',
+    customerName: 'Dairibord Zimbabwe',
+    matchNames: ['Dairibord Zimbabwe', 'Dairibord Zimbabwe Pvt Ltd', 'Dairibord Zimbabwe (Private) Limited'],
+    fields: {
+      country_of_destination: 'Zimbabwe',
+      port_of_discharge: 'HRE',
+      airport_of_arrival: 'HRE',
+    },
+  },
+];
+
+export const getCustomerSpecificExportRule = (customerName) => {
+  const normalizedCustomerName = normalizeRuleName(customerName);
+  if (!normalizedCustomerName) return null;
+
+  return CUSTOMER_SPECIFIC_EXPORT_RULES.find(rule =>
+    rule.matchNames.some(name => normalizeRuleName(name) === normalizedCustomerName)
+  ) || null;
+};
+
+export const applyCustomerSpecificExportRule = (data, customerName = data?.customer_name) => {
+  const rule = getCustomerSpecificExportRule(customerName);
+  if (!rule) return data;
+
+  return {
+    ...data,
+    customer_name: customerName,
+    ...rule.fields,
+  };
+};
+
 export const LAST_MILE_RATES = {
   express_air: [
     { value: 'klapmuts-jhb-dbn', label: 'Klapmuts to Johannesburg / Durban', minimum: 850, rate: 40 },
@@ -1180,6 +1220,9 @@ export default {
   LAST_MILE_RATES,
   getLastMileRouteOptions,
   getLastMileRate,
+  CUSTOMER_SPECIFIC_EXPORT_RULES,
+  getCustomerSpecificExportRule,
+  applyCustomerSpecificExportRule,
   SA_PORTS,
   AFRICAN_PORTS,
   LOAD_TYPES,
