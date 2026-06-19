@@ -11,7 +11,6 @@ import {
   WORLD_PORTS,
   SA_AIRPORTS,
   WORLD_AIRPORTS,
-  applyCustomerSpecificExportRule,
 } from '../utils/costingCalculations';
 import { generateEstimatePDF, generateEstimatePDFBase64 } from '../utils/costingPdf';
 import { useNotification } from '../contexts/NotificationContext';
@@ -298,10 +297,7 @@ function ExportCosting() {
 
   const handleInputChange = (field, value) => {
     setFormData(prev => {
-      let updated = { ...prev, [field]: value };
-      if (field === 'customer_name') {
-        updated = applyCustomerSpecificExportRule(updated, value);
-      }
+      const updated = { ...prev, [field]: value };
       if (field === 'port_of_loading' || field === 'shipping_line' || field === 'container_type') {
         const rate = lookupOceanFreightRate(
           field === 'port_of_loading' ? value : updated.port_of_loading,

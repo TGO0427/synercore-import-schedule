@@ -11,41 +11,10 @@ import {
   calculateLastMileCharge,
   formatCurrency,
   formatNumber,
-  applyCustomerSpecificExportRule,
-  getCustomerSpecificExportRule,
   lookupOceanFreightRate,
 } from '../costingCalculations.js';
 
 // ── calculateDAVIF ──
-
-describe('customer-specific export rules', () => {
-  it('matches Dairibord Zimbabwe and applies Zimbabwe destination defaults', () => {
-    const rule = getCustomerSpecificExportRule('Dairibord Zimbabwe');
-    expect(rule?.id).toBe('dairibord-zimbabwe');
-
-    const result = applyCustomerSpecificExportRule({
-      direction: 'export',
-      customer_name: 'Dairibord Zimbabwe',
-      country_of_destination: '',
-      port_of_discharge: '',
-    });
-
-    expect(result.country_of_destination).toBe('Zimbabwe');
-    expect(result.port_of_discharge).toBe('HRE');
-    expect(result.airport_of_arrival).toBe('HRE');
-  });
-
-  it('leaves customers without a specific export rule unchanged', () => {
-    const data = {
-      direction: 'export',
-      customer_name: 'Other Customer',
-      country_of_destination: 'Kenya',
-      port_of_discharge: 'MBA',
-    };
-
-    expect(applyCustomerSpecificExportRule(data)).toBe(data);
-  });
-});
 
 describe('calculateLastMileCharge', () => {
   it('uses manual charge as an override for automated route rates', () => {
